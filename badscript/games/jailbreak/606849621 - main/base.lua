@@ -9,7 +9,7 @@ local isfile = isfile or function(file)
 end
 local function downloadFile(path, func)
 	if not isfile(path) then
-		local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/'..readfile('badscript/profiles/commit.txt')..'/'..select(1, path:gsub('badscript/', '')), true) end)
+		local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/'..select(1, path:gsub('badscript/', '')), true) end)
 		if not suc or res == '404: Not Found' then error(res) end
 		if path:find('.lua') then res = '--
 		writefile(path, res)
@@ -367,6 +367,9 @@ end)
 for _, v in {'Reach', 'TriggerBot', 'Disabler', 'AntiFall', 'HitBoxes', 'Killaura', 'MurderMystery'} do
 	Bad:Remove(v)
 end
+
+
+
 
 
 

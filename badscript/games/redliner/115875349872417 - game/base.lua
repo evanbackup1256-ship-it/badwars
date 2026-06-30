@@ -1,5 +1,6 @@
+local _loadstring = (getgenv and getgenv().loadstring) or loadstring or function(s) return loadstring(s) end
 local loadstring = function(...)
-	local res, err = loadstring(...)
+	local res, err = _loadstring(...)
 	if err and Bad then
 		Bad:CreateNotification('Bad', 'Failed to load : '..err, 30, 'alert')
 	end
@@ -14,7 +15,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/'..readfile('badscript/profiles/commit.txt')..'/'..select(1, path:gsub('badscript/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/'..select(1, path:gsub('badscript/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -602,6 +603,9 @@ end
 for _, v in {'Reach', 'TriggerBot', 'AntiFall', 'Desync', 'HitBoxes', 'Invisible', 'Jesus', 'MouseTP', 'Spider', 'SpinBot', 'Swim', 'TargetStrafe', 'AntiRagdoll', 'Disabler', 'StateSpoofer', 'Parkour', 'SafeWalk', 'MurderMystery'} do
 	Bad:Remove(v)
 end
+
+
+
 
 
 

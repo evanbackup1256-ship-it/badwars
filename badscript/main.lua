@@ -11,7 +11,7 @@ pcall(function()
 end)
 
 local Bad
-local oldLoadstring = loadstring
+local oldLoadstring = (getgenv and getgenv().loadstring) or loadstring or function(...) error("loadstring not available") end
 local loadstring = function(...)
 	local res, err = oldLoadstring(...)
 	if err and Bad then
@@ -126,6 +126,8 @@ else
 	Bad.Init = finishLoading
 	return Bad
 end
+
+
 
 
 

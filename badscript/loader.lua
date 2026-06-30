@@ -1,12 +1,20 @@
-local isfile = isfile or function(file)
+isfile = isfile or function(file)
 	local suc, res = pcall(function()
 		return readfile(file)
 	end)
 	return suc and res ~= nil and res ~= ''
 end
-local delfile = delfile or function(file)
+delfile = delfile or function(file)
 	writefile(file, '')
 end
+isfolder = isfolder or function() return false end
+makefolder = makefolder or function() end
+listfiles = listfiles or function() return {} end
+readfile = readfile or function() return '' end
+writefile = writefile or function() end
+cloneref = cloneref or function(obj) return obj end
+setthreadidentity = setthreadidentity or function() end
+queue_on_teleport = queue_on_teleport or function() end
 
 local _loadstring = loadstring or function(s) return loadstring(s) end
 local function downloadFile(path, func)

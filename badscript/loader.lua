@@ -41,21 +41,8 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-if not shared.BadDeveloper then
-	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/evanbackup1256-ship-it/badwars')
-	end)
-	local commit = subbed:find('currentOid')
-	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
-	commit = commit and #commit == 40 and commit or 'main'
-	if commit == 'main' or (isfile('badscript/profiles/commit.txt') and readfile('badscript/profiles/commit.txt') or '') ~= commit then
-		wipeFolder('badscript')
-		wipeFolder('badscript/games')
-		wipeFolder('badscript/guis')
-		wipeFolder('badscript/libraries')
-	end
-	writefile('badscript/profiles/commit.txt', commit)
-end
+-- Simplified for reliability: always use main branch, no fragile scraping
+writefile('badscript/profiles/commit.txt', 'main')
 
 return loadstring(downloadFile('badscript/main.lua'), 'main')()
 

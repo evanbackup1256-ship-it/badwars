@@ -94,7 +94,7 @@ local gui = readfile('badscript/profiles/gui.txt')
 if not isfolder('badscript/assets/'..gui) then
 	makefolder('badscript/assets/'..gui)
 end
-Bad = loadstring(downloadFile('badscript/guis/'..gui..'.lua'), 'gui')()
+Bad = loadstring(downloadFile('badscript/guis/'..gui..'/gui.lua'), 'gui')()
 shared.Bad = Bad
 
 if not shared.BadIndependent then

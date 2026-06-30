@@ -1,7 +1,8 @@
+local _loadstring = loadstring or function(s) return loadstring(s) end
 local loadstring = function(...)
-	local res, err = loadstring(...)
+	local res, err = _loadstring(...)
 	if err and Bad then
-		Bad:CreateNotification('Bad', 'Failed to load : '..err, 30, 'alert')
+		Bad:CreateNotification('BadWars', 'Failed to load : '..err, 30, 'alert')
 	end
 	return res
 end
@@ -14,13 +15,13 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/'..readfile('badscript/profiles/commit.txt')..'/'..select(1, path:gsub('badscript/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
 		end
 		if path:find('.lua') then
-			res = '--
+			res = '-- BadWars by usingINales (rebranded)\n' .. res
 		end
 		writefile(path, res)
 	end
@@ -920,6 +921,7 @@ run(function()
 	end)
 end)
 entitylib.start()
+
 
 
 

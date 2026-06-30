@@ -2,15 +2,18 @@ repeat task.wait() until game:IsLoaded()
 if shared.Bad then shared.Bad:Uninject() end
 
 -- Custom splash by usingINales for BadWars
-game:GetService("StarterGui"):SetCore("SendNotification", {
-	Title = "BadWars",
-	Text = "by usingINales | Dev Mode Active",
-	Duration = 6
-})
+pcall(function()
+	game:GetService("StarterGui"):SetCore("SendNotification", {
+		Title = "BadWars",
+		Text = "by usingINales | Dev Mode Active",
+		Duration = 6
+	})
+end)
 
 local Bad
+local oldLoadstring = loadstring
 local loadstring = function(...)
-	local res, err = loadstring(...)
+	local res, err = oldLoadstring(...)
 	if err and Bad then
 		Bad:CreateNotification('BadWars', 'Failed to load : '..err, 30, 'alert')
 	end
@@ -98,7 +101,7 @@ Bad = loadstring(downloadFile('badscript/guis/'..gui..'/gui.lua'), 'gui')()
 shared.Bad = Bad
 
 if not shared.BadIndependent then
-	loadstring(downloadFile('badscript/games/universal.lua'), 'universal')()
+	loadstring(downloadFile('badscript/games/universal - base/base.lua'), 'universal')()
 	if isfile('badscript/games/'..game.PlaceId..'.lua') then
 		loadstring(readfile('badscript/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))(...)
 	else

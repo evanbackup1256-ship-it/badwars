@@ -1,0 +1,158 @@
+# Badwars .gitignore
+# Comprehensive ignore file covering common languages and tools
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.env
+*.pem
+*.key
+secrets/
+*.p12
+*.pfx
+
+# Build outputs and dependencies
+node_modules/
+dist/
+build/
+out/
+target/
+bin/
+obj/
+*.class
+*.jar
+*.war
+*.ear
+*.o
+*.so
+*.dll
+*.exe
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+*.swp
+*.swo
+*~
+
+# IDE and editor
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.history/
+*.iml
+.project
+.classpath
+.settings/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Package managers and caches
+.npm/
+.yarn/
+.pnp.*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Testing and coverage
+coverage/
+.nyc_output/
+*.lcov
+junit.xml
+
+# Misc
+*.bak
+*.tmp
+temp/
+tmp/
+*.pid
+*.seed
+*.pid.lock
+.cache/
+.parcel-cache/
+
+# Language specific
+# Go
+bin/
+pkg/
+
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock  # Uncomment if you want to ignore lockfile
+
+# Java / Kotlin
+.gradle/
+*.gradle
+build/
+
+# .NET
+*.dll
+*.exe
+*.pdb
+*.user
+*.vs/
+*.suo
+
+# Python
+*.egg
+*.egg-info/
+dist/
+build/
+develop-eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Docker
+docker-compose.override.yml
+
+# Other
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z

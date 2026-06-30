@@ -1,0 +1,37 @@
+# Auto detect text files and normalize to LF
+* text=auto
+
+# Force LF for specific file types
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.7z binary
+*.tar binary
+*.gz binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.class binary
+*.jar binary
+*.war binary
+*.ear binary
+*.db binary
+*.sqlite binary
+*.mp3 binary
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.wav binary
+*.ttf binary
+*.woff binary
+*.woff2 binary

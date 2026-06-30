@@ -153,3 +153,4 @@ CircleFilled = SilentAim:CreateToggle({
 Instant = SilentAim:CreateToggle({Name = 'Hitscan Bullets'})
 
 
+

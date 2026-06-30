@@ -82,3 +82,4 @@ KillauraTarget = AimAssist:CreateToggle({
 StrafeIncrease = AimAssist:CreateToggle({Name = 'Strafe increase'})
 
 
+

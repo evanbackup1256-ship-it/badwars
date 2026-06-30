@@ -4,6 +4,8 @@ shared.BadWarsDev = true
 shared.usingINales = true
 
 -- Custom splash already injected in main files
-loadstring(game:HttpGet("https://raw.githubusercontent.com/usingINales/badwars/main/badscript/loader.lua", true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()
+
+
 
 

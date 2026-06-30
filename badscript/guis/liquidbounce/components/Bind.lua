@@ -47,3 +47,4 @@ bind.MouseButton1Click:Connect(function()
 end)
 
 
+

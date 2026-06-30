@@ -56,3 +56,4 @@ FireRate = GunModifications:CreateToggle({Name = 'Fire rate'})
 Automatic = GunModifications:CreateToggle({Name = 'Full Automatic'})
 
 
+

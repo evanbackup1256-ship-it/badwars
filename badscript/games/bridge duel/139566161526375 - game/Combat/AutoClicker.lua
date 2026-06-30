@@ -26,3 +26,4 @@ CPS = AutoClicker:CreateTwoSlider({
 })
 
 
+

@@ -11,13 +11,14 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/usingINales/badwars/'..readfile('badscript/profiles/commit.txt')..'/'..select(1, path:gsub('badscript/', '')), true)
+			-- Fixed for self-hosted structure: use 'main' branch and full path
+			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
 		end
 		if path:find('.lua') then
-			res = '--
+			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
 		end
 		writefile(path, res)
 	end
@@ -42,7 +43,7 @@ end
 
 if not shared.BadDeveloper then
 	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/usingINales/badwars')
+		return game:HttpGet('https://github.com/evanbackup1256-ship-it/badwars')
 	end)
 	local commit = subbed:find('currentOid')
 	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
@@ -57,6 +58,7 @@ if not shared.BadDeveloper then
 end
 
 return loadstring(downloadFile('badscript/main.lua'), 'main')()
+
 
 
 

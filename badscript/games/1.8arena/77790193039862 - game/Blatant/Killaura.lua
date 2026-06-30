@@ -280,3 +280,4 @@ ParticleSize = Killaura:CreateSlider({
 Face = Killaura:CreateToggle({Name = 'Face target'})
 
 
+

@@ -578,3 +578,4 @@ Clear = AutoHotbar:CreateToggle({Name = 'Clear Hotbar'})
 List = AutoHotbar:CreateHotbarList({})
 
 
+

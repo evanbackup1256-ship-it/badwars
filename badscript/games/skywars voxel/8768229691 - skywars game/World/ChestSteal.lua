@@ -47,3 +47,4 @@ Range = ChestSteal:CreateSlider({
 Open = ChestSteal:CreateToggle({Name = 'GUI Check'})
 
 
+

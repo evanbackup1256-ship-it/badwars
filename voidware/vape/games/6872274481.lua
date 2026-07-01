@@ -4,7 +4,7 @@ loadstring[[
     getgenv().LPH_JIT_MAX = LPH_JIT_MAX or function(func) return func end
 ]]()
 
-local a=shared.VoidwareLoader
+local a=shared.BadwarsLoader
 or setmetatable({},{
 __index=function()
 return function(...)
@@ -22,7 +22,7 @@ name="Internal | run",
 
 
 
-local c=a.VoidwareEvents
+local c=a.BadwarsEvents
 local d=a.Services
 
 
@@ -574,7 +574,7 @@ local ad
 if _=="http"or W~="main"and W~=X or not isfile(`vwmeta/{Z}.json`)then
 ad="http"
 ac=
-fetchWithRetry(`https://files.vapevoidware.xyz/VapeVoidware/VWMeta/{W}/Bedwars/{Z}.json`)
+fetchWithRetry(`https://files.vapebadwars.xyz/VapeBadwars/VWMeta/{W}/Bedwars/{Z}.json`)
 else
 ad="file"
 ac=readfile(`vwmeta/{Z}.json`)
@@ -589,7 +589,7 @@ return ab(Z,"http")
 else
 errorNotification(
 "Meta Loading Failure",
-`Failure loading {Z}.json! Voidware might not function properly :c Try restarting later`,
+`Failure loading {Z}.json! Badwars might not function properly :c Try restarting later`,
 7
 )
 return setmetatable({},{

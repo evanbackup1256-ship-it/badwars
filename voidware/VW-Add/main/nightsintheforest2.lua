@@ -6,15 +6,15 @@
  ╚████╔╝ ╚██████╔╝██║██████╔╝╚███╔███╔╝██║  ██║██║     ███████╗
   ╚═══╝   ╚═════╝ ╚═╝╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝     ╚══════╝
 
-                🚀 VOIDWARE — 99 Nights In The Forest 🚀
+                🚀 BADWARS — 99 Nights In The Forest 🚀
 ----------------------------------------------------------------------------
   IMPORTANT:
   You must copy and use the FULL script below. Do NOT press on the link.:
 
-  loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/main/loader.lua", true))()
+  loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/main/loader.lua", true))()
 
 ----------------------------------------------------------------------------
-  For support head over to discord.gg/voidware
+  For support head over to discord.gg/badwars
 ----------------------------------------------------------------------------
 ]]
 if not game:IsLoaded() then return end
@@ -103,8 +103,8 @@ shared.ForcePlayerGui = true
 if game.PlaceId == 79546208627805 then
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Voidware | 99 Nights In The Forest",
-            Text = "Go In Game for Voidware to load :D [You are in lobby currently]",
+            Title = "Badwars | 99 Nights In The Forest",
+            Text = "Go In Game for Badwars to load :D [You are in lobby currently]",
             Duration = 10
         })
     end)
@@ -209,18 +209,18 @@ if suc and res and shared.CustomCommit == nil then
     task.spawn(function()
         pcall(function()
 			game:GetService("StarterGui"):SetCore("SendNotification", {
-				Title = "Voidware | Xeno",
+				Title = "Badwars | Xeno",
 				Text = "Your executor currently doesn't support the newest version of the script!",
 				Duration = 10,
 			})
             task.wait(0.5)
 			game:GetService("StarterGui"):SetCore("SendNotification", {
-				Title = "Voidware | Xeno",
-				Text = "For more info head over to discord.gg/voidware",
+				Title = "Badwars | Xeno",
+				Text = "For more info head over to discord.gg/badwars",
 				Duration = 10,
 			})
         end)
     end)
 end--]]
 
-loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/"..tostring(commit).."/newnightsintheforest.lua", true))()
+loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/"..tostring(commit).."/newnightsintheforest.lua", true))()

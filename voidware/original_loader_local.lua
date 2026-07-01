@@ -1,4 +1,4 @@
 -- ORIGINAL LOADER ENTRY (LOCAL VERSION)
--- This replaces: loadstring(game:HttpGet('https://files.vapevoidware.xyz/VapeVoidware/VW-Add/main/loader.lua', true))()
+-- This replaces: loadstring(game:HttpGet('https://files.vapebadwars.xyz/VapeBadwars/VW-Add/main/loader.lua', true))()
 
-loadstring(readfile('voidware/local_start.lua'))()
+loadstring(readfile('badwars/local_start.lua'))()

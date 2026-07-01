@@ -32,7 +32,7 @@ until e<=0
 return g
 end
 
-local d="https://files.vapevoidware.xyz/VapeVoidware/VWExtra/main/"
+local d="https://files.vapebadwars.xyz/VapeBadwars/VWExtra/main/"
 
 local e=(shared.UpdateLogDevMode and loadJson"VW_Update_Log.json")or(retry(function()
 return b:JSONDecode(game:HttpGet(d.."UpdateMeta.json",true))

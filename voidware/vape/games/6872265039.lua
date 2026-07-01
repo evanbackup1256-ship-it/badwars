@@ -1,5 +1,5 @@
-local VoidwareLoader = shared.VoidwareLoader or { wrap = function(_, func) return func end }
-local run = VoidwareLoader:wrap(function(func) func() end)
+local BadwarsLoader = shared.BadwarsLoader or { wrap = function(_, func) return func end }
+local run = BadwarsLoader:wrap(function(func) func() end)
 local cloneref = cloneref or function(obj) return obj end
 
 local playersService = cloneref(game:GetService('Players'))

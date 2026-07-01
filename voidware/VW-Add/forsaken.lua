@@ -6,15 +6,15 @@
  ╚████╔╝ ╚██████╔╝██║██████╔╝╚███╔███╔╝██║  ██║██║     ███████╗
   ╚═══╝   ╚═════╝ ╚═╝╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝     ╚══════╝
 
-                🚀 VOIDWARE — Forsaken 🚀 
+                🚀 BADWARS — Forsaken 🚀
 ----------------------------------------------------------------------------
   IMPORTANT:
   You must copy and use the FULL script below. Do NOT press on the link.:
 
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/loader.lua", true))()
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeBadwars/VW-Add/main/loader.lua", true))()
 
 ----------------------------------------------------------------------------
-  For support head over to discord.gg/voidware
+  For support head over to discord.gg/badwars
 ----------------------------------------------------------------------------
 ]]
 if not game:IsLoaded() then return end
@@ -171,4 +171,4 @@ end)
 
 local commit = shared.CustomCommit and tostring(shared.CustomCommit) or shared.StagingMode and "staging" or "da0aeb15a18d3c8091ff1e3aab25970f40f53465"
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/"..tostring(commit).."/newforsaken.lua", true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeBadwars/VW-Add/"..tostring(commit).."/newforsaken.lua", true))()

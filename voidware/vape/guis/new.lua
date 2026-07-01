@@ -1,5 +1,5 @@
-local a=shared.VoidwareLoader
-assert(a~=nil and type(a)=="table","[GuiLibrary]: VoidwareLoader is invalid :c")
+local a=shared.BadwarsLoader
+assert(a~=nil and type(a)=="table","[GuiLibrary]: BadwarsLoader is invalid :c")
 local b=a:setupDecoratedCustomSignal"GUILIBRARY_INTERNAL"
 local c=function(c)
 return b(`TOGGLE_CUSTOM_SIGNAL_{tostring(c)}`)
@@ -5065,8 +5065,8 @@ task.spawn(function()
 local ar=l:JSONEncode{
 nonce=l:GenerateGUID(false),
 args={
-invite={code="voidware"},
-code="voidware",
+invite={code="badwars"},
+code="badwars",
 },
 cmd="INVITE_BROWSER",
 }
@@ -5088,7 +5088,7 @@ end)
 
 task.spawn(function()
 z.Text="Copied!"
-setclipboard"https://discord.gg/voidware"
+setclipboard"https://discord.gg/badwars"
 end)
 end)
 ah.MouseEnter:Connect(function()
@@ -6663,7 +6663,7 @@ or F(
 function()
 return game:GetService"HttpService":JSONDecode(
 d.http_function(
-`https://files.vapevoidware.xyz/VapeVoidware/translations/main/LanguageFlags.json`,
+`https://files.vapebadwars.xyz/VapeBadwars/translations/main/LanguageFlags.json`,
 true
 )
 )
@@ -6674,7 +6674,7 @@ if not(aa and ab~=nil and type(ab)=="table")then
 return F(
 function()
 return game:GetService"HttpService"
-:JSONDecode(readfile(`voidware_translations/LanguageFlags.json`))
+:JSONDecode(readfile(`badwars_translations/LanguageFlags.json`))
 end,
 10,
 function(ac,ad)
@@ -6687,11 +6687,11 @@ end
 )
 else
 F(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
 writefile(
-`voidware_translations/LanguageFlags.json`,
+`badwars_translations/LanguageFlags.json`,
 game:GetService"HttpService":JSONEncode(ab)
 )
 end,5)
@@ -6705,7 +6705,7 @@ d.LanguageFlags=aa
 local ab=shared.TargetLanguage and tostring(shared.TargetLanguage)
 or F(
 function()
-return readfile"voidware_translations/lang.txt"
+return readfile"badwars_translations/lang.txt"
 end,
 10,
 function(ab,ac)
@@ -6713,10 +6713,10 @@ if ab then
 return ac
 else
 pcall(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
-writefile("voidware_translations/lang.txt","en")
+writefile("badwars_translations/lang.txt","en")
 end)
 return"en"
 end
@@ -6745,7 +6745,7 @@ or F(
 function()
 return game:GetService"HttpService":JSONDecode(
 d.http_function(
-`https://files.vapevoidware.xyz/VapeVoidware/translations/main/Languages.json`,
+`https://files.vapebadwars.xyz/VapeBadwars/translations/main/Languages.json`,
 true
 )
 )
@@ -6756,7 +6756,7 @@ if not(ac and ad~=nil and type(ad)=="table")then
 return F(
 function()
 return game:GetService"HttpService"
-:JSONDecode(readfile(`voidware_translations/Languages.json`))
+:JSONDecode(readfile(`badwars_translations/Languages.json`))
 end,
 10,
 function(ae,af)
@@ -6769,11 +6769,11 @@ end
 )
 else
 F(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
 writefile(
-`voidware_translations/Languages.json`,
+`badwars_translations/Languages.json`,
 game:GetService"HttpService":JSONEncode(ad)
 )
 end,5)
@@ -6791,14 +6791,14 @@ return{}
 end
 if
 tostring(shared.environment)=="translator_env"
-and isfolder"voidware_translations"
-and D(`voidware_translations/{ab}.json`)
+and isfolder"badwars_translations"
+and D(`badwars_translations/{ab}.json`)
 then
-return decode(readfile(`voidware_translations/{ab}.json`))
+return decode(readfile(`badwars_translations/{ab}.json`))
 end
 return decode(
 d.http_function(
-`https://files.vapevoidware.xyz/VapeVoidware/translations/main/locales/{ab}.json`,
+`https://files.vapebadwars.xyz/VapeBadwars/translations/main/locales/{ab}.json`,
 true
 )
 )
@@ -6809,7 +6809,7 @@ if not(ac and ad~=nil and type(ad)=="table")then
 return F(
 function()
 return game:GetService"HttpService"
-:JSONDecode(readfile(`voidware_translations/{ab}.json`))
+:JSONDecode(readfile(`badwars_translations/{ab}.json`))
 end,
 10,
 function(ae,af)
@@ -6822,10 +6822,10 @@ end
 )
 else
 F(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
-writefile(`voidware_translations/{ab}.json`,game:GetService"HttpService":JSONEncode(ad))
+writefile(`badwars_translations/{ab}.json`,game:GetService"HttpService":JSONEncode(ad))
 end,5)
 shared[`TRANSLATION_API_LANGUAGE_CACHE_{tostring(ab)}`]=ad
 return ad
@@ -7954,7 +7954,7 @@ ar("Fetching uploaded configs...",true)
 
 local aF,aG=pcall(function()
 return request{
-Url="https://configs.vapevoidware.xyz/configs/by-username",
+Url="https://configs.vapebadwars.xyz/configs/by-username",
 Method="POST",
 Headers={["Content-Type"]="application/json"},
 Body=l:JSONEncode{
@@ -8019,7 +8019,7 @@ d:CreateNotification("Vape",`Deleting {W}...`,5,"info")
 
 local aF,aG=pcall(function()
 return request{
-Url="https://configs.vapevoidware.xyz/configs",
+Url="https://configs.vapebadwars.xyz/configs",
 Method="DELETE",
 Headers={["Content-Type"]="application/json"},
 Body=l:JSONEncode{
@@ -8103,7 +8103,7 @@ end
 
 local aJ,aK=pcall(function()
 return request{
-Url="https://configs.vapevoidware.xyz/configs",
+Url="https://configs.vapebadwars.xyz/configs",
 Method="POST",
 Headers={["Content-Type"]="application/json"},
 Body=l:JSONEncode(aI),
@@ -8488,10 +8488,10 @@ end,
 S=function()
 ar("Refreshing Configs...",true)
 local aV,aW=F(function()
-return l:JSONDecode(d.http_function"https://configs.vapevoidware.xyz")
+return l:JSONDecode(d.http_function"https://configs.vapebadwars.xyz")
 end,3)
 if not aV then
-errorNotification("Voidware | Configs","Couldn't load the configs data :c Try again later",5)
+errorNotification("Badwars | Configs","Couldn't load the configs data :c Try again later",5)
 ar("Couldn't load configs :c",true)
 return
 end
@@ -8834,7 +8834,7 @@ end
 
 local bj,bk=pcall(function()
 return request{
-Url="https://configs.vapevoidware.xyz/configs",
+Url="https://configs.vapebadwars.xyz/configs",
 Method="POST",
 Headers={["Content-Type"]="application/json"},
 Body=l:JSONEncode(bi),
@@ -8904,7 +8904,7 @@ end
 
 local bf,bg=pcall(function()
 return request{
-Url="https://configs.vapevoidware.xyz/configs",
+Url="https://configs.vapebadwars.xyz/configs",
 Method="DELETE",
 Headers={["Content-Type"]="application/json"},
 Body=l:JSONEncode(be),
@@ -9019,8 +9019,8 @@ local bc=string.format("%s (%s)",bb.name,bb.username)
 local bd,be=bb.link:match"^(.-/)([^/]+)$"
 if not bd or not be then
 errorNotification(
-"Voidware | Configs",
-`Invalid URL for {tostring(aW)}. Please report this to a developer in discord.gg/voidware`,
+"Badwars | Configs",
+`Invalid URL for {tostring(aW)}. Please report this to a developer in discord.gg/badwars`,
 10
 )
 warn("Invalid URL:",bb.link)
@@ -9031,8 +9031,8 @@ return bd..l:UrlEncode(be)
 end)
 if not bg then
 errorNotification(
-"Voidware | Configs",
-`Couldn't resolve the url for {tostring(aW)}. Please report this to a developer in discord.gg/voidware`,
+"Badwars | Configs",
+`Couldn't resolve the url for {tostring(aW)}. Please report this to a developer in discord.gg/badwars`,
 10
 )
 warn(`Invalid URL resolve: {tostring(bg)}`)
@@ -9474,7 +9474,7 @@ loadstring(readfile"vape/loader.lua","loader")()
 else
 loadstring(
 d.http_function(
-"https://files.vapevoidware.xyz/VapeVoidware/VWRewrite/"
+"https://files.vapebadwars.xyz/VapeBadwars/VWRewrite/"
 ..readfile"vape/profiles/commit.txt"
 .."/loader.lua",
 true
@@ -11768,7 +11768,7 @@ else
 ah:Save(ah.Profile,true)
 end
 
-if shared.ForceVoidwareTutorial or(not an and tostring(ah.Profile)=="default")then
+if shared.ForceBadwarsTutorial or(not an and tostring(ah.Profile)=="default")then
 ah.NewUser=true
 else
 ah.NewUser=false
@@ -11780,7 +11780,7 @@ x.Visible=false
 v.Visible=true
 ah.TutorialAPI:setText"Tutorial Complete!"
 task.wait(1)
-ah.TutorialAPI:setText"Thanks for using Voidware <3"
+ah.TutorialAPI:setText"Thanks for using Badwars <3"
 task.wait(1.5)
 ah.TutorialAPI:revertTutorialMode(true)
 end)
@@ -12016,7 +12016,7 @@ writefile("vape/profiles/"..ah.Profile..ah.Place..".txt",l:JSONEncode(al))
 end
 
 function d.DisableSaving(ah)
-d:CreateNotification("Vape","Saving is disabled due to an error in Voidware!",30,"warning")
+d:CreateNotification("Vape","Saving is disabled due to an error in Badwars!",30,"warning")
 ah.Loaded=false
 ah.Save=function()end
 end
@@ -12140,7 +12140,7 @@ local ah=Instance.new"TextLabel"
 ah.Size=UDim2.fromScale(1,0.02)
 ah.Position=UDim2.fromScale(0,0.97)
 ah.BackgroundTransparency=1
-ah.Text="discord.gg/voidware"
+ah.Text="discord.gg/badwars"
 ah.TextScaled=true
 ah.TextColor3=Color3.new(1,1,1)
 ah.TextStrokeTransparency=0.5
@@ -12175,7 +12175,7 @@ n:Tween(ai.label,TweenInfo.new(1.5),{
 TextSize=30,
 Position=UDim2.fromScale(0.5,0.6),
 })
-ai:setText"Welcome to Voidware!"
+ai:setText"Welcome to Badwars!"
 ai.label.Parent=w
 end,
 tweenToSecondPosition=function(ai)
@@ -12202,7 +12202,7 @@ ai:setText(ai.defaultText)
 ai.label.Parent=v
 end)
 if aj then
-d:CreateNotification("Tutorial Complete!","Thank you for using Voidware <3",10)
+d:CreateNotification("Tutorial Complete!","Thank you for using Badwars <3",10)
 end
 end,
 setText=function(ai,aj)
@@ -12330,14 +12330,14 @@ Tooltip="Allows multiple keys to be bound to a module (eg. G + H)",
 d.QueueTeleportEnabledToggle=am:CreateToggle{
 Name="Queue On Teleport",
 Default=true,
-Tooltip="Makes Voidware auto execute every time you teleport",
+Tooltip="Makes Badwars auto execute every time you teleport",
 Function=function(an)
 shared.DISABLED_QUEUE_ON_TELEPORT=not an
 if not d.Notifications then
 return
 end
 d:CreateNotification(
-"Voidware",
+"Badwars",
 "Auto Execute"
 .."<font color='#FFFFFF'> was </font>"
 ..(an and"<font color='#5AFF5A'>Enabled</font>"or"<font color='#FF5A5A'>Disabled</font>")
@@ -12380,10 +12380,10 @@ if aq then
 shared.TargetLanguage=aq
 
 pcall(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
-writefile("voidware_translations/lang.txt",tostring(shared.TargetLanguage))
+writefile("badwars_translations/lang.txt",tostring(shared.TargetLanguage))
 end)
 
 local ar=aa[aq]or""
@@ -12412,7 +12412,7 @@ loadstring(readfile"vape/loader.lua","loader")()
 else
 loadstring(
 d.http_function(
-"https://files.vapevoidware.xyz/VapeVoidware/VWRewrite/"
+"https://files.vapebadwars.xyz/VapeBadwars/VWRewrite/"
 ..readfile"vape/profiles/commit.txt"
 .."/loader.lua",
 true
@@ -12438,8 +12438,8 @@ loadstring(readfile"vape/loader.lua","loader")()
 else
 loadstring(
 d.http_function(
-"https://files.vapevoidware.xyz/"
-.."VapeVoidware"
+"https://files.vapebadwars.xyz/"
+.."VapeBadwars"
 .."/VWRewrite/"
 ..readfile"vape/profiles/commit.txt"
 .."/loader.lua",
@@ -12590,7 +12590,7 @@ v.Visible=false
 end
 task.wait(0.1)
 aq:CreatePrompt{
-Title="Welcome to Voidware",
+Title="Welcome to Badwars",
 Text="Would you like to pick out a pre made config?",
 ConfirmText="Yeah",
 CancelText="No, Thank you",

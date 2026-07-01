@@ -1,5 +1,5 @@
 --[[
-VOIDWARE LOCAL - NOW USING FULLY DEOBFUSCATED CLEAN CODE
+BADWARS LOCAL - NOW USING FULLY DEOBFUSCATED CLEAN CODE
 =======================================================
 All game scripts (Universal, Bedwars, Ink, Forsaken, 99 Nights) now work using clean public VapeV4 source.
 
@@ -8,7 +8,7 @@ Full deobfuscation: Replaced Luraph-obfuscated main code with clean editable sou
 Dev: usingINales enabled.
 
 Run:
-loadstring(readfile("voidware/local_start.lua"))()
+loadstring(readfile("badwars/local_start.lua"))()
 
 See clean_local_start.lua for pure clean mode.
 ]]
@@ -21,4 +21,4 @@ getgenv().VapeDeveloper = true
 
 -- Load the clean deobfuscated version
 print("[Local] Loading fully deobfuscated clean version for all games...")
-loadstring(readfile("voidware/clean_local_start.lua"))()
+loadstring(readfile("badwars/clean_local_start.lua"))()

@@ -7,15 +7,15 @@ local Players = game:GetService("Players")
  ╚████╔╝ ╚██████╔╝██║██████╔╝╚███╔███╔╝██║  ██║██║     ███████╗
   ╚═══╝   ╚═════╝ ╚═╝╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝     ╚══════╝
 
-                🚀 VOIDWARE — Ink Game 🚀
+                🚀 BADWARS — Ink Game 🚀
 ----------------------------------------------------------------------------
   IMPORTANT:
   You must copy and use the FULL script below. Do NOT press on the link.:
 
-  loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/main/loader.lua", true))()
+  loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/main/loader.lua", true))()
 
 ----------------------------------------------------------------------------
-  For support head over to discord.gg/voidware
+  For support head over to discord.gg/badwars
 ----------------------------------------------------------------------------
 ]]
 if not game:IsLoaded() then return end
@@ -195,7 +195,7 @@ end
     end)
 end)--]]
 
---game:GetService("Players").LocalPlayer:Kick("Voidware Is Temporarily Down. Please wait while we bring it back discord.gg/voidware :c")
+--game:GetService("Players").LocalPlayer:Kick("Badwars Is Temporarily Down. Please wait while we bring it back discord.gg/badwars :c")
 local IS_DOWN = true
 
 local commit = shared.CustomCommit and tostring(shared.CustomCommit) or shared.StagingMode and "staging" or "b6f4a09e1e204ae4b9af7d2bb46b3150c2e0c6d9"
@@ -211,11 +211,11 @@ if IS_DOWN and not shared.BYPASS_VW_PROTECTION then
 			end
 			shared.BYPASS_VW_PROTECTION = true
 			shared.VW_PUBLIC_TESTING_MODE = true
-			loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/main/loader.lua", true))()
+			loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/main/loader.lua", true))()
 		end
 		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = "Voidware Anti Ban",
-			Text = "Voidware is currently unstable and should NOT be used on main accounts! Are you sure you want to use it?",
+			Title = "Badwars Anti Ban",
+			Text = "Badwars is currently unstable and should NOT be used on main accounts! Are you sure you want to use it?",
 			Button1 = "Yes, Im sure",
 			Button2 = "Nevermind",
 			Duration = 15,
@@ -229,11 +229,11 @@ if IS_DOWN and not shared.BYPASS_VW_PROTECTION then
         if text ~= "Execute Public Beta Version" then return end
         shared.BYPASS_VW_PROTECTION = true
         shared.VW_PUBLIC_TESTING_MODE = true
-        loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/main/loader.lua", true))()
+        loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/main/loader.lua", true))()
     end
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Voidware Public Testing",
-        Text = "Voidware is currently down, but you can try the public beta version before it officially gets released :D",
+        Title = "Badwars Public Testing",
+        Text = "Badwars is currently down, but you can try the public beta version before it officially gets released :D",
         Button1 = "Execute Public Beta Version",
         Button2 = "Nevermind",
         Duration = 15,
@@ -241,14 +241,14 @@ if IS_DOWN and not shared.BYPASS_VW_PROTECTION then
     })
 
     --[[game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Voidware | Ink Game",
-        Text = "Voidware is currently down! Please wait until we patch the anticheat once again :c",
+        Title = "Badwars | Ink Game",
+        Text = "Badwars is currently down! Please wait until we patch the anticheat once again :c",
         Duration = 10
     })
 
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Voidware | Discord",
-        Text = "Join discord.gg/voidware for updates",
+        Title = "Badwars | Discord",
+        Text = "Join discord.gg/badwars for updates",
         Duration = 10
     })--]]
 
@@ -270,8 +270,8 @@ else
 
     --[[pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Voidware | Ink Game | Announcment",
-            Text = "Warning! After Ink Game updates voidware might become detected so be careful until we fully verify that vw works!",
+            Title = "Badwars | Ink Game | Announcment",
+            Text = "Warning! After Ink Game updates badwars might become detected so be careful until we fully verify that vw works!",
             Duration = 10
         })
     end)--]]
@@ -282,7 +282,7 @@ else
             if text ~= "Execute Public Beta Version" then return end
             shared.AcceptedRisksOfBan = true
             shared.TestingMode = true
-            loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/main/loader.lua", true))()
+            loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/main/loader.lua", true))()
         end
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Executor Status",
@@ -294,24 +294,24 @@ else
         })
         --[[if not shared.CheatEngineMode and not verified then
             game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Voidware | Ink Game",
+                Title = "Badwars | Ink Game",
                 Text = "Warning! Your executor hasn't been tested yet if it's going to be able to bypass the anticheat!",
                 Duration = 10
             })
             game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Voidware | Currently Tested Executors",
+                Title = "Badwars | Currently Tested Executors",
                 Text = "The following executors have been tested as fully working: " .. table.concat(verified_executors, ", "),
                 Duration = 10
             })
         else
             game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Voidware | Ink Game",
+                Title = "Badwars | Ink Game",
                 Text = "Warning! Your executor might not support all functions needed to patch the anticheat!",
                 Duration = 10
             })
         end--]]
         --[[game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Voidware | Ink Game",
+            Title = "Badwars | Ink Game",
             Text = "If you understand the risk of getting banned by using your executor, execute the script again.",
             Duration = 10
         })--]]
@@ -321,13 +321,13 @@ else
 
     --[[if not hookmetamethod then
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Voidware - Anticheat Test | Ink Game",
+            Title = "Badwars - Anticheat Test | Ink Game",
             Text = "Your executor "..(hookmetamethod ~= nil and "supports ✅" or "doesn't support ❌").." the anticheat patch!",
             Duration = 10
         })
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Voidware - Anticheat Test | Ink Game",
-            Text = "Please use a different executor! For support: discord.gg/voidware",
+            Title = "Badwars - Anticheat Test | Ink Game",
+            Text = "Please use a different executor! For support: discord.gg/badwars",
             Duration = 10
         })
         return
@@ -335,8 +335,8 @@ else
 
     --[[pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Voidware | Announcment",
-            Text = "Warning: Rebelling with Voidware may lead to bans. Don't join Rebels and start a new game when one starts. Sorry for the inconvenience! We are working on it",
+            Title = "Badwars | Announcment",
+            Text = "Warning: Rebelling with Badwars may lead to bans. Don't join Rebels and start a new game when one starts. Sorry for the inconvenience! We are working on it",
             Duration = 8
         })
     end)--]]
@@ -344,11 +344,11 @@ else
     if shared.VW_PUBLIC_TESTING_MODE then
         local RESULT_HANDLER = Instance.new("BindableFunction")
         RESULT_HANDLER.OnInvoke = function(text : string)
-            loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/"..tostring(commit).."/something.lua", true))()
+            loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/"..tostring(commit).."/something.lua", true))()
         end
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Voidware Public Testing",
-            Text = "Make sure to report any bugs in discord.gg/voidware!",
+            Title = "Badwars Public Testing",
+            Text = "Make sure to report any bugs in discord.gg/badwars!",
             Button1 = "Copy Discord Link",
             Duration = 15,
             Callback = RESULT_HANDLER
@@ -358,9 +358,9 @@ else
     task.spawn(function()
         pcall(function()
             if not hookmetamethod then return end
-            --loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/"..tostring(commit).."/inkgamereducer.lua", true))()
+            --loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/"..tostring(commit).."/inkgamereducer.lua", true))()
         end)
     end)
 
-    loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/"..tostring(commit).."/newinkgame.lua", true))()
+    loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/"..tostring(commit).."/newinkgame.lua", true))()
 end

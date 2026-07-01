@@ -6,20 +6,20 @@
  ╚████╔╝ ╚██████╔╝██║██████╔╝╚███╔███╔╝██║  ██║██║     ███████╗
   ╚═══╝   ╚═════╝ ╚═╝╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝     ╚══════╝
 
-                🚀 VOIDWARE — Loader 🚀
+                🚀 BADWARS — Loader 🚀
 ----------------------------------------------------------------------------
   IMPORTANT:
   You must copy and use the FULL script below. Do NOT press on the link.:
 
-  loadstring(game:HttpGet("https://files.vapevoidware.xyz/VapeVoidware/VW-Add/main/loader.lua", true))()
+  loadstring(game:HttpGet("https://files.vapebadwars.xyz/VapeBadwars/VW-Add/main/loader.lua", true))()
 
 ----------------------------------------------------------------------------
-  For support head over to discord.gg/voidware
+  For support head over to discord.gg/badwars
 ----------------------------------------------------------------------------
 ]]
 
 -- DEBUG MODE: Set to true to enable detailed debugging output
-local DEBUG_MODE = shared.VoidwareLoadingDebug or false
+local DEBUG_MODE = shared.BadwarsLoadingDebug or false
 
 -- Debug helper function
 local function debugLog(...)
@@ -29,10 +29,10 @@ local function debugLog(...)
 		warn("[DEBUG] " .. msg)
 		-- Also save to file if possible
 		pcall(function()
-			if not isfolder("voidware_debug") then
-				makefolder("voidware_debug")
+			if not isfolder("badwars_debug") then
+				makefolder("badwars_debug")
 			end
-			local debugFile = "voidware_debug/debug_log.txt"
+			local debugFile = "badwars_debug/debug_log.txt"
 			local current = isfile(debugFile) and readfile(debugFile) or ""
 			local timestamp = os.date("%Y-%m-%d %H:%M:%S")
 			writefile(debugFile, current .. string.format("[%s] %s\n", timestamp, msg))
@@ -50,14 +50,14 @@ local meta = {
 	[0] = {
 		title = "Universal",
 		dev = "vwdev/vwrw.lua",
-		script = "https://files.vapevoidware.xyz/VapeVoidware/VWRewrite/" .. (shared.CustomCommit and tostring(
+		script = "https://files.vapebadwars.xyz/VapeBadwars/VWRewrite/" .. (shared.CustomCommit and tostring(
 			shared.CustomCommit
 		) or "main") .. "/NewMainScript.lua",
 	},
 	[2619619496] = {
 		title = "Bedwars",
 		dev = "vwdev/vwrw.lua",
-		script = "https://files.vapevoidware.xyz/VapeVoidware/VWRewrite/" .. (shared.CustomCommit and tostring(
+		script = "https://files.vapebadwars.xyz/VapeBadwars/VWRewrite/" .. (shared.CustomCommit and tostring(
 			shared.CustomCommit
 		) or "main") .. "/NewMainScript.lua",
 	},
@@ -65,21 +65,21 @@ local meta = {
 		no = true,
 		title = "Ink Game",
 		dev = "vwdev/inkgame.lua",
-		script = "https://files.vapevoidware.xyz/VapeVoidware/VW-Add/" .. (shared.CustomCommit and tostring(
+		script = "https://files.vapebadwars.xyz/VapeBadwars/VW-Add/" .. (shared.CustomCommit and tostring(
 			shared.CustomCommit
 		) or "main") .. "/inkgame.lua",
 	},
 	[6331902150] = {
 		title = "Forsaken",
 		dev = "vwdev/forsaken.lua",
-		script = "https://files.vapevoidware.xyz/VapeVoidware/VW-Add/" .. (shared.CustomCommit and tostring(
+		script = "https://files.vapebadwars.xyz/VapeBadwars/VW-Add/" .. (shared.CustomCommit and tostring(
 			shared.CustomCommit
 		) or "main") .. "/forsaken.lua",
 	},
 	[7326934954] = {
 		title = "99 Nights In The Forest",
 		dev = "vwdev/nightsintheforest.lua",
-		script = "https://files.vapevoidware.xyz/VapeVoidware/VW-Add/" .. (shared.CustomCommit and tostring(
+		script = "https://files.vapebadwars.xyz/VapeBadwars/VW-Add/" .. (shared.CustomCommit and tostring(
 			shared.CustomCommit
 		) or "main") .. "/nightsintheforest.lua",
 	},
@@ -153,7 +153,7 @@ loaderFile = loaderFile
 		function()
 			debugLog("Fetching loader from URL...")
 			local url =
-				"https://files.vapevoidware.xyz/VapeVoidware/VWExtra/3ec1c4abde539b3587265577e5c3dfe94d2f1b30/libraries/loader.lua"
+				"https://files.vapebadwars.xyz/VapeBadwars/VWExtra/3ec1c4abde539b3587265577e5c3dfe94d2f1b30/libraries/loader.lua"
 			debugLog("Loader URL: " .. url)
 
 			local success, data = pcall(function()
@@ -172,11 +172,11 @@ loaderFile = loaderFile
 			if data ~= nil and data ~= "nil" then
 				debugLog("Data is valid, writing to file...")
 				timedFunction(function()
-					if not isfolder("voidware_libraries") then
-						makefolder("voidware_libraries")
-						debugLog("Created voidware_libraries folder")
+					if not isfolder("badwars_libraries") then
+						makefolder("badwars_libraries")
+						debugLog("Created badwars_libraries folder")
 					end
-					writefile("voidware_libraries/loader.lua", data)
+					writefile("badwars_libraries/loader.lua", data)
 					debugLog("Wrote loader.lua file")
 				end, 1)
 				debugLog("Loading loader string...")
@@ -200,17 +200,17 @@ loaderFile = loaderFile
 				or timedFunction(
 					function()
 						debugLog("Attempting fallback: loading from file...")
-						if not isfolder("voidware_libraries") then
-							debugLog("voidware_libraries folder doesn't exist, creating...")
-							makefolder("voidware_libraries")
+						if not isfolder("badwars_libraries") then
+							debugLog("badwars_libraries folder doesn't exist, creating...")
+							makefolder("badwars_libraries")
 						end
-						if not isfile("voidware_libraries/loader.lua") then
+						if not isfile("badwars_libraries/loader.lua") then
 							debugLog("ERROR: loader file missing!")
 							error("loader file missing!")
 							return
 						end
 						debugLog("Reading loader.lua from file...")
-						local fileContent = readfile("voidware_libraries/loader.lua")
+						local fileContent = readfile("badwars_libraries/loader.lua")
 						debugLog("File loaded, length: " .. tostring(string.len(fileContent)))
 						debugLog("File preview: " .. string.sub(fileContent, 1, 200) .. "...")
 						local loaded = loadstring(fileContent)
@@ -244,10 +244,10 @@ loaderFile.Colors.Gradient = {
 	ColorSequenceKeypoint.new(1, Color3.fromHex("#ff477e")),
 }
 
-local stitle = "Voidware"
+local stitle = "Badwars"
 local sicon = nil
 pcall(function()
-	if tostring(shared.VOIDWARE_SCRIPT_TYPE) == "99_NIGHTS_7Z" then
+	if tostring(shared.BADWARS_SCRIPT_TYPE) == "99_NIGHTS_7Z" then
 		loaderFile.Colors.Gradient = {
 			ColorSequenceKeypoint.new(0, Color3.fromHex("#e879f9")),
 			ColorSequenceKeypoint.new(0.5, Color3.fromHex("#c026d3")),
@@ -322,10 +322,10 @@ else
 		end
 
 		if scriptContent == nil or scriptContent == "nil" then
-			loader:Abort("Voidware Unavailable In Your Region! \n Please use VPN and re execute!")
+			loader:Abort("Badwars Unavailable In Your Region! \n Please use VPN and re execute!")
 			game:GetService("StarterGui"):SetCore("SendNotification", {
-				Title = "Voidware Unavailable In Your Region",
-				Text = "Please use VPN and re execute Voidware!",
+				Title = "Badwars Unavailable In Your Region",
+				Text = "Please use VPN and re execute Badwars!",
 				Duration = 15,
 			})
 			return
@@ -354,7 +354,7 @@ else
 			end
 			game:GetService("StarterGui"):SetCore("SendNotification", {
 				Title = stitle .. " Loading Error",
-				Text = "Please report this issue to erchodev#0 \n or in discord.gg/voidware",
+				Text = "Please report this issue to erchodev#0 \n or in discord.gg/badwars",
 				Duration = 15,
 			})
 		end)
@@ -377,7 +377,7 @@ else
 				end
 				game:GetService("StarterGui"):SetCore("SendNotification", {
 					Title = stitle .. " Main Error",
-					Text = "Please report this issue to erchodev#0 \n or in discord.gg/voidware",
+					Text = "Please report this issue to erchodev#0 \n or in discord.gg/badwars",
 					Duration = 15,
 				})
 			end)

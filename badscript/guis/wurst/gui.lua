@@ -90,11 +90,6 @@ end
 getcustomasset = not inputService.TouchEnabled and getcustomasset and function(path)
 	local mapped = getcustomassets[path]
 	if mapped and mapped ~= '' then
-		if not isfile(path) then
-			task.spawn(function()
-				pcall(downloadFile, path, readfile)
-			end)
-		end
 		return mapped
 	end
 	return downloadFile(path, getcustomasset)

@@ -544,7 +544,7 @@ local function downloadFile(path, func)
 			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/b0898d9c3fb3f666c9303490a3fe9afbb75a84f9/' .. path:gsub(' ', '%%20'), true)
 		end)
 		if not suc or res == '404: Not Found' then
-			error(res)
+			return getcustomassets[path] or ''
 		end
 		if path:find('.lua') then
 			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
@@ -557,11 +557,6 @@ end
 getcustomasset = not inputService.TouchEnabled and assetfunction and function(path)
 	local mapped = getcustomassets[path]
 	if mapped and mapped ~= '' then
-		if not isfile(path) then
-			task.spawn(function()
-				pcall(downloadFile, path, readfile)
-			end)
-		end
 		return mapped
 	end
 	return downloadFile(path, assetfunction)

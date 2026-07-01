@@ -48,7 +48,7 @@ getgenv().global = setmetatable({}, {
 		})
 	end,
 	__tostring = function()
-		return "VOIDWARE_INTERNAL_GLOBAL_ENV"
+		return "BADWARS_INTERNAL_GLOBAL_ENV"
 	end,
 })
 
@@ -170,7 +170,7 @@ if CEMode then
 	else
 		getgenv().setthreadidentity = function() end
 	end
-	warn(`[CEMode]: Voidware Cheat Engine mode overwrite done`)
+	warn(`[CEMode]: Badwars Cheat Engine mode overwrite done`)
 end
 
 shared.CheatEngineMode = CEMode
@@ -203,16 +203,16 @@ local smf = function(id, core)
 					return
 				end
 				pcall(function()
-					setclipboard("discord.gg/voidware")
+					setclipboard("discord.gg/badwars")
 					game:GetService("StarterGui"):SetCore("SendNotification", {
-						Title = "Voidware Bedwars",
-						Text = "discord.gg/voidware copied to your clipboard!",
+						Title = "Badwars Bedwars",
+						Text = "discord.gg/badwars copied to your clipboard!",
 						Duration = 5,
 					})
 				end)
 			end
 			game:GetService("StarterGui"):SetCore("SendNotification", {
-				Title = "Voidware Bedwars",
+				Title = "Badwars Bedwars",
 				Text = "Your executor's file system doesn't work! Try reinstalling it or join the discord server for support :c",
 				Button1 = "Join Discord Server",
 				Button2 = "Ok",
@@ -256,7 +256,7 @@ end
 local TESTING_COMMIT = "master"
 local PRODUCTION_COMMIT = "2ea6cad224d16b455a1cee93912251e94806493f"
 local commit = shared.CustomCommit or (shared.TestingMode or shared.StagingMode) and TESTING_COMMIT or PRODUCTION_COMMIT
-shared.VOIDWARE_SCRIPT_TYPE = "BEDWARS_REWRITE_NEW"
+shared.BADWARS_SCRIPT_TYPE = "BEDWARS_REWRITE_NEW"
 shared.META_COMMIT = "a109a0a4441e42d497fa7e3cdc04d770dd853a04"
 if (isfile("vape/profiles/commit.txt") and readfile("vape/profiles/commit.txt") or "") ~= commit then
 	wipeFolder("vape")
@@ -298,11 +298,11 @@ local SAVE_BLACKLISTED = setmetatable({
 
 local function downloadFile(path, func)
 	if not isfile(path) or SAVE_BLACKLISTED(path) then
-		if shared.VoidwareBedwarsLoadingDebug then
+		if shared.BadwarsBedwarsLoadingDebug then
 			warn(
 				"downloadFile",
 				path,
-				"https://files.vapevoidware.xyz/VapeVoidware/VWRewrite/"
+				"https://files.vapebadwars.xyz/VapeBadwars/VWRewrite/"
 					.. commit
 					.. "/"
 					.. select(1, path:gsub("vape/", ""))
@@ -310,7 +310,7 @@ local function downloadFile(path, func)
 		end
 		local suc, res = pcall(function()
 			return http_function(
-				"https://files.vapevoidware.xyz/VapeVoidware/VWRewrite/"
+				"https://files.vapebadwars.xyz/VapeBadwars/VWRewrite/"
 					.. commit
 					.. "/"
 					.. select(1, path:gsub("vape/", "")),
@@ -329,14 +329,14 @@ local function downloadFile(path, func)
 			return res
 		end
 		if res == nil then
-			error("Voidware Unavailable In Your Region. Please use VPN and re execute!")
+			error("Badwars Unavailable In Your Region. Please use VPN and re execute!")
 			return
 		end
 		local suc, err = pcall(function()
 			writefile(path, res)
 		end)
 		if not suc then
-			if shared.VoidwareBedwarsLoadingDebug then
+			if shared.BadwarsBedwarsLoadingDebug then
 				warn(`Failure Saving {tostring(path)} locally: {tostring(err)} \n Contents: {tostring(res)}`)
 			end
 			return res
@@ -356,7 +356,7 @@ getgenv().pload = function(name, id, found)
 	if name:find(".lua") or name:find(".json") then
 		part = ""
 	end
-	if shared.VoidwareBedwarsObfuscationDebug and shared.VoidDev then
+	if shared.BadwarsBedwarsObfuscationDebug and shared.VoidDev then
 		if name:find("/") then
 			local parts = name:split("/")
 			local last = parts[#parts]
@@ -379,7 +379,7 @@ getgenv().pload = function(name, id, found)
 			end
 		end
 	end
-	if shared.VoidwareBedwarsLoadingDebug then
+	if shared.BadwarsBedwarsLoadingDebug then
 		print(`vape/{name}{part}`)
 	end
 	local suc, download = pcall(function()
@@ -419,7 +419,7 @@ getgenv().pload = function(name, id, found)
 		end
 		error(`Failure Loading {tostring(id or name)} [3]`)
 	end
-	if shared.VoidwareBedwarsLoadingDebug then
+	if shared.BadwarsBedwarsLoadingDebug then
 		print(name, suc, res)
 	end
 	return suc and res

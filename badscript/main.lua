@@ -11,9 +11,13 @@ pcall(function()
 end)
 
 local Bad
-local g = getgenv
-if type(g) == 'function' then g = g() end
-local oldLoadstring = (g and g.loadstring) or function(...) error("loadstring not available") end
+local oldLoadstring
+pcall(function()
+	local g = getgenv
+	if type(g) == 'function' then g = g() end
+	oldLoadstring = (g and g.loadstring) or loadstring
+end)
+if not oldLoadstring then oldLoadstring = function(...) error("loadstring not available in executor") end end
 local loadstring = function(...)
 	local realLoad = oldLoadstring or function() return nil, "loadstring not available" end
 	local res, err = realLoad(...)

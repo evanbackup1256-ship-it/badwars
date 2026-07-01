@@ -26,7 +26,13 @@ local function safeHttpGet(inst, url, nocache)
 end
 HttpGet = safeHttpGet
 
-local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring = (g and g.loadstring) or function(s) error("loadstring not available in executor") end
+local _loadstring
+pcall(function()
+	local g = getgenv
+	if type(g) == 'function' then g = g() end
+	_loadstring = (g and g.loadstring) or loadstring
+end)
+if not _loadstring then _loadstring = function(s) error("loadstring not available in executor") end end
 local function downloadFile(path, func)
 	if not HttpGet or not game then
 		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))

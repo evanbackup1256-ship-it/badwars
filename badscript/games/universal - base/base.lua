@@ -8,11 +8,11 @@ local function safeHttpGet(inst, url, nocache)
 	return httpService:GetAsync(url, nocache)
 end
 local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring = (g and g.loadstring) or function(s) error("loadstring not available in executor") end
-local _loadstring = (getgenv and getgenv().loadstring) or loadstring or function(s) error("loadstring not available in executor") end
 local loadstring = function(...)
 	local res, err = _loadstring(...)
-	if err and Bad then
-		Bad:CreateNotification('BadWars', 'Failed to load : '..err, 30, 'alert')
+	local bad = shared and shared.Bad
+	if err and bad and type(bad.CreateNotification) == 'function' then
+		bad:CreateNotification('BadWars', 'Failed to load : '..tostring(err), 30, 'alert')
 	end
 	return res
 end

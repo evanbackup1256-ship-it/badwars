@@ -153,20 +153,28 @@ shared.Bad = Bad
 
 if not shared.BadIndependent then
 	local uniCode = downloadFile('badscript/games/universal - base/base.lua')
-	local uni = uniCode and loadstring(uniCode, 'universal')
+	local uni, uniErr
+	if uniCode then
+		uni, uniErr = loadstring(uniCode, 'universal')
+	end
 	if uni then 
 		local ok, err = pcall(uni)
 		if not ok and AddLog then AddLog('Error', 'Universal load failed: ' .. tostring(err), debug.traceback()) end
 	else 
-		warn("Failed to load universal") 
+		local msg = 'Failed to load universal' .. (uniErr and (': ' .. tostring(uniErr)) or '')
+		warn(msg)
+		if AddLog then AddLog('Error', msg, debug.traceback()) end
 	end
 	if isfile('badscript/games/'..game.PlaceId..'.lua') then
 		local modCode = readfile('badscript/games/'..game.PlaceId..'.lua')
-		local mod = modCode and loadstring(modCode, tostring(game.PlaceId))
+		local mod, modErr
+		if modCode then
+			mod, modErr = loadstring(modCode, tostring(game.PlaceId))
+		end
 		if mod then 
 			local ok, err = pcall(mod, ...)
 			if not ok and AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
-		else warn("Failed to load game module") end
+		else warn('Failed to load game module' .. (modErr and (': ' .. tostring(modErr)) or '')) end
 	else
 		if not shared.BadDeveloper then
 			local suc, res = pcall(function()
@@ -174,11 +182,14 @@ if not shared.BadIndependent then
 			end)
 			if suc and res ~= '404: Not Found' then
 				local modCode = downloadFile('badscript/games/'..game.PlaceId..'.lua')
-				local mod = modCode and loadstring(modCode, tostring(game.PlaceId))
+				local mod, modErr
+				if modCode then
+					mod, modErr = loadstring(modCode, tostring(game.PlaceId))
+				end
 				if mod then 
 					local ok, err = pcall(mod, ...)
 					if not ok and AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
-				else warn("Failed to load game module") end
+				else warn('Failed to load game module' .. (modErr and (': ' .. tostring(modErr)) or '')) end
 			end
 		end
 	end

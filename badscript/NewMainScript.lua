@@ -71,6 +71,17 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
+local cacheVersion = 'badwars-main-syntax-fix-2026-06-30-2'
+local cacheVersionPath = 'badscript/profiles/cache-version.txt'
+if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
+	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end
+	if isfile('badscript/loader.lua') then delfile('badscript/loader.lua') end
+	wipeFolder('badscript/games')
+	wipeFolder('badscript/guis')
+	wipeFolder('badscript/libraries')
+	writefile(cacheVersionPath, cacheVersion)
+end
+
 if not shared.BadDeveloper then
 	local _, subbed = pcall(function()
 		return safeHttpGet(game, 'https://github.com/evanbackup1256-ship-it/badwars')

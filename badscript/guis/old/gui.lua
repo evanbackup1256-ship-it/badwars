@@ -245,7 +245,7 @@ end
 
 getcustomasset = not inputService.TouchEnabled and assetfunction and function(path)
 	local mapped = getcustomassets[path]
-	if mapped and mapped ~= '' then
+	if mapped ~= nil then
 		return mapped
 	end
 	return downloadFile(path, assetfunction)

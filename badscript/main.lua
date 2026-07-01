@@ -13,9 +13,10 @@ end)
 local Bad
 local g = getgenv
 if type(g) == 'function' then g = g() end
-local oldLoadstring = (g and g.loadstring) or loadstring or function(...) error("loadstring not available") end
+local oldLoadstring = (g and g.loadstring) or function(...) error("loadstring not available") end
 local loadstring = function(...)
-	local res, err = oldLoadstring(...)
+	local realLoad = oldLoadstring or function() return nil, "loadstring not available" end
+	local res, err = realLoad(...)
 	if err and Bad then
 		Bad:CreateNotification('BadWars', 'Failed to load : '..err, 30, 'alert')
 	end
@@ -158,6 +159,7 @@ else
 	Bad.Init = finishLoading
 	return Bad
 end
+
 
 
 

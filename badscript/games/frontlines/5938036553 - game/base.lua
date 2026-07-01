@@ -1,4 +1,5 @@
 local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring = (g and g.loadstring) or function(s) error("loadstring not available in executor") end
+local _loadstring = (getgenv and getgenv().loadstring) or loadstring or function(s) error("loadstring not available in executor") end
 local loadstring = function(...)
 	local res, err = _loadstring(...)
 	if err and Bad then
@@ -406,6 +407,9 @@ entitylib.start()
 for i, v in {'Reach', 'Health', 'TriggerBot', 'AntiFall', 'AntiRagdoll', 'Invisible', 'Disabler', 'Freecam', 'Parkour', 'HitBoxes', 'SafeWalk', 'Spider', 'Swim', 'GamingChair', 'TargetStrafe', 'Timer', 'MurderMystery', 'Blink', 'AnimationPlayer'} do
 	Bad:Remove(v)
 end
+
+
+
 
 
 

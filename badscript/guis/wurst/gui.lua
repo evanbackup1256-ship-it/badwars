@@ -88,9 +88,6 @@ local function downloadFile(path, func)
 end
 
 getcustomasset = not inputService.TouchEnabled and getcustomasset and function(path)
-	if getcustomassets[path] and getcustomassets[path] ~= '' then
-		return getcustomassets[path]
-	end
 	return downloadFile(path, getcustomasset)
 end or function(path)
 	return getcustomassets[path] or ''

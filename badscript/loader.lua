@@ -84,7 +84,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-recursive-cache-refresh-2026-06-30-4'
+local cacheVersion = 'badwars-loadstring-error-propagation-2026-06-30-5'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end

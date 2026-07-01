@@ -30,7 +30,7 @@ local loadstring = function(...)
 			warn('BadWars loadstring failed: ' .. tostring(err))
 		end
 	end
-	return res
+	return res, err
 end
 isfile = isfile or function(file)
 	local suc, res = pcall(function()

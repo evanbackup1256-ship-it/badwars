@@ -20,8 +20,40 @@ local mainapi = {
 	ThreadFix = setthreadidentity and true or false,
 	ToggleNotifications = {},
 	Version = '4.18',
-	Windows = {}
+	Windows = {},
+	Logs = {},
+	MaxLogs = 500,
+	LogLevels = {Info = Color3.fromRGB(200, 200, 200), Success = Color3.fromRGB(100, 255, 100), Warning = Color3.fromRGB(255, 200, 100), Debug = Color3.fromRGB(150, 150, 255), Error = Color3.fromRGB(255, 100, 100)}
 }
+
+-- Custom log function
+local function AddLog(level, message, stack)
+	if not mainapi.Logs then mainapi.Logs = {} end
+	table.insert(mainapi.Logs, {level = level, message = message, stack = stack, time = os.date("%H:%M:%S")})
+	if #mainapi.Logs > mainapi.MaxLogs then table.remove(mainapi.Logs, 1) end
+	if mainapi.UpdateConsole then mainapi.UpdateConsole() end
+end
+
+-- Override for runtime errors
+mainapi.CreateRuntimeError = function(title, text, stack)
+	AddLog('Error', title .. ': ' .. text, stack)
+	-- also show in notification if wanted, but separate
+	mainapi:CreateNotification(title or 'Runtime Error', text or '', 8, 'error', stack)
+end
+
+-- Safe wrapper for module execution
+local function SafeRequire(moduleCode, name)
+	local success, result = pcall(function()
+		local f = loadstring(moduleCode, name or 'module')
+		if not f then error("Failed to load module " .. (name or '')) end
+		return f()
+	end)
+	if not success then
+		AddLog('Error', 'Module load failed: ' .. (name or 'unknown'), result)
+		return nil
+	end
+	return result
+end
 
 local cloneref = cloneref or function(obj)
 	return obj
@@ -3805,6 +3837,13 @@ gui.IgnoreGuiInset = true
 gui.OnTopOfCoreBlur = true
 if mainapi.ThreadFix then
 	gui.Parent = cloneref(game:GetService('CoreGui'))--(gethui and gethui()) or cloneref(game:GetService('CoreGui'))
+
+-- Toggle console with F2
+inputService.InputBegan:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.F2 and mainapi.Console then
+		mainapi.Console.Visible = not mainapi.Console.Visible
+	end
+end)
 else
 	gui.Parent = cloneref(game:GetService('Players')).LocalPlayer.PlayerGui
 	gui.ResetOnSpawn = false
@@ -5171,6 +5210,233 @@ mainapi:Clean(inputService.InputEnded:Connect(function(inputObj)
 		table.remove(mainapi.HeldKeybinds, ind)
 	end
 end))
+
+-- Custom Developer Console for BadWars
+local consoleFrame
+local logScrolling
+local logListLayout
+local activeLogs = {}
+local maxVisibleLogs = 100
+local isPaused = false
+local autoScroll = true
+local currentFilter = 'All'
+local searchTerm = ''
+
+local function createConsole()
+	if consoleFrame then return end
+	consoleFrame = Instance.new('Frame')
+	consoleFrame.Name = 'BadWarsConsole'
+	consoleFrame.Size = UDim2.fromOffset(600, 400)
+	consoleFrame.Position = UDim2.fromOffset(100, 100)
+	consoleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	consoleFrame.BorderSizePixel = 0
+	consoleFrame.Visible = false
+	consoleFrame.ZIndex = 100
+	consoleFrame.Parent = scaledgui
+
+	local corner = Instance.new('UICorner')
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = consoleFrame
+
+	local shadow = Instance.new('ImageLabel')
+	shadow.Size = UDim2.new(1, 20, 1, 20)
+	shadow.Position = UDim2.fromOffset(-10, -10)
+	shadow.BackgroundTransparency = 1
+	shadow.Image = 'rbxassetid://5554236805'
+	shadow.ImageColor3 = Color3.new(0, 0, 0)
+	shadow.ImageTransparency = 0.5
+	shadow.ZIndex = 99
+	shadow.Parent = consoleFrame
+
+	-- Title bar
+	local titleBar = Instance.new('Frame')
+	titleBar.Size = UDim2.new(1, 0, 0, 30)
+	titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	titleBar.BorderSizePixel = 0
+	titleBar.Parent = consoleFrame
+
+	local titleCorner = Instance.new('UICorner')
+	titleCorner.CornerRadius = UDim.new(0, 8)
+	titleCorner.Parent = titleBar
+
+	local title = Instance.new('TextLabel')
+	title.Size = UDim2.new(1, -200, 1, 0)
+	title.Position = UDim2.fromOffset(10, 0)
+	title.BackgroundTransparency = 1
+	title.Text = 'BadWars Developer Console'
+	title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 14
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Parent = titleBar
+
+	-- Buttons
+	local buttonY = 5
+	local btnWidth = 70
+	local btns = {
+		{name = 'Clear', func = function() activeLogs = {}; updateConsole() end},
+		{name = 'Pause', func = function() isPaused = not isPaused; this.Text = isPaused and 'Resume' or 'Pause' end},
+		{name = 'Copy All', func = function() local t = ''; for _, l in activeLogs do t = t .. l.time .. ' [' .. l.level .. '] ' .. l.message .. '\n' end; setclipboard(t) end},
+		{name = 'Filter', func = function() -- cycle filter
+			local levels = {'All', 'Info', 'Success', 'Warning', 'Debug', 'Error'}
+			local idx = table.find(levels, currentFilter) or 1
+			currentFilter = levels[idx % #levels + 1]
+			updateConsole()
+		end},
+		{name = 'Compact', func = function() -- toggle compact
+			-- simple toggle size or something
+		end}
+	}
+	for i, b in ipairs(btns) do
+		local btn = Instance.new('TextButton')
+		btn.Size = UDim2.fromOffset(btnWidth, 20)
+		btn.Position = UDim2.fromOffset( titleBar.AbsoluteSize.X - (btnWidth + 5) * i , buttonY)
+		btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+		btn.Text = b.name
+		btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+		btn.Font = Enum.Font.Gotham
+		btn.TextSize = 11
+		btn.Parent = titleBar
+		local bc = Instance.new('UICorner')
+		bc.CornerRadius = UDim.new(0, 4)
+		bc.Parent = btn
+		btn.MouseButton1Click:Connect(b.func)
+	end
+
+	-- Search
+	local searchBox = Instance.new('TextBox')
+	searchBox.Size = UDim2.fromOffset(150, 20)
+	searchBox.Position = UDim2.fromOffset(10, 35)
+	searchBox.PlaceholderText = 'Search logs...'
+	searchBox.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+	searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	searchBox.Font = Enum.Font.Gotham
+	searchBox.TextSize = 11
+	searchBox.Parent = consoleFrame
+	local sc = Instance.new('UICorner')
+	sc.CornerRadius = UDim.new(0, 4)
+	sc.Parent = searchBox
+	searchBox:GetPropertyChangedSignal('Text'):Connect(function()
+		searchTerm = searchBox.Text
+		updateConsole()
+	end)
+
+	-- Log area
+	logScrolling = Instance.new('ScrollingFrame')
+	logScrolling.Size = UDim2.new(1, -20, 1, -80)
+	logScrolling.Position = UDim2.fromOffset(10, 60)
+	logScrolling.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	logScrolling.BorderSizePixel = 0
+	logScrolling.ScrollBarThickness = 6
+	logScrolling.Parent = consoleFrame
+
+	logListLayout = Instance.new('UIListLayout')
+	logListLayout.Parent = logScrolling
+	logListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	logListLayout.Padding = UDim.new(0, 2)
+
+	-- Make draggable
+	local dragging, dragInput, dragStart, startPos
+	titleBar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = consoleFrame.Position
+		end
+	end)
+	titleBar.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+	inputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
+			consoleFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+
+	-- Resize handle (simple)
+	local resize = Instance.new('TextButton')
+	resize.Size = UDim2.fromOffset(20, 20)
+	resize.Position = UDim2.new(1, -20, 1, -20)
+	resize.Text = '⤡'
+	resize.BackgroundTransparency = 1
+	resize.TextColor3 = Color3.fromRGB(200, 200, 200)
+	resize.Parent = consoleFrame
+	-- add resize logic similar to drag if needed
+
+	updateConsole = function()
+		if not logScrolling then return end
+		logScrolling:ClearAllChildren()
+		local visible = 0
+		for i = #activeLogs, math.max(1, #activeLogs - maxVisibleLogs), -1 do
+			local log = activeLogs[i]
+			if currentFilter ~= 'All' and log.level ~= currentFilter then continue end
+			if searchTerm ~= '' and not (log.message:lower():find(searchTerm:lower()) or (log.stack and log.stack:lower():find(searchTerm:lower()))) then continue end
+			visible = visible + 1
+			if visible > maxVisibleLogs then break end
+			local entry = Instance.new('Frame')
+			entry.Size = UDim2.new(1, 0, 0, 22)
+			entry.BackgroundTransparency = 1
+			entry.Parent = logScrolling
+			local timeLabel = Instance.new('TextLabel')
+			timeLabel.Size = UDim2.fromOffset(50, 20)
+			timeLabel.Position = UDim2.fromOffset(5, 1)
+			timeLabel.BackgroundTransparency = 1
+			timeLabel.Text = log.time
+			timeLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+			timeLabel.Font = Enum.Font.Gotham
+			timeLabel.TextSize = 10
+			timeLabel.Parent = entry
+			local levelLabel = Instance.new('TextLabel')
+			levelLabel.Size = UDim2.fromOffset(60, 20)
+			levelLabel.Position = UDim2.fromOffset(55, 1)
+			levelLabel.BackgroundTransparency = 1
+			levelLabel.Text = '[' .. log.level .. ']'
+			levelLabel.TextColor3 = mainapi.LogLevels[log.level] or Color3.fromRGB(200, 200, 200)
+			levelLabel.Font = Enum.Font.GothamBold
+			levelLabel.TextSize = 10
+			levelLabel.Parent = entry
+			local msgLabel = Instance.new('TextLabel')
+			msgLabel.Size = UDim2.new(1, -130, 1, 0)
+			msgLabel.Position = UDim2.fromOffset(120, 1)
+			msgLabel.BackgroundTransparency = 1
+			msgLabel.Text = log.message
+			msgLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+			msgLabel.Font = Enum.Font.Gotham
+			msgLabel.TextSize = 11
+			msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+			msgLabel.TextTruncate = Enum.TextTruncate.AtEnd
+			msgLabel.Parent = entry
+			entry.MouseButton1Click:Connect(function()
+				if log.stack then
+					print('--- Full Stack for ' .. log.message .. ' ---\n' .. log.stack)
+					-- or expand in UI
+				end
+			end)
+		end
+		if autoScroll then
+			logScrolling.CanvasPosition = Vector2.new(0, logScrolling.AbsoluteCanvasSize.Y)
+		end
+	end
+
+	mainapi.UpdateConsole = updateConsole
+
+	-- Toggle with key or button (example with RightShift for console too, or separate)
+	-- For now, toggle with a key in input
+
+	-- Add to mainapi for external use
+	mainapi.Console = consoleFrame
+	mainapi.AddLog = AddLog
+	mainapi.ShowConsole = function() consoleFrame.Visible = not consoleFrame.Visible end
+
+	-- Initial update
+	updateConsole()
+end
+
+-- Call to init console when ready
+task.delay(1, createConsole)
 
 return mainapi
 

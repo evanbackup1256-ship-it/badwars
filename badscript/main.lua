@@ -123,7 +123,11 @@ if not isfolder('badscript/assets/'..gui) then
 end
 local guiCode = downloadFile('badscript/guis/'..gui..'/gui.lua')
 local guiFunc = guiCode and loadstring(guiCode, 'gui')
-Bad = guiFunc and guiFunc() or nil
+local ok, guiResult = pcall(function() return guiFunc and guiFunc() end)
+if not ok then
+	AddLog and AddLog('Error', 'GUI load failed: ' .. tostring(guiResult), debug.traceback())
+end
+Bad = ok and guiResult or nil
 if not Bad or not Bad.CreateNotification then
 	Bad = {
 		CreateNotification = function(t,...) print("BadWars dummy notif:", ...) end,
@@ -138,19 +142,33 @@ end
 shared.Bad = Bad
 
 if not shared.BadIndependent then
-	local uni = loadstring(downloadFile('badscript/games/universal - base/base.lua'), 'universal')
-if uni then uni() else warn("Failed to load universal") end
+	local uniCode = downloadFile('badscript/games/universal - base/base.lua')
+	local uni = uniCode and loadstring(uniCode, 'universal')
+	if uni then 
+		local ok, err = pcall(uni)
+		if not ok then AddLog and AddLog('Error', 'Universal load failed: ' .. tostring(err), debug.traceback()) end
+	else 
+		warn("Failed to load universal") 
+	end
 	if isfile('badscript/games/'..game.PlaceId..'.lua') then
-		local mod = loadstring(readfile('badscript/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))
-		if mod then mod(...) else warn("Failed to load game module") end
+		local modCode = readfile('badscript/games/'..game.PlaceId..'.lua')
+		local mod = modCode and loadstring(modCode, tostring(game.PlaceId))
+		if mod then 
+			local ok, err = pcall(mod, ...)
+			if not ok then AddLog and AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
+		else warn("Failed to load game module") end
 	else
 		if not shared.BadDeveloper then
 			local suc, res = pcall(function()
 				return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/games/'..game.PlaceId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
-				local mod = loadstring(downloadFile('badscript/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))
-				if mod then mod(...) else warn("Failed to load game module") end
+				local modCode = downloadFile('badscript/games/'..game.PlaceId..'.lua')
+				local mod = modCode and loadstring(modCode, tostring(game.PlaceId))
+				if mod then 
+					local ok, err = pcall(mod, ...)
+					if not ok then AddLog and AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
+				else warn("Failed to load game module") end
 			end
 		end
 	end
@@ -159,6 +177,7 @@ else
 	Bad.Init = finishLoading
 	return Bad
 end
+
 
 
 

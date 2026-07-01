@@ -21,8 +21,14 @@ if not oldLoadstring then oldLoadstring = function(...) error("loadstring not av
 local loadstring = function(...)
 	local realLoad = oldLoadstring or function() return nil, "loadstring not available" end
 	local res, err = realLoad(...)
-	if err and Bad then
-		Bad:CreateNotification('BadWars', 'Failed to load : '..err, 30, 'alert')
+	if err then
+		if Bad and type(Bad.CreateNotification) == 'function' then
+			pcall(function()
+				Bad:CreateNotification('BadWars', 'Failed to load : '..tostring(err), 30, 'alert')
+			end)
+		else
+			warn('BadWars loadstring failed: ' .. tostring(err))
+		end
 	end
 	return res
 end

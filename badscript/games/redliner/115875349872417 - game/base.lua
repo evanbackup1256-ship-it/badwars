@@ -31,7 +31,7 @@ local function downloadFile(path, func)
 			error(res)
 		end
 		if path:find('.lua') then
-			res = '--
+			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
 		end
 		writefile(path, res)
 	end

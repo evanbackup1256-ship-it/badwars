@@ -54,11 +54,22 @@ local function downloadFile(path, func)
 	return (func or readfile or function() return '' end)(path)
 end
 
+local badwarsCacheHeader = '-- BadWars by usingINales'
+local vapeCacheHeader = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.'
+
+local function isGeneratedCache(contents)
+	return type(contents) == 'string'
+		and (
+			contents:find(badwarsCacheHeader, 1, true) == 1
+			or contents:find(vapeCacheHeader, 1, true) == 1
+		)
+end
+
 local function wipeFolder(path)
 	if not isfolder(path) then return end
 	for _, file in listfiles(path) do
 		if file:find('loader') then continue end
-		if isfile(file) and select(1, readfile(file):find('--
+		if isfile(file) and isGeneratedCache(readfile(file)) then
 			delfile(file)
 		end
 	end
@@ -70,10 +81,30 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
+local cacheVersion = 'badwars-loader-fix-2026-06-30'
+local cacheVersionPath = 'badscript/profiles/cache-version.txt'
+if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
+	wipeFolder('badscript')
+	wipeFolder('badscript/games')
+	wipeFolder('badscript/guis')
+	wipeFolder('badscript/libraries')
+	writefile(cacheVersionPath, cacheVersion)
+end
+
 -- Simplified for reliability: always use main branch, no fragile scraping
 writefile('badscript/profiles/commit.txt', 'main')
 
-return _loadstring(downloadFile('badscript/main.lua'), 'main')()
+local mainCode = downloadFile('badscript/main.lua')
+if type(mainCode) ~= 'string' or mainCode == '' then
+	error('Failed to download/read badscript/main.lua', 0)
+end
+
+local mainFunc, mainErr = _loadstring(mainCode, 'main')
+if not mainFunc then
+	error('Failed to compile badscript/main.lua: ' .. tostring(mainErr), 0)
+end
+
+return mainFunc()
 
 
 

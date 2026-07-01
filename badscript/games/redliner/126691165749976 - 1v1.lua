@@ -32,7 +32,7 @@ local function downloadFile(path, func)
 			error(res)
 		end
 		if path:find('.lua') then
-			res = '--
+			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
 		end
 		writefile(path, res)
 	end
@@ -45,7 +45,7 @@ if isfile('badscript/games/'..Bad.Place..'.lua') then
 else
 	if not shared.BadDeveloper then
 		local suc, res = pcall(function()
-			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/games/'..Bad.Place..'.lua', true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/games/'..Bad.Place..'.lua', true)
 		end)
 		if suc and res ~= '404: Not Found' then
 			loadstring(downloadFile('badscript/games/'..Bad.Place..'.lua'), 'redliner')(...)

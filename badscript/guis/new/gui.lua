@@ -35,34 +35,220 @@ local mainapi = {
 	LogLevels = {Info = Color3.fromRGB(200, 200, 200), Success = Color3.fromRGB(100, 255, 100), Warning = Color3.fromRGB(255, 200, 100), Debug = Color3.fromRGB(150, 150, 255), Error = Color3.fromRGB(255, 100, 100)}
 }
 
--- Custom log function
-local function AddLog(level, message, stack)
+-- Custom log function (supports rich entries)
+local function AddLog(level, message, stackOrExtra)
 	if not mainapi.Logs then mainapi.Logs = {} end
-	table.insert(mainapi.Logs, {level = level, message = message, stack = stack, time = os.date("%H:%M:%S")})
+	local entry
+	if type(stackOrExtra) == 'table' and (stackOrExtra.preview or stackOrExtra.script or stackOrExtra.category) then
+		entry = stackOrExtra
+		entry.level = level or entry.level or 'Info'
+		entry.message = message or entry.message or ''
+		entry.time = entry.time or os.date('%H:%M:%S')
+	else
+		entry = {level = level, message = message, stack = stackOrExtra, time = os.date('%H:%M:%S')}
+	end
+	table.insert(mainapi.Logs, entry)
 	if #mainapi.Logs > mainapi.MaxLogs then table.remove(mainapi.Logs, 1) end
 	if mainapi.UpdateConsole then mainapi.UpdateConsole() end
 end
 
--- Override for runtime errors
-mainapi.CreateRuntimeError = function(title, text, stack)
-	AddLog('Error', title .. ': ' .. text, stack)
-	-- also show in notification if wanted, but separate
-	mainapi:CreateNotification(title or 'Runtime Error', text or '', 8, 'error', stack)
+local makeCompileLog
+
+-- Rich compile error reporter (primary entry point for parser errors)
+mainapi.CreateCompileError = function(scriptName, err, sourceCode, extra)
+	local logEntry = makeCompileLog(scriptName, err, sourceCode)
+	if extra then
+		for k, v in pairs(extra) do logEntry[k] = v end
+	end
+	AddLog('Compile', logEntry.message, logEntry)
+	-- Also surface via notification system with compile type
+	mainapi:CreateNotification(
+		'Compile Error • ' .. (logEntry.script or scriptName or 'script'),
+		logEntry.message,
+		12,
+		'compile',
+		logEntry
+	)
 end
 
--- Safe wrapper for module execution
+-- Override for runtime errors
+mainapi.CreateRuntimeError = function(title, text, stack)
+	AddLog('Error', (title or 'Runtime Error') .. ': ' .. (text or ''), stack)
+	mainapi:CreateNotification(title or 'Runtime Error', text or '', 8, 'runtime', stack)
+end
+
+-- Safe wrapper for module execution (now uses compile diagnostics when possible)
 local function SafeRequire(moduleCode, name)
-	local success, result = pcall(function()
-		local f = loadstring(moduleCode, name or 'module')
-		if not f then error("Failed to load module " .. (name or '')) end
-		return f()
-	end)
+	local f, loadErr = loadstring(moduleCode, name or 'module')
+	if not f then
+		if mainapi.CreateCompileError then
+			mainapi.CreateCompileError(name or 'module', loadErr, moduleCode)
+		else
+			AddLog('Compile', 'Module load failed: ' .. (name or 'unknown'), {rawError = loadErr})
+		end
+		return nil
+	end
+	local success, result = pcall(f)
 	if not success then
-		AddLog('Error', 'Module load failed: ' .. (name or 'unknown'), result)
+		AddLog('Error', 'Module runtime error: ' .. (name or 'unknown'), result)
+		if mainapi.CreateRuntimeError then mainapi.CreateRuntimeError(name or 'module', tostring(result)) end
 		return nil
 	end
 	return result
 end
+
+-- ============================================================
+-- Rich Compiler Diagnostics & IDE-like Error UI Helpers
+-- ============================================================
+
+-- Parse standard Roblox loadstring error: [string "Name"]:55: Message
+local function parseCompileError(err)
+	if type(err) ~= 'string' then
+		return { script = 'unknown', line = 0, message = tostring(err), raw = err }
+	end
+	-- Common forms
+	local scriptName, lineNum, msg = err:match('%[string ["\']?([^"\']+)["\']?%]:(%d+):%s*(.+)')
+	if scriptName and lineNum then
+		return { script = scriptName, line = tonumber(lineNum), message = msg, raw = err }
+	end
+	-- Fallback: file.lua:NN: msg or generic
+	scriptName, lineNum, msg = err:match('([^:]+):(%d+):%s*(.+)')
+	if scriptName and lineNum then
+		return { script = scriptName, line = tonumber(lineNum), message = msg, raw = err }
+	end
+	-- Last resort
+	local ln = err:match(':(%d+):')
+	return { script = 'unknown', line = ln and tonumber(ln) or 0, message = err, raw = err }
+end
+
+-- Analyze message and (optionally) source line for friendly explanations + suggested fixes
+local function analyzeLuaError(parsed, source)
+	local msg = (parsed.message or ''):lower()
+	local suggestions = {}
+	local category = 'Syntax Error'
+	local likely = ''
+
+	if msg:find('malformed string') or msg:find('unfinished string') or msg:find('unfinished long string') then
+		likely = 'Unterminated string literal.'
+		table.insert(suggestions, 'Missing closing quotation mark ( " or \' ).')
+		table.insert(suggestions, 'If the string spans lines, use long string [[ ... ]] syntax (and close it).')
+		table.insert(suggestions, 'Check for literal newline inside "double" or \'single\' quoted string — Lua does not allow this without escaping or long-string form.')
+		table.insert(suggestions, 'Escaped quote mismatch: use \\" inside "..." or \\\' inside \'...\'.')
+		table.insert(suggestions, 'Possible missing closing bracket/paren after string concat: "foo" .. bar )')
+	elseif msg:find('expected near') or msg:find("'=' expected near") then
+		likely = 'Syntax near the reported token.'
+		table.insert(suggestions, 'Missing comma, operator, or closing bracket/parenthesis.')
+		table.insert(suggestions, 'Check for incomplete expression or statement on previous line.')
+	elseif msg:find('unexpected symbol') or msg:find('expected') then
+		likely = 'Unexpected token.'
+		table.insert(suggestions, 'Look for stray characters, missing "end", or unbalanced ( [ { " \' .')
+	elseif msg:find('\'end\' expected') or msg:find('block ends') then
+		likely = 'Unclosed block (function/if/for/etc).'
+		table.insert(suggestions, 'Add missing "end" to close the block started earlier.')
+	elseif msg:find('unfinished') then
+		likely = 'Unfinished construct.'
+		table.insert(suggestions, 'Check brackets, quotes, and block terminators.')
+	else
+		table.insert(suggestions, 'Review the highlighted line and surrounding context for typos or missing tokens.')
+	end
+
+	-- Contextual help using source line if available
+	local lineText = ''
+	if source and parsed.line and parsed.line > 0 then
+		local lines = {}
+		for line in (source .. '\n'):gmatch('([^\r\n]*)\r?\n') do table.insert(lines, line) end
+		lineText = lines[parsed.line] or ''
+		if lineText:find('["\']') and (lineText:match('["\'].*["\']') == nil or select(2, lineText:gsub('["\']', '')) % 2 ~= 0) then
+			table.insert(suggestions, 'The failing line appears to contain an odd number of quote characters.')
+		end
+		if lineText:find('%[%[') and not lineText:find('%]%]') then
+			table.insert(suggestions, 'Detected [[ long string opener without matching ]].')
+		end
+	end
+
+	return {
+		likely = likely ~= '' and likely or nil,
+		suggestions = suggestions,
+		category = category,
+		lineText = lineText
+	}
+end
+
+-- Extract surrounding source lines for preview (e.g. errLine-3 .. errLine+3)
+local function getCodePreview(source, errLine, contextLines)
+	contextLines = contextLines or 3
+	if not source or not errLine or errLine < 1 then return nil end
+	local lines = {}
+	for line in (source .. '\n'):gmatch('([^\r\n]*)\r?\n') do
+		table.insert(lines, line)
+	end
+	local startL = math.max(1, errLine - contextLines)
+	local endL = math.min(#lines, errLine + contextLines)
+	local preview = {}
+	for i = startL, endL do
+		table.insert(preview, {
+			num = i,
+			text = lines[i] or '',
+			isError = (i == errLine)
+		})
+	end
+	return preview
+end
+
+-- Very lightweight Lua syntax highlighter returning RichText-compatible string for one line
+local function highlightLua(line)
+	if type(line) ~= 'string' then return tostring(line or '') end
+	local s = line
+	-- Escape for rich text first (order important)
+	s = s:gsub('&', '&amp;'):gsub('<', '&lt;'):gsub('>', '&gt;')
+
+	-- Strings (double, single, long) — simple non-nested capture
+	s = s:gsub('(%-%-%[=*%[.-%]=*%])', '<font color="#6A9955">%1</font>') -- long comment
+	s = s:gsub('(%-%-.*)', '<font color="#6A9955">%1</font>') -- line comment (after strings less ideal)
+	s = s:gsub('(".-")', '<font color="#CE9178">%1</font>')
+	s = s:gsub("('.-')", '<font color="#CE9178">%1</font>')
+	s = s:gsub('(%[%[.-%]%])', '<font color="#CE9178">%1</font>')
+
+	-- Keywords
+	local keywords = {'local','function','end','if','then','else','elseif','for','in','while','do','repeat','until','return','break','and','or','not','true','false','nil'}
+	for _, kw in ipairs(keywords) do
+		s = s:gsub('(%f[%w_])(' .. kw .. ')(%f[%W_])', '<font color="#569CD6">%1%2%3</font>')
+	end
+
+	-- Numbers
+	s = s:gsub('(%f[%w_%.]%d+%.?%d*)(%f[%W_])', '<font color="#B5CEA8">%1</font>%2')
+
+	-- Common builtins / globals hint
+	s = s:gsub('(%f[%w_])(game|workspace|script|Instance|require|pcall|loadstring|table|string)(%f[%W_])', '<font color="#4EC9B0">%1%2%3</font>')
+
+	return s
+end
+
+-- Create a compile error entry object (used by AddLog / direct)
+function makeCompileLog(scriptName, err, sourceCode)
+	local parsed = parseCompileError(err)
+	parsed.script = scriptName or parsed.script
+	local analysis = analyzeLuaError(parsed, sourceCode)
+	local preview = getCodePreview(sourceCode, parsed.line, 3)
+	return {
+		level = 'Compile',
+		message = parsed.message or tostring(err),
+		time = os.date('%H:%M:%S'),
+		script = parsed.script,
+		line = parsed.line,
+		rawError = err,
+		source = sourceCode,
+		preview = preview,
+		suggestions = analysis.suggestions,
+		likely = analysis.likely,
+		category = 'Compile Error',
+		expanded = false
+	}
+end
+
+-- ============================================================
+-- End Rich Diagnostics Helpers
+-- ============================================================
 
 local cloneref = cloneref or function(obj)
 	return obj
@@ -361,7 +547,7 @@ local function downloadFile(path, func)
 			error(res)
 		end
 		if path:find('.lua') then
-			res = '--
+			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
 		end
 		writefile(path, res)
 	end
@@ -3411,7 +3597,8 @@ function mainapi:CreateNotification(title, text, duration, type, stack)
 		if self.ThreadFix then
 			setthreadidentity(8)
 		end
-		local isError = (type == 'alert' or type == 'runtime' or type == 'error')
+		local isCompile = (type == 'compile')
+		local isError = (type == 'alert' or type == 'runtime' or type == 'error' or isCompile)
 		local container = isError and errorNotificationContainer or notifications
 		local key = title .. '|' .. (text or ''):sub(1, 80)
 		-- Group duplicate errors
@@ -3424,15 +3611,34 @@ function mainapi:CreateNotification(title, text, duration, type, stack)
 			end
 			return
 		end
+
+		-- Rich data if stack is our compile log entry
+		local rich = (type == 'compile' or type == 'runtime') and typeof(stack) == 'table' and stack or nil
+		local displayTitle = title or (isCompile and 'Compile Error' or 'Error')
+		local displayMsg = text or ''
+		local scriptBadge = rich and rich.script or nil
+		local lineNum = rich and rich.line or nil
+
 		local notif = Instance.new('Frame')
 		notif.Name = key
-		notif.Size = UDim2.new(1, 0, 0, 70)
-		notif.BackgroundColor3 = isError and Color3.fromRGB(45, 20, 20) or Color3.fromRGB(30, 30, 30)
+		notif.Size = UDim2.new(1, 0, 0, isCompile and 92 or 70)
+		notif.BackgroundColor3 = isCompile and Color3.fromRGB(55, 25, 15) or (isError and Color3.fromRGB(45, 20, 20) or Color3.fromRGB(30, 30, 30))
 		notif.BorderSizePixel = 0
 		notif.Parent = container
 		local corner = Instance.new('UICorner')
 		corner.CornerRadius = UDim.new(0, 8)
 		corner.Parent = notif
+
+		-- left accent bar for category
+		local accent = Instance.new('Frame')
+		accent.Size = UDim2.new(0, 4, 1, 0)
+		accent.BackgroundColor3 = isCompile and Color3.fromRGB(255, 140, 60) or (isError and Color3.fromRGB(255, 90, 90) or Color3.fromRGB(100, 180, 255))
+		accent.BorderSizePixel = 0
+		accent.Parent = notif
+		local acorner = Instance.new('UICorner')
+		acorner.CornerRadius = UDim.new(0, 8)
+		acorner.Parent = accent
+
 		-- shadow
 		local shadow = Instance.new('ImageLabel')
 		shadow.Name = 'Shadow'
@@ -3443,77 +3649,124 @@ function mainapi:CreateNotification(title, text, duration, type, stack)
 		shadow.ImageColor3 = Color3.new(0, 0, 0)
 		shadow.ImageTransparency = 0.6
 		shadow.Parent = notif
-		-- icon
-		local icon = Instance.new('ImageLabel')
-		icon.Name = 'Icon'
-		icon.Size = UDim2.fromOffset(20, 20)
-		icon.Position = UDim2.fromOffset(10, 8)
-		icon.BackgroundTransparency = 1
-		icon.Image = getcustomasset(isError and 'badscript/assets/new/alert.png' or 'badscript/assets/new/info.png')
-		icon.Parent = notif
+
+		-- icon (use emoji text for dedicated compile icon + fallback assets)
+		local icon
+		if isCompile then
+			icon = Instance.new('TextLabel')
+			icon.Name = 'Icon'
+			icon.Size = UDim2.fromOffset(22, 22)
+			icon.Position = UDim2.fromOffset(12, 8)
+			icon.BackgroundTransparency = 1
+			icon.Text = '❌'
+			icon.TextColor3 = Color3.fromRGB(255, 160, 80)
+			icon.Font = Enum.Font.GothamBold
+			icon.TextSize = 16
+			icon.Parent = notif
+		else
+			icon = Instance.new('ImageLabel')
+			icon.Name = 'Icon'
+			icon.Size = UDim2.fromOffset(20, 20)
+			icon.Position = UDim2.fromOffset(10, 8)
+			icon.BackgroundTransparency = 1
+			icon.Image = getcustomasset(isError and 'badscript/assets/new/alert.png' or 'badscript/assets/new/info.png')
+			icon.Parent = notif
+		end
+
+		-- Script badge (styled label)
+		local badgeX = isCompile and 38 or 36
+		if scriptBadge then
+			local badge = Instance.new('TextLabel')
+			badge.Name = 'ScriptBadge'
+			badge.Size = UDim2.fromOffset(math.min(110, #scriptBadge * 6 + 16), 16)
+			badge.Position = UDim2.fromOffset(badgeX, 6)
+			badge.BackgroundColor3 = Color3.fromRGB(70, 40, 25)
+			badge.Text = tostring(scriptBadge)
+			badge.TextColor3 = Color3.fromRGB(255, 200, 140)
+			badge.Font = Enum.Font.GothamBold
+			badge.TextSize = 10
+			badge.TextXAlignment = Enum.TextXAlignment.Center
+			badge.Parent = notif
+			local bc = Instance.new('UICorner')
+			bc.CornerRadius = UDim.new(0, 4)
+			bc.Parent = badge
+			badgeX = badgeX + badge.Size.X.Offset + 6
+		end
+
 		local titleLabel = Instance.new('TextLabel')
 		titleLabel.Name = 'Title'
-		titleLabel.Size = UDim2.new(1, -80, 0, 18)
-		titleLabel.Position = UDim2.fromOffset(36, 6)
+		titleLabel.Size = UDim2.new(1, -140, 0, 18)
+		titleLabel.Position = UDim2.fromOffset(badgeX, 6)
 		titleLabel.BackgroundTransparency = 1
-		titleLabel.Text = title or 'Error'
-		titleLabel.TextColor3 = isError and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(220, 220, 220)
+		titleLabel.Text = displayTitle .. (lineNum and (' @ line ' .. lineNum) or '')
+		titleLabel.TextColor3 = isCompile and Color3.fromRGB(255, 170, 100) or (isError and Color3.fromRGB(255, 110, 110) or Color3.fromRGB(220, 220, 220))
 		titleLabel.Font = Enum.Font.GothamBold
-		titleLabel.TextSize = 13
+		titleLabel.TextSize = 12
+		titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 		titleLabel.Parent = notif
+
 		local textLabel = Instance.new('TextLabel')
 		textLabel.Name = 'Text'
-		textLabel.Size = UDim2.new(1, -16, 0, 36)
+		textLabel.Size = UDim2.new(1, -16, 0, isCompile and 28 or 36)
 		textLabel.Position = UDim2.fromOffset(10, 26)
 		textLabel.BackgroundTransparency = 1
-		textLabel.Text = text or ''
-		textLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+		textLabel.Text = displayMsg
+		textLabel.TextColor3 = Color3.fromRGB(220, 200, 190)
 		textLabel.Font = Enum.Font.Gotham
 		textLabel.TextSize = 11
 		textLabel.TextWrapped = true
 		textLabel.TextXAlignment = Enum.TextXAlignment.Left
 		textLabel.Parent = notif
-		-- stack trace (hidden by default)
-		local stackLabel = Instance.new('TextLabel')
-		stackLabel.Name = 'Stack'
-		stackLabel.Size = UDim2.new(1, -16, 0, 0)
-		stackLabel.Position = UDim2.fromOffset(10, 60)
-		stackLabel.BackgroundTransparency = 1
-		stackLabel.Text = stack or ''
-		stackLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
-		stackLabel.Font = Enum.Font.Gotham
-		stackLabel.TextSize = 10
-		stackLabel.TextWrapped = true
-		stackLabel.Visible = false
-		stackLabel.Parent = notif
+
+		-- Compile-specific: show 1-line hint + expand for details
+		local detailLabel = Instance.new('TextLabel')
+		detailLabel.Name = 'Detail'
+		detailLabel.Size = UDim2.new(1, -16, 0, 0)
+		detailLabel.Position = UDim2.fromOffset(10, 54)
+		detailLabel.BackgroundTransparency = 1
+		detailLabel.Text = (rich and rich.likely) or (isCompile and 'Click to view context & suggested fixes' or '')
+		detailLabel.TextColor3 = Color3.fromRGB(180, 160, 140)
+		detailLabel.Font = Enum.Font.Gotham
+		detailLabel.TextSize = 9
+		detailLabel.TextWrapped = true
+		detailLabel.Visible = isCompile
+		detailLabel.Parent = notif
+
 		-- buttons
 		local copyBtn = Instance.new('TextButton')
-		copyBtn.Size = UDim2.fromOffset(55, 18)
-		copyBtn.Position = UDim2.new(1, -120, 1, -24)
+		copyBtn.Size = UDim2.fromOffset(50, 16)
+		copyBtn.Position = UDim2.new(1, -110, 1, -20)
 		copyBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 		copyBtn.Text = 'Copy'
 		copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		copyBtn.Font = Enum.Font.Gotham
-		copyBtn.TextSize = 10
+		copyBtn.TextSize = 9
 		copyBtn.Parent = notif
 		local corner1 = Instance.new('UICorner')
-		corner1.CornerRadius = UDim.new(0, 4)
+		corner1.CornerRadius = UDim.new(0, 3)
 		corner1.Parent = copyBtn
 		copyBtn.MouseButton1Click:Connect(function()
-			setclipboard((text or '') .. (stack and '\n' .. stack or ''))
+			local payload = displayMsg
+			if rich then
+				payload = (rich.category or 'Error') .. ': ' .. (rich.script or '') .. ':' .. (rich.line or '') .. '\n' .. (rich.message or displayMsg)
+				if rich.rawError then payload = payload .. '\n\n' .. tostring(rich.rawError) end
+			end
+			setclipboard(payload)
 		end)
+
 		local dismissBtn = Instance.new('TextButton')
-		dismissBtn.Size = UDim2.fromOffset(55, 18)
-		dismissBtn.Position = UDim2.new(1, -60, 1, -24)
+		dismissBtn.Size = UDim2.fromOffset(50, 16)
+		dismissBtn.Position = UDim2.new(1, -55, 1, -20)
 		dismissBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 		dismissBtn.Text = 'Dismiss'
 		dismissBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		dismissBtn.Font = Enum.Font.Gotham
-		dismissBtn.TextSize = 10
+		dismissBtn.TextSize = 9
 		dismissBtn.Parent = notif
 		local corner2 = Instance.new('UICorner')
-		corner2.CornerRadius = UDim.new(0, 4)
+		corner2.CornerRadius = UDim.new(0, 3)
 		corner2.Parent = dismissBtn
+
 		local expanded = false
 		local function dismiss()
 			if tween and tween.Tween then
@@ -3523,27 +3776,44 @@ function mainapi:CreateNotification(title, text, duration, type, stack)
 			if notif and notif.Parent then notif:Destroy() end
 		end
 		dismissBtn.MouseButton1Click:Connect(dismiss)
+
 		notif.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				expanded = not expanded
-				if expanded and stack then
-					stackLabel.Size = UDim2.new(1, -16, 0, 80)
-					stackLabel.Visible = true
-					notif.Size = UDim2.new(1, 0, 0, 150)
+				if expanded and rich then
+					-- show suggestions or raw in detail
+					local detailText = ''
+					if rich.likely then detailText = detailText .. rich.likely .. '\n' end
+					if rich.suggestions and #rich.suggestions > 0 then
+						detailText = detailText .. 'Suggestions:\n• ' .. table.concat(rich.suggestions, '\n• ')
+					end
+					if rich.preview and #rich.preview > 0 then
+						detailText = detailText .. '\n[Context shown in Console]'
+					end
+					detailLabel.Text = detailText ~= '' and detailText or (rich.rawError or '')
+					detailLabel.Size = UDim2.new(1, -16, 0, 68)
+					detailLabel.Visible = true
+					notif.Size = UDim2.new(1, 0, 0, 140)
+				elseif expanded and stack then
+					detailLabel.Text = tostring(stack)
+					detailLabel.Size = UDim2.new(1, -16, 0, 50)
+					detailLabel.Visible = true
+					notif.Size = UDim2.new(1, 0, 0, 110)
 				else
-					stackLabel.Size = UDim2.new(1, -16, 0, 0)
-					stackLabel.Visible = false
-					notif.Size = UDim2.new(1, 0, 0, 70)
+					detailLabel.Size = UDim2.new(1, -16, 0, 0)
+					detailLabel.Visible = isCompile
+					notif.Size = UDim2.new(1, 0, 0, isCompile and 92 or 70)
 				end
 			end
 		end)
+
 		-- entrance animation
 		notif.Size = UDim2.new(1, 0, 0, 0)
 		if tween and tween.Tween then
-			tween:Tween(notif, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 70)})
+			tween:Tween(notif, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, isCompile and 92 or 70)})
 		end
 		-- auto dismiss (keep in log history)
-		local dismissTime = duration or (isError and 12 or 6)
+		local dismissTime = duration or (isCompile and 16 or (isError and 12 or 6))
 		task.delay(dismissTime, dismiss)
 	end)
 end
@@ -4124,7 +4394,7 @@ general:CreateButton({
 		if shared.BadDeveloper then
 			loadstring(readfile('badscript/loader.lua'), 'loader')()
 		else
-			loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+			loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()
 		end
 	end,
 	Tooltip = 'This will set your profile to the default settings of Bad'
@@ -4143,7 +4413,7 @@ general:CreateButton({
 		if shared.BadDeveloper then
 			loadstring(readfile('badscript/loader.lua'), 'loader')()
 		else
-			loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+			loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()
 		end
 	end,
 	Tooltip = 'Reloads Bad for debugging purposes'
@@ -4251,7 +4521,7 @@ guipane:CreateDropdown({
 			if shared.BadDeveloper then
 				loadstring(readfile('badscript/loader.lua'), 'loader')()
 			else
-				loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+				loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()
 			end
 		end
 	end,

@@ -259,7 +259,7 @@ local function downloadFile(path, func)
 			error(res)
 		end
 		if path:find('.lua') then
-			res = '--
+			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
 		end
 		writefile(path, res)
 	end
@@ -1752,7 +1752,7 @@ mainapi.Categories.Main:CreateDropdown({
 			if shared.BadDeveloper then
 				loadstring(readfile('badscript/loader.lua'), 'loader')()
 			else
-				loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+				loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()
 			end
 		end
 	end
@@ -1780,7 +1780,7 @@ mainapi.Categories.Main:CreateButton({
 		if shared.BadDeveloper then
 			loadstring(readfile('badscript/loader.lua'), 'loader')()
 		else
-			loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+			loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()
 		end
 	end
 })

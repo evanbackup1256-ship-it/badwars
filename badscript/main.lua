@@ -96,14 +96,14 @@ local function finishLoading()
 	Bad:Clean(playersService.LocalPlayer.OnTeleport:Connect(function()
 		if (not teleportedServers) and (not shared.BadIndependent) then
 			teleportedServers = true
-			local teleportScript = [[
-				shared.Badreload = true
-				if shared.BadDeveloper then
-					loadstring(readfile('badscript/loader.lua'), 'loader')()
-				else
-					loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()
-				end
-			]]
+			local teleportScript = table.concat({
+				'shared.Badreload = true',
+				'if shared.BadDeveloper then',
+				"	loadstring(readfile('badscript/loader.lua'), 'loader')()",
+				'else',
+				"	loadstring(game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()",
+				'end'
+			}, '\n')
 			if shared.BadDeveloper then
 				teleportScript = 'shared.BadDeveloper = true\n'..teleportScript
 			end

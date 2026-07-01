@@ -11,8 +11,14 @@ pcall(function()
 end)
 
 local Bad
+local function setStatus(message, isError)
+	if shared.BadStatus then
+		shared.BadStatus(message, isError)
+	end
+end
 local function notify(title, text, duration)
 	pcall(function()
+		setStatus('showing startup notification')
 		game:GetService("StarterGui"):SetCore("SendNotification", {
 			Title = tostring(title or "BadWars"),
 			Text = tostring(text or ""),
@@ -72,16 +78,19 @@ local playersService = cloneref(game:GetService('Players'))
 
 local function downloadFile(path, func)
 	if not HttpGet or not game then
+		setStatus('ERROR: HttpGet or game is nil for ' .. tostring(path), true)
 		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
 		return nil, 'HttpGet or game is nil'
 	end
 	local cached = isfile(path) and readfile(path) or nil
 	if type(cached) ~= 'string' or cached == '' then
+		setStatus('downloading ' .. tostring(path))
 		local suc, res = pcall(function()
 			-- Fixed: direct main + full path under badscript/
 			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
 		end)
 		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then
+			setStatus('ERROR downloading ' .. tostring(path) .. ': ' .. tostring(res), true)
 			return nil, tostring(res)
 		end
 		if path:find('.lua') then
@@ -91,19 +100,23 @@ local function downloadFile(path, func)
 		cached = res
 	end
 	if type(cached) ~= 'string' or cached == '' then
+		setStatus('ERROR empty file: ' .. tostring(path), true)
 		return nil, 'empty file: ' .. tostring(path)
 	end
+	setStatus('loaded ' .. tostring(path))
 	return func and func(path) or cached
 end
 
 local function finishLoading()
 	Bad.Init = nil
+	setStatus('loading saved GUI/profile')
 	Bad:Load()
 	if not shared.Badreload then
 		pcall(function()
 			local clickgui = Bad.gui and Bad.gui.ScaledGui and Bad.gui.ScaledGui.ClickGui
 			if clickgui then
 				clickgui.Visible = true
+				setStatus('ready - menu opened')
 			end
 		end)
 	end
@@ -154,79 +167,119 @@ if not isfolder('badscript/assets/'..gui) then
 	makefolder('badscript/assets/'..gui)
 end
 local guiPath = 'badscript/guis/'..gui..'/gui.lua'
+setStatus('loading GUI: ' .. tostring(gui))
 local guiCode, guiDownloadErr = downloadFile(guiPath)
 if type(guiCode) ~= 'string' or guiCode == '' then
 	local msg = 'GUI download failed: ' .. tostring(guiDownloadErr or guiPath)
+	setStatus('ERROR: ' .. msg, true)
 	notify('BadWars', msg, 12)
 	error(msg, 0)
 end
+setStatus('compiling GUI: ' .. tostring(gui))
 local guiFunc, guiCompileErr = loadstring(guiCode, 'gui')
 if not guiFunc then
 	local msg = 'GUI compile failed: ' .. tostring(guiCompileErr)
+	setStatus('ERROR: ' .. msg, true)
 	notify('BadWars', msg, 12)
 	error(msg, 0)
 end
+setStatus('running GUI: ' .. tostring(gui))
 local ok, guiResult = pcall(guiFunc)
 if not ok then
 	local msg = 'GUI runtime failed: ' .. tostring(guiResult)
+	setStatus('ERROR: ' .. msg, true)
 	notify('BadWars', msg, 12)
 	error(msg, 0)
 end
 if not guiResult or not guiResult.CreateNotification then
 	local msg = 'GUI returned invalid API'
+	setStatus('ERROR: ' .. msg, true)
 	notify('BadWars', msg, 12)
 	error(msg, 0)
 end
 Bad = guiResult
 shared.Bad = Bad
+setStatus('GUI API loaded')
 
 if not shared.BadIndependent then
+	setStatus('loading universal modules')
 	local uniCode, uniDownloadErr = downloadFile('badscript/games/universal - base/base.lua')
 	local uni, uniErr
 	if uniCode then
+		setStatus('compiling universal modules')
 		uni, uniErr = loadstring(uniCode, 'universal')
 	else
 		uniErr = uniDownloadErr
 	end
 	if uni then 
+		setStatus('running universal modules')
 		local ok, err = pcall(uni)
-		if not ok and AddLog then AddLog('Error', 'Universal load failed: ' .. tostring(err), debug.traceback()) end
+		if not ok then
+			setStatus('ERROR universal runtime: ' .. tostring(err), true)
+			if AddLog then AddLog('Error', 'Universal load failed: ' .. tostring(err), debug.traceback()) end
+		end
 	else 
 		local msg = 'Failed to load universal' .. (uniErr and (': ' .. tostring(uniErr)) or '')
+		setStatus('ERROR: ' .. msg, true)
 		warn(msg)
 		if AddLog then AddLog('Error', msg, debug.traceback()) end
 	end
 	if isfile('badscript/games/'..game.PlaceId..'.lua') then
+		setStatus('loading cached game module: ' .. tostring(game.PlaceId))
 		local modCode = readfile('badscript/games/'..game.PlaceId..'.lua')
 		local mod, modErr
 		if modCode then
+			setStatus('compiling cached game module')
 			mod, modErr = loadstring(modCode, tostring(game.PlaceId))
 		end
 		if mod then 
+			setStatus('running cached game module')
 			local ok, err = pcall(mod, ...)
-			if not ok and AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
-		else warn('Failed to load game module' .. (modErr and (': ' .. tostring(modErr)) or '')) end
+			if not ok then
+				setStatus('ERROR game module runtime: ' .. tostring(err), true)
+				if AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
+			end
+		else
+			local msg = 'Failed to load game module' .. (modErr and (': ' .. tostring(modErr)) or '')
+			setStatus('ERROR: ' .. msg, true)
+			warn(msg)
+		end
 	else
 		if not shared.BadDeveloper then
+			setStatus('checking game module: ' .. tostring(game.PlaceId))
 			local suc, res = pcall(function()
 				return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/games/'..game.PlaceId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
+				setStatus('downloading game module: ' .. tostring(game.PlaceId))
 				local modCode = downloadFile('badscript/games/'..game.PlaceId..'.lua')
 				local mod, modErr
 				if modCode then
+					setStatus('compiling game module')
 					mod, modErr = loadstring(modCode, tostring(game.PlaceId))
 				end
 				if mod then 
+					setStatus('running game module')
 					local ok, err = pcall(mod, ...)
-					if not ok and AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
-				else warn('Failed to load game module' .. (modErr and (': ' .. tostring(modErr)) or '')) end
+					if not ok then
+						setStatus('ERROR game module runtime: ' .. tostring(err), true)
+						if AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
+					end
+				else
+					local msg = 'Failed to load game module' .. (modErr and (': ' .. tostring(modErr)) or '')
+					setStatus('ERROR: ' .. msg, true)
+					warn(msg)
+				end
+			else
+				setStatus('no game module found; finishing universal load')
 			end
 		end
 	end
+	setStatus('finishing load')
 	finishLoading()
 else
 	Bad.Init = finishLoading
+	setStatus('independent mode ready')
 	return Bad
 end
 

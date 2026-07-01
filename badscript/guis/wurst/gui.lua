@@ -71,7 +71,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true) end)
-		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then return nil end
+		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then return '' end
 		if path:find('.lua') then res = '--
 		writefile(path, res)
 	end
@@ -621,6 +621,7 @@ mainapi:Clean(inputService.InputBegan:Connect(function(inputObj)
 end))
 
 return mainapi
+
 
 
 

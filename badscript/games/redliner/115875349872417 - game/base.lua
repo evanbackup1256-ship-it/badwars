@@ -25,7 +25,7 @@ local function downloadFile(path, func)
 		end
 		writefile(path, res)
 	end
-	return (func or readfile)(path)
+	return (func or readfile or function() return '' end)(path)
 end
 local run = function(func)
 	func()
@@ -603,6 +603,7 @@ end
 for _, v in {'Reach', 'TriggerBot', 'AntiFall', 'Desync', 'HitBoxes', 'Invisible', 'Jesus', 'MouseTP', 'Spider', 'SpinBot', 'Swim', 'TargetStrafe', 'AntiRagdoll', 'Disabler', 'StateSpoofer', 'Parkour', 'SafeWalk', 'MurderMystery'} do
 	Bad:Remove(v)
 end
+
 
 
 

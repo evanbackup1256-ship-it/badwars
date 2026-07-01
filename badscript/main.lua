@@ -68,7 +68,7 @@ local function downloadFile(path, func)
 		end
 		writefile(path, res)
 	end
-	return (func or readfile)(path)
+	return (func or readfile or function() return '' end)(path)
 end
 
 local function finishLoading()

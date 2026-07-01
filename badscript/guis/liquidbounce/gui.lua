@@ -184,7 +184,7 @@ local function downloadFile(path, func)
 		end
 		writefile(path, res)
 	end
-	return (func or readfile)(path)
+	return (func or readfile or function() return '' end)(path)
 end
 
 getcustomasset = not inputService.TouchEnabled and assetfunction and function(path)
@@ -903,6 +903,7 @@ mainapi:Clean(inputService.InputEnded:Connect(function(inputObj)
 end))
 
 return mainapi
+
 
 
 

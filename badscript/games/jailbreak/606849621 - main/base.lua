@@ -15,7 +15,7 @@ local function downloadFile(path, func)
 		if path:find('.lua') then res = '--
 		writefile(path, res)
 	end
-	return (func or readfile)(path)
+	return (func or readfile or function() return '' end)(path)
 end
 local run = function(func) func() end
 local cloneref = cloneref or function(obj) return obj end
@@ -368,6 +368,7 @@ end)
 for _, v in {'Reach', 'TriggerBot', 'Disabler', 'AntiFall', 'HitBoxes', 'Killaura', 'MurderMystery'} do
 	Bad:Remove(v)
 end
+
 
 
 

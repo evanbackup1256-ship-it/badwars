@@ -75,7 +75,7 @@ local function downloadFile(path, func)
 		if path:find('.lua') then res = '--
 		writefile(path, res)
 	end
-	return (func or readfile)(path)
+	return (func or readfile or function() return '' end)(path)
 end
 
 getcustomasset = not inputService.TouchEnabled and getcustomasset and function(path)
@@ -621,6 +621,7 @@ mainapi:Clean(inputService.InputBegan:Connect(function(inputObj)
 end))
 
 return mainapi
+
 
 
 

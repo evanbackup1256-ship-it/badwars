@@ -25,7 +25,7 @@ local function downloadFile(path, func)
 		end
 		writefile(path, res)
 	end
-	return (func or readfile)(path)
+	return (func or readfile or function() return '' end)(path)
 end
 local run = function(func)
 	func()
@@ -406,6 +406,7 @@ entitylib.start()
 for i, v in {'Reach', 'Health', 'TriggerBot', 'AntiFall', 'AntiRagdoll', 'Invisible', 'Disabler', 'Freecam', 'Parkour', 'HitBoxes', 'SafeWalk', 'Spider', 'Swim', 'GamingChair', 'TargetStrafe', 'Timer', 'MurderMystery', 'Blink', 'AnimationPlayer'} do
 	Bad:Remove(v)
 end
+
 
 
 

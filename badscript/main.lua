@@ -111,16 +111,19 @@ end
 shared.Bad = Bad
 
 if not shared.BadIndependent then
-	loadstring(downloadFile('badscript/games/universal - base/base.lua'), 'universal')()
+	local uni = loadstring(downloadFile('badscript/games/universal - base/base.lua'), 'universal')
+if uni then uni() else warn("Failed to load universal") end
 	if isfile('badscript/games/'..game.PlaceId..'.lua') then
-		loadstring(readfile('badscript/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))(...)
+		local mod = loadstring(readfile('badscript/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))
+		if mod then mod(...) else warn("Failed to load game module") end
 	else
 		if not shared.BadDeveloper then
 			local suc, res = pcall(function()
 				return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/games/'..game.PlaceId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
-				loadstring(downloadFile('badscript/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))(...)
+				local mod = loadstring(downloadFile('badscript/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))
+				if mod then mod(...) else warn("Failed to load game module") end
 			end
 		end
 	end

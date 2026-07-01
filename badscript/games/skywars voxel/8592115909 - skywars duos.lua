@@ -1,5 +1,5 @@
 local Bad = shared.Bad
-local _loadstring = (getgenv and getgenv().loadstring) or loadstring or function(s) return loadstring(s) end
+local _loadstring = (getgenv and getgenv().loadstring) or function(s) error("loadstring not available in executor") end
 local loadstring = function(...)
 	local res, err = _loadstring(...)
 	if err and Bad then
@@ -16,7 +16,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/'..select(1, path:gsub('badscript/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -42,6 +42,17 @@ else
 		end
 	end
 end
+
+
+
+
+
+
+
+
+
+
+
 
 
 

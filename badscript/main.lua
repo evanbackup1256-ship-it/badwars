@@ -44,8 +44,8 @@ local function downloadFile(path, func)
 			-- Fixed: direct main + full path under badscript/
 			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
-		if not suc or res == '404: Not Found' then
-			error(res)
+		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then
+			return nil
 		end
 		if path:find('.lua') then
 			res = '-- BadWars by usingINales (rebranded)\n' .. res
@@ -132,6 +132,7 @@ else
 	Bad.Init = finishLoading
 	return Bad
 end
+
 
 
 

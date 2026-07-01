@@ -1,6 +1,7 @@
+local _loadstring = (getgenv and getgenv().loadstring) or function(s) error("loadstring not available in executor") end
 local loadstring = function(...)
-	local res, err = loadstring(...)
-	if err and Bad then Bad:CreateNotification('Bad', 'Failed to load : '..err, 30, 'alert') end
+	local res, err = _loadstring(...)
+	if err and Bad then Bad:CreateNotification('BadWars', 'Failed to load : '..err, 30, 'alert') end
 	return res
 end
 local isfile = isfile or function(file)
@@ -9,8 +10,8 @@ local isfile = isfile or function(file)
 end
 local function downloadFile(path, func)
 	if not isfile(path) then
-		local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/'..select(1, path:gsub('badscript/', '')), true) end)
-		if not suc or res == '404: Not Found' then error(res) end
+		local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true) end)
+		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then return nil end
 		if path:find('.lua') then res = '--
 		writefile(path, res)
 	end
@@ -367,6 +368,16 @@ end)
 for _, v in {'Reach', 'TriggerBot', 'Disabler', 'AntiFall', 'HitBoxes', 'Killaura', 'MurderMystery'} do
 	Bad:Remove(v)
 end
+
+
+
+
+
+
+
+
+
+
 
 
 

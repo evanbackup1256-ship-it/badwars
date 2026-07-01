@@ -83,3 +83,4 @@ StrafeIncrease = AimAssist:CreateToggle({Name = 'Strafe increase'})
 
 
 
+

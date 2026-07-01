@@ -1,4 +1,4 @@
-local _loadstring = loadstring or function(s) return loadstring(s) end
+local _loadstring = (getgenv and getgenv().loadstring) or function(s) error("loadstring not available in executor") end
 local loadstring = function(...)
 	local res, err = _loadstring(...)
 	if err and Bad then
@@ -229,9 +229,9 @@ local function motorMove(target, cf)
 	task.delay(0, part.Destroy, part)
 end
 
-local hash = loadstring(downloadFile('badscript/libraries/hash.lua'), 'hash')()
-local prediction = loadstring(downloadFile('badscript/libraries/prediction.lua'), 'prediction')()
-entitylib = loadstring(downloadFile('badscript/libraries/entity.lua'), 'entitylibrary')()
+local hash = (function() local f = loadstring(downloadFile('badscript/libraries/hash.lua'), 'hash'); return f and f() end)() or {}
+local prediction = (function() local f = loadstring(downloadFile('badscript/libraries/prediction.lua'), 'prediction'); return f and f() end)() or {}
+entitylib = (function() local f = loadstring(downloadFile('badscript/libraries/entity.lua'), 'entitylibrary'); return f and f() end)() or {}
 local whitelist = {
 	alreadychecked = {},
 	customtags = {},
@@ -921,6 +921,9 @@ run(function()
 	end)
 end)
 entitylib.start()
+
+
+
 
 
 

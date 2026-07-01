@@ -104,7 +104,9 @@ local gui = readfile('badscript/profiles/gui.txt')
 if not isfolder('badscript/assets/'..gui) then
 	makefolder('badscript/assets/'..gui)
 end
-Bad = loadstring(downloadFile('badscript/guis/'..gui..'/gui.lua'), 'gui')()
+local guiCode = downloadFile('badscript/guis/'..gui..'/gui.lua')
+local guiFunc = guiCode and loadstring(guiCode, 'gui')
+Bad = guiFunc and guiFunc() or nil
 if not Bad or not Bad.CreateNotification then
 	Bad = {CreateNotification = function(t,...) print("BadWars dummy notif:", ...) end, Load = function() end, Save = function() end, Clean = function() end, Uninject = function() end }
 end

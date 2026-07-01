@@ -135,7 +135,7 @@ local guiCode = downloadFile('badscript/guis/'..gui..'/gui.lua')
 local guiFunc = guiCode and loadstring(guiCode, 'gui')
 local ok, guiResult = pcall(function() return guiFunc and guiFunc() end)
 if not ok then
-	AddLog and AddLog('Error', 'GUI load failed: ' .. tostring(guiResult), debug.traceback())
+	if AddLog then AddLog('Error', 'GUI load failed: ' .. tostring(guiResult), debug.traceback()) end
 end
 Bad = ok and guiResult or nil
 if not Bad or not Bad.CreateNotification then
@@ -156,7 +156,7 @@ if not shared.BadIndependent then
 	local uni = uniCode and loadstring(uniCode, 'universal')
 	if uni then 
 		local ok, err = pcall(uni)
-		if not ok then AddLog and AddLog('Error', 'Universal load failed: ' .. tostring(err), debug.traceback()) end
+		if not ok and AddLog then AddLog('Error', 'Universal load failed: ' .. tostring(err), debug.traceback()) end
 	else 
 		warn("Failed to load universal") 
 	end
@@ -165,7 +165,7 @@ if not shared.BadIndependent then
 		local mod = modCode and loadstring(modCode, tostring(game.PlaceId))
 		if mod then 
 			local ok, err = pcall(mod, ...)
-			if not ok then AddLog and AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
+			if not ok and AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
 		else warn("Failed to load game module") end
 	else
 		if not shared.BadDeveloper then
@@ -177,7 +177,7 @@ if not shared.BadIndependent then
 				local mod = modCode and loadstring(modCode, tostring(game.PlaceId))
 				if mod then 
 					local ok, err = pcall(mod, ...)
-					if not ok then AddLog and AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
+					if not ok and AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
 				else warn("Failed to load game module") end
 			end
 		end

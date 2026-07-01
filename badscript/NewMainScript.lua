@@ -59,6 +59,9 @@ local function wipeFolder(path)
 	if not isfolder(path) then return end
 	for _, file in listfiles(path) do
 		if file:find('loader') then continue end
+		if isfolder(file) then
+			wipeFolder(file)
+		end
 		if isfile(file) and isGeneratedCache(readfile(file)) then
 			delfile(file)
 		end
@@ -71,11 +74,12 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-universal-load-fix-2026-06-30-3'
+local cacheVersion = 'badwars-recursive-cache-refresh-2026-06-30-4'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end
 	if isfile('badscript/loader.lua') then delfile('badscript/loader.lua') end
+	if isfile('badscript/games/universal - base/base.lua') then delfile('badscript/games/universal - base/base.lua') end
 	wipeFolder('badscript/games')
 	wipeFolder('badscript/guis')
 	wipeFolder('badscript/libraries')

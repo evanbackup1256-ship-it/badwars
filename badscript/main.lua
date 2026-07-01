@@ -108,7 +108,15 @@ local guiCode = downloadFile('badscript/guis/'..gui..'/gui.lua')
 local guiFunc = guiCode and loadstring(guiCode, 'gui')
 Bad = guiFunc and guiFunc() or nil
 if not Bad or not Bad.CreateNotification then
-	Bad = {CreateNotification = function(t,...) print("BadWars dummy notif:", ...) end, Load = function() end, Save = function() end, Clean = function() end, Uninject = function() end }
+	Bad = {
+		CreateNotification = function(t,...) print("BadWars dummy notif:", ...) end,
+		Load = function() end,
+		Save = function() end,
+		Clean = function() end,
+		Uninject = function() end,
+		Libraries = {tween = function() end, targetinfo = {}, getfontsize = function() return 0 end, getcustomasset = function(s) return s end},
+		gui = {ScaledGui = {ClickGui = {Visible = false}}}
+	}
 end
 shared.Bad = Bad
 

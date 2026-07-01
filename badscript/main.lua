@@ -71,7 +71,7 @@ local function downloadFile(path, func)
 			-- Fixed: direct main + full path under badscript/
 			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
-		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then
+		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then
 			return nil
 		end
 		if path:find('.lua') then

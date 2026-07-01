@@ -79,7 +79,6 @@ if not shared.BadDeveloper then
 	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
 	commit = commit and #commit == 40 and commit or 'main'
 	if commit == 'main' or (isfile('badscript/profiles/commit.txt') and readfile('badscript/profiles/commit.txt') or '') ~= commit then
-		wipeFolder('badscript')
 		wipeFolder('badscript/games')
 		wipeFolder('badscript/guis')
 		wipeFolder('badscript/libraries')

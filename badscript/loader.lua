@@ -43,7 +43,7 @@ local function downloadFile(path, func)
 			-- Fixed for self-hosted structure: use 'main' branch and full path
 			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
-		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then
+		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then
 			return nil
 		end
 		if path:find('.lua') then
@@ -84,7 +84,6 @@ end
 local cacheVersion = 'badwars-loader-fix-2026-06-30'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
-	wipeFolder('badscript')
 	wipeFolder('badscript/games')
 	wipeFolder('badscript/guis')
 	wipeFolder('badscript/libraries')

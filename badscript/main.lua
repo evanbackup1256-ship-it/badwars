@@ -11,6 +11,15 @@ pcall(function()
 end)
 
 local Bad
+local function notify(title, text, duration)
+	pcall(function()
+		game:GetService("StarterGui"):SetCore("SendNotification", {
+			Title = tostring(title or "BadWars"),
+			Text = tostring(text or ""),
+			Duration = duration or 8
+		})
+	end)
+end
 local oldLoadstring
 pcall(function()
 	local g = getgenv
@@ -66,7 +75,8 @@ local function downloadFile(path, func)
 		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
 		return nil, 'HttpGet or game is nil'
 	end
-	if not isfile(path) then
+	local cached = isfile(path) and readfile(path) or nil
+	if type(cached) ~= 'string' or cached == '' then
 		local suc, res = pcall(function()
 			-- Fixed: direct main + full path under badscript/
 			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
@@ -78,13 +88,25 @@ local function downloadFile(path, func)
 			res = '-- BadWars by usingINales (rebranded)\n' .. res
 		end
 		writefile(path, res)
+		cached = res
 	end
-	return (func or readfile or function() return '' end)(path)
+	if type(cached) ~= 'string' or cached == '' then
+		return nil, 'empty file: ' .. tostring(path)
+	end
+	return func and func(path) or cached
 end
 
 local function finishLoading()
 	Bad.Init = nil
 	Bad:Load()
+	if not shared.Badreload then
+		pcall(function()
+			local clickgui = Bad.gui and Bad.gui.ScaledGui and Bad.gui.ScaledGui.ClickGui
+			if clickgui then
+				clickgui.Visible = true
+			end
+		end)
+	end
 	task.spawn(function()
 		repeat
 			Bad:Save()
@@ -131,24 +153,31 @@ local gui = readfile('badscript/profiles/gui.txt')
 if not isfolder('badscript/assets/'..gui) then
 	makefolder('badscript/assets/'..gui)
 end
-local guiCode = downloadFile('badscript/guis/'..gui..'/gui.lua')
-local guiFunc = guiCode and loadstring(guiCode, 'gui')
-local ok, guiResult = pcall(function() return guiFunc and guiFunc() end)
+local guiPath = 'badscript/guis/'..gui..'/gui.lua'
+local guiCode, guiDownloadErr = downloadFile(guiPath)
+if type(guiCode) ~= 'string' or guiCode == '' then
+	local msg = 'GUI download failed: ' .. tostring(guiDownloadErr or guiPath)
+	notify('BadWars', msg, 12)
+	error(msg, 0)
+end
+local guiFunc, guiCompileErr = loadstring(guiCode, 'gui')
+if not guiFunc then
+	local msg = 'GUI compile failed: ' .. tostring(guiCompileErr)
+	notify('BadWars', msg, 12)
+	error(msg, 0)
+end
+local ok, guiResult = pcall(guiFunc)
 if not ok then
-	if AddLog then AddLog('Error', 'GUI load failed: ' .. tostring(guiResult), debug.traceback()) end
+	local msg = 'GUI runtime failed: ' .. tostring(guiResult)
+	notify('BadWars', msg, 12)
+	error(msg, 0)
 end
-Bad = ok and guiResult or nil
-if not Bad or not Bad.CreateNotification then
-	Bad = {
-		CreateNotification = function(t,...) print("BadWars dummy notif:", ...) end,
-		Load = function() end,
-		Save = function() end,
-		Clean = function() end,
-		Uninject = function() end,
-		Libraries = {tween = function() end, targetinfo = {}, getfontsize = function() return 0 end, getcustomasset = function(s) return s end},
-		gui = {ScaledGui = {ClickGui = {Visible = false}}}
-	}
+if not guiResult or not guiResult.CreateNotification then
+	local msg = 'GUI returned invalid API'
+	notify('BadWars', msg, 12)
+	error(msg, 0)
 end
+Bad = guiResult
 shared.Bad = Bad
 
 if not shared.BadIndependent then

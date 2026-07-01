@@ -38,7 +38,8 @@ local function downloadFile(path, func)
 		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
 		return nil, 'HttpGet or game is nil'
 	end
-	if not isfile(path) then
+	local cached = isfile(path) and readfile(path) or nil
+	if type(cached) ~= 'string' or cached == '' then
 		local suc, res = pcall(function()
 			-- Fixed for self-hosted structure: use 'main' branch and full path
 			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
@@ -50,8 +51,12 @@ local function downloadFile(path, func)
 			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
 		end
 		writefile(path, res)
+		cached = res
 	end
-	return (func or readfile or function() return '' end)(path)
+	if type(cached) ~= 'string' or cached == '' then
+		return nil, 'empty file: ' .. tostring(path)
+	end
+	return func and func(path) or cached
 end
 
 local badwarsCacheHeader = '-- BadWars by usingINales'
@@ -95,7 +100,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-no-asset-downloader-console-fix-2026-07-01-14'
+local cacheVersion = 'badwars-reject-empty-gui-cache-2026-07-01-15'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end

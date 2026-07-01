@@ -479,6 +479,9 @@ local function checkKeybinds(compare, target, key)
 end
 
 local function createDownloader(text)
+	if tostring(text):find('badscript/assets/', 1, true) then
+		return
+	end
 	if mainapi.Loaded ~= true then
 		local downloader = mainapi.Downloader
 		if not downloader then
@@ -4124,17 +4127,15 @@ gui.IgnoreGuiInset = true
 gui.OnTopOfCoreBlur = true
 if mainapi.ThreadFix then
 	gui.Parent = cloneref(game:GetService('CoreGui'))--(gethui and gethui()) or cloneref(game:GetService('CoreGui'))
-
--- Toggle console with F2
-inputService.InputBegan:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.F2 and mainapi.Console then
-		mainapi.Console.Visible = not mainapi.Console.Visible
-	end
-end)
 else
 	gui.Parent = cloneref(game:GetService('Players')).LocalPlayer.PlayerGui
 	gui.ResetOnSpawn = false
 end
+mainapi:Clean(inputService.InputBegan:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.F2 and mainapi.Console then
+		mainapi.Console.Visible = not mainapi.Console.Visible
+	end
+end))
 mainapi.gui = gui
 scaledgui = Instance.new('Frame')
 scaledgui.Name = 'ScaledGui'
@@ -5511,6 +5512,7 @@ local searchTerm = ''
 
 local function createConsole()
 	if consoleFrame then return end
+	activeLogs = mainapi.Logs or activeLogs
 	consoleFrame = Instance.new('Frame')
 	consoleFrame.Name = 'BadWarsConsole'
 	consoleFrame.Size = UDim2.fromOffset(600, 400)
@@ -5560,9 +5562,13 @@ local function createConsole()
 	-- Buttons
 	local buttonY = 5
 	local btnWidth = 70
+	local pauseButton
 	local btns = {
-		{name = 'Clear', func = function() activeLogs = {}; updateConsole() end},
-		{name = 'Pause', func = function() isPaused = not isPaused; this.Text = isPaused and 'Resume' or 'Pause' end},
+		{name = 'Clear', func = function() table.clear(activeLogs); updateConsole() end},
+		{name = 'Pause', func = function()
+			isPaused = not isPaused
+			if pauseButton then pauseButton.Text = isPaused and 'Resume' or 'Pause' end
+		end},
 		{name = 'Copy All', func = function() local t = ''; for _, l in activeLogs do t = t .. l.time .. ' [' .. l.level .. '] ' .. l.message .. '\n' end; setclipboard(t) end},
 		{name = 'Filter', func = function() -- cycle filter
 			local levels = {'All', 'Info', 'Success', 'Warning', 'Debug', 'Error'}
@@ -5584,6 +5590,7 @@ local function createConsole()
 		btn.Font = Enum.Font.Gotham
 		btn.TextSize = 11
 		btn.Parent = titleBar
+		if b.name == 'Pause' then pauseButton = btn end
 		local bc = Instance.new('UICorner')
 		bc.CornerRadius = UDim.new(0, 4)
 		bc.Parent = btn
@@ -5663,9 +5670,10 @@ local function createConsole()
 			if searchTerm ~= '' and not (log.message:lower():find(searchTerm:lower()) or (log.stack and log.stack:lower():find(searchTerm:lower()))) then continue end
 			visible = visible + 1
 			if visible > maxVisibleLogs then break end
-			local entry = Instance.new('Frame')
+			local entry = Instance.new('TextButton')
 			entry.Size = UDim2.new(1, 0, 0, 22)
 			entry.BackgroundTransparency = 1
+			entry.Text = ''
 			entry.Parent = logScrolling
 			local timeLabel = Instance.new('TextLabel')
 			timeLabel.Size = UDim2.fromOffset(50, 20)

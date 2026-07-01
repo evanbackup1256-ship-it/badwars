@@ -16,7 +16,7 @@ cloneref = cloneref or function(obj) return obj end
 setthreadidentity = setthreadidentity or function() end
 queue_on_teleport = queue_on_teleport or function() end
 
-local _loadstring = loadstring or function(s) return loadstring(s) end
+local _loadstring = (getgenv and getgenv().loadstring) or function(s) error("loadstring not available in executor") end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
@@ -53,7 +53,9 @@ end
 -- Simplified for reliability: always use main branch, no fragile scraping
 writefile('badscript/profiles/commit.txt', 'main')
 
-return loadstring(downloadFile('badscript/main.lua'), 'main')()
+return _loadstring(downloadFile('badscript/main.lua'), 'main')()
+
+
 
 
 

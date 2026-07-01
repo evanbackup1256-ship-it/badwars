@@ -11,7 +11,7 @@ pcall(function()
 end)
 
 local Bad
-local oldLoadstring = (getgenv and getgenv().loadstring) or loadstring or function(...) error("loadstring not available") end
+local oldLoadstring = (getgenv and getgenv().loadstring) or function(...) error("loadstring not available") end
 local loadstring = function(...)
 	local res, err = oldLoadstring(...)
 	if err and Bad then
@@ -105,7 +105,7 @@ if not isfolder('badscript/assets/'..gui) then
 	makefolder('badscript/assets/'..gui)
 end
 Bad = loadstring(downloadFile('badscript/guis/'..gui..'/gui.lua'), 'gui')()
-if not Bad then
+if not Bad or not Bad.CreateNotification then
 	Bad = {CreateNotification = function(t,...) print("BadWars dummy notif:", ...) end, Load = function() end, Save = function() end, Clean = function() end, Uninject = function() end }
 end
 shared.Bad = Bad

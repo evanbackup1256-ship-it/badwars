@@ -95,7 +95,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-pinned-gui-asset-downloads-2026-06-30-9'
+local cacheVersion = 'badwars-async-gui-asset-cache-2026-07-01-10'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end

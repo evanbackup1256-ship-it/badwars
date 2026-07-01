@@ -79,7 +79,7 @@ end
 
 local function downloadFile(path, func)
 	if not isfile(path) then
-		local suc, res = pcall(function() return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true) end)
+		local suc, res = pcall(function() return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/b0898d9c3fb3f666c9303490a3fe9afbb75a84f9/' .. path, true) end)
 		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then return '' end
 		if path:find('.lua') then res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res end
 		writefile(path, res)

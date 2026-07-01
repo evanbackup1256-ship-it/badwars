@@ -230,7 +230,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		createDownloader(path)
 		local suc, res = pcall(function()
-			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/b0898d9c3fb3f666c9303490a3fe9afbb75a84f9/' .. path, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)

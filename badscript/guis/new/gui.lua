@@ -778,6 +778,255 @@ mainapi.Components = setmetatable(components, {
 	end
 })
 
+local function registerSimpleComponent(name, func)
+	mainapi.Components[name] = func
+end
+
+local function createOptionRow(settings, parent)
+	local row = Instance.new('TextButton')
+	row.Name = (settings.Name or 'Option')..'Option'
+	row.Size = UDim2.fromOffset(220, 40)
+	row.BackgroundColor3 = uipallet.Main
+	row.BorderSizePixel = 0
+	row.AutoButtonColor = false
+	row.Text = '          '..tostring(settings.Name or 'Option')
+	row.TextXAlignment = Enum.TextXAlignment.Left
+	row.TextColor3 = color.Dark(uipallet.Text, 0.16)
+	row.TextSize = 14
+	row.FontFace = uipallet.Font
+	row.Parent = parent
+	return row
+end
+
+local function currentGuiColor()
+	local guiColor = mainapi.GUIColor
+	return guiColor and guiColor.Hue or 0.46, guiColor and guiColor.Sat or 0.96, guiColor and guiColor.Value or 0.52
+end
+
+local function storeOption(owner, settings, api)
+	api.Name = settings.Name
+	owner.Options = owner.Options or {}
+	if settings.Name then owner.Options[settings.Name] = api end
+	return api
+end
+
+registerSimpleComponent('Button', function(settings, parent, owner)
+	settings.Function = settings.Function or function() end
+	local row = createOptionRow(settings, parent)
+	row.MouseButton1Click:Connect(function()
+		task.spawn(settings.Function)
+	end)
+	return storeOption(owner, settings, {Type = 'Button', Object = row, Save = false})
+end)
+
+registerSimpleComponent('Toggle', function(settings, parent, owner)
+	settings.Function = settings.Function or function() end
+	local api = {Type = 'Toggle', Enabled = false}
+	local row = createOptionRow(settings, parent)
+	local knob = Instance.new('Frame')
+	knob.Name = 'Knob'
+	knob.Size = UDim2.fromOffset(22, 12)
+	knob.Position = UDim2.new(1, -32, 0, 14)
+	knob.BackgroundColor3 = color.Light(uipallet.Main, 0.14)
+	knob.Parent = row
+	addCorner(knob, UDim.new(1, 0))
+	local dot = Instance.new('Frame')
+	dot.Name = 'Dot'
+	dot.Size = UDim2.fromOffset(8, 8)
+	dot.Position = UDim2.fromOffset(2, 2)
+	dot.BackgroundColor3 = uipallet.Main
+	dot.Parent = knob
+	addCorner(dot, UDim.new(1, 0))
+	function api:SetValue(value, silent)
+		self.Enabled = value == true
+		local hue, sat, val = currentGuiColor()
+		knob.BackgroundColor3 = self.Enabled and Color3.fromHSV(hue, sat, val) or color.Light(uipallet.Main, 0.14)
+		dot.Position = UDim2.fromOffset(self.Enabled and 12 or 2, 2)
+		if not silent then settings.Function(self.Enabled) end
+	end
+	function api:Toggle()
+		self:SetValue(not self.Enabled)
+	end
+	function api:Save(tab)
+		tab[settings.Name] = {Enabled = self.Enabled}
+	end
+	function api:Load(tab)
+		self:SetValue(tab and tab.Enabled, true)
+	end
+	row.MouseButton1Click:Connect(function() api:Toggle() end)
+	api.Object = row
+	storeOption(owner, settings, api)
+	if settings.Default then api:SetValue(true) end
+	return api
+end)
+
+registerSimpleComponent('Slider', function(settings, parent, owner)
+	settings.Function = settings.Function or function() end
+	local api = {
+		Type = 'Slider',
+		Min = settings.Min or 0,
+		Max = settings.Max or 100,
+		Value = settings.Default or settings.Min or 0
+	}
+	local row = createOptionRow(settings, parent)
+	local value = Instance.new('TextLabel')
+	value.Name = 'Value'
+	value.Size = UDim2.fromOffset(70, 40)
+	value.Position = UDim2.new(1, -78, 0, 0)
+	value.BackgroundTransparency = 1
+	value.TextXAlignment = Enum.TextXAlignment.Right
+	value.TextColor3 = color.Dark(uipallet.Text, 0.16)
+	value.TextSize = 13
+	value.FontFace = uipallet.Font
+	value.Parent = row
+	function api:SetValue(newValue, silent)
+		self.Value = math.clamp(tonumber(newValue) or self.Value, self.Min, self.Max)
+		value.Text = tostring(self.Value)
+		if not silent then settings.Function(self.Value) end
+	end
+	function api:Save(tab)
+		tab[settings.Name] = {Value = self.Value}
+	end
+	function api:Load(tab)
+		self:SetValue(tab and tab.Value, true)
+	end
+	row.MouseButton1Click:Connect(function()
+		local step = settings.Step or 1
+		api:SetValue(api.Value + step > api.Max and api.Min or api.Value + step)
+	end)
+	api.Object = row
+	storeOption(owner, settings, api)
+	api:SetValue(api.Value, true)
+	return api
+end)
+
+registerSimpleComponent('Dropdown', function(settings, parent, owner)
+	settings.Function = settings.Function or function() end
+	local list = settings.List or settings.Values or {}
+	local api = {Type = 'Dropdown', List = list, Value = settings.Default or list[1] or ''}
+	local row = createOptionRow(settings, parent)
+	local value = Instance.new('TextLabel')
+	value.Name = 'Value'
+	value.Size = UDim2.fromOffset(95, 40)
+	value.Position = UDim2.new(1, -103, 0, 0)
+	value.BackgroundTransparency = 1
+	value.TextXAlignment = Enum.TextXAlignment.Right
+	value.TextColor3 = color.Dark(uipallet.Text, 0.16)
+	value.TextSize = 13
+	value.FontFace = uipallet.Font
+	value.Parent = row
+	function api:SetValue(newValue, silent)
+		self.Value = newValue or self.Value
+		value.Text = tostring(self.Value)
+		if not silent then settings.Function(self.Value) end
+	end
+	function api:Save(tab)
+		tab[settings.Name] = {Value = self.Value}
+	end
+	function api:Load(tab)
+		self:SetValue(tab and tab.Value, true)
+	end
+	row.MouseButton1Click:Connect(function()
+		if #list <= 0 then return end
+		local ind = table.find(list, api.Value) or 0
+		api:SetValue(list[(ind % #list) + 1] or api.Value)
+	end)
+	api.Object = row
+	storeOption(owner, settings, api)
+	api:SetValue(api.Value, true)
+	return api
+end)
+
+registerSimpleComponent('TextBox', function(settings, parent, owner)
+	settings.Function = settings.Function or function() end
+	local api = {Type = 'TextBox', Value = settings.Default or ''}
+	local row = createOptionRow(settings, parent)
+	local box = Instance.new('TextBox')
+	box.Name = 'Box'
+	box.Size = UDim2.new(1, -20, 0, 24)
+	box.Position = UDim2.fromOffset(10, 38)
+	box.BackgroundTransparency = 0.9
+	box.Text = tostring(api.Value)
+	box.PlaceholderText = settings.Placeholder or ''
+	box.TextColor3 = uipallet.Text
+	box.TextSize = 13
+	box.FontFace = uipallet.Font
+	box.ClearTextOnFocus = false
+	box.Parent = row
+	row.Size = UDim2.fromOffset(220, 68)
+	function api:SetValue(newValue, silent)
+		self.Value = tostring(newValue or '')
+		box.Text = self.Value
+		if not silent then settings.Function(self.Value) end
+	end
+	function api:Save(tab)
+		tab[settings.Name] = {Value = self.Value}
+	end
+	function api:Load(tab)
+		self:SetValue(tab and tab.Value, true)
+	end
+	box.FocusLost:Connect(function()
+		api:SetValue(box.Text)
+	end)
+	api.Object = row
+	storeOption(owner, settings, api)
+	return api
+end)
+
+registerSimpleComponent('TextList', function(settings, parent, owner)
+	settings.Function = settings.Function or function() end
+	local api = {Type = 'TextList', List = settings.List or {}, ListEnabled = settings.ListEnabled or {}}
+	local row = createOptionRow(settings, parent)
+	function api:Save(tab)
+		tab[settings.Name] = {List = self.List, ListEnabled = self.ListEnabled}
+	end
+	function api:Load(tab)
+		self.List = tab and tab.List or self.List
+		self.ListEnabled = tab and tab.ListEnabled or self.ListEnabled
+	end
+	api.Object = row
+	return storeOption(owner, settings, api)
+end)
+
+registerSimpleComponent('ColorSlider', function(settings, parent, owner)
+	settings.Function = settings.Function or function() end
+	local api = {
+		Type = 'ColorSlider',
+		Hue = settings.Hue or 0,
+		Sat = settings.Sat or 1,
+		Value = settings.Value or 1,
+		Rainbow = false
+	}
+	local row = createOptionRow(settings, parent)
+	local preview = Instance.new('Frame')
+	preview.Name = 'Preview'
+	preview.Size = UDim2.fromOffset(18, 18)
+	preview.Position = UDim2.new(1, -28, 0, 11)
+	preview.Parent = row
+	addCorner(preview, UDim.new(1, 0))
+	function api:SetValue(hue, sat, val, silent)
+		self.Hue = tonumber(hue) or self.Hue
+		self.Sat = tonumber(sat) or self.Sat
+		self.Value = tonumber(val) or self.Value
+		preview.BackgroundColor3 = Color3.fromHSV(self.Hue, self.Sat, self.Value)
+		if not silent then settings.Function(self.Hue, self.Sat, self.Value) end
+	end
+	api.Color = api.SetValue
+	function api:Save(tab)
+		tab[settings.Name] = {Hue = self.Hue, Sat = self.Sat, Value = self.Value}
+	end
+	function api:Load(tab)
+		if tab then self:SetValue(tab.Hue, tab.Sat, tab.Value, true) end
+	end
+	row.MouseButton1Click:Connect(function()
+		api:SetValue((api.Hue + 0.08) % 1, api.Sat, api.Value)
+	end)
+	api.Object = row
+	storeOption(owner, settings, api)
+	api:SetValue(api.Hue, api.Sat, api.Value, true)
+	return api
+end)
+
 task.spawn(function()
 	repeat
 		local hue = tick() * (0.2 * mainapi.RainbowSpeed.Value) % 1

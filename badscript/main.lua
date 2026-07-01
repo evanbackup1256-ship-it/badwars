@@ -64,15 +64,15 @@ local playersService = cloneref(game:GetService('Players'))
 local function downloadFile(path, func)
 	if not HttpGet or not game then
 		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
-		return ''
+		return nil, 'HttpGet or game is nil'
 	end
 	if not isfile(path) then
 		local suc, res = pcall(function()
 			-- Fixed: direct main + full path under badscript/
-			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
 		end)
 		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then
-			return nil
+			return nil, tostring(res)
 		end
 		if path:find('.lua') then
 			res = '-- BadWars by usingINales (rebranded)\n' .. res
@@ -152,10 +152,12 @@ end
 shared.Bad = Bad
 
 if not shared.BadIndependent then
-	local uniCode = downloadFile('badscript/games/universal - base/base.lua')
+	local uniCode, uniDownloadErr = downloadFile('badscript/games/universal - base/base.lua')
 	local uni, uniErr
 	if uniCode then
 		uni, uniErr = loadstring(uniCode, 'universal')
+	else
+		uniErr = uniDownloadErr
 	end
 	if uni then 
 		local ok, err = pcall(uni)

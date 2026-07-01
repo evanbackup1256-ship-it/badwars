@@ -31,7 +31,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
 			-- Fixed for self-hosted: direct main branch + full path
-			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -74,7 +74,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-loadstring-error-propagation-2026-06-30-5'
+local cacheVersion = 'badwars-url-encoded-universal-2026-06-30-6'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end

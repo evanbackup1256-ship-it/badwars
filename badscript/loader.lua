@@ -36,15 +36,15 @@ if not _loadstring then _loadstring = function(s) error("loadstring not availabl
 local function downloadFile(path, func)
 	if not HttpGet or not game then
 		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
-		return ''
+		return nil, 'HttpGet or game is nil'
 	end
 	if not isfile(path) then
 		local suc, res = pcall(function()
 			-- Fixed for self-hosted structure: use 'main' branch and full path
-			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
 		end)
 		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then
-			return nil
+			return nil, tostring(res)
 		end
 		if path:find('.lua') then
 			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
@@ -84,7 +84,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-loadstring-error-propagation-2026-06-30-5'
+local cacheVersion = 'badwars-url-encoded-universal-2026-06-30-6'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end

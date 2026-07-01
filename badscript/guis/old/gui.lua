@@ -221,7 +221,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		createDownloader(path)
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -2432,7 +2432,7 @@ topbar:CreateDropdown({
 			if shared.BadDeveloper then
 				loadstring(readfile('badscript/loader.lua'), 'loader')()
 			else
-				loadstring(game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+				loadstring(HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
 			end
 		end
 	end,
@@ -2470,7 +2470,7 @@ topbar:CreateButton({
 		if shared.BadDeveloper then
 			loadstring(readfile('badscript/loader.lua'), 'loader')()
 		else
-			loadstring(game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+			loadstring(HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
 		end
 	end,
 	Tooltip = 'This will set your profile to the default settings of Bad'
@@ -2534,7 +2534,7 @@ topbar:CreateButton({
 		if shared.BadDeveloper then
 			loadstring(readfile('badscript/loader.lua'), 'loader')()
 		else
-			loadstring(game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+			loadstring(HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
 		end
 	end,
 	Tooltip = 'Reloads Bad for debugging purposes'
@@ -3070,6 +3070,7 @@ mainapi:Clean(inputService.InputEnded:Connect(function(inputObj)
 end))
 
 return mainapi
+
 
 
 

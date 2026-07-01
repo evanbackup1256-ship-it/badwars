@@ -36,13 +36,23 @@ writefile = writefile or function() end
 cloneref = cloneref or function(obj) return obj end
 setthreadidentity = setthreadidentity or function() end
 queue_on_teleport = queue_on_teleport or function() end
+local function safeHttpGet(inst, url, nocache)
+	local g = inst or game
+	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
+	if httpget then
+		return httpget(g, url, nocache)
+	end
+	local httpService = cloneref(game:GetService('HttpService'))
+	return httpService:GetAsync(url, nocache)
+end
+HttpGet = safeHttpGet
 local playersService = cloneref(game:GetService('Players'))
 
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
 			-- Fixed: direct main + full path under badscript/
-			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then
 			return nil
@@ -74,7 +84,7 @@ local function finishLoading()
 				if shared.BadDeveloper then
 					loadstring(readfile('badscript/loader.lua'), 'loader')()
 				else
-					loadstring(game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()
+					loadstring(HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()
 				end
 			]]
 			if shared.BadDeveloper then
@@ -129,7 +139,7 @@ if uni then uni() else warn("Failed to load universal") end
 	else
 		if not shared.BadDeveloper then
 			local suc, res = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/games/'..game.PlaceId..'.lua', true)
+				return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/games/'..game.PlaceId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
 				local mod = loadstring(downloadFile('badscript/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))
@@ -142,6 +152,7 @@ else
 	Bad.Init = finishLoading
 	return Bad
 end
+
 
 
 

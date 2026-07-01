@@ -15,13 +15,23 @@ writefile = writefile or function() end
 cloneref = cloneref or function(obj) return obj end
 setthreadidentity = setthreadidentity or function() end
 queue_on_teleport = queue_on_teleport or function() end
+local function safeHttpGet(inst, url, nocache)
+	local g = inst or game
+	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
+	if httpget then
+		return httpget(g, url, nocache)
+	end
+	local httpService = cloneref(game:GetService('HttpService'))
+	return httpService:GetAsync(url, nocache)
+end
+HttpGet = safeHttpGet
 
 local _loadstring = (getgenv and getgenv().loadstring) or function(s) error("loadstring not available in executor") end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
 			-- Fixed for self-hosted structure: use 'main' branch and full path
-			return game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then
 			return nil
@@ -54,6 +64,7 @@ end
 writefile('badscript/profiles/commit.txt', 'main')
 
 return _loadstring(downloadFile('badscript/main.lua'), 'main')()
+
 
 
 

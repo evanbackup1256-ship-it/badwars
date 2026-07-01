@@ -1,3 +1,12 @@
+local function safeHttpGet(inst, url, nocache)
+	local g = inst or game
+	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
+	if httpget then
+		return httpget(g, url, nocache)
+	end
+	local httpService = cloneref(game:GetService("HttpService"))
+	return httpService:GetAsync(url, nocache)
+end
 local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring = (g and g.loadstring) or function(s) error("loadstring not available in executor") end
 local _loadstring = (getgenv and getgenv().loadstring) or loadstring or function(s) error("loadstring not available in executor") end
 local loadstring = function(...)
@@ -16,7 +25,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -604,6 +613,8 @@ end
 for _, v in {'Reach', 'TriggerBot', 'AntiFall', 'Desync', 'HitBoxes', 'Invisible', 'Jesus', 'MouseTP', 'Spider', 'SpinBot', 'Swim', 'TargetStrafe', 'AntiRagdoll', 'Disabler', 'StateSpoofer', 'Parkour', 'SafeWalk', 'MurderMystery'} do
 	Bad:Remove(v)
 end
+
+
 
 
 

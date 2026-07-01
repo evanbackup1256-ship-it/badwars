@@ -1,3 +1,12 @@
+local function safeHttpGet(inst, url, nocache)
+	local g = inst or game
+	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
+	if httpget then
+		return httpget(g, url, nocache)
+	end
+	local httpService = cloneref(game:GetService("HttpService"))
+	return httpService:GetAsync(url, nocache)
+end
 local mainapi = {
 	Categories = {},
 	GUIColor = {
@@ -244,7 +253,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		createDownloader(path)
 		local suc, res = pcall(function()
-			return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -1743,7 +1752,7 @@ mainapi.Categories.Main:CreateDropdown({
 			if shared.BadDeveloper then
 				loadstring(readfile('badscript/loader.lua'), 'loader')()
 			else
-				loadstring(HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+				loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
 			end
 		end
 	end
@@ -1771,7 +1780,7 @@ mainapi.Categories.Main:CreateButton({
 		if shared.BadDeveloper then
 			loadstring(readfile('badscript/loader.lua'), 'loader')()
 		else
-			loadstring(HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
+			loadstring(safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/loader.lua', true))()
 		end
 	end
 })
@@ -2314,6 +2323,8 @@ mainapi:Clean(inputService.InputEnded:Connect(function(inputObj)
 end))
 
 return mainapi
+
+
 
 
 

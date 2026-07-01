@@ -1,3 +1,12 @@
+local function safeHttpGet(inst, url, nocache)
+	local g = inst or game
+	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
+	if httpget then
+		return httpget(g, url, nocache)
+	end
+	local httpService = cloneref(game:GetService("HttpService"))
+	return httpService:GetAsync(url, nocache)
+end
 local Bad = shared.Bad
 local g = getgenv; if type(g) == 'function' then g = g() end
 local _loadstring = (g and g.loadstring) or function(s) error("loadstring not available in executor") end
@@ -17,7 +26,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -36,13 +45,15 @@ if isfile('badscript/games/'..Bad.Place..'.lua') then
 else
 	if not shared.BadDeveloper then
 		local suc, res = pcall(function()
-			return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/games/'..Bad.Place..'.lua', true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/profiles/commit.txt')..'/games/'..Bad.Place..'.lua', true)
 		end)
 		if suc and res ~= '404: Not Found' then
 			loadstring(downloadFile('badscript/games/'..Bad.Place..'.lua'), 'bedwars')()
 		end
 	end
 end
+
+
 
 
 

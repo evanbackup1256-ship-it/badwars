@@ -41,7 +41,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
 			-- Fixed for self-hosted structure: use 'main' branch and full path
-			return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
+			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true)
 		end)
 		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then
 			return nil
@@ -74,6 +74,7 @@ end
 writefile('badscript/profiles/commit.txt', 'main')
 
 return _loadstring(downloadFile('badscript/main.lua'), 'main')()
+
 
 
 

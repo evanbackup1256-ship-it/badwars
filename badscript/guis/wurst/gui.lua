@@ -1,3 +1,12 @@
+local function safeHttpGet(inst, url, nocache)
+	local g = inst or game
+	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
+	if httpget then
+		return httpget(g, url, nocache)
+	end
+	local httpService = cloneref(game:GetService("HttpService"))
+	return httpService:GetAsync(url, nocache)
+end
 local mainapi = {
 	Connections = {},
 	Categories = {},
@@ -70,7 +79,7 @@ end
 
 local function downloadFile(path, func)
 	if not isfile(path) then
-		local suc, res = pcall(function() return HttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true) end)
+		local suc, res = pcall(function() return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path, true) end)
 		if not suc or (type(res) == 'string' and (res == '404: Not Found' or res:find('404'))) then return '' end
 		if path:find('.lua') then res = '--
 		writefile(path, res)
@@ -621,6 +630,8 @@ mainapi:Clean(inputService.InputBegan:Connect(function(inputObj)
 end))
 
 return mainapi
+
+
 
 
 

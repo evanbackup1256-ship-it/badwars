@@ -11,7 +11,9 @@ pcall(function()
 end)
 
 local Bad
-local oldLoadstring = (getgenv and getgenv().loadstring) or function(...) error("loadstring not available") end
+local g = getgenv
+if type(g) == 'function' then g = g() end
+local oldLoadstring = (g and g.loadstring) or loadstring or function(...) error("loadstring not available") end
 local loadstring = function(...)
 	local res, err = oldLoadstring(...)
 	if err and Bad then
@@ -49,6 +51,10 @@ HttpGet = safeHttpGet
 local playersService = cloneref(game:GetService('Players'))
 
 local function downloadFile(path, func)
+	if not HttpGet or not game then
+		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
+		return ''
+	end
 	if not isfile(path) then
 		local suc, res = pcall(function()
 			-- Fixed: direct main + full path under badscript/

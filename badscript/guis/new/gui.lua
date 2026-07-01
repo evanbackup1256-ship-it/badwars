@@ -3793,6 +3793,15 @@ cursor.Parent = gui
 notifications = Instance.new('Folder')
 notifications.Name = 'Notifications'
 notifications.Parent = scaledgui
+
+-- Separate container for runtime error notifications
+local errorNotificationContainer = Instance.new('Frame')
+errorNotificationContainer.Name = 'ErrorNotifications'
+errorNotificationContainer.Size = UDim2.new(0, 380, 1, -40)
+errorNotificationContainer.Position = UDim2.new(1, -10, 0, 20)
+errorNotificationContainer.BackgroundTransparency = 1
+errorNotificationContainer.Parent = scaledgui
+errorNotificationContainer.ZIndex = 10
 tooltip = Instance.new('TextLabel')
 tooltip.Name = 'Tooltip'
 tooltip.Position = UDim2.fromScale(-1, -1)

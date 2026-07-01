@@ -26,8 +26,12 @@ local function safeHttpGet(inst, url, nocache)
 end
 HttpGet = safeHttpGet
 
-local _loadstring = (getgenv and getgenv().loadstring) or function(s) error("loadstring not available in executor") end
+local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring = (g and g.loadstring) or function(s) error("loadstring not available in executor") end
 local function downloadFile(path, func)
+	if not HttpGet or not game then
+		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
+		return ''
+	end
 	if not isfile(path) then
 		local suc, res = pcall(function()
 			-- Fixed for self-hosted structure: use 'main' branch and full path
@@ -64,6 +68,7 @@ end
 writefile('badscript/profiles/commit.txt', 'main')
 
 return _loadstring(downloadFile('badscript/main.lua'), 'main')()
+
 
 
 

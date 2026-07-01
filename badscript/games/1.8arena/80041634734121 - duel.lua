@@ -1,5 +1,5 @@
 local Bad = shared.Bad
-local _loadstring = (getgenv and getgenv().loadstring) or function(s) error("loadstring not available in executor") end
+local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring = (g and g.loadstring) or function(s) error("loadstring not available in executor") end
 local loadstring = function(...)
 	local res, err = _loadstring(...)
 	if err and Bad then
@@ -42,6 +42,7 @@ else
 		end
 	end
 end
+
 
 
 

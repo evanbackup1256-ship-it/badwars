@@ -16,7 +16,7 @@ cloneref = cloneref or function(obj) return obj end
 setthreadidentity = setthreadidentity or function() end
 queue_on_teleport = queue_on_teleport or function() end
 
-local _loadstring = (getgenv and getgenv().loadstring) or loadstring or function(s) error("loadstring not available in executor") end
+local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring = (g and g.loadstring) or loadstring or function(s) error("loadstring not available in executor") end
 
 local function downloadFile(path, func)
 	if not isfile(path) then
@@ -74,6 +74,7 @@ game:GetService("StarterGui"):SetCore("SendNotification", {
 })
 
 return _loadstring(downloadFile('badscript/main.lua'), 'main')()
+
 
 
 

@@ -250,6 +250,8 @@ if not shared.BadIndependent then
 		if not ok then
 			setStatus('ERROR universal runtime: ' .. tostring(err), true)
 			if AddLog then AddLog('Error', 'Universal load failed: ' .. tostring(err), debug.traceback()) end
+		else
+			setStatus('universal modules ready')
 		end
 	else 
 		local msg = 'Failed to load universal' .. (uniErr and (': ' .. tostring(uniErr)) or '')
@@ -304,7 +306,7 @@ if not shared.BadIndependent then
 					warn(msg)
 				end
 			else
-				setStatus('no game module found; finishing universal load')
+				setStatus('universal active; no game-specific module found')
 			end
 		end
 	end

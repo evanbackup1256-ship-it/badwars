@@ -130,6 +130,12 @@ if ($main -match "security:Start\(Bad\)" -and $main.IndexOf("security:Start(Bad)
     Fail "Security gate is missing or runs after feature modules"
 }
 
+if ($main -match "universal modules ready" -and $main -match "universal active; no game-specific module found") {
+    Pass "Universal-only fallback status is explicit"
+} else {
+    Fail "Universal-only fallback status is unclear"
+}
+
 if ($security -match "Mode = mode" -and $security -match "ApiUrl" -and $security -match "LicenseKey") {
     Pass "Security gate has configurable API licensing"
 } else {

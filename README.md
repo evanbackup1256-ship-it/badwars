@@ -1,79 +1,49 @@
-# badwars
+# BadWars
 
-**BadWars** — [Short one-line description of the project goes here]
+BadWars is a Roblox Lua client runtime with a remote loader, GUI layer, universal modules, and place-specific game modules.
 
-## 📖 Overview
+## Active Runtime
 
-This repository contains the source code for **BadWars**.
+- `badscript/entry.lua`: short public entry point.
+- `badscript/loader.lua`: primary loader and cache refresh path.
+- `badscript/NewMainScript.lua`: alternate loader entry path.
+- `badscript/main.lua`: GUI selection, universal module load, and game-module dispatch.
+- `badscript/guis/new/gui.lua`: current GUI implementation.
+- `badscript/games`: universal and place-specific runtime modules.
 
-> **Note:** This project is currently in early development / setup phase.
+The loader writes visible progress and exact failure messages through the `BadWars:` status label. If a user reports a freeze, the label text and Developer Console error should point to the failing stage.
 
-Replace this section with a detailed description of what the project does, its goals, and who it's for.
+## Loadstring
 
-## ✨ Features
+Use the branch loader for normal testing:
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
+```lua
+if delfolder and isfolder and isfolder("badscript") then
+    delfolder("badscript")
+end
 
-(Add real features once implemented)
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [List required software, runtimes, versions here]
-- Example: Node.js 20+, Python 3.11+, etc.
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/evanbackup1256-ship-it/badwars.git
-cd badwars
-
-# Install dependencies (example)
-# npm install
-# pip install -r requirements.txt
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true), "badwars-loader")()
 ```
 
-### Usage
+For emergency testing, use a commit-pinned raw URL from the latest pushed commit.
 
-```bash
-# Run the project (update with actual commands)
-# npm start
-# python main.py
+## Validation
+
+Run the runtime checks before pushing loader or GUI changes:
+
+```powershell
+.\scripts\check-runtime.ps1
 ```
 
-## 🛠️ Development
+The check covers cache-version sync, required GUI fallback APIs, blur default, startup status wiring, empty-file rejection, old pinned raw URL references, and old branding outside the legacy archive.
 
-```bash
-# Development commands go here
-```
+## Documentation
 
-## 🤝 Contributing
+- [Runtime Architecture](docs/ARCHITECTURE.md)
+- [Engineering Audit](docs/ENGINEERING_AUDIT.md)
 
-Contributions are welcome!
+## Development Notes
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) (if present) for guidelines.
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
-## 📬 Contact / Links
-
-- GitHub: [@evanbackup1256-ship-it](https://github.com/evanbackup1256-ship-it)
-- Repository: [badwars](https://github.com/evanbackup1256-ship-it/badwars)
-
----
-
-**Status:** 🚧 Early setup — more coming soon!
-
-*Last updated: 2026-06-30*
+- Keep changes to the active product path scoped to `badscript` unless intentionally migrating reference code.
+- Bump the `cacheVersion` in both loader entry files when changing cached runtime behavior.
+- Avoid adding silent fallbacks for loader failures. Surface the exact stage and error so in-game reports are actionable.

@@ -1,9 +1,6 @@
 # Documentation
 
-This folder contains project documentation, guides, architecture notes, and API references.
+- [Architecture](ARCHITECTURE.md)
+- [Engineering Audit](ENGINEERING_AUDIT.md)
 
-Add markdown files here for:
-- Architecture decisions
-- Setup guides
-- User manuals
-- API docs
+The active runtime is under `badscript`. Keep production notes and validation guidance here so loader, GUI, and game-module changes stay easier to review.

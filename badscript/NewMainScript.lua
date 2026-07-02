@@ -160,7 +160,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-universal-ready-status-2026-07-01-24'
+local cacheVersion = 'badwars-bundle-universal-modules-2026-07-01-25'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	setStatus('clearing old cache')
@@ -168,6 +168,7 @@ if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersi
 	if isfile('badscript/loader.lua') then delfile('badscript/loader.lua') end
 	if isfile('badscript/security.lua') then delfile('badscript/security.lua') end
 	if isfile('badscript/games/universal - base/base.lua') then delfile('badscript/games/universal - base/base.lua') end
+	if isfile('badscript/games/universal - base/files.txt') then delfile('badscript/games/universal - base/files.txt') end
 	wipeAnyFolder('badscript/assets')
 	wipeFolder('badscript/games')
 	wipeFolder('badscript/guis')

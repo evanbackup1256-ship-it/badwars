@@ -33,6 +33,7 @@ $newGui = Read-ProjectFile "badscript\guis\new\gui.lua"
 $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
 $entityLib = Read-ProjectFile "badscript\libraries\entity.lua"
+$universalManifest = Read-ProjectFile "badscript\games\universal - base\files.txt"
 
 $cacheVersions = @()
 foreach ($content in @($loader, $newMain)) {
@@ -116,6 +117,12 @@ if ($hashLib -match "sha512" -and $predictionLib -match "Prediction Library" -an
     Pass "Universal runtime libraries are present"
 } else {
     Fail "Universal runtime libraries are missing or incomplete"
+}
+
+if ($main -match "loadLuaBundle\('universal'" -and $universalManifest -match "Combat/AutoClicker.lua" -and $universalManifest -match "Render/ESP.lua") {
+    Pass "Universal feature modules are bundled with base"
+} else {
+    Fail "Universal feature modules are not bundled with base"
 }
 
 if ($loader -match "shared\.BadStatus" -and $newMain -match "shared\.BadStatus" -and $main -match "shared\.BadStatus") {

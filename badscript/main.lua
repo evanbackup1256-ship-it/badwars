@@ -108,6 +108,46 @@ local function downloadFile(path, func)
 	return func and func(path) or cached
 end
 
+local function splitLines(text)
+	local lines = {}
+	for line in tostring(text or ''):gmatch('[^\r\n]+') do
+		line = line:match('^%s*(.-)%s*$')
+		if line ~= '' and not line:find('^#') then
+			table.insert(lines, line)
+		end
+	end
+	return lines
+end
+
+local function loadLuaBundle(name, basePath, manifestPath)
+	local baseCode, baseErr = downloadFile(basePath)
+	if type(baseCode) ~= 'string' or baseCode == '' then
+		return nil, baseErr or ('missing base: ' .. tostring(basePath))
+	end
+
+	local parts = {baseCode}
+	local manifestCode, manifestErr = downloadFile(manifestPath)
+	if type(manifestCode) ~= 'string' or manifestCode == '' then
+		return table.concat(parts, '\n'), manifestErr
+	end
+
+	local loaded = 0
+	for _, modulePath in splitLines(manifestCode) do
+		if modulePath ~= basePath then
+			setStatus('loading ' .. tostring(name) .. ' module: ' .. tostring(modulePath))
+			local moduleCode, moduleErr = downloadFile(modulePath)
+			if type(moduleCode) == 'string' and moduleCode ~= '' then
+				table.insert(parts, '\n-- bundled ' .. modulePath .. '\n' .. moduleCode)
+				loaded += 1
+			else
+				setStatus('WARNING skipped ' .. tostring(modulePath) .. ': ' .. tostring(moduleErr), false)
+			end
+		end
+	end
+	setStatus('bundled ' .. tostring(loaded) .. ' ' .. tostring(name) .. ' modules')
+	return table.concat(parts, '\n')
+end
+
 local function finishLoading()
 	Bad.Init = nil
 	setStatus('loading saved GUI/profile')
@@ -236,7 +276,7 @@ setStatus('security verified: ' .. tostring(securityStatus or security.Status))
 
 if not shared.BadIndependent then
 	setStatus('loading universal modules')
-	local uniCode, uniDownloadErr = downloadFile('badscript/games/universal - base/base.lua')
+	local uniCode, uniDownloadErr = loadLuaBundle('universal', 'badscript/games/universal - base/base.lua', 'badscript/games/universal - base/files.txt')
 	local uni, uniErr
 	if uniCode then
 		setStatus('compiling universal modules')

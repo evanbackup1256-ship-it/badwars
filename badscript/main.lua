@@ -1,5 +1,6 @@
 repeat task.wait() until game:IsLoaded()
 if shared.Bad then shared.Bad:Uninject() end
+shared.BadSecurityStarted = nil
 
 -- Custom splash by usingINales for BadWars
 pcall(function()
@@ -200,6 +201,38 @@ end
 Bad = guiResult
 shared.Bad = Bad
 setStatus('GUI API loaded')
+
+setStatus('loading security gate')
+local securityCode, securityDownloadErr = downloadFile('badscript/security.lua')
+local securityFunc, securityErr
+if securityCode then
+	setStatus('compiling security gate')
+	securityFunc, securityErr = loadstring(securityCode, 'security')
+else
+	securityErr = securityDownloadErr
+end
+if not securityFunc then
+	local msg = 'Security gate failed to load' .. (securityErr and (': ' .. tostring(securityErr)) or '')
+	setStatus('ERROR: ' .. msg, true)
+	notify('BadWars Security', msg, 12)
+	error(msg, 0)
+end
+setStatus('running security gate')
+local securityOk, security = pcall(securityFunc)
+if not securityOk or type(security) ~= 'table' or type(security.Start) ~= 'function' then
+	local msg = 'Security gate returned invalid API: ' .. tostring(security)
+	setStatus('ERROR: ' .. msg, true)
+	notify('BadWars Security', msg, 12)
+	error(msg, 0)
+end
+local verified, securityStatus = security:Start(Bad)
+if not verified then
+	local msg = 'Security denied load: ' .. tostring(securityStatus or security.Status)
+	setStatus('ERROR: ' .. msg, true)
+	notify('BadWars Security', msg, 12)
+	error(msg, 0)
+end
+setStatus('security verified: ' .. tostring(securityStatus or security.Status))
 
 if not shared.BadIndependent then
 	setStatus('loading universal modules')

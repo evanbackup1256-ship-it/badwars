@@ -160,12 +160,13 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-fix-colorslider-refresh-recursion-2026-07-01-21'
+local cacheVersion = 'badwars-security-gate-2026-07-01-22'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	setStatus('clearing old cache')
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end
 	if isfile('badscript/loader.lua') then delfile('badscript/loader.lua') end
+	if isfile('badscript/security.lua') then delfile('badscript/security.lua') end
 	if isfile('badscript/games/universal - base/base.lua') then delfile('badscript/games/universal - base/base.lua') end
 	wipeAnyFolder('badscript/assets')
 	wipeFolder('badscript/games')

@@ -35,6 +35,24 @@ local mainapi = {
 	LogLevels = {Info = Color3.fromRGB(200, 200, 200), Success = Color3.fromRGB(100, 255, 100), Warning = Color3.fromRGB(255, 200, 100), Debug = Color3.fromRGB(150, 150, 255), Error = Color3.fromRGB(255, 100, 100)}
 }
 
+function mainapi:IsModuleAllowed(modulesettings, kind)
+	local security = shared and shared.BadSecurity
+	if security and type(security.IsModuleAllowed) == 'function' then
+		local ok, allowed, reason = pcall(security.IsModuleAllowed, security, modulesettings.Name, modulesettings.Category, kind)
+		if not ok then
+			if type(self.AddLog) == 'function' then self.AddLog('Error', 'Security permission check failed: '..tostring(allowed)) end
+			return false
+		end
+		if allowed == false then
+			local message = 'Blocked unauthorized module: '..tostring(modulesettings.Name)..(reason and (' ('..tostring(reason)..')') or '')
+			if type(self.AddLog) == 'function' then self.AddLog('Warning', message) end
+			if type(self.CreateNotification) == 'function' then self:CreateNotification('BadWars Security', message, 8, 'alert') end
+			return false
+		end
+	end
+	return true
+end
+
 -- Custom log function (supports rich entries)
 local function AddLog(level, message, stackOrExtra)
 	if not mainapi.Logs then mainapi.Logs = {} end
@@ -2360,6 +2378,20 @@ function mainapi:CreateCategory(categorysettings)
 	windowlist.Parent = children
 
 	function categoryapi:CreateModule(modulesettings)
+		modulesettings.Category = modulesettings.Category or categorysettings.Name
+		if not mainapi:IsModuleAllowed(modulesettings, 'module') then
+			return {
+				Enabled = false,
+				Options = {},
+				Bind = {},
+				Blocked = true,
+				Name = modulesettings.Name,
+				Category = modulesettings.Category,
+				Clean = function() end,
+				SetBind = function() end,
+				Toggle = function() end
+			}
+		end
 		mainapi:Remove(modulesettings.Name)
 		local moduleapi = {
 			Enabled = false,
@@ -3655,6 +3687,20 @@ function mainapi:CreateLegit()
 	table.insert(mainapi.Windows, window)
 
 	function legitapi:CreateModule(modulesettings)
+		modulesettings.Category = modulesettings.Category or 'Legit'
+		if not mainapi:IsModuleAllowed(modulesettings, 'legit') then
+			return {
+				Enabled = false,
+				Options = {},
+				Bind = {},
+				Blocked = true,
+				Name = modulesettings.Name,
+				Category = modulesettings.Category,
+				Clean = function() end,
+				SetBind = function() end,
+				Toggle = function() end
+			}
+		end
 		mainapi:Remove(modulesettings.Name)
 		local moduleapi = {
 			Enabled = false,

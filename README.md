@@ -41,6 +41,7 @@ The check covers cache-version sync, required GUI fallback APIs, blur default, s
 
 - [Runtime Architecture](docs/ARCHITECTURE.md)
 - [Engineering Audit](docs/ENGINEERING_AUDIT.md)
+- [Security Gate](docs/SECURITY.md)
 
 ## Development Notes
 

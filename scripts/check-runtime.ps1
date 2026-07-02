@@ -28,6 +28,7 @@ $script:Failed = $false
 $loader = Read-ProjectFile "badscript\loader.lua"
 $newMain = Read-ProjectFile "badscript\NewMainScript.lua"
 $main = Read-ProjectFile "badscript\main.lua"
+$security = Read-ProjectFile "badscript\security.lua"
 $newGui = Read-ProjectFile "badscript\guis\new\gui.lua"
 
 $cacheVersions = @()
@@ -112,6 +113,30 @@ if ($loader -match "shared\.BadStatus" -and $newMain -match "shared\.BadStatus" 
     Pass "Startup status surface is wired through loader and main"
 } else {
     Fail "Startup status surface is not wired through every entry point"
+}
+
+if ($main -match "security:Start\(Bad\)" -and $main.IndexOf("security:Start(Bad)") -lt $main.IndexOf("loading universal modules")) {
+    Pass "Security gate runs before feature modules"
+} else {
+    Fail "Security gate is missing or runs after feature modules"
+}
+
+if ($security -match "Mode = mode" -and $security -match "ApiUrl" -and $security -match "LicenseKey") {
+    Pass "Security gate has configurable API licensing"
+} else {
+    Fail "Security gate licensing configuration is incomplete"
+}
+
+if ($security -match "nonce" -and $security -match "timestamp" -and $security -match "VerifySignature") {
+    Pass "Security API response validation includes nonce, timestamp, and signature hook"
+} else {
+    Fail "Security API response validation is incomplete"
+}
+
+if ($newGui -match "function mainapi:IsModuleAllowed" -and $newGui -match "Blocked unauthorized module") {
+    Pass "GUI module creation honors security permissions"
+} else {
+    Fail "GUI module permission enforcement is missing"
 }
 
 if ($newGui -match "mainapi\.Logs") {

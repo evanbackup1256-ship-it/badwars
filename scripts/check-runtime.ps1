@@ -30,6 +30,9 @@ $newMain = Read-ProjectFile "badscript\NewMainScript.lua"
 $main = Read-ProjectFile "badscript\main.lua"
 $security = Read-ProjectFile "badscript\security.lua"
 $newGui = Read-ProjectFile "badscript\guis\new\gui.lua"
+$hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
+$predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
+$entityLib = Read-ProjectFile "badscript\libraries\entity.lua"
 
 $cacheVersions = @()
 foreach ($content in @($loader, $newMain)) {
@@ -107,6 +110,12 @@ if ($main -match "ERROR empty file" -and $loader -match "ERROR empty file" -and 
     Pass "Empty cache/download files are rejected"
 } else {
     Fail "Empty cache/download rejection is incomplete"
+}
+
+if ($hashLib -match "sha512" -and $predictionLib -match "Prediction Library" -and $entityLib -match "entitylib") {
+    Pass "Universal runtime libraries are present"
+} else {
+    Fail "Universal runtime libraries are missing or incomplete"
 }
 
 if ($loader -match "shared\.BadStatus" -and $newMain -match "shared\.BadStatus" -and $main -match "shared\.BadStatus") {

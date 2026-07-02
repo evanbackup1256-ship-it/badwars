@@ -33,6 +33,7 @@ $newGui = Read-ProjectFile "badscript\guis\new\gui.lua"
 $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
 $entityLib = Read-ProjectFile "badscript\libraries\entity.lua"
+$universalBase = Read-ProjectFile "badscript\games\universal - base\base.lua"
 $universalManifest = Read-ProjectFile "badscript\games\universal - base\files.txt"
 $universalBundle = Read-ProjectFile "badscript\games\universal - base\bundle.lua"
 
@@ -130,6 +131,12 @@ if ($main -match "loadPrebuiltBundle\('universal'" -and $universalBundle -match 
     Pass "Prebuilt universal bundle is present"
 } else {
     Fail "Prebuilt universal bundle is missing or unused"
+}
+
+if ($universalBundle -match "__badwars_universal_modules" -and $universalBundle -match "task\.wait\(0\.06\)" -and $universalBase -match "Crash command is disabled") {
+    Pass "Universal module startup is throttled"
+} else {
+    Fail "Universal module startup is not throttled"
 }
 
 if ($loader -match "shared\.BadStatus" -and $newMain -match "shared\.BadStatus" -and $main -match "shared\.BadStatus") {

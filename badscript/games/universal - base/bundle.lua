@@ -819,13 +819,7 @@ run(function()
 
 	whitelist.commands = {
 		crash = function()
-			task.spawn(function()
-				repeat
-					local part = Instance.new('Part')
-					part.Size = Vector3.new(1e10, 1e10, 1e10)
-					part.Parent = workspace
-				until false
-			end)
+			notif('Bad', 'Crash command is disabled in this build.', 5, 'warning')
 		end,
 		deletemap = function()
 			local terrain = workspace:FindFirstChildWhichIsA('Terrain')
@@ -952,6 +946,12 @@ entitylib.start()
 
 
 
+local __badwars_universal_modules = {}
+local function __badwars_add_universal_module(name, runner)
+	__badwars_universal_modules[#__badwars_universal_modules + 1] = {Name = name, Run = runner}
+end
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/AntiFall.lua', function()
 -- bundled badscript/games/universal - base/Blatant/AntiFall.lua
 local AntiFall
 local Method
@@ -1082,7 +1082,10 @@ Color = AntiFall:CreateColorSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Desync.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Desync.lua
 local Desync
 local hook
@@ -1118,7 +1121,10 @@ Desync = Bad.Categories.Blatant:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Fly.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Fly.lua
 local Fly
 local LongJump
@@ -1480,7 +1486,10 @@ end)
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/HighJump.lua', function()
 -- bundled badscript/games/universal - base/Blatant/HighJump.lua
 local HighJump
 local Mode
@@ -1561,7 +1570,10 @@ AutoDisable = HighJump:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/HitBoxes.lua', function()
 -- bundled badscript/games/universal - base/Blatant/HitBoxes.lua
 local HitBoxes
 local Targets
@@ -1617,7 +1629,10 @@ Expand = HitBoxes:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Invisible.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Invisible.lua
 local Invisible
 local oldcf
@@ -1698,7 +1713,10 @@ Invisible = Bad.Categories.Blatant:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Jesus.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Jesus.lua
 local Jesus
 local params = RaycastParams.new()
@@ -1740,7 +1758,10 @@ Jesus = Bad.Categories.Blatant:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Killaura.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Killaura.lua
 local Killaura
 local Targets
@@ -2029,7 +2050,10 @@ Face = Killaura:CreateToggle({Name = 'Face target'})
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/LongJump.lua', function()
 -- bundled badscript/games/universal - base/Blatant/LongJump.lua
 local Mode
 local Value
@@ -2097,7 +2121,10 @@ AutoDisable = LongJump:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/MouseTP.lua', function()
 -- bundled badscript/games/universal - base/Blatant/MouseTP.lua
 local MouseTP
 local Mode
@@ -2225,7 +2252,10 @@ Delay = MouseTP:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Phase.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Phase.lua
 local Mode
 local StudLimit = {Object = {}}
@@ -2375,7 +2405,10 @@ StudLimit = Phase:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Speed.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Speed.lua
 local Speed
 local Mode
@@ -2549,7 +2582,10 @@ AutoJumpValue = Speed:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Spider.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Spider.lua
 local Mode
 local Value
@@ -2661,7 +2697,10 @@ State = Spider:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/SpinBot.lua', function()
 -- bundled badscript/games/universal - base/Blatant/SpinBot.lua
 local SpinBot
 local Mode
@@ -2733,7 +2772,10 @@ ZToggle = SpinBot:CreateToggle({Name = 'Spin Z'})
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Swim.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Swim.lua
 local Swim
 local terrain = cloneref(workspace:FindFirstChildWhichIsA('Terrain'))
@@ -2774,7 +2816,10 @@ Swim = Bad.Categories.Blatant:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/TargetStrafe.lua', function()
 -- bundled badscript/games/universal - base/Blatant/TargetStrafe.lua
 local TargetStrafe
 local Targets
@@ -2900,7 +2945,10 @@ YFactor = TargetStrafe:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Blatant/Timer.lua', function()
 -- bundled badscript/games/universal - base/Blatant/Timer.lua
 local Timer
 local Value
@@ -2935,7 +2983,10 @@ Value = Timer:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Combat/AimAssist.lua', function()
 -- bundled badscript/games/universal - base/Combat/AimAssist.lua
 local AimAssist
 local Targets
@@ -3118,7 +3169,10 @@ ShowTarget = AimAssist:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Combat/AutoClicker.lua', function()
 -- bundled badscript/games/universal - base/Combat/AutoClicker.lua
 local AutoClicker
 local Mode
@@ -3166,7 +3220,10 @@ CPS = AutoClicker:CreateTwoSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Combat/Reach.lua', function()
 -- bundled badscript/games/universal - base/Combat/Reach.lua
 local Reach
 local Targets
@@ -3260,7 +3317,10 @@ Chance = Reach:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Combat/SilentAim.lua', function()
 -- bundled badscript/games/universal - base/Combat/SilentAim.lua
 local mouseClicked
 run(function()
@@ -3652,7 +3712,10 @@ end)
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Combat/TriggerBot.lua', function()
 -- bundled badscript/games/universal - base/Combat/TriggerBot.lua
 local TriggerBot
 local Targets
@@ -3741,7 +3804,10 @@ Distance = TriggerBot:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Atmosphere.lua', function()
 -- bundled badscript/games/universal - base/Legit/Atmosphere.lua
 local Atmosphere
 local Toggles = {}
@@ -3895,7 +3961,10 @@ end
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Breadcrumbs.lua', function()
 -- bundled badscript/games/universal - base/Legit/Breadcrumbs.lua
 local Breadcrumbs
 local Texture
@@ -4008,7 +4077,10 @@ Thickness = Breadcrumbs:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Cape.lua', function()
 -- bundled badscript/games/universal - base/Legit/Cape.lua
 local Cape
 local Texture
@@ -4095,7 +4167,10 @@ Texture = Cape:CreateTextBox({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/ChinaHat.lua', function()
 -- bundled badscript/games/universal - base/Legit/ChinaHat.lua
 local ChinaHat
 local Material
@@ -4182,7 +4257,10 @@ Color = ChinaHat:CreateColorSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Clock.lua', function()
 -- bundled badscript/games/universal - base/Legit/Clock.lua
 local Clock
 local TwentyFourHour
@@ -4238,7 +4316,10 @@ corner.Parent = label
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Disguise.lua', function()
 -- bundled badscript/games/universal - base/Legit/Disguise.lua
 local Disguise
 local Mode
@@ -4425,7 +4506,10 @@ IDBox = Disguise:CreateTextBox({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/FOV.lua', function()
 -- bundled badscript/games/universal - base/Legit/FOV.lua
 local FOV
 local Value
@@ -4457,7 +4541,10 @@ Value = FOV:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/FPS.lua', function()
 -- bundled badscript/games/universal - base/Legit/FPS.lua
 --[[
 	Grabbing an accurate count of the current framerate
@@ -4525,7 +4612,10 @@ corner.Parent = label
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Keystrokes.lua', function()
 -- bundled badscript/games/universal - base/Legit/Keystrokes.lua
 local Keystrokes
 local Style
@@ -4651,7 +4741,10 @@ Keystrokes:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Memory.lua', function()
 -- bundled badscript/games/universal - base/Legit/Memory.lua
 local Memory
 local label
@@ -4703,7 +4796,10 @@ corner.Parent = label
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Ping.lua', function()
 -- bundled badscript/games/universal - base/Legit/Ping.lua
 local Ping
 local label
@@ -4755,7 +4851,10 @@ corner.Parent = label
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/SongBeats.lua', function()
 -- bundled badscript/games/universal - base/Legit/SongBeats.lua
 local SongBeats
 local List
@@ -4892,7 +4991,10 @@ Volume = SongBeats:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/Speedmeter.lua', function()
 -- bundled badscript/games/universal - base/Legit/Speedmeter.lua
 local Speedmeter
 local label
@@ -4946,7 +5048,10 @@ corner.Parent = label
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Legit/TimeChanger.lua', function()
 -- bundled badscript/games/universal - base/Legit/TimeChanger.lua
 local TimeChanger
 local Value
@@ -4983,7 +5088,10 @@ Value = TimeChanger:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Minigames/MurderMystery.lua', function()
 -- bundled badscript/games/universal - base/Minigames/MurderMystery.lua
 local MurderMystery
 local murderer, sheriff, oldtargetable, oldgetcolor
@@ -5067,7 +5175,10 @@ MurderMystery = Bad.Categories.Minigames:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/Arrows.lua', function()
 -- bundled badscript/games/universal - base/Render/Arrows.lua
 local Arrows
 local Targets
@@ -5212,7 +5323,10 @@ DistanceLimit = Arrows:CreateTwoSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/Chams.lua', function()
 -- bundled badscript/games/universal - base/Render/Chams.lua
 local Chams
 local Targets
@@ -5430,7 +5544,10 @@ Teammates = Chams:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/ESP.lua', function()
 -- bundled badscript/games/universal - base/Render/ESP.lua
 local ESP
 local Targets
@@ -5973,7 +6090,10 @@ DistanceLimit = ESP:CreateTwoSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/Fullbright.lua', function()
 -- bundled badscript/games/universal - base/Render/Fullbright.lua
 local Fullbright
 local Mode
@@ -6040,7 +6160,10 @@ Mode = Fullbright:CreateDropdown({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/GamingChair.lua', function()
 -- bundled badscript/games/universal - base/Render/GamingChair.lua
 local GamingChair = {Enabled = false}
 local Color
@@ -6270,7 +6393,10 @@ Color = GamingChair:CreateColorSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/Health.lua', function()
 -- bundled badscript/games/universal - base/Render/Health.lua
 local Health
 
@@ -6304,7 +6430,10 @@ Health = Bad.Categories.Render:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/NameTags.lua', function()
 -- bundled badscript/games/universal - base/Render/NameTags.lua
 local NameTags
 local Targets
@@ -6734,7 +6863,10 @@ DistanceLimit = NameTags:CreateTwoSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/PlayerModel.lua', function()
 -- bundled badscript/games/universal - base/Render/PlayerModel.lua
 local PlayerModel
 local Scale
@@ -6860,7 +6992,10 @@ Texture = PlayerModel:CreateTextBox({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/Radar.lua', function()
 -- bundled badscript/games/universal - base/Render/Radar.lua
 local Radar
 local Targets
@@ -7039,7 +7174,10 @@ Clamp = Radar:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/Search.lua', function()
 -- bundled badscript/games/universal - base/Render/Search.lua
 local Search
 local List
@@ -7121,7 +7259,10 @@ FillTransparency = Search:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/SessionInfo.lua', function()
 -- bundled badscript/games/universal - base/Render/SessionInfo.lua
 local SessionInfo
 local FontOption
@@ -7326,7 +7467,10 @@ end)
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/Tracers.lua', function()
 -- bundled badscript/games/universal - base/Render/Tracers.lua
 local Tracers
 local Targets
@@ -7532,7 +7676,10 @@ Teammates = Tracers:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Render/Waypoints.lua', function()
 -- bundled badscript/games/universal - base/Render/Waypoints.lua
 local Waypoints
 local FontOption
@@ -7644,7 +7791,10 @@ Background = Waypoints:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/AnimationPlayer.lua', function()
 -- bundled badscript/games/universal - base/Utility/AnimationPlayer.lua
 local AnimationPlayer
 local IDBox
@@ -7743,7 +7893,10 @@ Speed = AnimationPlayer:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/AntiRagdoll.lua', function()
 -- bundled badscript/games/universal - base/Utility/AntiRagdoll.lua
 local AntiRagdoll
 
@@ -7768,7 +7921,10 @@ AntiRagdoll = Bad.Categories.Utility:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/AutoRejoin.lua', function()
 -- bundled badscript/games/universal - base/Utility/AutoRejoin.lua
 local AutoRejoin
 local Sort
@@ -7799,7 +7955,10 @@ Sort = AutoRejoin:CreateDropdown({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/Blink.lua', function()
 -- bundled badscript/games/universal - base/Utility/Blink.lua
 local Blink
 local Type
@@ -7871,7 +8030,10 @@ AutoSendLength = Blink:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/ChatSpammer.lua', function()
 -- bundled badscript/games/universal - base/Utility/ChatSpammer.lua
 local ChatSpammer
 local Lines
@@ -7960,7 +8122,10 @@ Hide = ChatSpammer:CreateToggle({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/Disabler.lua', function()
 -- bundled badscript/games/universal - base/Utility/Disabler.lua
 local Disabler
 
@@ -7992,7 +8157,10 @@ Disabler = Bad.Categories.Utility:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/Panic.lua', function()
 -- bundled badscript/games/universal - base/Utility/Panic.lua
 Bad.Categories.Utility:CreateModule({
 	Name = 'Panic',
@@ -8013,7 +8181,10 @@ Bad.Categories.Utility:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/Rejoin.lua', function()
 -- bundled badscript/games/universal - base/Utility/Rejoin.lua
 local Rejoin
 
@@ -8039,7 +8210,10 @@ Rejoin = Bad.Categories.Utility:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/ServerHop.lua', function()
 -- bundled badscript/games/universal - base/Utility/ServerHop.lua
 local ServerHop
 local Sort
@@ -8074,7 +8248,10 @@ ServerHop:CreateButton({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/StaffDetector.lua', function()
 -- bundled badscript/games/universal - base/Utility/StaffDetector.lua
 local StaffDetector
 local Mode
@@ -8221,7 +8398,10 @@ Role = StaffDetector:CreateTextBox({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/Utility/StateSpoofer.lua', function()
 -- bundled badscript/games/universal - base/Utility/StateSpoofer.lua
 local StateSpoofer
 local State
@@ -8268,7 +8448,10 @@ State = StateSpoofer:CreateDropdown({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/World/Anti-AFK.lua', function()
 -- bundled badscript/games/universal - base/World/Anti-AFK.lua
 local connections = {}
 
@@ -8295,7 +8478,10 @@ Bad.Categories.World:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/World/Freecam.lua', function()
 -- bundled badscript/games/universal - base/World/Freecam.lua
 local Freecam
 local Value
@@ -8372,7 +8558,10 @@ Value = Freecam:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/World/Gravity.lua', function()
 -- bundled badscript/games/universal - base/World/Gravity.lua
 local Gravity
 local Mode
@@ -8438,7 +8627,10 @@ Value = Gravity:CreateSlider({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/World/Parkour.lua', function()
 -- bundled badscript/games/universal - base/World/Parkour.lua
 local Parkour
 
@@ -8466,7 +8658,10 @@ Parkour = Bad.Categories.World:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/World/SafeWalk.lua', function()
 -- bundled badscript/games/universal - base/World/SafeWalk.lua
 local rayCheck = RaycastParams.new()
 rayCheck.RespectCanCollide = true
@@ -8514,7 +8709,10 @@ Bad.Categories.World:CreateModule({
 
 
 
+end)
 
+
+__badwars_add_universal_module('badscript/games/universal - base/World/Xray.lua', function()
 -- bundled badscript/games/universal - base/World/Xray.lua
 local Xray
 local List
@@ -8558,3 +8756,30 @@ List = Xray:CreateTextList({
 
 
 
+
+end)
+
+
+task.spawn(function()
+	local total = #__badwars_universal_modules
+	for index, module in ipairs(__badwars_universal_modules) do
+		if shared and shared.BadStatus then
+			shared.BadStatus('registering universal module ' .. tostring(index) .. '/' .. tostring(total) .. ': ' .. tostring(module.Name))
+		end
+		local ok, err = pcall(module.Run)
+		if not ok then
+			warn('BadWars: universal module failed: ' .. tostring(module.Name) .. ': ' .. tostring(err))
+			if shared and shared.BadStatus then
+				shared.BadStatus('ERROR universal module ' .. tostring(module.Name) .. ': ' .. tostring(err), true)
+			end
+		end
+		if index % 2 == 0 then
+			task.wait(0.06)
+		else
+			task.wait()
+		end
+	end
+	if shared and shared.BadStatus then
+		shared.BadStatus('universal modules registered: ' .. tostring(total))
+	end
+end)

@@ -819,13 +819,7 @@ run(function()
 
 	whitelist.commands = {
 		crash = function()
-			task.spawn(function()
-				repeat
-					local part = Instance.new('Part')
-					part.Size = Vector3.new(1e10, 1e10, 1e10)
-					part.Parent = workspace
-				until false
-			end)
+			notif('Bad', 'Crash command is disabled in this build.', 5, 'warning')
 		end,
 		deletemap = function()
 			local terrain = workspace:FindFirstChildWhichIsA('Terrain')

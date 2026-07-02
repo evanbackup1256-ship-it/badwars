@@ -2029,6 +2029,10 @@ function mainapi:CreateGUI()
 		end
 
 		function optionapi:SetValue(h, s, v, n)
+			if type(n) ~= 'number' then
+				n = nil
+			end
+
 			if n then
 				if self.Rainbow then
 					self:Toggle()
@@ -2039,9 +2043,9 @@ function mainapi:CreateGUI()
 				self.CustomColor = true
 			end
 
-			self.Hue = h or self.Hue
-			self.Sat = s or self.Sat
-			self.Value = v or self.Value
+			self.Hue = tonumber(h) or self.Hue or 0
+			self.Sat = tonumber(s) or self.Sat or 1
+			self.Value = tonumber(v) or self.Value or 1
 			self.Notch = n
 			preview.ImageColor3 = Color3.fromHSV(self.Hue, self.Sat, self.Value)
 			satSlider.Slider.UIGradient.Color = ColorSequence.new({
@@ -2094,7 +2098,7 @@ function mainapi:CreateGUI()
 					})
 				end
 			end
-			optionsettings.Function(self.Hue, self.Sat, self.Value)
+			optionsettings.Function(self.Hue, self.Sat, self.Value, 1)
 		end
 
 		function optionapi:Toggle()
@@ -5419,6 +5423,7 @@ local targetinfocolortoggle = targetinfoobj:CreateToggle({
 targetinfocolor = targetinfoobj:CreateColorSlider({
 	Name = 'Color',
 	Function = function(hue, sat, val)
+		hue, sat, val = tonumber(hue) or 0.44, tonumber(sat) or 1, tonumber(val) or 1
 		if targetinfocolortoggle.Enabled then
 			targetinfobkg.BackgroundColor3 = Color3.fromHSV(hue, sat, val)
 			targetinfoshot.BackgroundColor3 = Color3.fromHSV(hue, sat, math.max(val - 0.1, 0))
@@ -5438,6 +5443,8 @@ targetinfoobj:CreateToggle({
 targetinfobcolor = targetinfoobj:CreateColorSlider({
 	Name = 'Border Color',
 	Function = function(hue, sat, val, opacity)
+		hue, sat, val = tonumber(hue) or 0.44, tonumber(sat) or 1, tonumber(val) or 1
+		opacity = tonumber(opacity) or 1
 		targetinfob.Color = Color3.fromHSV(hue, sat, val)
 		targetinfob.Transparency = 1 - opacity
 	end,

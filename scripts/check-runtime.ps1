@@ -78,6 +78,18 @@ if ($newGui -match "registerSimpleComponent\('Font'") {
     Fail "CreateFont compatibility API is missing"
 }
 
+if ($newGui -match "type\(n\) ~= 'number'[\s\S]{0,80}n = nil") {
+    Pass "Native GUI color slider ignores boolean rainbow refresh flags"
+} else {
+    Fail "Native GUI color slider may treat refresh flags as color notches"
+}
+
+if ($newGui -match "opacity = tonumber\(opacity\) or 1") {
+    Pass "Target Info border color callback guards missing opacity"
+} else {
+    Fail "Target Info border color callback can still receive nil opacity"
+}
+
 if ($newGui -match "Name = 'Blur background'[\s\S]{0,240}Default = false") {
     Pass "Blur background defaults off"
 } else {

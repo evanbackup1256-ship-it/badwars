@@ -78,6 +78,12 @@ if ($newGui -match "registerSimpleComponent\('Font'") {
     Fail "CreateFont compatibility API is missing"
 }
 
+if ($newGui -match "function api:Color\(hue, sat, val\)[\s\S]{0,80}self:SetValue\(hue, sat, val, true\)") {
+    Pass "Fallback color slider refresh is silent"
+} else {
+    Fail "Fallback color slider refresh may recurse through callbacks"
+}
+
 if ($newGui -match "type\(n\) ~= 'number'[\s\S]{0,80}n = nil") {
     Pass "Native GUI color slider ignores boolean rainbow refresh flags"
 } else {

@@ -1012,7 +1012,7 @@ registerSimpleComponent('ColorSlider', function(settings, parent, owner)
 		if not silent then settings.Function(self.Hue, self.Sat, self.Value, 1) end
 	end
 	function api:Color(hue, sat, val)
-		settings.Function(tonumber(hue) or self.Hue, tonumber(sat) or self.Sat, tonumber(val) or self.Value, 1)
+		self:SetValue(hue, sat, val, true)
 	end
 	function api:Save(tab)
 		tab[settings.Name] = {Hue = self.Hue, Sat = self.Sat, Value = self.Value}

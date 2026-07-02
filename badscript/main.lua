@@ -148,6 +148,16 @@ local function loadLuaBundle(name, basePath, manifestPath)
 	return table.concat(parts, '\n')
 end
 
+local function loadPrebuiltBundle(name, bundlePath, basePath, manifestPath)
+	local bundleCode, bundleErr = downloadFile(bundlePath)
+	if type(bundleCode) == 'string' and bundleCode ~= '' then
+		setStatus('loaded prebuilt ' .. tostring(name) .. ' bundle')
+		return bundleCode
+	end
+	setStatus('WARNING prebuilt ' .. tostring(name) .. ' bundle unavailable; building from manifest: ' .. tostring(bundleErr), false)
+	return loadLuaBundle(name, basePath, manifestPath)
+end
+
 local function finishLoading()
 	Bad.Init = nil
 	setStatus('loading saved GUI/profile')
@@ -276,7 +286,7 @@ setStatus('security verified: ' .. tostring(securityStatus or security.Status))
 
 if not shared.BadIndependent then
 	setStatus('loading universal modules')
-	local uniCode, uniDownloadErr = loadLuaBundle('universal', 'badscript/games/universal - base/base.lua', 'badscript/games/universal - base/files.txt')
+	local uniCode, uniDownloadErr = loadPrebuiltBundle('universal', 'badscript/games/universal - base/bundle.lua', 'badscript/games/universal - base/base.lua', 'badscript/games/universal - base/files.txt')
 	local uni, uniErr
 	if uniCode then
 		setStatus('compiling universal modules')

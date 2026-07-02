@@ -34,6 +34,7 @@ $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
 $entityLib = Read-ProjectFile "badscript\libraries\entity.lua"
 $universalManifest = Read-ProjectFile "badscript\games\universal - base\files.txt"
+$universalBundle = Read-ProjectFile "badscript\games\universal - base\bundle.lua"
 
 $cacheVersions = @()
 foreach ($content in @($loader, $newMain)) {
@@ -119,10 +120,16 @@ if ($hashLib -match "sha512" -and $predictionLib -match "Prediction Library" -an
     Fail "Universal runtime libraries are missing or incomplete"
 }
 
-if ($main -match "loadLuaBundle\('universal'" -and $universalManifest -match "Combat/AutoClicker.lua" -and $universalManifest -match "Render/ESP.lua") {
+if ($main -match "local function loadLuaBundle" -and $universalManifest -match "Combat/AutoClicker.lua" -and $universalManifest -match "Render/ESP.lua") {
     Pass "Universal feature modules are bundled with base"
 } else {
     Fail "Universal feature modules are not bundled with base"
+}
+
+if ($main -match "loadPrebuiltBundle\('universal'" -and $universalBundle -match "Combat/AutoClicker.lua" -and $universalBundle -match "Render/ESP.lua") {
+    Pass "Prebuilt universal bundle is present"
+} else {
+    Fail "Prebuilt universal bundle is missing or unused"
 }
 
 if ($loader -match "shared\.BadStatus" -and $newMain -match "shared\.BadStatus" -and $main -match "shared\.BadStatus") {

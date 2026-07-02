@@ -1027,6 +1027,74 @@ registerSimpleComponent('ColorSlider', function(settings, parent, owner)
 	return api
 end)
 
+registerSimpleComponent('Font', function(settings, parent, owner)
+	settings.Function = settings.Function or function() end
+	local fonts = settings.List or {'Arial', 'Gotham', 'Roboto', 'RobotoMono', 'SourceSans'}
+	local defaultName = settings.Default or fonts[1] or 'Arial'
+	if settings.Blacklist == defaultName then
+		defaultName = fonts[2] or 'Gotham'
+	end
+	local api = {
+		Type = 'Font',
+		Value = Font.fromEnum(Enum.Font[defaultName] or Enum.Font.Arial),
+		FontName = defaultName
+	}
+	local row = createOptionRow(settings, parent)
+	local value = Instance.new('TextLabel')
+	value.Name = 'Value'
+	value.Size = UDim2.fromOffset(100, 40)
+	value.Position = UDim2.new(1, -108, 0, 0)
+	value.BackgroundTransparency = 1
+	value.TextXAlignment = Enum.TextXAlignment.Right
+	value.TextColor3 = color.Dark(uipallet.Text, 0.16)
+	value.TextSize = 13
+	value.FontFace = uipallet.Font
+	value.Parent = row
+	function api:SetValue(fontName, silent)
+		fontName = tostring(fontName or self.FontName)
+		if settings.Blacklist == fontName then fontName = defaultName end
+		self.FontName = fontName
+		self.Value = Font.fromEnum(Enum.Font[fontName] or Enum.Font.Arial)
+		value.Text = fontName
+		if not silent then settings.Function(self.Value) end
+	end
+	function api:Save(tab)
+		tab[settings.Name] = {Value = self.FontName}
+	end
+	function api:Load(tab)
+		self:SetValue(tab and tab.Value, true)
+	end
+	row.MouseButton1Click:Connect(function()
+		local ind = table.find(fonts, api.FontName) or 0
+		api:SetValue(fonts[(ind % #fonts) + 1] or api.FontName)
+	end)
+	api.Object = row
+	storeOption(owner, settings, api)
+	api:SetValue(api.FontName, true)
+	return api
+end)
+
+registerSimpleComponent('TwoSlider', function(settings, parent, owner)
+	local api = mainapi.Components.Slider(settings, parent, owner)
+	api.Type = 'TwoSlider'
+	api.Value2 = settings.Default2 or settings.Default or api.Value
+	return api
+end)
+
+registerSimpleComponent('Targets', function(settings, parent, owner)
+	local api = mainapi.Components.TextList(settings, parent, owner)
+	api.Type = 'Targets'
+	api.Players = true
+	api.NPCs = true
+	return api
+end)
+
+registerSimpleComponent('HotbarList', function(settings, parent, owner)
+	local api = mainapi.Components.TextList(settings, parent, owner)
+	api.Type = 'HotbarList'
+	return api
+end)
+
 task.spawn(function()
 	repeat
 		local hue = tick() * (0.2 * mainapi.RainbowSpeed.Value) % 1

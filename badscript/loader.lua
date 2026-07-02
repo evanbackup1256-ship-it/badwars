@@ -77,6 +77,11 @@ local function createStatusLabel()
 		local text = 'BadWars: ' .. tostring(message)
 		warn(text)
 		if statusLabel then
+			if not isError and tostring(message):find('ready', 1, true) then
+				statusGui.Enabled = false
+				return
+			end
+			statusGui.Enabled = true
 			statusLabel.Text = text
 			statusLabel.TextColor3 = isError and Color3.fromRGB(255, 120, 120) or Color3.fromRGB(235, 245, 255)
 		end
@@ -166,7 +171,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-new-gui-font-component-2026-07-01-18'
+local cacheVersion = 'badwars-fix-blur-and-colorslider-callback-2026-07-01-19'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	setStatus('clearing old cache')

@@ -133,7 +133,13 @@ if ($main -match "loadPrebuiltBundle\('universal'" -and $universalBundle -match 
     Fail "Prebuilt universal bundle is missing or unused"
 }
 
-if ($universalBundle -match "__badwars_universal_modules" -and $universalBundle -match "task\.wait\(0\.06\)" -and $universalBase -match "Crash command is disabled") {
+if (
+    $universalBundle -match "__badwars_universal_modules" -and
+    $universalBundle -match "task\.wait\(0\.06\)" -and
+    $universalBundle -match "for __badwars_universal_index, __badwars_universal_module in ipairs" -and
+    $universalBundle -notmatch "task\.spawn\(function\(\)\s*local __badwars_universal_total" -and
+    $universalBase -match "Crash command is disabled"
+) {
     Pass "Universal module startup is throttled"
 } else {
     Fail "Universal module startup is not throttled"

@@ -8760,26 +8760,24 @@ List = Xray:CreateTextList({
 end)
 
 
-task.spawn(function()
-	local total = #__badwars_universal_modules
-	for index, module in ipairs(__badwars_universal_modules) do
-		if shared and shared.BadStatus then
-			shared.BadStatus('registering universal module ' .. tostring(index) .. '/' .. tostring(total) .. ': ' .. tostring(module.Name))
-		end
-		local ok, err = pcall(module.Run)
-		if not ok then
-			warn('BadWars: universal module failed: ' .. tostring(module.Name) .. ': ' .. tostring(err))
-			if shared and shared.BadStatus then
-				shared.BadStatus('ERROR universal module ' .. tostring(module.Name) .. ': ' .. tostring(err), true)
-			end
-		end
-		if index % 2 == 0 then
-			task.wait(0.06)
-		else
-			task.wait()
-		end
-	end
+local __badwars_universal_total = #__badwars_universal_modules
+for __badwars_universal_index, __badwars_universal_module in ipairs(__badwars_universal_modules) do
 	if shared and shared.BadStatus then
-		shared.BadStatus('universal modules registered: ' .. tostring(total))
+		shared.BadStatus('registering universal module ' .. tostring(__badwars_universal_index) .. '/' .. tostring(__badwars_universal_total) .. ': ' .. tostring(__badwars_universal_module.Name))
 	end
-end)
+	local __badwars_universal_ok, __badwars_universal_err = pcall(__badwars_universal_module.Run)
+	if not __badwars_universal_ok then
+		warn('BadWars: universal module failed: ' .. tostring(__badwars_universal_module.Name) .. ': ' .. tostring(__badwars_universal_err))
+		if shared and shared.BadStatus then
+			shared.BadStatus('ERROR universal module ' .. tostring(__badwars_universal_module.Name) .. ': ' .. tostring(__badwars_universal_err), true)
+		end
+	end
+	if __badwars_universal_index % 2 == 0 then
+		task.wait(0.06)
+	else
+		task.wait()
+	end
+end
+if shared and shared.BadStatus then
+	shared.BadStatus('universal modules registered: ' .. tostring(__badwars_universal_total))
+end

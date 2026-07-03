@@ -343,10 +343,10 @@ if #missing>0 then warn('BadWars: Missing services: '..table.concat(missing,', '
 pcall(function() game:GetService('StarterGui'):SetCore('SendNotification',{Title='BadWars',Text='by usingINales | Dev Mode Active',Duration=6}) end)
 
 -- Stage 3: GUI Profile
-local defaultGui='liquidbounce'
+local defaultGui='new'
 local validGuis={liquidbounce=true,new=true,old=true,rise=true,wurst=true}
 local savedGui=isfile('badscript/profiles/gui.txt') and readfile('badscript/profiles/gui.txt') or ''
-if not validGuis[savedGui] or savedGui=='new' or savedGui=='old' then writefile('badscript/profiles/gui.txt',defaultGui) end
+if not validGuis[savedGui] or savedGui=='liquidbounce' then writefile('badscript/profiles/gui.txt',defaultGui) end
 local gui=readfile('badscript/profiles/gui.txt')
 if not isfolder('badscript/assets/'..gui) then makefolder('badscript/assets/'..gui) end
 

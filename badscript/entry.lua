@@ -3,6 +3,13 @@
 shared.BadWarsDev = true
 shared.usingINales = true
 
+-- URL configuration
+local BASE_REPO = 'evanbackup1256-ship-it'
+local BASE_REPO_NAME = 'badwars'
+local BASE_BRANCH = 'main'
+local LOADER_PATH = 'badscript/loader.lua'
+local LOADER_URL = 'https://raw.githubusercontent.com/' .. BASE_REPO .. '/' .. BASE_REPO_NAME .. '/' .. BASE_BRANCH .. '/' .. LOADER_PATH
+
 -- HTTP GET that actually returns the result
 local function httpGet(url)
 	local fn = (game and game.HttpGet)
@@ -21,6 +28,13 @@ local function httpGet(url)
 	return nil, 'all HTTP methods failed'
 end
 
+-- URL diagnostics
+warn('BadWars: [URL DIAGNOSTICS]')
+warn('  Repository:   ' .. BASE_REPO .. '/' .. BASE_REPO_NAME)
+warn('  Branch:       ' .. BASE_BRANCH)
+warn('  File:         ' .. LOADER_PATH)
+warn('  Raw URL:      ' .. LOADER_URL)
+
 local g = getgenv
 if type(g) == 'function' then
 	local ok, res = pcall(g)
@@ -35,9 +49,18 @@ if type(ls) ~= 'function' then
 	warn(msg); error(msg, 0)
 end
 
-local loaderCode = httpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua')
+-- Fetch loader with validation
+local loaderCode = httpGet(LOADER_URL)
+if loaderCode == nil then
+	local msg = 'BadWars: httpGet returned nil for ' .. LOADER_URL
+	warn(msg); error(msg, 0)
+end
 if type(loaderCode) ~= 'string' or loaderCode == '' then
-	local msg = 'BadWars: Failed to fetch loader'
+	local msg = 'BadWars: empty response from ' .. LOADER_URL
+	warn(msg); error(msg, 0)
+end
+if loaderCode:find('404: Not Found', 1, true) then
+	local msg = 'FILE NOT FOUND: ' .. LOADER_PATH .. ' does not exist at ' .. LOADER_URL
 	warn(msg); error(msg, 0)
 end
 

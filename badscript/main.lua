@@ -1,4 +1,4 @@
--- BadWars Main v3.0 - Robust Pipeline
+-- BadWars Main v3.1 - URL-consistent Pipeline
 repeat task.wait() until game:IsLoaded()
 if shared.Bad then pcall(function() shared.Bad:Uninject() end) end
 shared.BadSecurityStarted=nil
@@ -11,6 +11,10 @@ local collectgarbage=collectgarbage
 local __rtErrs=shared.__badwars_runtime_errors
 if type(__rtErrs)~='table' then __rtErrs={}; shared.__badwars_runtime_errors=__rtErrs end
 local function recordErr(mod,err) table.insert(__rtErrs,{module=tostring(mod),error=tostring(err),time=os_clock()}) end
+
+-- URL configuration (consistent with entry.lua and loader.lua)
+local BASE_REPO='evanbackup1256-ship-it'; local BASE_REPO_NAME='badwars'; local BASE_BRANCH='main'
+local function rawUrl(path) return 'https://raw.githubusercontent.com/'..BASE_REPO..'/'..BASE_REPO_NAME..'/'..BASE_BRANCH..'/'..path:gsub(' ','%%20') end
 
 -- Safe helpers
 local function typeName(v) return typeof(v) end
@@ -85,28 +89,34 @@ setthreadidentity=setthreadidentity or function() end
 queue_on_teleport=queue_on_teleport or function() end
 
 local function httpGet(url)
-	local g = game
-	local ok1, res1 = pcall(function() return g:HttpGet(url, true) end)
-	if ok1 and type(res1) == 'string' and #res1 > 0 then return res1 end
-	local ok2, res2 = pcall(function() local env = getgenv(); if type(env.HttpGet) == 'function' then return env.HttpGet(g, url, true) end; return nil end)
-	if ok2 and type(res2) == 'string' and #res2 > 0 then return res2 end
-	local ok3, res3 = pcall(function() return cloneref(g:GetService('HttpService')):GetAsync(url, true) end)
-	if ok3 and type(res3) == 'string' and #res3 > 0 then return res3 end
+	local fn=(game and game.HttpGet)
+	if type(fn)~='function' then
+		local env=getgenv and type(getgenv)=='function' and getgenv()
+		fn=env and env.HttpGet
+	end
+	if type(fn)=='function' then
+		local ok,res=pcall(fn,game,url,true)
+		if ok and type(res)=='string' and #res>0 then return res end
+	end
+	local ok,res=pcall(function()
+		return cloneref(game:GetService('HttpService')):GetAsync(url,true)
+	end)
+	if ok and type(res)=='string' and #res>0 then return res end
 	return nil
 end
-HttpGet = httpGet
+HttpGet=httpGet
 
 local function downloadFile(path)
-	if not HttpGet then return nil, 'HttpGet nil' end
-	local cached = isfile(path) and readfile(path)
-	if type(cached) == 'string' and #cached > 0 then return cached end
-	setStatus('downloading ' .. tostring(path))
-	local url = 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20')
-	local res = httpGet(url)
-	if type(res) ~= 'string' or #res == 0 then return nil, 'empty response from ' .. url end
-	if res:find('404: Not Found', 1, true) or (#res < 200 and res:find('Not Found', 1, true)) then return nil, '404: Not Found - ' .. url end
-	if path:find('.lua') then res = '-- BadWars by usingINales\n' .. res end
-	pcall(function() writefile(path, res) end)
+	if not HttpGet then return nil,'HttpGet nil' end
+	local cached=isfile(path) and readfile(path)
+	if type(cached)=='string' and #cached>0 then return cached end
+	setStatus('downloading '..tostring(path))
+	local url=rawUrl(path)
+	local res=httpGet(url)
+	if type(res)~='string' or #res==0 then return nil,'empty response from '..url end
+	if res:find('404: Not Found',1,true) or (#res<200 and res:find('Not Found',1,true)) then return nil,'FILE NOT FOUND: '..url end
+	if path:find('.lua') then res='-- BadWars by usingINales\n'..res end
+	pcall(function() writefile(path,res) end)
 	return res
 end
 
@@ -221,7 +231,7 @@ local function finish()
 	shared.Bad:Clean(shared.Bad.gui and shared.Bad.gui:FindFirstChild('LocalPlayer') and shared.Bad.gui:FindFirstChild('LocalPlayer').OnTeleport:Connect(function()
 		if not teleported and not shared.BadIndependent then
 			teleported=true
-			local script='shared.BadReload=true\nif shared.BadDeveloper then\nloadstring(readfile(\'badscript/loader.lua\'),\'loader\')()\nelse\nloadstring(game:HttpGet(\'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua\',true),\'loader\')()\nend'
+			local script='shared.BadReload=true\nif shared.BadDeveloper then\nloadstring(readfile(\'badscript/loader.lua\'),\'loader\')()\nelse\nloadstring(game:HttpGet(\''..rawUrl('badscript/loader.lua')..'\',true),\'loader\')()\nend'
 			if shared.BadDeveloper then script='shared.BadDeveloper=true\n'..script end
 			shared.Bad:Save()
 			queue_on_teleport(script)

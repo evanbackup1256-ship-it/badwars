@@ -1,4 +1,6 @@
--- BadWars Loader v5.0
+-- BadWars Loader v6.0
+-- Diagnostics-first pipeline: validates every URL before download, reports exact paths
+
 local loaderStart = os.clock()
 local collectgarbage = collectgarbage
 
@@ -13,6 +15,28 @@ writefile = writefile or function() end
 cloneref = cloneref or function(o) return o end
 setthreadidentity = setthreadidentity or function() end
 queue_on_teleport = queue_on_teleport or function() end
+
+-- ========== CONFIG ==========
+local BASE_REPO = 'evanbackup1256-ship-it'
+local BASE_REPO_NAME = 'badwars'
+local BASE_BRANCH = 'main'
+local BASE_FOLDER = 'badscript'
+local ORCHESTRATOR_FILE = 'main.lua'
+local ORCHESTRATOR_PATH = BASE_FOLDER .. '/' .. ORCHESTRATOR_FILE
+local ORCHESTRATOR_URL = 'https://raw.githubusercontent.com/' .. BASE_REPO .. '/' .. BASE_REPO_NAME .. '/' .. BASE_BRANCH .. '/' .. ORCHESTRATOR_PATH
+
+-- ========== URL DIAGNOSTICS ==========
+local function printUrlDiagnostics()
+	warn('BadWars: [URL DIAGNOSTICS]')
+	warn('  Repository:   ' .. BASE_REPO .. '/' .. BASE_REPO_NAME)
+	warn('  Branch:       ' .. BASE_BRANCH)
+	warn('  Folder:       ' .. BASE_FOLDER)
+	warn('  File:         ' .. ORCHESTRATOR_FILE)
+	warn('  Full path:    ' .. BASE_FOLDER .. '/' .. ORCHESTRATOR_FILE)
+	warn('  Raw URL:      ' .. ORCHESTRATOR_URL)
+	warn('  Expected:     https://raw.githubusercontent.com/{user}/{repo}/{branch}/{folder}/{file}')
+	warn('  Constructed:  https://raw.githubusercontent.com/' .. BASE_REPO .. '/' .. BASE_REPO_NAME .. '/' .. BASE_BRANCH .. '/' .. BASE_FOLDER .. '/' .. ORCHESTRATOR_FILE)
+end
 
 -- httpGet: matches entry.lua's pattern exactly
 local function httpGet(url)
@@ -92,7 +116,7 @@ end
 local function wipeAny(p) if isfolder(p) then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end; if isfolder(f) then wipeGen(f) end; if isfile(f) then local c=readfile(f); if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) then delfile(f) end end end end end
 
-local cacheVer='badwars-v5-diagnostic'
+local cacheVer='badwars-v6-url-diagnostics'
 local cacheFile='badscript/profiles/cache-version.txt'
 if (isfile(cacheFile) and readfile(cacheFile) or '')~=cacheVer then
 	setStatus('cache cleared (version mismatch)')
@@ -102,78 +126,85 @@ if (isfile(cacheFile) and readfile(cacheFile) or '')~=cacheVer then
 end
 writefile('badscript/profiles/commit.txt','main')
 
--- Download main.lua with full diagnostics
+-- ========== SELF-TEST ==========
+setStatus('pipeline: self-test')
+printUrlDiagnostics()
+
+-- Validate the orchestrator URL before attempting download
+setStatus('validating target URL: ' .. ORCHESTRATOR_URL)
+local testResult = httpGet(ORCHESTRATOR_URL)
+if testResult == nil then
+	local m = 'URL validation FAILED: httpGet returned nil for ' .. ORCHESTRATOR_URL
+	setStatus('ERROR: ' .. m, true)
+	recordErr('loader', m)
+	error(m, 0)
+end
+if type(testResult) ~= 'string' or #testResult == 0 then
+	local m = 'URL validation FAILED: empty response from ' .. ORCHESTRATOR_URL
+	setStatus('ERROR: ' .. m, true)
+	recordErr('loader', m)
+	error(m, 0)
+end
+if testResult:find('404: Not Found', 1, true) then
+	local m = 'FILE NOT FOUND: the orchestrator file does not exist at the expected location.'
+	local detail = '  Repo: ' .. BASE_REPO .. '/' .. BASE_REPO_NAME
+	detail = detail .. '  Branch: ' .. BASE_BRANCH
+	detail = detail .. '  Path: ' .. ORCHESTRATOR_PATH
+	detail = detail .. '  Full URL: ' .. ORCHESTRATOR_URL
+	warn('BadWars: ' .. m)
+	warn('BadWars: ' .. detail)
+	m = m .. ' ' .. detail
+	setStatus('ERROR: ' .. m, true)
+	recordErr('loader', m)
+	error(m, 0)
+end
+setStatus('URL validation passed: ' .. tostring(#testResult) .. ' bytes received')
+
+-- ========== DOWNLOAD ORCHESTRATOR ==========
 setStatus('pipeline: downloading main orchestrator')
-local MAIN_URL = 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/main.lua'
-setStatus('download URL: ' .. MAIN_URL)
-local raw = httpGet(MAIN_URL)
-if type(raw) == 'string' and #raw > 0 then
-	setStatus('download OK: ' .. #raw .. ' bytes')
-	-- Validate: GitHub raw 404 pages contain "404: Not Found"
-	if raw:find('404: Not Found', 1, true) then
-		recordErr('loader', 'URL returned 404: ' .. MAIN_URL)
-		raw = nil
-	else
-		local header = '-- BadWars by usingINales\n'
-		local code = header .. raw
-		pcall(function() writefile('badscript/main.lua', code) end)
-		-- Compile-check before executing
-		local fn, cerr = _loadstring(code, 'main')
-		if fn then
-			setStatus('main.lua compiled OK')
-			setStatus('pipeline: executing main orchestrator')
-			local ok, result = xpcall(fn, debug.traceback)
-			if not ok then
-				local m = 'main.lua runtime error: ' .. tostring(result)
-				setStatus('ERROR: ' .. m, true); recordErr('loader', m); error(m, 0)
-			end
-			-- Post-execution validation
-			setStatus('pipeline: validation')
-			local issues = {}
-			if not shared.Bad then table.insert(issues, 'shared.Bad is nil') end
-			local report = shared.__badwars_universal_report
-			if type(report)=='table' and type(report.failed)=='table' and #report.failed>0 then
-				for _,e in ipairs(report.failed) do table.insert(issues,'Module ['..tostring(e.name)..']: '..tostring(e.error)) end
-			end
-			if #__rtErrs>0 then for _,e in ipairs(__rtErrs) do table.insert(issues,'Runtime ['..tostring(e.module)..']: '..tostring(e.error)) end end
-			if #issues>0 then
-				warn('BadWars: [VALIDATION] '..#issues..' issue(s):')
-				for _,i in ipairs(issues) do warn('  ! '..i) end
-				setStatus(#issues..' issue(s) found',true)
-			else
-				setStatus('validation passed')
-			end
-			local el=os.clock()-loaderStart
-			local final='Loader complete in '..string.format('%.2f',el)..'s'
-			if #issues>0 then final=final..' ('..#issues..' issue(s))' end
-			warn('BadWars: '..final)
-			return result
-		else
-			raw = nil
-			recordErr('loader', 'main.lua compile failed: ' .. tostring(cerr))
-		end
-	end
+local raw = testResult -- already have it from self-test
+setStatus('download OK: ' .. #raw .. ' bytes')
+
+local header = '-- BadWars by usingINales\n'
+local code = header .. raw
+pcall(function() writefile('badscript/main.lua', code) end)
+
+-- Compile-check before executing
+local fn, cerr = _loadstring(code, 'main')
+if not fn then
+	local m = 'main.lua compile failed: ' .. tostring(cerr)
+	setStatus('ERROR: ' .. m, true); recordErr('loader', m); error(m, 0)
+end
+setStatus('main.lua compiled OK')
+
+-- ========== EXECUTE ==========
+setStatus('pipeline: executing main orchestrator')
+local ok, result = xpcall(fn, debug.traceback)
+if not ok then
+	local m = 'main.lua runtime error: ' .. tostring(result)
+	setStatus('ERROR: ' .. m, true); recordErr('loader', m); error(m, 0)
+end
+
+-- ========== POST-EXECUTION VALIDATION ==========
+setStatus('pipeline: validation')
+local issues = {}
+if not shared.Bad then table.insert(issues, 'shared.Bad is nil') end
+local report = shared.__badwars_universal_report
+if type(report)=='table' and type(report.failed)=='table' and #report.failed>0 then
+	for _,e in ipairs(report.failed) do table.insert(issues,'Module ['..tostring(e.name)..']: '..tostring(e.error)) end
+end
+if #__rtErrs>0 then for _,e in ipairs(__rtErrs) do table.insert(issues,'Runtime ['..tostring(e.module)..']: '..tostring(e.error)) end end
+if #issues>0 then
+	warn('BadWars: [VALIDATION] '..#issues..' issue(s):')
+	for _,i in ipairs(issues) do warn('  ! '..i) end
+	setStatus(#issues..' issue(s) found',true)
 else
-	recordErr('loader', 'httpGet returned nil for: ' .. MAIN_URL)
+	setStatus('validation passed')
 end
 
--- Fallback to cache
-setStatus('trying cached main.lua')
-local cached = isfile('badscript/main.lua') and readfile('badscript/main.lua') or ''
-if type(cached) == 'string' and #cached > 100 then
-	local fn, cerr = _loadstring(cached, 'main')
-	if fn then
-		setStatus('using cached main.lua')
-		setStatus('pipeline: executing')
-		local ok, result = xpcall(fn, debug.traceback)
-		if not ok then setStatus('ERROR: '..tostring(result),true); recordErr('loader',tostring(result)); error(tostring(result),0) end
-		warn('BadWars: Loader complete (cached) in '..string.format('%.2f',os.clock()-loaderStart)..'s')
-		return result
-	end
-end
-
--- Fatal: nothing works
-local m = 'Failed to download main.lua from GitHub. Check that the URL is accessible and your executor supports HTTP requests.'
-setStatus('ERROR: '..m,true)
-recordErr('loader', m)
-error(m, 0)
+-- Final summary
+local el=os.clock()-loaderStart
+local final='Loader complete in '..string.format('%.2f',el)..'s'
+if #issues>0 then final=final..' ('..#issues..' issue(s))' end
+warn('BadWars: '..final)
+return result

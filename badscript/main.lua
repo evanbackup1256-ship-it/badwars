@@ -158,11 +158,68 @@ local function loadPrebuiltBundle(name, bundlePath, basePath, manifestPath)
 	return loadLuaBundle(name, basePath, manifestPath)
 end
 
+local gameModulePaths = {
+	[606849621] = 'badscript/games/jailbreak/606849621 - main/base.lua',
+	[893973440] = 'badscript/games/893973440 - flee the facility/base.lua',
+	[6872265039] = 'badscript/games/bedwars/6872265039 - lobby/base.lua',
+	[6872274481] = 'badscript/games/bedwars/6872274481 - game/base.lua',
+	[8444591321] = 'badscript/games/bedwars/8444591321 - mega.lua',
+	[8560631822] = 'badscript/games/bedwars/8560631822 - micro.lua',
+	[77790193039862] = 'badscript/games/1.8arena/77790193039862 - game/base.lua',
+	[80041634734121] = 'badscript/games/1.8arena/80041634734121 - duel.lua',
+	[139566161526375] = 'badscript/games/bridge duel/139566161526375 - game/base.lua',
+	[16483433878] = 'badscript/games/blocktales/16483433878 - blocktales/base.lua',
+	[106431012459431] = 'badscript/games/blocktales/106431012459431 - battle sim.lua',
+	[5938036553] = 'badscript/games/frontlines/5938036553 - game/base.lua',
+	[123804558118054] = 'badscript/games/frontlines/123804558118054 - versus.lua',
+	[131465939650733] = 'badscript/games/frontlines/131465939650733 - versus ffa.lua',
+	[83413351472244] = 'badscript/games/frontlines/83413351472244 - versus ffa2.lua',
+	[155615604] = 'badscript/games/prison life/155615604 - main/base.lua',
+	[135564683255158] = 'badscript/games/prison life/135564683255158 - vc servers.lua',
+	[115875349872417] = 'badscript/games/redliner/115875349872417 - game/base.lua',
+	[126691165749976] = 'badscript/games/redliner/126691165749976 - 1v1.lua',
+	[94987506187454] = 'badscript/games/redliner/94987506187454 - lobby.lua',
+	[8768229691] = 'badscript/games/skywars voxel/8768229691 - skywars game/base.lua',
+	[8542259458] = 'badscript/games/skywars voxel/8542259458 - skywars lobby.lua',
+	[8542275097] = 'badscript/games/skywars voxel/8542275097 - skywars solo.lua',
+	[8592115909] = 'badscript/games/skywars voxel/8592115909 - skywars duos.lua',
+	[13246639586] = 'badscript/games/skywars voxel/13246639586 - skywars bridge.lua',
+	[8951451142] = 'badscript/games/skywars voxel/8951451142 - skywars egg squad.lua'
+}
+
+local function resolveGameModulePath(placeId)
+	local numericPlaceId = tonumber(placeId)
+	return gameModulePaths[numericPlaceId] or ('badscript/games/' .. tostring(placeId) .. '.lua')
+end
+
+local function runGameModule(modulePath, sourceLabel, ...)
+	setStatus('loading ' .. tostring(sourceLabel) .. ' game module: ' .. tostring(modulePath))
+	local modCode, modDownloadErr = downloadFile(modulePath)
+	if type(modCode) ~= 'string' or modCode == '' then
+		return false, modDownloadErr or ('missing game module: ' .. tostring(modulePath))
+	end
+
+	setStatus('compiling game module: ' .. tostring(modulePath))
+	local mod, modErr = loadstring(modCode, tostring(game.PlaceId))
+	if not mod then
+		return false, modErr or 'compile failed'
+	end
+
+	setStatus('running game module: ' .. tostring(modulePath))
+	local ok, err = pcall(mod, ...)
+	if not ok then
+		return false, err
+	end
+
+	setStatus('game module ready: ' .. tostring(modulePath))
+	return true
+end
+
 local function finishLoading()
 	Bad.Init = nil
 	setStatus('loading saved GUI/profile')
 	Bad:Load()
-	if not shared.Badreload then
+	if not shared.BadReload then
 		pcall(function()
 			local clickgui = Bad.gui and Bad.gui.ScaledGui and Bad.gui.ScaledGui.ClickGui
 			if clickgui then
@@ -183,7 +240,7 @@ local function finishLoading()
 		if (not teleportedServers) and (not shared.BadIndependent) then
 			teleportedServers = true
 			local teleportScript = table.concat({
-				'shared.Badreload = true',
+				'shared.BadReload = true',
 				'if shared.BadDeveloper then',
 				"	loadstring(readfile('badscript/loader.lua'), 'loader')()",
 				'else',
@@ -201,7 +258,7 @@ local function finishLoading()
 		end
 	end))
 
-	if not shared.Badreload then
+	if not shared.BadReload then
 		if not Bad.Categories then return end
 		if Bad.Categories.Main.Options['GUI bind indicator'].Enabled then
 			Bad:CreateNotification('BadWars', 'by usingINales | Press keybind to open GUI', 6)
@@ -209,7 +266,8 @@ local function finishLoading()
 	end
 end
 
-if not isfile('badscript/profiles/gui.txt') then
+if (not isfile('badscript/profiles/gui.txt')) or readfile('badscript/profiles/gui.txt') ~= 'new' then
+	setStatus('selecting current GUI profile')
 	writefile('badscript/profiles/gui.txt', 'new')
 end
 local gui = readfile('badscript/profiles/gui.txt')
@@ -309,56 +367,17 @@ if not shared.BadIndependent then
 		warn(msg)
 		if AddLog then AddLog('Error', msg, debug.traceback()) end
 	end
-	if isfile('badscript/games/'..game.PlaceId..'.lua') then
-		setStatus('loading cached game module: ' .. tostring(game.PlaceId))
-		local modCode = readfile('badscript/games/'..game.PlaceId..'.lua')
-		local mod, modErr
-		if modCode then
-			setStatus('compiling cached game module')
-			mod, modErr = loadstring(modCode, tostring(game.PlaceId))
-		end
-		if mod then 
-			setStatus('running cached game module')
-			local ok, err = pcall(mod, ...)
-			if not ok then
-				setStatus('ERROR game module runtime: ' .. tostring(err), true)
-				if AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
-			end
-		else
-			local msg = 'Failed to load game module' .. (modErr and (': ' .. tostring(modErr)) or '')
+	local modulePath = resolveGameModulePath(game.PlaceId)
+	if shared.BadDeveloper or gameModulePaths[tonumber(game.PlaceId)] or isfile(modulePath) then
+		local ok, err = runGameModule(modulePath, isfile(modulePath) and 'cached' or 'mapped', ...)
+		if not ok then
+			local msg = 'Failed to load game module ' .. tostring(modulePath) .. ': ' .. tostring(err)
 			setStatus('ERROR: ' .. msg, true)
 			warn(msg)
+			if AddLog then AddLog('Error', msg, debug.traceback()) end
 		end
 	else
-		if not shared.BadDeveloper then
-			setStatus('checking game module: ' .. tostring(game.PlaceId))
-			local suc, res = pcall(function()
-				return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/games/'..game.PlaceId..'.lua', true)
-			end)
-			if suc and res ~= '404: Not Found' then
-				setStatus('downloading game module: ' .. tostring(game.PlaceId))
-				local modCode = downloadFile('badscript/games/'..game.PlaceId..'.lua')
-				local mod, modErr
-				if modCode then
-					setStatus('compiling game module')
-					mod, modErr = loadstring(modCode, tostring(game.PlaceId))
-				end
-				if mod then 
-					setStatus('running game module')
-					local ok, err = pcall(mod, ...)
-					if not ok then
-						setStatus('ERROR game module runtime: ' .. tostring(err), true)
-						if AddLog then AddLog('Error', 'Game module load failed: ' .. tostring(err), debug.traceback()) end
-					end
-				else
-					local msg = 'Failed to load game module' .. (modErr and (': ' .. tostring(modErr)) or '')
-					setStatus('ERROR: ' .. msg, true)
-					warn(msg)
-				end
-			else
-				setStatus('universal active; no game-specific module found')
-			end
-		end
+		setStatus('universal active; no game-specific module found for place ' .. tostring(game.PlaceId))
 	end
 	setStatus('finishing load')
 	finishLoading()

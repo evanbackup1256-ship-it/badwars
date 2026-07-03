@@ -296,11 +296,11 @@ local tween = {
 	tweenstwo = {}
 }
 local uipallet = {
-	Main = Color3.fromRGB(26, 25, 26),
-	Text = Color3.fromRGB(200, 200, 200),
+	Main = Color3.fromRGB(22, 22, 24),
+	Text = Color3.fromRGB(215, 215, 225),
 	Font = Font.fromEnum(Enum.Font.Arial),
 	FontSemiBold = Font.fromEnum(Enum.Font.Arial, Enum.FontWeight.SemiBold),
-	Tween = TweenInfo.new(0.16, Enum.EasingStyle.Linear)
+	Tween = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 }
 
 local getcustomassets = {
@@ -1155,14 +1155,21 @@ function mainapi:CreateGUI()
 	addBlur(window)
 	addCorner(window)
 	makeDraggable(window)
+	local headerBar = Instance.new('Frame')
+	headerBar.Name = 'HeaderBar'
+	headerBar.Size = UDim2.new(1, 0, 0, 33)
+	headerBar.BackgroundColor3 = color.Dark(uipallet.Main, 0.04)
+	headerBar.BorderSizePixel = 0
+	headerBar.Parent = window
+	addCorner(headerBar)
 	local logo = Instance.new('ImageLabel')
 	logo.Name = 'BadLogo'
 	logo.Size = UDim2.fromOffset(62, 18)
-	logo.Position = UDim2.fromOffset(11, 10)
+	logo.Position = UDim2.fromOffset(11, 8)
 	logo.BackgroundTransparency = 1
 	logo.Image = getcustomasset('badscript/assets/new/guiBad.png')
-	logo.ImageColor3 = select(3, uipallet.Main:ToHSV()) > 0.5 and uipallet.Text or Color3.new(1, 1, 1)
-	logo.Parent = window
+	logo.ImageColor3 = Color3.fromHSV(mainapi.GUIColor.Hue, mainapi.GUIColor.Sat, math.clamp(mainapi.GUIColor.Value, 0.6, 1))
+	logo.Parent = headerBar
 	local logov4 = Instance.new('ImageLabel')
 	logov4.Name = 'V4Logo'
 	logov4.Size = UDim2.fromOffset(28, 16)
@@ -1170,6 +1177,16 @@ function mainapi:CreateGUI()
 	logov4.BackgroundTransparency = 1
 	logov4.Image = getcustomasset('badscript/assets/new/guiv4.png')
 	logov4.Parent = logo
+	local headerAccent = Instance.new('Frame')
+	headerAccent.Name = 'HeaderAccent'
+	headerAccent.Size = UDim2.new(1, 0, 0, 2)
+	headerAccent.Position = UDim2.fromOffset(0, 31)
+	headerAccent.BackgroundColor3 = Color3.fromHSV(mainapi.GUIColor.Hue, mainapi.GUIColor.Sat, mainapi.GUIColor.Value)
+	headerAccent.BorderSizePixel = 0
+	headerAccent.Parent = headerBar
+	local logoGlow = Instance.new('UIGradient')
+	logoGlow.Color = ColorSequence.new(Color3.fromHSV(mainapi.GUIColor.Hue, mainapi.GUIColor.Sat, mainapi.GUIColor.Value))
+	logoGlow.Parent = logo
 	local children = Instance.new('Frame')
 	children.Name = 'Children'
 	children.Size = UDim2.new(1, 0, 1, -33)

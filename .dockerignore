@@ -1,0 +1,15 @@
+node_modules
+.next
+dist
+voidware
+badscript
+assets
+src
+website
+docs
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+next-start*.log
+npm-debug.log*
+.env
+.env.*

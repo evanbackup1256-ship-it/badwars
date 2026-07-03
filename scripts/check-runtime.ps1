@@ -133,6 +133,26 @@ if ($main -match "loadPrebuiltBundle\('universal'" -and $universalBundle -match 
     Fail "Prebuilt universal bundle is missing or unused"
 }
 
+if ($main -match "local gameModulePaths" -and $main -match "6872274481.*bedwars/6872274481 - game/base.lua" -and $main -match "resolveGameModulePath" -and $main -match "game module ready") {
+    Pass "Game-specific modules resolve nested place paths"
+} else {
+    Fail "Game-specific module resolver is missing nested place paths"
+}
+
+if ($main -match "selecting current GUI profile" -and $main -match "writefile\('badscript/profiles/gui.txt', 'new'\)") {
+    Pass "Current GUI profile is forced to the new UI"
+} else {
+    Fail "Current GUI profile is not forced to the new UI"
+}
+
+$unescapedPathDownloads = Select-String -Path "$Root\badscript\*" -Pattern "raw\.githubusercontent\.com/evanbackup1256-ship-it/badwars/main/' \.\. path, true" -SimpleMatch
+if ($unescapedPathDownloads) {
+    Fail "Found raw GitHub path downloads without space escaping"
+    $unescapedPathDownloads | ForEach-Object { Write-Host "       $($_.Path):$($_.LineNumber) $($_.Line.Trim())" -ForegroundColor DarkYellow }
+} else {
+    Pass "Raw GitHub path downloads escape spaces"
+}
+
 if (
     $universalBundle -match "__badwars_universal_modules" -and
     $universalBundle -match "task\.wait\(0\.06\)" -and
@@ -149,6 +169,12 @@ if ($loader -match "shared\.BadStatus" -and $newMain -match "shared\.BadStatus" 
     Pass "Startup status surface is wired through loader and main"
 } else {
     Fail "Startup status surface is not wired through every entry point"
+}
+
+if ($loader -match "shared\.BadWarsStatusApi" -and $loader -match "Roblox update watch" -and $loader -match "JSONDecode") {
+    Pass "Loader can show Roblox update warnings from the website API"
+} else {
+    Fail "Loader Roblox update warning integration is missing"
 }
 
 if ($main -match "security:Start\(Bad\)" -and $main.IndexOf("security:Start(Bad)") -lt $main.IndexOf("loading universal modules")) {
@@ -196,11 +222,10 @@ if ($activeRuntime -notmatch [regex]::Escape($oldPinnedCommit)) {
 }
 
 $oldBrandTerms = @("Void" + "ware", "VOID" + "WARE", "Void" + "Ware", "vape" + "void" + "ware", "Vape" + "Void" + "ware")
-$oldBrandPattern = $oldBrandTerms -join "|"
-$brandingMatches = & rg -n $oldBrandPattern "$Root" --glob "!.git/**" --glob "!voidware/**" --glob "!scripts/check-runtime.ps1" 2>$null
-if ($LASTEXITCODE -eq 0 -and $brandingMatches) {
+$brandingMatches = Get-ChildItem -Recurse -File -Path $Root -Include "*.lua","*.ts","*.tsx","*.mjs","*.json","*.md","*.txt","*.ps1","*.css" | Where-Object { $_.FullName -notmatch '\\(\.git|voidware|node_modules|package-lock\.json)\\' } | Select-String -Pattern ($oldBrandTerms -join "|") -SimpleMatch
+if ($brandingMatches) {
     Fail "Found old branding in tracked project files outside the legacy archive"
-    $brandingMatches | ForEach-Object { Write-Host "       $_" -ForegroundColor DarkYellow }
+    $brandingMatches | ForEach-Object { Write-Host "       $($_.Path):$($_.LineNumber)" -ForegroundColor DarkYellow }
 } else {
     Pass "No old branding remains outside the legacy archive"
 }

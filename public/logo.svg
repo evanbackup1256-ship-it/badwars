@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">BadWars logo</title>
+  <desc id="desc">A sharp neon BW monogram inside a shield.</desc>
+  <defs>
+    <linearGradient id="core" x1="76" y1="64" x2="438" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26D9FF"/>
+      <stop offset="0.52" stop-color="#7CFFC4"/>
+      <stop offset="1" stop-color="#FF4F66"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="112" y1="84" x2="384" y2="432" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101923"/>
+      <stop offset="1" stop-color="#04070B"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.15 0 0 0 0 0.85 0 0 0 0 1 0 0 0 0.65 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+  </defs>
+  <path d="M256 28L430 91V222C430 330 361 423 256 484C151 423 82 330 82 222V91L256 28Z" fill="url(#dark)" stroke="url(#core)" stroke-width="18" filter="url(#glow)"/>
+  <path d="M145 143H238C278 143 302 165 302 198C302 222 291 238 271 247C299 256 316 277 316 308C316 348 286 373 240 373H145V143ZM203 194V229H229C240 229 247 222 247 211C247 200 240 194 228 194H203ZM203 278V322H235C250 322 258 314 258 300C258 286 249 278 234 278H203Z" fill="#F5FBFF"/>
+  <path d="M281 143H337L357 277L389 143H448L394 373H330L310 246L290 373H256L267 319L281 143Z" fill="url(#core)"/>
+  <path d="M116 396L177 368M396 116L336 144" stroke="#26D9FF" stroke-width="18" stroke-linecap="round"/>
+  <path d="M141 118L108 88M371 399L405 430" stroke="#FF4F66" stroke-width="16" stroke-linecap="round"/>
+</svg>

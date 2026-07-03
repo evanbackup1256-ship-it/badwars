@@ -119,7 +119,7 @@ function Security:ValidateEnvironment()
 end
 
 function Security:RunSelfChecks()
-	if shared.BadSecurityStarted and not shared.Badreload then
+	if shared.BadSecurityStarted and not 	shared.BadReload then
 		return self:Fail('tampered', 'duplicate security initialization detected')
 	end
 	shared.BadSecurityStarted = true
@@ -145,7 +145,7 @@ end
 
 local function encodeQuery(data)
 	local parts = {}
-	for key, value in data do
+	for key, value in pairs(data) do
 		table.insert(parts, httpService:UrlEncode(tostring(key))..'='..httpService:UrlEncode(tostring(value)))
 	end
 	return table.concat(parts, '&')
@@ -153,7 +153,8 @@ end
 
 function Security:Request(payload)
 	local body = httpService:JSONEncode(payload)
-	local req = (syn and syn.request) or http_request or request
+	local synTable = type(syn) == 'table' and syn or nil
+	local req = (synTable and synTable.request) or http_request or request
 	if type(req) == 'function' then
 		local response = req({
 			Url = self.Config.ApiUrl,

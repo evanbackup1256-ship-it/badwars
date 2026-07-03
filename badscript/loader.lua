@@ -92,6 +92,41 @@ end
 local setStatus = shared.BadStatus or createStatusLabel()
 setStatus('starting loader')
 
+local function checkRobloxUpdateStatus()
+	local api = shared.BadWarsStatusApi
+	if type(api) ~= 'string' or api == '' then return end
+	task.spawn(function()
+		local ok, raw = pcall(function()
+			return safeHttpGet(game, api, true)
+		end)
+		if not ok or type(raw) ~= 'string' or raw == '' then
+			setStatus('Roblox update watch unavailable; continuing load', false)
+			return
+		end
+		local decoded
+		pcall(function()
+			decoded = cloneref(game:GetService('HttpService')):JSONDecode(raw)
+		end)
+		if type(decoded) ~= 'table' then return end
+		if decoded.changed then
+			local warning = decoded.warning or 'Roblox updated recently. Some modules may need a refresh.'
+			setStatus('WARNING: ' .. tostring(warning), true)
+			pcall(function()
+				game:GetService('StarterGui'):SetCore('SendNotification', {
+					Title = 'BadWars Roblox Watch',
+					Text = tostring(warning),
+					Duration = 12
+				})
+			end)
+			task.wait(2.5)
+		elseif decoded.ok and decoded.version then
+			setStatus('Roblox version checked: ' .. tostring(decoded.version))
+		end
+	end)
+end
+
+checkRobloxUpdateStatus()
+
 local _loadstring
 pcall(function()
 	local g = getgenv
@@ -171,7 +206,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-synchronous-universal-registration-2026-07-01-28'
+local cacheVersion = 'badwars-v2-game-router-v2-2026-07-02-03'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	setStatus('clearing old cache')

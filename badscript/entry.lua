@@ -1,23 +1,24 @@
 -- BadWars by usingINales
--- Entry point for minimal execution environments
+-- Entry point
 shared.BadWarsDev = true
 shared.usingINales = true
 
-local function safeHttpGet(url)
-	local httpget = (game and game.HttpGet)
-	if type(httpget) ~= 'function' then
-		httpget = (getgenv and type(getgenv) == 'function' and getgenv().HttpGet)
+-- HTTP GET that actually returns the result
+local function httpGet(url)
+	local fn = (game and game.HttpGet)
+	if type(fn) ~= 'function' then
+		local env = getgenv and type(getgenv) == 'function' and getgenv()
+		fn = env and env.HttpGet
 	end
-	if type(httpget) == 'function' then
-		return httpget(game, url, true)
+	if type(fn) == 'function' then
+		local ok, res = pcall(fn, game, url, true)
+		if ok and type(res) == 'string' and #res > 0 then return res end
 	end
-	pcall(function()
-		local httpService = game:GetService('HttpService')
-		if httpService then
-			return httpService:GetAsync(url, true)
-		end
+	local ok, res = pcall(function()
+		return game:GetService('HttpService'):GetAsync(url, true)
 	end)
-	return nil
+	if ok and type(res) == 'string' and #res > 0 then return res end
+	return nil, 'all HTTP methods failed'
 end
 
 local g = getgenv
@@ -30,30 +31,26 @@ end
 
 local ls = loadstring or (g and g.loadstring)
 if type(ls) ~= 'function' then
-	local msg = 'BadWars: loadstring not available in this executor'
-	warn(msg)
-	error(msg, 0)
+	local msg = 'BadWars: loadstring not available'
+	warn(msg); error(msg, 0)
 end
 
-local loaderCode = safeHttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua')
+local loaderCode = httpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua')
 if type(loaderCode) ~= 'string' or loaderCode == '' then
-	local msg = 'BadWars: Failed to fetch loader from GitHub'
-	warn(msg)
-	error(msg, 0)
+	local msg = 'BadWars: Failed to fetch loader'
+	warn(msg); error(msg, 0)
 end
 
 local loaderFunc, loaderErr = ls(loaderCode, 'badwars-loader')
 if not loaderFunc then
 	local msg = 'BadWars: Failed to compile loader: ' .. tostring(loaderErr)
-	warn(msg)
-	error(msg, 0)
+	warn(msg); error(msg, 0)
 end
 
 local ok, result = xpcall(loaderFunc, debug.traceback)
 if not ok then
-	local msg = 'BadWars: Loader runtime error: ' .. tostring(result)
-	warn(msg)
-	error(msg, 0)
+	local msg = 'BadWars: Loader error: ' .. tostring(result)
+	warn(msg); error(msg, 0)
 end
 
 return result

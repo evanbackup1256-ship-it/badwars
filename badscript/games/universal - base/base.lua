@@ -197,7 +197,11 @@ local function serverHop(pointer, filter)
 			notif('Bad', 'Failed to find an available server.', 5, 'warning')
 		end
 	else
-		notif('Bad', 'Failed to grab servers. ('..(data and data.errors[1].message or 'no data')..')', 5, 'warning')
+		local errDetail = 'no data'
+		if data and type(data.errors) == 'table' and data.errors[1] and type(data.errors[1]) == 'table' then
+			errDetail = tostring(data.errors[1].message or 'unknown error')
+		end
+		notif('Bad', 'Failed to grab servers. ('..errDetail..')', 5, 'warning')
 	end
 end
 
@@ -827,10 +831,11 @@ run(function()
 				terrain:Clear()
 			end
 
+			local character = lplr.Character
 			for _, v in workspace:GetChildren() do
-				if v ~= terrain and not v:IsDescendantOf(lplr.Character) and not v:IsA('Camera') then
-					v:Destroy()
-					v:ClearAllChildren()
+				if v ~= terrain and (not character or not v:IsDescendantOf(character)) and not v:IsA('Camera') then
+					pcall(function() v:ClearAllChildren() end)
+					pcall(function() v:Destroy() end)
 				end
 			end
 		end,

@@ -172,7 +172,7 @@ local ESPUpdated = {
 			end
 			
 			if EntityESP.HealthLine then
-				EntityESP.HealthLine.Color = Color3.fromHSV(math.clamp(ent.Health / ent.MaxHealth, 0, 1) / 2.5, 0.89, 0.75)
+			EntityESP.HealthLine.Color = Color3.fromHSV(math.clamp((ent.MaxHealth or 0) > 0 and (ent.Health / ent.MaxHealth) or 0, 0, 1) / 2.5, 0.89, 0.75)
 			end
 
 			if EntityESP.Text then
@@ -238,7 +238,7 @@ local ESPLoop = {
 			end
 
 			if EntityESP.HealthLine then
-				local healthposy = sizey * math.clamp(ent.Health / ent.MaxHealth, 0, 1)
+				local healthposy = sizey * math.clamp((ent.MaxHealth or 0) > 0 and (ent.Health / ent.MaxHealth) or 0, 0, 1)
 				EntityESP.HealthLine.Visible = ent.Health > 0
 				EntityESP.HealthLine.From = Vector2.new(posx - 6, posy + (sizey - (sizey - healthposy))) // 1
 				EntityESP.HealthLine.To = Vector2.new(posx - 6, posy) // 1

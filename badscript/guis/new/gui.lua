@@ -5738,7 +5738,12 @@ function mainapi:UpdateGUI(hue, sat, val, default)
 
 	for i, v in mainapi.Categories do
 		if i == 'Main' then
-			v.Object.BadLogo.V4Logo.ImageColor3 = Color3.fromHSV(hue, sat, val)
+			local headerBar = v.Object and v.Object:FindFirstChild('HeaderBar')
+			local badLogo = headerBar and headerBar:FindFirstChild('BadLogo')
+			local v4Logo = badLogo and badLogo:FindFirstChild('V4Logo')
+			if v4Logo then
+				v4Logo.ImageColor3 = Color3.fromHSV(hue, sat, val)
+			end
 			for _, button in v.Buttons do
 				if button.Enabled then
 					button.Object.TextColor3 = rainbow and Color3.fromHSV(mainapi:Color((hue - (button.Index * 0.025)) % 1)) or Color3.fromHSV(hue, sat, val)

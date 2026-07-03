@@ -10,32 +10,53 @@ run(function()
 	rayCheck.RespectCanCollide = true
 	local up, down, old = 0, 0
 
+	local function safeGetAttribute(char, attr)
+		if not char then return 0 end
+		local val = char:GetAttribute(attr)
+		return type(val) == 'number' and val or 0
+	end
+
 	Fly = Bad.Categories.Blatant:CreateModule({
 		Name = 'Fly',
 		Function = function(callback)
 			frictionTable.Fly = callback or nil
 			updateVelocity()
 			if callback then
-				up, down, old = 0, 0, bedwars.BalloonController.deflateBalloon
-				bedwars.BalloonController.deflateBalloon = function() end
+				up, down, old = 0, 0, nil
+				if bedwars and bedwars.BalloonController then
+					old = bedwars.BalloonController.deflateBalloon
+					bedwars.BalloonController.deflateBalloon = function() end
+				end
 				local tpTick, tpToggle, oldy = tick(), true
 
-				if lplr.Character and (lplr.Character:GetAttribute('InflatedBalloons') or 0) == 0 and getItem('balloon') then
-					bedwars.BalloonController:inflateBalloon()
-				end
-				Fly:Clean(BadEvents.AttributeChanged.Event:Connect(function(changed)
-					if changed == 'InflatedBalloons' and (lplr.Character:GetAttribute('InflatedBalloons') or 0) == 0 and getItem('balloon') then
-						bedwars.BalloonController:inflateBalloon()
+				if lplr.Character and safeGetAttribute(lplr.Character, 'InflatedBalloons') == 0 and getItem and getItem('balloon') then
+					if bedwars and bedwars.BalloonController then
+						pcall(function() bedwars.BalloonController:inflateBalloon() end)
 					end
-				end))
+				end
+				if lplr.Character then
+					local charAttr = lplr.Character:GetAttribute('InflatedBalloons')
+					local charEvents = lplr.Character
+					if charEvents then
+						Fly:Clean(charEvents:GetAttributeChangedSignal('InflatedBalloons'):Connect(function()
+							if safeGetAttribute(lplr.Character, 'InflatedBalloons') == 0 and getItem and getItem('balloon') then
+								if bedwars and bedwars.BalloonController then
+									pcall(function() bedwars.BalloonController:inflateBalloon() end)
+								end
+							end
+						end))
+					end
+				end
 				Fly:Clean(runService.PreSimulation:Connect(function(dt)
 					if entitylib.isAlive and not InfiniteFly.Enabled and isnetworkowner(entitylib.character.RootPart) then
-						local flyAllowed = (lplr.Character:GetAttribute('InflatedBalloons') and lplr.Character:GetAttribute('InflatedBalloons') > 0) or store.matchState == 2
+						local flyAllowed = (safeGetAttribute(lplr.Character, 'InflatedBalloons') > 0) or (store and store.matchState == 2)
 						local mass = (1.5 + (flyAllowed and 6 or 0) * (tick() % 0.4 < 0.2 and -1 or 1)) + ((up + down) * VerticalValue.Value)
 						local root, moveDirection = entitylib.character.RootPart, entitylib.character.Humanoid.MoveDirection
-						local velo = getSpeed()
+						local velo = getSpeed and getSpeed() or 0
 						local destination = (moveDirection * math.max(Value.Value - velo, 0) * dt)
-						rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera, AntiFallPart}
+						local filterInstances = {lplr.Character, gameCamera}
+						if AntiFallPart then table.insert(filterInstances, AntiFallPart) end
+						rayCheck.FilterDescendantsInstances = filterInstances
 						rayCheck.CollisionGroup = root.CollisionGroup
 
 						if WallCheck.Enabled then
@@ -95,17 +116,25 @@ run(function()
 				end))
 				if inputService.TouchEnabled then
 					pcall(function()
-						local jumpButton = lplr.PlayerGui.TouchGui.TouchControlFrame.JumpButton
-						Fly:Clean(jumpButton:GetPropertyChangedSignal('ImageRectOffset'):Connect(function()
-							up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
-						end))
+						local touchGui = lplr.PlayerGui and lplr.PlayerGui:FindFirstChild('TouchGui')
+						local touchControl = touchGui and touchGui:FindFirstChild('TouchControlFrame')
+						local jumpButton = touchControl and touchControl:FindFirstChild('JumpButton')
+						if jumpButton then
+							Fly:Clean(jumpButton:GetPropertyChangedSignal('ImageRectOffset'):Connect(function()
+								up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
+							end))
+						end
 					end)
 				end
 			else
-				bedwars.BalloonController.deflateBalloon = old
-				if PopBalloons.Enabled and entitylib.isAlive and (lplr.Character:GetAttribute('InflatedBalloons') or 0) > 0 then
-					for _ = 1, 3 do
-						bedwars.BalloonController:deflateBalloon()
+				if old and bedwars and bedwars.BalloonController then
+					bedwars.BalloonController.deflateBalloon = old
+				end
+				if PopBalloons.Enabled and entitylib.isAlive and safeGetAttribute(lplr.Character, 'InflatedBalloons') > 0 then
+					if bedwars and bedwars.BalloonController then
+						for _ = 1, 3 do
+							pcall(function() bedwars.BalloonController:deflateBalloon() end)
+						end
 					end
 				end
 			end
@@ -146,8 +175,3 @@ run(function()
 		Default = true
 	})
 end)
-
-
-
-
-

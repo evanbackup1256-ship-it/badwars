@@ -29,7 +29,8 @@ local Added = {
 		Strings[ent] = ent.Player and whitelist:tag(ent.Player, true, true)..(DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or ent.Character.Name
 
 		if Health.Enabled then
-			local healthColor = Color3.fromHSV(math.clamp(ent.Health / ent.MaxHealth, 0, 1) / 2.5, 0.89, 0.75)
+			local maxH = ent.MaxHealth or 0
+			local healthColor = Color3.fromHSV(math.clamp(maxH > 0 and (ent.Health / maxH) or 0, 0, 1) / 2.5, 0.89, 0.75)
 			Strings[ent] = Strings[ent]..' <font color="rgb('..tostring(math.floor(healthColor.R * 255))..','..tostring(math.floor(healthColor.G * 255))..','..tostring(math.floor(healthColor.B * 255))..')">'..math.round(ent.Health)..'</font>'
 		end
 
@@ -130,7 +131,8 @@ local Updated = {
 			Strings[ent] = ent.Player and whitelist:tag(ent.Player, true, true)..(DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or ent.Character.Name
 
 			if Health.Enabled then
-				local color = Color3.fromHSV(math.clamp(ent.Health / ent.MaxHealth, 0, 1) / 2.5, 0.89, 0.75)
+				local maxH = ent.MaxHealth or 0
+				local color = Color3.fromHSV(math.clamp(maxH > 0 and (ent.Health / maxH) or 0, 0, 1) / 2.5, 0.89, 0.75)
 				Strings[ent] = Strings[ent]..' <font color="rgb('..tostring(math.floor(color.R * 255))..','..tostring(math.floor(color.G * 255))..','..tostring(math.floor(color.B * 255))..')">'..math.round(ent.Health)..'</font>'
 			end
 

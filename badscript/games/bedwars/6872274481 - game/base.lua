@@ -53,7 +53,12 @@ end
 
 local function monitorPhaseChange()
 	local lastPhase = bedwars.Phase
-	RunService.Heartbeat:Connect(function()
+	local phaseConnection
+	phaseConnection = RunService.Heartbeat:Connect(function()
+		if not Bad or not Bad.Loaded then
+			if phaseConnection then pcall(function() phaseConnection:Disconnect() end) end
+			return
+		end
 		pcall(function()
 			if ReplicatedStorage:FindFirstChild('GameInProgress') then
 				bedwars.Phase = 'game'
@@ -69,6 +74,9 @@ local function monitorPhaseChange()
 			end
 		end)
 	end)
+	if Bad and type(Bad.Clean) == 'function' then
+		Bad:Clean(phaseConnection)
+	end
 end
 
 task.spawn(function()

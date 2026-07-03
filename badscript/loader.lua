@@ -1,3 +1,13 @@
+-- ============================================================
+-- BadWars Loader v2.1 - Production Pipeline
+-- ============================================================
+
+local loaderStart = os.clock()
+local collectgarbage = collectgarbage
+
+-- ============================================================
+-- Stage 0: Executor API Polyfills
+-- ============================================================
 isfile = isfile or function(file)
 	local suc, res = pcall(function()
 		return readfile(file)
@@ -26,6 +36,9 @@ local function safeHttpGet(inst, url, nocache)
 end
 HttpGet = safeHttpGet
 
+-- ============================================================
+-- Stage 1: Status GUI Creation
+-- ============================================================
 local function createStatusLabel()
 	local statusGui, statusLabel
 	pcall(function()
@@ -65,7 +78,7 @@ local function createStatusLabel()
 		statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 		statusLabel.TextColor3 = Color3.fromRGB(235, 245, 255)
 		statusLabel.TextWrapped = true
-		statusLabel.Text = 'BadWars: starting loader...'
+		statusLabel.Text = 'BadWars: initializing pipeline...'
 		statusLabel.Parent = statusGui
 		local padding = Instance.new('UIPadding')
 		padding.PaddingLeft = UDim.new(0, 12)
@@ -90,8 +103,11 @@ local function createStatusLabel()
 end
 
 local setStatus = shared.BadStatus or createStatusLabel()
-setStatus('starting loader')
+setStatus('pipeline stage 1: status GUI ready')
 
+-- ============================================================
+-- Stage 2: Roblox Update Watch
+-- ============================================================
 local function checkRobloxUpdateStatus()
 	local api = shared.BadWarsStatusApi
 	if type(api) ~= 'string' or api == '' then return end
@@ -127,6 +143,9 @@ end
 
 checkRobloxUpdateStatus()
 
+-- ============================================================
+-- Stage 3: Loadstring & File System Setup
+-- ============================================================
 local _loadstring
 pcall(function()
 	local g = getgenv
@@ -134,6 +153,7 @@ pcall(function()
 	_loadstring = (g and g.loadstring) or loadstring
 end)
 if not _loadstring then _loadstring = function(s) error("loadstring not available in executor") end end
+
 local function downloadFile(path, func)
 	if not HttpGet or not game then
 		setStatus('ERROR: HttpGet or game is nil for ' .. tostring(path), true)
@@ -144,7 +164,6 @@ local function downloadFile(path, func)
 	if type(cached) ~= 'string' or cached == '' then
 		setStatus('downloading ' .. tostring(path))
 		local suc, res = pcall(function()
-			-- Fixed for self-hosted structure: use 'main' branch and full path
 			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
 		end)
 		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then
@@ -152,7 +171,7 @@ local function downloadFile(path, func)
 			return nil, tostring(res)
 		end
 		if path:find('.lua') then
-			res = '-- BadWars by usingINales (rebranded, no watermark)\n' .. res
+			res = '-- BadWars by usingINales (rebranded)\n' .. res
 		end
 		writefile(path, res)
 		cached = res
@@ -206,6 +225,10 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
+-- ============================================================
+-- Stage 4: Cache Integrity Check
+-- ============================================================
+setStatus('pipeline stage 2: cache integrity check')
 local cacheVersion = 'badwars-v2-game-router-v2-2026-07-02-03'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
@@ -223,10 +246,13 @@ if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersi
 	writefile(cacheVersionPath, cacheVersion)
 end
 
--- Simplified for reliability: always use main branch, no fragile scraping
+-- Simplified for reliability: always use main branch
 writefile('badscript/profiles/commit.txt', 'main')
 
-setStatus('loading main.lua')
+-- ============================================================
+-- Stage 5: Download & Compile main.lua
+-- ============================================================
+setStatus('pipeline stage 3: loading main orchestrator')
 local mainCode = downloadFile('badscript/main.lua')
 if type(mainCode) ~= 'string' or mainCode == '' then
 	setStatus('ERROR: failed to download/read badscript/main.lua', true)
@@ -240,23 +266,20 @@ if not mainFunc then
 	error('Failed to compile badscript/main.lua: ' .. tostring(mainErr), 0)
 end
 
-setStatus('running main.lua')
+-- ============================================================
+-- Stage 6: Execute main.lua (runs full pipeline internally)
+-- ============================================================
+setStatus('pipeline stage 4: executing main orchestrator')
 local ok, result = xpcall(mainFunc, debug.traceback)
 if not ok then
 	setStatus('ERROR running main.lua: ' .. tostring(result), true)
 	error(result, 0)
 end
 
+-- ============================================================
+-- Stage 7: Pipeline Complete
+-- ============================================================
+local loaderElapsed = os.clock() - loaderStart
+warn('BadWars: Loader pipeline complete in ' .. string.format('%.2f', loaderElapsed) .. 's')
+
 return result
-
-
-
-
-
-
-
-
-
-
-
-

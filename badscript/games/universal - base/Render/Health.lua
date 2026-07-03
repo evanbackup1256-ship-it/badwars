@@ -14,18 +14,28 @@ Health = Bad.Categories.Render:CreateModule({
 			label.Font = Enum.Font.Arial
 			label.Parent = Bad.gui
 			Health:Clean(label)
-			
-			repeat
-				label.Text = entitylib.isAlive and math.round(entitylib.character.Humanoid.Health)..' ❤️' or ''
-				label.TextColor3 = entitylib.isAlive and Color3.fromHSV((entitylib.character.Humanoid.Health / entitylib.character.Humanoid.MaxHealth) / 2.8, 0.86, 1) or Color3.new()
-				task.wait()
-			until not Health.Enabled
+
+			local function updateHealth()
+				pcall(function()
+					if not entitylib.isAlive or not entitylib.character or not entitylib.character.Humanoid then
+						label.Text = ''
+						return
+					end
+					local hp = entitylib.character.Humanoid.Health
+					local maxHp = entitylib.character.Humanoid.MaxHealth
+					if type(hp) ~= 'number' or type(maxHp) ~= 'number' then
+						label.Text = ''
+						return
+					end
+					label.Text = math.round(hp) .. ' ❤️'
+					local ratio = maxHp > 0 and hp / maxHp or 0
+					label.TextColor3 = Color3.fromHSV(ratio / 2.8, 0.86, 1)
+				end)
+			end
+
+			updateHealth()
+			Health:Clean(runService.RenderStepped:Connect(updateHealth))
 		end
 	end,
 	Tooltip = 'Displays your health in the center of your screen.'
 })
-
-
-
-
-

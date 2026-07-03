@@ -197,7 +197,11 @@ local function serverHop(pointer, filter)
 			notif('Bad', 'Failed to find an available server.', 5, 'warning')
 		end
 	else
-		notif('Bad', 'Failed to grab servers. ('..(data and data.errors[1].message or 'no data')..')', 5, 'warning')
+		local errDetail = 'no data'
+		if data and type(data.errors) == 'table' and data.errors[1] and type(data.errors[1]) == 'table' then
+			errDetail = tostring(data.errors[1].message or 'unknown error')
+		end
+		notif('Bad', 'Failed to grab servers. ('..errDetail..')', 5, 'warning')
 	end
 end
 
@@ -8761,23 +8765,87 @@ end)
 
 
 local __badwars_universal_total = #__badwars_universal_modules
+local __badwars_universal_report = {
+	loaded = {},
+	failed = {},
+	skipped = {},
+	totalTime = 0,
+	peakMemory = 0
+}
+local __badwars_universal_startTime = os.clock()
+local collectgarbage = collectgarbage
+
 for __badwars_universal_index, __badwars_universal_module in ipairs(__badwars_universal_modules) do
+	local __modName = tostring(__badwars_universal_module.Name or ('module_' .. __badwars_universal_index))
+	local __modStart = os.clock()
+
 	if shared and shared.BadStatus then
-		shared.BadStatus('registering universal module ' .. tostring(__badwars_universal_index) .. '/' .. tostring(__badwars_universal_total) .. ': ' .. tostring(__badwars_universal_module.Name))
+		pcall(function()
+			shared.BadStatus('registering universal module ' .. tostring(__badwars_universal_index) .. '/' .. tostring(__badwars_universal_total) .. ': ' .. __modName)
+		end)
 	end
+
 	local __badwars_universal_ok, __badwars_universal_err = pcall(__badwars_universal_module.Run)
-	if not __badwars_universal_ok then
-		warn('BadWars: universal module failed: ' .. tostring(__badwars_universal_module.Name) .. ': ' .. tostring(__badwars_universal_err))
+
+	local __modElapsed = os.clock() - __modStart
+	local __memNow = collectgarbage and collectgarbage('count') or 0
+	if __memNow > __badwars_universal_report.peakMemory then
+		__badwars_universal_report.peakMemory = __memNow
+	end
+
+	if __badwars_universal_ok then
+		table.insert(__badwars_universal_report.loaded, {
+			name = __modName,
+			time = __modElapsed,
+			index = __badwars_universal_index
+		})
+	else
+		local __errMsg = tostring(__badwars_universal_err or 'unknown error')
+		table.insert(__badwars_universal_report.failed, {
+			name = __modName,
+			time = __modElapsed,
+			index = __badwars_universal_index,
+			error = __errMsg
+		})
+		warn('BadWars: [MODULE FAIL] ' .. __modName .. ' (' .. string.format('%.3f', __modElapsed) .. 's): ' .. __errMsg)
 		if shared and shared.BadStatus then
-			shared.BadStatus('ERROR universal module ' .. tostring(__badwars_universal_module.Name) .. ': ' .. tostring(__badwars_universal_err), true)
+			pcall(function()
+				shared.BadStatus('ERROR universal module ' .. __modName .. ': ' .. __errMsg, true)
+			end)
 		end
 	end
-	if __badwars_universal_index % 2 == 0 then
-		task.wait(0.06)
+
+	if __badwars_universal_index % 4 == 0 then
+		task.wait(0.05)
 	else
 		task.wait()
 	end
 end
-if shared and shared.BadStatus then
-	shared.BadStatus('universal modules registered: ' .. tostring(__badwars_universal_total))
+
+__badwars_universal_report.totalTime = os.clock() - __badwars_universal_startTime
+
+do
+	local __loaded = #__badwars_universal_report.loaded
+	local __failed = #__badwars_universal_report.failed
+	local __summary = 'universal modules: ' .. __loaded .. ' loaded, ' .. __failed .. ' failed'
+		.. ' (' .. string.format('%.2f', __badwars_universal_report.totalTime) .. 's)'
+		.. ' | peak memory: ' .. string.format('%.1f', __badwars_universal_report.peakMemory) .. ' KB'
+
+	if shared and shared.BadStatus then
+		pcall(function()
+			shared.BadStatus(__summary, __failed > 0)
+		end)
+	end
+	warn('BadWars: ' .. __summary)
+
+	if __failed > 0 then
+		warn('BadWars: Failed modules:')
+		for _, __entry in ipairs(__badwars_universal_report.failed) do
+			warn('  ✗ ' .. __entry.name .. ' [' .. __entry.error .. ']')
+		end
+	end
+end
+
+if shared then
+	shared.__badwars_universal_report = __badwars_universal_report
 end

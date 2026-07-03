@@ -27,7 +27,8 @@ local Added = {
 		Strings[ent] = ent.Player and whitelist:tag(ent.Player, true, true)..(DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or ent.Character.Name
 
 		if Health.Enabled then
-			local healthColor = Color3.fromHSV(math.clamp(ent.Health / ent.MaxHealth, 0, 1) / 2.5, 0.89, 0.75)
+			local maxH = ent.MaxHealth or 0
+			local healthColor = Color3.fromHSV(math.clamp(maxH > 0 and (ent.Health / maxH) or 0, 0, 1) / 2.5, 0.89, 0.75)
 			Strings[ent] = Strings[ent]..' <font color="rgb('..tostring(math.floor(healthColor.R * 255))..','..tostring(math.floor(healthColor.G * 255))..','..tostring(math.floor(healthColor.B * 255))..')">'..math.round(ent.Health)..'</font>'
 		end
 
@@ -129,7 +130,8 @@ local Updated = {
 			Strings[ent] = ent.Player and whitelist:tag(ent.Player, true, true)..(DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or ent.Character.Name
 
 			if Health.Enabled then
-				local healthColor = Color3.fromHSV(math.clamp(ent.Health / ent.MaxHealth, 0, 1) / 2.5, 0.89, 0.75)
+				local maxH = ent.MaxHealth or 0
+				local healthColor = Color3.fromHSV(math.clamp(maxH > 0 and (ent.Health / maxH) or 0, 0, 1) / 2.5, 0.89, 0.75)
 				Strings[ent] = Strings[ent]..' <font color="rgb('..tostring(math.floor(healthColor.R * 255))..','..tostring(math.floor(healthColor.G * 255))..','..tostring(math.floor(healthColor.B * 255))..')">'..math.round(ent.Health)..'</font>'
 			end
 
@@ -137,14 +139,20 @@ local Updated = {
 				Strings[ent] = '<font color="rgb(85, 255, 85)">[</font><font color="rgb(255, 255, 255)">%s</font><font color="rgb(85, 255, 85)">]</font> '..Strings[ent]
 			end
 
-			if Equipment.Enabled and store.inventories[ent.Player] then
-				local kit = ent.Player:GetAttribute('PlayingAsKit')
-				local inventory = store.inventories[ent.Player]
-				nametag.Hand.Image = bedwars.getIcon(inventory.hand or {itemType = ''}, true)
-				nametag.Helmet.Image = bedwars.getIcon(inventory.armor[4] or {itemType = ''}, true)
-				nametag.Chestplate.Image = bedwars.getIcon(inventory.armor[5] or {itemType = ''}, true)
-				nametag.Boots.Image = bedwars.getIcon(inventory.armor[6] or {itemType = ''}, true)
-				nametag.Kit.Image = kit and kit ~= 'none' and bedwars.BedwarsKitMeta[kit].renderImage or ''
+			if Equipment.Enabled and store and type(store.inventories) == 'table' and store.inventories[ent.Player] then
+				pcall(function()
+					local kit = ent.Player:GetAttribute('PlayingAsKit')
+					local inventory = store.inventories[ent.Player]
+					if bedwars and bedwars.getIcon then
+						nametag.Hand.Image = bedwars.getIcon(inventory.hand or {itemType = ''}, true)
+						nametag.Helmet.Image = bedwars.getIcon(inventory.armor and inventory.armor[4] or {itemType = ''}, true)
+						nametag.Chestplate.Image = bedwars.getIcon(inventory.armor and inventory.armor[5] or {itemType = ''}, true)
+						nametag.Boots.Image = bedwars.getIcon(inventory.armor and inventory.armor[6] or {itemType = ''}, true)
+					end
+					if kit and kit ~= 'none' and bedwars and bedwars.BedwarsKitMeta and bedwars.BedwarsKitMeta[kit] then
+						nametag.Kit.Image = bedwars.BedwarsKitMeta[kit].renderImage or ''
+					end
+				end)
 			end
 
 			local size = getfontsize(removeTags(Strings[ent]), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000))

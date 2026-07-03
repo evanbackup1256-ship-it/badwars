@@ -85,20 +85,28 @@ setthreadidentity=setthreadidentity or function() end
 queue_on_teleport=queue_on_teleport or function() end
 
 local function httpGet(url)
-	local g=game; local fn=g.HttpGet or(getgenv and type(getgenv)=='function' and getgenv().HttpGet)
-	if fn then return fn(g,url,true) end; return cloneref(g:GetService('HttpService')):GetAsync(url,true)
+	local g = game
+	local ok1, res1 = pcall(function() return g:HttpGet(url, true) end)
+	if ok1 and type(res1) == 'string' and #res1 > 0 then return res1 end
+	local ok2, res2 = pcall(function() local env = getgenv(); if type(env.HttpGet) == 'function' then return env.HttpGet(g, url, true) end; return nil end)
+	if ok2 and type(res2) == 'string' and #res2 > 0 then return res2 end
+	local ok3, res3 = pcall(function() return cloneref(g:GetService('HttpService')):GetAsync(url, true) end)
+	if ok3 and type(res3) == 'string' and #res3 > 0 then return res3 end
+	return nil
 end
-HttpGet=httpGet
+HttpGet = httpGet
 
 local function downloadFile(path)
-	if not HttpGet then return nil,'HttpGet nil' end
-	local cached=isfile(path) and readfile(path)
-	if type(cached)=='string' and cached~='' then return cached end
-	setStatus('downloading '..tostring(path))
-	local ok,res=pcall(function() return httpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/'..path:gsub(' ','%%20')) end)
-	if not ok or type(res)~='string' or res=='' or res:match('404') then return nil,tostring(res) end
-	if path:find('.lua') then res='-- BadWars by usingINales\n'..res end
-	writefile(path,res)
+	if not HttpGet then return nil, 'HttpGet nil' end
+	local cached = isfile(path) and readfile(path)
+	if type(cached) == 'string' and #cached > 0 then return cached end
+	setStatus('downloading ' .. tostring(path))
+	local url = 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20')
+	local res = httpGet(url)
+	if type(res) ~= 'string' or #res == 0 then return nil, 'empty response from ' .. url end
+	if res:find('404: Not Found', 1, true) or (#res < 200 and res:find('Not Found', 1, true)) then return nil, '404: Not Found - ' .. url end
+	if path:find('.lua') then res = '-- BadWars by usingINales\n' .. res end
+	pcall(function() writefile(path, res) end)
 	return res
 end
 

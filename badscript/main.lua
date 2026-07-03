@@ -1,722 +1,340 @@
+-- BadWars Main v3.0 - Robust Pipeline
 repeat task.wait() until game:IsLoaded()
 if shared.Bad then pcall(function() shared.Bad:Uninject() end) end
-shared.BadSecurityStarted = nil
+shared.BadSecurityStarted=nil
 
-local collectgarbage = collectgarbage
-local os_clock = os.clock
-local pipelineStart = os_clock()
+local os_clock=os.clock
+local pipelineStart=os_clock()
+local collectgarbage=collectgarbage
 
--- Centralized safe helpers
-local function safeToString(v)
-	if v == nil then return '' end
-	if type(v) == 'string' then return v end
-	if type(v) == 'table' then
-		local ok, r = pcall(function() return table.concat(v, ', ') end)
-		if ok then return r end
-		ok, r = pcall(function() return tostring(v) end)
-		return ok and r or '<table>'
-	end
-	return tostring(v)
+-- Error tracker
+local __rtErrs=shared.__badwars_runtime_errors
+if type(__rtErrs)~='table' then __rtErrs={}; shared.__badwars_runtime_errors=__rtErrs end
+local function recordErr(mod,err) table.insert(__rtErrs,{module=tostring(mod),error=tostring(err),time=os_clock()}) end
+
+-- Safe helpers
+local function typeName(v) return typeof(v) end
+local function safeStr(v) if v==nil then return '' end; if type(v)~='table' then return tostring(v) end; local o,r=pcall(function() return table.concat(v,', ') end); if o then return r end; return '<table>' end
+local function safeConcat(...) local r={}; for _,p in ipairs({...}) do table.insert(r,safeStr(p)) end; return table.concat(r) end
+
+-- Feature state: ensures every option has {Enabled, Value, ...}
+-- Profile data sometimes stores booleans instead of {Enabled=true}
+local function normalize(v)
+	if type(v)=='boolean' then return {Enabled=v} end
+	if type(v)~='table' then return {Enabled=false} end
+	return v
+end
+-- Safe option read: option.Value or option.Enabled with fallback
+local function optVal(t,key,default)
+	if type(t)~='table' then return default end
+	local v=t[key]
+	if v==nil then return default end
+	return v
+end
+local function optEnabled(t,default)
+	if type(t)~='table' then return default or false end
+	if type(t.Enabled)=='boolean' then return t.Enabled end
+	return default or false
+end
+-- Safe toggle/dropdown read (handles both table and saved boolean state)
+local function safeOption(v)
+	v=normalize(v)
+	if type(v.Enabled)~='boolean' then v.Enabled=false end
+	return v
+end
+-- Safe module reference: Bad.Modules.Fly.Enabled → check cascade
+local function moduleEnabled(modName)
+	if not shared.Bad or type(shared.Bad.Modules)~='table' then return false end
+	local m=shared.Bad.Modules[modName]
+	if type(m)~='table' then return false end
+	return optEnabled(m,false)
 end
 
-local function safeConcat(...)
-	local parts = {...}
-	local result = {}
-	for _, p in ipairs(parts) do
-		table.insert(result, safeToString(p))
-	end
-	return table.concat(result)
+-- Status & notify
+local function setStatus(msg,isErr)
+	if shared.BadStatus then pcall(function() shared.BadStatus(msg,isErr) end) end
+end
+local function notify(title,text,dur)
+	pcall(function() game:GetService('StarterGui'):SetCore('SendNotification',{Title=safeStr(title),Text=safeStr(text),Duration=dur or 8}) end)
+end
+local __logHistory={}
+local function logMod(stage,name,elapsed,success,detail)
+	local key=safeStr(name)..'|'..safeStr(detail)
+	if __logHistory[key] then __logHistory[key]=__logHistory[key]+1; return end
+	__logHistory[key]=1
+	local tag=success and'[OK]'or'[FAIL]'
+	local msg=tag..' ['..stage..'] '..safeStr(name)
+	if elapsed then msg=msg..' ('..string.format('%.3f',elapsed)..'s)' end
+	if detail then msg=msg..' - '..safeStr(detail) end
+	warn('BadWars: '..msg)
 end
 
-local function normalizeFeatureState(value)
-	if type(value) == 'boolean' then
-		return {Enabled = value}
-	end
-	if type(value) ~= 'table' then
-		return {Enabled = false}
-	end
-	return value
+-- Download
+local _loadstring
+pcall(function() local g=getgenv; if type(g)=='function' then g=g() end; _loadstring=(g and g.loadstring) or loadstring end)
+if not _loadstring then _loadstring=function(s) error('loadstring unavailable') end end
+isfile=isfile or function(f) local s,r=pcall(readfile,f); return s and r~=nil and r~='' end
+delfile=delfile or function(f) writefile(f,'') end
+isfolder=isfolder or function() return false end
+makefolder=makefolder or function() end
+listfiles=listfiles or function() return {} end
+readfile=readfile or function() return '' end
+writefile=writefile or function() end
+cloneref=cloneref or function(o) return o end
+setthreadidentity=setthreadidentity or function() end
+queue_on_teleport=queue_on_teleport or function() end
+
+local function httpGet(url)
+	local g=game; local fn=g.HttpGet or(getgenv and type(getgenv)=='function' and getgenv().HttpGet)
+	if fn then return fn(g,url,true) end; return cloneref(g:GetService('HttpService')):GetAsync(url,true)
+end
+HttpGet=httpGet
+
+local function downloadFile(path)
+	if not HttpGet then return nil,'HttpGet nil' end
+	local cached=isfile(path) and readfile(path)
+	if type(cached)=='string' and cached~='' then return cached end
+	setStatus('downloading '..tostring(path))
+	local ok,res=pcall(function() return httpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/'..path:gsub(' ','%%20')) end)
+	if not ok or type(res)~='string' or res=='' or res:match('404') then return nil,tostring(res) end
+	if path:find('.lua') then res='-- BadWars by usingINales\n'..res end
+	writefile(path,res)
+	return res
 end
 
-local function safeCallCallback(fn, ...)
-	if type(fn) ~= 'function' then return false, 'callback not a function' end
-	local ok, err = pcall(fn, ...)
-	if not ok then
-		warn('BadWars: [CALLBACK ERROR] ' .. tostring(err))
-	end
-	return ok, err
-end
+local function splitLines(t) local r={}; for l in tostring(t):gmatch('[^\r\n]+') do l=l:match('^%s*(.-)%s*$'); if l~='' and not l:find('^#') then table.insert(r,l) end end; return r end
 
-local function safeFind(root, path, timeout)
-	if not root then return nil end
-	if type(root) ~= 'userdata' then return nil end
-	local timeLimit = timeout or 5
-	local start = os_clock()
-	local current = root
-	for part in path:gmatch('[^/]+') do
-		local child = current:FindFirstChild(part)
-		while not child and (os_clock() - start < timeLimit) do
-			task.wait()
-			child = current:FindFirstChild(part)
-		end
-		if not child then return nil end
-		current = child
-	end
-	return current
-end
-
-local function safeConnect(signal, callback)
-	if not signal then return nil end
-	local ok, conn = pcall(function() return signal:Connect(callback) end)
-	if ok and conn then return conn end
-	return nil
-end
-
-local function validateAnimationId(id)
-	id = tostring(id or '')
-	local numeric = id:match('^(%d+)$')
-	if not numeric then
-		numeric = id:match('rbxassetid://(%d+)') or id:match('asset/?.*%?id=(%d+)') or id:match('(%d+)')
-	end
-	if numeric and #numeric > 0 then
-		return 'rbxassetid://' .. numeric
-	end
-	return nil
-end
-
-local __runtimeErrors = shared.__badwars_runtime_errors
-if type(__runtimeErrors) ~= 'table' then
-	__runtimeErrors = {}
-	shared.__badwars_runtime_errors = __runtimeErrors
-end
-local function recordRuntimeError(moduleName, err)
-	table.insert(__runtimeErrors, {module = moduleName, error = tostring(err), time = os_clock()})
-	warn('BadWars: [RUNTIME ERROR] ' .. tostring(moduleName) .. ': ' .. tostring(err))
-end
-
-pcall(function()
-	game:GetService("StarterGui"):SetCore("SendNotification", {
-		Title = "BadWars",
-		Text = "by usingINales | Dev Mode Active",
-		Duration = 6
-	})
-end)
-
-local Bad
-
-local function setStatus(message, isError)
-	if shared.BadStatus then
-		pcall(function() shared.BadStatus(message, isError) end)
-	end
-end
-
-local function notify(title, text, duration)
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = tostring(title or "BadWars"),
-			Text = tostring(text or ""),
-			Duration = duration or 8
-		})
-	end)
-end
-
-local __logHistory = {}
-local function logModule(stage, name, elapsed, success, detail)
-	local severity = success and 'SUCCESS' or 'ERROR'
-	local tag = '[MODULE][' .. severity .. ']'
-	local msg = tag .. ' [' .. stage .. '] ' .. tostring(name)
-	if elapsed then msg = msg .. ' (' .. string.format('%.3f', elapsed) .. 's)' end
-	if detail then msg = msg .. ' - ' .. tostring(detail) end
-	local dedupKey = tostring(name) .. '|' .. tostring(detail)
-	if __logHistory[dedupKey] then
-		__logHistory[dedupKey] = __logHistory[dedupKey] + 1
-		return
-	end
-	__logHistory[dedupKey] = 1
-	warn('BadWars: ' .. msg)
-end
-
-local function logEvent(category, message, isError)
-	local tag = isError and '[ERROR]' or '[INFO]'
-	local fullTag = '[' .. category .. ']' .. tag
-	local dedupKey = tostring(category) .. '|' .. tostring(message)
-	if __logHistory[dedupKey] then
-		__logHistory[dedupKey] = __logHistory[dedupKey] + 1
-		return
-	end
-	__logHistory[dedupKey] = 1
-	warn('BadWars: ' .. fullTag .. ' ' .. tostring(message))
-end
-
-local oldLoadstring
-pcall(function()
-	local g = getgenv
-	if type(g) == 'function' then g = g() end
-	oldLoadstring = (g and g.loadstring) or loadstring
-end)
-if not oldLoadstring then oldLoadstring = function(...) error("loadstring not available in executor") end end
-local loadstring = function(...)
-	local realLoad = oldLoadstring or function() return nil, "loadstring not available" end
-	local res, err = realLoad(...)
-	if err then
-		if Bad and type(Bad.CreateNotification) == 'function' then
-			pcall(function()
-				Bad:CreateNotification('BadWars', 'Failed to load : '..tostring(err), 30, 'alert')
-			end)
-		else
-			warn('BadWars loadstring failed: ' .. tostring(err))
-		end
-	end
-	return res, err
-end
-isfile = isfile or function(file)
-	local suc, res = pcall(function()
-		return readfile(file)
-	end)
-	return suc and res ~= nil and res ~= ''
-end
-delfile = delfile or function(file)
-	writefile(file, '')
-end
-isfolder = isfolder or function() return false end
-makefolder = makefolder or function() end
-listfiles = listfiles or function() return {} end
-readfile = readfile or function() return '' end
-writefile = writefile or function() end
-cloneref = cloneref or function(obj) return obj end
-setthreadidentity = setthreadidentity or function() end
-queue_on_teleport = queue_on_teleport or function() end
-local function safeHttpGet(inst, url, nocache)
-	local g = inst or game
-	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
-	if httpget then
-		return httpget(g, url, nocache)
-	end
-	local httpService = cloneref(game:GetService('HttpService'))
-	return httpService:GetAsync(url, nocache)
-end
-HttpGet = safeHttpGet
-local playersService = cloneref(game:GetService('Players'))
-
-local function downloadFile(path, func)
-	if not HttpGet or not game then
-		setStatus('ERROR: HttpGet or game is nil for ' .. tostring(path), true)
-		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
-		return nil, 'HttpGet or game is nil'
-	end
-	local cached = isfile(path) and readfile(path) or nil
-	if type(cached) ~= 'string' or cached == '' then
-		setStatus('downloading ' .. tostring(path))
-		local suc, res = pcall(function()
-			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
-		end)
-		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then
-			setStatus('ERROR downloading ' .. tostring(path) .. ': ' .. tostring(res), true)
-			return nil, tostring(res)
-		end
-		if path:find('.lua') then
-			res = '-- BadWars by usingINales (rebranded)\n' .. res
-		end
-		writefile(path, res)
-		cached = res
-	end
-	if type(cached) ~= 'string' or cached == '' then
-		setStatus('ERROR empty file: ' .. tostring(path), true)
-		return nil, 'empty file: ' .. tostring(path)
-	end
-	setStatus('loaded ' .. tostring(path))
-	return func and func(path) or cached
-end
-
-local function splitLines(text)
-	local lines = {}
-	for line in tostring(text or ''):gmatch('[^\r\n]+') do
-		line = line:match('^%s*(.-)%s*$')
-		if line ~= '' and not line:find('^#') then
-			table.insert(lines, line)
-		end
-	end
-	return lines
-end
-
-local function loadLuaBundle(name, basePath, manifestPath)
-	local baseCode, baseErr = downloadFile(basePath)
-	if type(baseCode) ~= 'string' or baseCode == '' then
-		return nil, baseErr or ('missing base: ' .. tostring(basePath))
-	end
-
-	local parts = {baseCode}
-	local manifestCode, manifestErr = downloadFile(manifestPath)
-	if type(manifestCode) ~= 'string' or manifestCode == '' then
-		return table.concat(parts, '\n'), manifestErr
-	end
-
-	-- Wrapper that gives each module pcall isolation + error tracking
-	local preamble = {
+-- Universal module bundle builder (no pre-built bundle, builds from sources with pcall isolation)
+local function buildBundle(name,basePath,manifestPath)
+	local baseCode=downloadFile(basePath)
+	if type(baseCode)~='string' or baseCode=='' then return nil,'missing base' end
+	local parts={baseCode}
+	local manifest=downloadFile(manifestPath)
+	local preamble={
 		'',
-		'local __badwars_module_ok = {}',
-		'local function __badwars_run_module(idx, modName, fn)',
-		'  local ok, err = pcall(fn)',
+		'local __m_ok={}',
+		'local function __run_m(idx,name,fn)',
+		'  local ok,err=pcall(fn)',
 		'  if not ok then',
-		'    warn("BadWars: [MODULE FAIL] " .. modName .. ": " .. tostring(err))',
+		'    warn("BadWars: [MODULE FAIL] "..name..": "..tostring(err))',
 		'    if shared and shared.__badwars_runtime_errors then',
-		'      table.insert(shared.__badwars_runtime_errors, {module = modName, error = tostring(err), time = os.clock()})',
+		'      table.insert(shared.__badwars_runtime_errors,{module=name,error=tostring(err)})',
 		'    end',
 		'  end',
-		'  __badwars_module_ok[idx] = ok',
+		'  __m_ok[idx]=ok',
 		'end',
 		''
 	}
-	table.insert(parts, table.concat(preamble, '\n'))
-
-	local loaded = 0
-	local moduleIndex = 1
-	for _, modulePath in splitLines(manifestCode) do
-		if modulePath ~= basePath then
-			setStatus('loading ' .. tostring(name) .. ' module: ' .. tostring(modulePath))
-			local moduleCode, moduleErr = downloadFile(modulePath)
-			if type(moduleCode) == 'string' and moduleCode ~= '' then
-				local wrapped = '\n-- module ' .. tostring(moduleIndex) .. ': ' .. modulePath
-					.. '\n__badwars_run_module(' .. tostring(moduleIndex) .. ', ' 
-					.. string.format('%q', modulePath) .. ', function()'
-					.. '\n' .. moduleCode .. '\nend)'
-				table.insert(parts, wrapped)
-				loaded = loaded + 1
-				moduleIndex = moduleIndex + 1
-			else
-				setStatus('WARNING skipped ' .. tostring(modulePath) .. ': ' .. tostring(moduleErr), false)
+	table.insert(parts,table.concat(preamble,'\n'))
+	local loaded=0; local mi=1
+	if type(manifest)=='string' then
+		for _,mp in splitLines(manifest) do
+			if mp~=basePath then
+				setStatus('loading module: '..tostring(mp))
+				local code=downloadFile(mp)
+				if type(code)=='string' and code~='' then
+					table.insert(parts,'\n-- module '..tostring(mi)..': '..mp..'\n__run_m('..tostring(mi)..','..string.format('%q',mp)..',function()\n'..code..'\nend)')
+					loaded=loaded+1; mi=mi+1
+				end
 			end
 		end
 	end
-	setStatus('bundled ' .. tostring(loaded) .. ' ' .. tostring(name) .. ' modules')
-
-	-- Summary
-	local summary = '\nlocal __b_ok = 0; local __b_fail = 0'
-		.. '\nfor _, v in ipairs(__badwars_module_ok) do'
-		.. '\n  if v then __b_ok = __b_ok + 1 else __b_fail = __b_fail + 1 end'
-		.. '\nend'
-		.. '\nwarn("BadWars: [BUNDLE] ' .. tostring(name) .. ': " .. __b_ok .. " loaded, " .. __b_fail .. " failed")'
-	table.insert(parts, summary)
-
-	return table.concat(parts, '\n')
+	setStatus('bundled '..tostring(loaded)..' '..tostring(name)..' modules')
+	local summary='\nlocal __ok=0;local __fail=0\nfor _,v in ipairs(__m_ok) do if v then __ok=__ok+1 else __fail=__fail+1 end end\nwarn("BadWars: [BUNDLE] '..tostring(name)..': "..__ok.." ok, "..__fail.." fail")'
+	table.insert(parts,summary)
+	return table.concat(parts,'\n')
 end
 
-local function loadPrebuiltBundle(name, bundlePath, basePath, manifestPath)
-	-- Build from individual source files every time for reliability
-	return loadLuaBundle(name, basePath, manifestPath)
-end
-
-local gameModulePaths = {
-	[606849621] = 'badscript/games/jailbreak/606849621 - main/base.lua',
-	[893973440] = 'badscript/games/893973440 - flee the facility/base.lua',
-	[6872265039] = 'badscript/games/bedwars/6872265039 - lobby/base.lua',
-	[6872274481] = 'badscript/games/bedwars/6872274481 - game/base.lua',
-	[8444591321] = 'badscript/games/bedwars/8444591321 - mega.lua',
-	[8560631822] = 'badscript/games/bedwars/8560631822 - micro.lua',
-	[77790193039862] = 'badscript/games/1.8arena/77790193039862 - game/base.lua',
-	[80041634734121] = 'badscript/games/1.8arena/80041634734121 - duel.lua',
-	[139566161526375] = 'badscript/games/bridge duel/139566161526375 - game/base.lua',
-	[16483433878] = 'badscript/games/blocktales/16483433878 - blocktales/base.lua',
-	[106431012459431] = 'badscript/games/blocktales/106431012459431 - battle sim.lua',
-	[5938036553] = 'badscript/games/frontlines/5938036553 - game/base.lua',
-	[123804558118054] = 'badscript/games/frontlines/123804558118054 - versus.lua',
-	[131465939650733] = 'badscript/games/frontlines/131465939650733 - versus ffa.lua',
-	[83413351472244] = 'badscript/games/frontlines/83413351472244 - versus ffa2.lua',
-	[155615604] = 'badscript/games/prison life/155615604 - main/base.lua',
-	[135564683255158] = 'badscript/games/prison life/135564683255158 - vc servers.lua',
-	[115875349872417] = 'badscript/games/redliner/115875349872417 - game/base.lua',
-	[126691165749976] = 'badscript/games/redliner/126691165749976 - 1v1.lua',
-	[94987506187454] = 'badscript/games/redliner/94987506187454 - lobby.lua',
-	[8768229691] = 'badscript/games/skywars voxel/8768229691 - skywars game/base.lua',
-	[8542259458] = 'badscript/games/skywars voxel/8542259458 - skywars lobby.lua',
-	[8542275097] = 'badscript/games/skywars voxel/8542275097 - skywars solo.lua',
-	[8592115909] = 'badscript/games/skywars voxel/8592115909 - skywars duos.lua',
-	[13246639586] = 'badscript/games/skywars voxel/13246639586 - skywars bridge.lua',
-	[8951451142] = 'badscript/games/skywars voxel/8951451142 - skywars egg squad.lua'
+-- Game module path map
+local gamePaths={
+	[606849621]='badscript/games/jailbreak/606849621 - main/base.lua',
+	[893973440]='badscript/games/893973440 - flee the facility/base.lua',
+	[6872265039]='badscript/games/bedwars/6872265039 - lobby/base.lua',
+	[6872274481]='badscript/games/bedwars/6872274481 - game/base.lua',
+	[8444591321]='badscript/games/bedwars/8444591321 - mega.lua',
+	[8560631822]='badscript/games/bedwars/8560631822 - micro.lua',
+	[77790193039862]='badscript/games/1.8arena/77790193039862 - game/base.lua',
+	[80041634734121]='badscript/games/1.8arena/80041634734121 - duel.lua',
+	[139566161526375]='badscript/games/bridge duel/139566161526375 - game/base.lua',
+	[16483433878]='badscript/games/blocktales/16483433878 - blocktales/base.lua',
+	[5938036553]='badscript/games/frontlines/5938036553 - game/base.lua',
+	[155615604]='badscript/games/prison life/155615604 - main/base.lua',
+	[115875349872417]='badscript/games/redliner/115875349872417 - game/base.lua',
+	[8768229691]='badscript/games/skywars voxel/8768229691 - skywars game/base.lua',
+	[8542259458]='badscript/games/skywars voxel/8542259458 - skywars lobby.lua',
 }
 
-local function resolveGameModulePath(placeId)
-	local numericPlaceId = tonumber(placeId)
-	return gameModulePaths[numericPlaceId] or ('badscript/games/' .. tostring(placeId) .. '.lua')
-end
+local function gamePath(placeId) return gamePaths[tonumber(placeId)] or ('badscript/games/'..tostring(placeId)..'.lua') end
 
-local function runGameModule(modulePath, sourceLabel, ...)
-	setStatus('loading ' .. tostring(sourceLabel) .. ' game module: ' .. tostring(modulePath))
-	local modStart = os_clock()
-	local modCode, modDownloadErr = downloadFile(modulePath)
-	if type(modCode) ~= 'string' or modCode == '' then
-		return false, modDownloadErr or ('missing game module: ' .. tostring(modulePath))
-	end
-
-	setStatus('compiling game module: ' .. tostring(modulePath))
-	local mod, modErr = loadstring(modCode, tostring(game.PlaceId))
-	if not mod then
-		return false, modErr or 'compile failed'
-	end
-
-	setStatus('running game module: ' .. tostring(modulePath))
-	local ok, err = pcall(mod, ...)
-	local elapsed = os_clock() - modStart
-	if not ok then
-		logModule('Game Module', modulePath, elapsed, false, err)
-		return false, err
-	end
-
-	logModule('Game Module', modulePath, elapsed, true)
-	setStatus('game module ready: ' .. tostring(modulePath))
+local function runGameMod(path,label)
+	setStatus('loading game module: '..tostring(path))
+	local start=os_clock()
+	local code=downloadFile(path)
+	if type(code)~='string' or code=='' then return false,'download failed' end
+	local fn,err=_loadstring(code,tostring(game.PlaceId))
+	if not fn then return false,err or 'compile failed' end
+	local ok,runErr=pcall(fn)
+	local el=os_clock()-start
+	if not ok then logMod('Game',path,el,false,runErr); recordErr(path,runErr); return false,runErr end
+	logMod('Game',path,el,true)
 	return true
 end
 
-local function performHealthCheck()
-	setStatus('running health checks')
-	local issues = {}
-	local warnings = {}
-
-	if not Bad then
-		table.insert(issues, 'Bad API is nil')
-		return issues, warnings
-	end
-
-	if type(Bad.CreateNotification) ~= 'function' then
-		table.insert(issues, 'CreateNotification missing')
-	end
-	if type(Bad.Save) ~= 'function' then
-		table.insert(issues, 'Save missing')
-	end
-	if type(Bad.Load) ~= 'function' then
-		table.insert(issues, 'Load missing')
-	end
-	if type(Bad.Clean) ~= 'function' then
-		table.insert(issues, 'Clean missing')
-	end
-
-	if not Bad.Categories then
-		table.insert(warnings, 'Categories table missing')
-	elseif not Bad.Categories.Main then
-		table.insert(warnings, 'Main category missing')
-	end
-
-	if not Bad.gui then
-		table.insert(warnings, 'GUI object missing')
-	else
-		pcall(function()
-			if not Bad.gui:FindFirstChild('ScaledGui') then
-				table.insert(warnings, 'ScaledGui missing')
-			end
-		end)
-	end
-
-	if not Bad.Modules then
-		table.insert(warnings, 'Modules table missing')
-	else
-		local count = 0
-		for _ in Bad.Modules do count += 1 end
-		if count == 0 then
-			table.insert(warnings, 'No modules registered')
-		end
-	end
-
-	if not Bad.Libraries then
-		table.insert(warnings, 'Libraries table missing')
-	end
-
-	pcall(function()
-		collectgarbage('collect')
-		local memKB = collectgarbage('count')
-		if memKB > 50000 then
-			table.insert(warnings, 'High memory usage: ' .. string.format('%.1f', memKB) .. ' KB')
-		end
-	end)
-
-	return issues, warnings
+-- Health check
+local function healthCheck()
+	local issues={}; local warns={}
+	if not shared.Bad then table.insert(issues,'Bad API nil'); return issues,warns end
+	local B=shared.Bad
+	if type(B.CreateNotification)~='function' then table.insert(issues,'CreateNotification missing') end
+	if type(B.Save)~='function' then table.insert(issues,'Save missing') end
+	if type(B.Load)~='function' then table.insert(issues,'Load missing') end
+	if type(B.Clean)~='function' then table.insert(issues,'Clean missing') end
+	if not B.Categories then table.insert(warns,'Categories missing')
+	elseif not B.Categories.Main then table.insert(warns,'Main category missing') end
+	if type(B.Modules)~='table' then table.insert(warns,'Modules missing') end
+	if type(B.Libraries)~='table' then table.insert(warns,'Libraries missing') end
+	pcall(function() collectgarbage('collect'); local m=collectgarbage('count'); if m>50000 then table.insert(warns,'High memory: '..string.format('%.1f',m)..' KB') end end)
+	return issues,warns
 end
 
-local function finishLoading()
-	Bad.Init = nil
-	setStatus('loading saved GUI/profile')
-	Bad:Load()
+-- Finish loading
+local function finish()
+	shared.Bad.Init=nil
+	setStatus('loading profile')
+	shared.Bad:Load()
 	if not shared.BadReload then
 		pcall(function()
-			local clickgui = Bad.gui and Bad.gui.ScaledGui and Bad.gui.ScaledGui.ClickGui
-			if clickgui then
-				clickgui.Visible = true
-				setStatus('ready - menu opened')
-			end
+			local cg=shared.Bad.gui and shared.Bad.gui.ScaledGui and shared.Bad.gui.ScaledGui.ClickGui
+			if cg then cg.Visible=true; setStatus('ready - menu open') end
 		end)
 	end
-	task.spawn(function()
-		repeat
-			Bad:Save()
-			task.wait(10)
-		until not Bad.Loaded
-	end)
-
-	local teleportedServers
-	Bad:Clean(playersService.LocalPlayer.OnTeleport:Connect(function()
-		if (not teleportedServers) and (not shared.BadIndependent) then
-			teleportedServers = true
-			local teleportScript = table.concat({
-				'shared.BadReload = true',
-				'if shared.BadDeveloper then',
-				"	loadstring(readfile('badscript/loader.lua'), 'loader')()",
-				'else',
-				"	loadstring(game:HttpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua', true), 'loader')()",
-				'end'
-			}, '\n')
-			if shared.BadDeveloper then
-				teleportScript = 'shared.BadDeveloper = true\n'..teleportScript
-			end
-			if shared.BadCustomProfile then
-				teleportScript = 'shared.BadCustomProfile = "'..tostring(shared.BadCustomProfile)..'"\n'..teleportScript
-			end
-			Bad:Save()
-			queue_on_teleport(teleportScript)
+	task.spawn(function() repeat shared.Bad:Save(); task.wait(10) until not shared.Bad.Loaded end)
+	local teleported
+	shared.Bad:Clean(shared.Bad.gui and shared.Bad.gui:FindFirstChild('LocalPlayer') and shared.Bad.gui:FindFirstChild('LocalPlayer').OnTeleport:Connect(function()
+		if not teleported and not shared.BadIndependent then
+			teleported=true
+			local script='shared.BadReload=true\nif shared.BadDeveloper then\nloadstring(readfile(\'badscript/loader.lua\'),\'loader\')()\nelse\nloadstring(game:HttpGet(\'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua\',true),\'loader\')()\nend'
+			if shared.BadDeveloper then script='shared.BadDeveloper=true\n'..script end
+			shared.Bad:Save()
+			queue_on_teleport(script)
 		end
-	end))
-
-	if not shared.BadReload then
-		if not Bad.Categories then return end
-		if Bad.Categories.Main.Options and Bad.Categories.Main.Options['GUI bind indicator'] and Bad.Categories.Main.Options['GUI bind indicator'].Enabled then
-			Bad:CreateNotification('BadWars', 'by usingINales | Press keybind to open GUI', 6)
-		end
+	end) or function() end)
+	if not shared.BadReload and shared.Bad.Categories and shared.Bad.Categories.Main and shared.Bad.Categories.Main.Options and shared.Bad.Categories.Main.Options['GUI bind indicator'] and shared.Bad.Categories.Main.Options['GUI bind indicator'].Enabled then
+		shared.Bad:CreateNotification('BadWars','by usingINales | Press keybind to open GUI',6)
 	end
 end
 
-local function validateDependencies()
-	setStatus('validating dependencies')
-	local deps = {
-		{ name = 'Players', ok = pcall(function() game:GetService('Players') end) },
-		{ name = 'RunService', ok = pcall(function() game:GetService('RunService') end) },
-		{ name = 'UserInputService', ok = pcall(function() game:GetService('UserInputService') end) },
-		{ name = 'TweenService', ok = pcall(function() game:GetService('TweenService') end) },
-		{ name = 'Lighting', ok = pcall(function() game:GetService('Lighting') end) },
-		{ name = 'HttpService', ok = pcall(function() game:GetService('HttpService') end) },
-		{ name = 'GuiService', ok = pcall(function() game:GetService('GuiService') end) },
-		{ name = 'ReplicatedStorage', ok = pcall(function() game:GetService('ReplicatedStorage') end) },
-		{ name = 'TeleportService', ok = pcall(function() game:GetService('TeleportService') end) },
-		{ name = 'MarketplaceService', ok = pcall(function() game:GetService('MarketplaceService') end) },
-		{ name = 'pcall', ok = type(pcall) == 'function' },
-		{ name = 'task', ok = type(task) == 'table' },
-		{ name = 'loadstring', ok = type(loadstring) == 'function' },
-		{ name = 'Instance', ok = type(Instance) == 'userdata' },
-		{ name = 'game', ok = type(game) == 'userdata' },
-		{ name = 'workspace', ok = type(workspace) == 'userdata' },
-	}
+-- ============ PIPELINE ============
 
-	local missing = {}
-	for _, dep in deps do
-		if not dep.ok then
-			table.insert(missing, dep.name)
+-- Stage 1: Deps
+setStatus('pipeline: dependencies')
+local deps={'Players','RunService','UserInputService','TweenService','Lighting','HttpService','GuiService','ReplicatedStorage','TeleportService','MarketplaceService'}
+local missing={}
+for _,d in ipairs(deps) do
+	local ok,sv=pcall(function() return game:GetService(d) end)
+	if not ok or not sv then table.insert(missing,d) end
+end
+if #missing>0 then warn('BadWars: Missing services: '..table.concat(missing,', ')) end
+
+-- Stage 2: Notify
+pcall(function() game:GetService('StarterGui'):SetCore('SendNotification',{Title='BadWars',Text='by usingINales | Dev Mode Active',Duration=6}) end)
+
+-- Stage 3: GUI Profile
+if not isfile('badscript/profiles/gui.txt') or readfile('badscript/profiles/gui.txt')~='new' then writefile('badscript/profiles/gui.txt','new') end
+local gui=readfile('badscript/profiles/gui.txt')
+if not isfolder('badscript/assets/'..gui) then makefolder('badscript/assets/'..gui) end
+
+-- Stage 4: Load GUI
+setStatus('loading GUI')
+local guiStart=os_clock()
+local guiCode=downloadFile('badscript/guis/'..gui..'/gui.lua')
+if type(guiCode)~='string' or guiCode=='' then error('GUI download failed',0) end
+local guiFn,guiErr=_loadstring(guiCode,'gui')
+if not guiFn then error('GUI compile: '..tostring(guiErr),0) end
+local ok,api=pcall(guiFn)
+if not ok or type(api)~='table' or type(api.CreateNotification)~='function' then error('GUI returned invalid API',0) end
+shared.Bad=api
+logMod('GUI',gui,os_clock()-guiStart,true)
+setStatus('GUI loaded')
+
+-- Stage 5: Security
+setStatus('pipeline: security')
+local secStart=os_clock()
+local secCode=downloadFile('badscript/security.lua')
+if type(secCode)=='string' and secCode~='' then
+	local secFn,secErr=_loadstring(secCode,'security')
+	if secFn then
+		local ok2,sec=pcall(secFn)
+		if ok2 and type(sec)=='table' and type(sec.Start)=='function' then
+			local verified,status=sec:Start(api)
+			if verified then logMod('Security','security.lua',os_clock()-secStart,true,tostring(status)) end
 		end
 	end
-
-	if #missing > 0 then
-		logEvent('DEPENDENCY', 'Missing: ' .. table.concat(missing, ', '), true)
-	end
-
-	local allOk = true
-	for _, dep in deps do
-		if not dep.ok then
-			allOk = false
-			break
-		end
-	end
-
-	return allOk, missing
 end
 
--- ============================================================
--- PIPELINE STAGES
--- ============================================================
-
--- Stage 1: Dependency Scan
-local depsOk, missingDeps = validateDependencies()
-if not depsOk then
-	warn('BadWars: Critical dependencies missing - proceeding with degraded mode')
-end
-
--- Stage 2: Integrity Check
-local integrityStart = os_clock()
-
--- Stage 3: GUI Profile Selection
-if (not isfile('badscript/profiles/gui.txt')) or readfile('badscript/profiles/gui.txt') ~= 'new' then
-	setStatus('selecting current GUI profile')
-	writefile('badscript/profiles/gui.txt', 'new')
-end
-local gui = readfile('badscript/profiles/gui.txt')
-
-if not isfolder('badscript/assets/'..gui) then
-	makefolder('badscript/assets/'..gui)
-end
-
--- Stage 4: Module Discovery & Validation (already done via gameModulePaths)
-
--- Stage 5: Compilation & Registration - GUI
-local guiPath = 'badscript/guis/'..gui..'/gui.lua'
-local guiStart = os_clock()
-setStatus('loading GUI: ' .. tostring(gui))
-local guiCode, guiDownloadErr = downloadFile(guiPath)
-if type(guiCode) ~= 'string' or guiCode == '' then
-	local msg = 'GUI download failed: ' .. tostring(guiDownloadErr or guiPath)
-	setStatus('ERROR: ' .. msg, true)
-	notify('BadWars', msg, 12)
-	error(msg, 0)
-end
-setStatus('compiling GUI: ' .. tostring(gui))
-local guiFunc, guiCompileErr = loadstring(guiCode, 'gui')
-if not guiFunc then
-	local msg = 'GUI compile failed: ' .. tostring(guiCompileErr)
-	setStatus('ERROR: ' .. msg, true)
-	notify('BadWars', msg, 12)
-	error(msg, 0)
-end
-setStatus('running GUI: ' .. tostring(gui))
-local ok, guiResult = pcall(guiFunc)
-if not ok then
-	local msg = 'GUI runtime failed: ' .. tostring(guiResult)
-	setStatus('ERROR: ' .. msg, true)
-	notify('BadWars', msg, 12)
-	error(msg, 0)
-end
-if not guiResult or not guiResult.CreateNotification then
-	local msg = 'GUI returned invalid API'
-	setStatus('ERROR: ' .. msg, true)
-	notify('BadWars', msg, 12)
-	error(msg, 0)
-end
-Bad = guiResult
-shared.Bad = Bad
-logModule('GUI', gui, os_clock() - guiStart, true)
-setStatus('GUI API loaded')
-
--- Stage 6: Security
-local secStart = os_clock()
-setStatus('loading security gate')
-local securityCode, securityDownloadErr = downloadFile('badscript/security.lua')
-local securityFunc, securityErr
-if securityCode then
-	setStatus('compiling security gate')
-	securityFunc, securityErr = loadstring(securityCode, 'security')
-else
-	securityErr = securityDownloadErr
-end
-if not securityFunc then
-	local msg = 'Security gate failed to load' .. (securityErr and (': ' .. tostring(securityErr)) or '')
-	setStatus('ERROR: ' .. msg, true)
-	notify('BadWars Security', msg, 12)
-	error(msg, 0)
-end
-setStatus('running security gate')
-local securityOk, security = pcall(securityFunc)
-if not securityOk or type(security) ~= 'table' or type(security.Start) ~= 'function' then
-	local msg = 'Security gate returned invalid API: ' .. tostring(security)
-	setStatus('ERROR: ' .. msg, true)
-	notify('BadWars Security', msg, 12)
-	error(msg, 0)
-end
-local verified, securityStatus = security:Start(Bad)
-if not verified then
-	local msg = 'Security denied load: ' .. tostring(securityStatus or security.Status)
-	setStatus('ERROR: ' .. msg, true)
-	notify('BadWars Security', msg, 12)
-	error(msg, 0)
-end
-logModule('Security', 'security.lua', os_clock() - secStart, true, tostring(securityStatus or security.Status))
-setStatus('security verified: ' .. tostring(securityStatus or security.Status))
-
--- Stage 7: Universal Modules
+-- Stage 6: Universal Modules
 if not shared.BadIndependent then
-	local uniStart = os_clock()
-	setStatus('loading universal modules')
-	local uniCode, uniDownloadErr = loadPrebuiltBundle('universal', 'badscript/games/universal - base/bundle.lua', 'badscript/games/universal - base/base.lua', 'badscript/games/universal - base/files.txt')
-	local uni, uniErr
-	if uniCode then
-		setStatus('compiling universal modules')
-		uni, uniErr = loadstring(uniCode, 'universal')
-	else
-		uniErr = uniDownloadErr
-	end
-	if uni then
-		setStatus('running universal modules')
-		local ok, err = pcall(uni)
-		if not ok then
-			setStatus('ERROR universal runtime: ' .. tostring(err), true)
-			logModule('Universal', 'bundle.lua', os_clock() - uniStart, false, tostring(err))
-		else
-			logModule('Universal', 'bundle.lua', os_clock() - uniStart, true)
-			setStatus('universal modules ready')
+	setStatus('pipeline: universal modules')
+	local uniStart=os_clock()
+	local uniCode,uniErr=buildBundle('universal','badscript/games/universal - base/base.lua','badscript/games/universal - base/files.txt')
+	if type(uniCode)=='string' and uniCode~='' then
+		local uniFn,uniCompile=_loadstring(uniCode,'universal')
+		if uniFn then
+			local ok3,runErr=pcall(uniFn)
+			if not ok3 then setStatus('ERROR universal: '..tostring(runErr),true); recordErr('universal',runErr) end
 		end
 	else
-		local msg = 'Failed to load universal' .. (uniErr and (': ' .. tostring(uniErr)) or '')
-		setStatus('ERROR: ' .. msg, true)
-		warn('BadWars: ' .. msg)
-		logModule('Universal', 'bundle.lua', os_clock() - uniStart, false, msg)
+		setStatus('WARNING: universal modules unavailable',true)
 	end
+	logMod('Universal','build',os_clock()-uniStart,true)
+	setStatus('universal modules loaded')
 
-	-- Stage 8: Game Module
-	local modulePath = resolveGameModulePath(game.PlaceId)
-	if shared.BadDeveloper or gameModulePaths[tonumber(game.PlaceId)] or isfile(modulePath) then
-		runGameModule(modulePath, isfile(modulePath) and 'cached' or 'mapped', ...)
+	-- Stage 7: Game Module
+	local gPath=gamePath(game.PlaceId)
+	if isfile(gPath) or gamePaths[tonumber(game.PlaceId)] then
+		runGameMod(gPath,isfile(gPath) and 'cached' or 'mapped')
 	else
-		setStatus('universal active; no game-specific module found for place ' .. tostring(game.PlaceId))
+		setStatus('no game module for place '..tostring(game.PlaceId))
 	end
 
-	-- Stage 9: Post Initialization & Health Check
-	setStatus('post-initialization')
-	finishLoading()
+	-- Stage 8: Finish
+	setStatus('pipeline: finalizing')
+	finish()
 
-	local issues, warnings = performHealthCheck()
-	if #issues > 0 then
-		warn('BadWars: [HEALTH] Critical issues:')
-		for _, issue in issues do
-			warn('  ✗ ' .. issue)
-		end
+	-- Stage 9: Health Check
+	local issues,warns=healthCheck()
+	if #issues>0 then
+		warn('BadWars: [HEALTH] Issues:')
+		for _,i in ipairs(issues) do warn('  x '..i) end
 	end
-	if #warnings > 0 then
+	if #warns>0 then
 		warn('BadWars: [HEALTH] Warnings:')
-		for _, warning in warnings do
-			warn('  ⚠ ' .. warning)
-		end
+		for _,w in ipairs(warns) do warn('  ! '..w) end
 	end
 
-	-- Stage 10: Module Validation
-	setStatus('validating universal modules')
-	local report = shared.__badwars_universal_report
-	if report then
-		local loadedCount = type(report.loaded) == 'table' and #report.loaded or (type(report.loaded) == 'number' and report.loaded) or 0
-		local failedCount = type(report.failed) == 'table' and #report.failed or (type(report.failed) == 'number' and report.failed) or 0
-		if failedCount > 0 then
-			warn('BadWars: [VALIDATION] Failed universal modules:')
-			for _, entry in ipairs(report.failed) do
-				warn('  ✗ ' .. entry.name .. ' [' .. tostring(entry.error) .. ']')
-			end
+	-- Stage 10: Summary
+	local report=shared.__badwars_universal_report
+	local uniFail=0
+	if type(report)=='table' then
+		local fc=type(report.failed)=='table' and #report.failed or 0
+		if fc>0 then
+			warn('BadWars: Failed modules:')
+			for _,e in ipairs(report.failed) do warn('  x '..tostring(e.name)..' ['..tostring(e.error)..']') end
 		end
-		if loadedCount > 0 or failedCount > 0 then
-			warn('BadWars: [VALIDATION] ' .. loadedCount .. ' modules loaded, ' .. failedCount .. ' failed')
-		end
+		uniFail=fc
 	end
-
-	-- Stage 11: Ready
-	local pipelineElapsed = os_clock() - pipelineStart
-	local totalErrors = #issues + #__runtimeErrors + failedCount
-	if totalErrors == 0 then
-		setStatus('ready - loaded in ' .. string.format('%.2f', pipelineElapsed) .. 's')
+	local rtCount=#__rtErrs
+	local totalErr=#issues+uniFail+rtCount
+	local el=os_clock()-pipelineStart
+	if totalErr==0 then
+		setStatus('ready - '..string.format('%.2f',el)..'s')
 	else
-		if #__runtimeErrors > 0 then
-			warn('BadWars: [RUNTIME ERRORS] ' .. #__runtimeErrors .. ' runtime error(s) recorded:')
-			for _, re in ipairs(__runtimeErrors) do
-				warn('  ✗ [' .. re.module .. '] ' .. re.error)
-			end
-		end
-		setStatus('loaded with ' .. totalErrors .. ' error(s) in ' .. string.format('%.2f', pipelineElapsed) .. 's', true)
+		if rtCount>0 then for _,e in ipairs(__rtErrs) do warn('BadWars: [RUNTIME] '..tostring(e.module)..': '..tostring(e.error)) end end
+		setStatus('loaded with '..totalErr..' issue(s) - '..string.format('%.2f',el)..'s',true)
 	end
-	local completeMsg = 'Pipeline complete in ' .. string.format('%.2f', pipelineElapsed) .. 's'
-	if totalErrors > 0 then
-		completeMsg = completeMsg .. ' (with ' .. totalErrors .. ' error(s))'
-	end
-	warn('BadWars: ' .. completeMsg)
+	warn('BadWars: Pipeline '..(totalErr==0 and 'OK' or 'ISSUES')..' in '..string.format('%.2f',el)..'s'..(totalErr>0 and ' ('..totalErr..' error(s))' or ''))
 else
-	Bad.Init = finishLoading
-	setStatus('independent mode ready')
-	return Bad
+	shared.Bad.Init=finish
+	setStatus('independent mode')
+	return api
 end

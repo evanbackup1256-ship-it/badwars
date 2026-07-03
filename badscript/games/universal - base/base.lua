@@ -67,6 +67,13 @@ local gameCamera = workspace.CurrentCamera or workspace:FindFirstChildWhichIsA('
 local lplr = playersService.LocalPlayer
 local assetfunction = getcustomasset
 
+-- Type-safe wrappers for all modules
+local function _norm(v) if type(v)=='boolean' then return {Enabled=v} end; if type(v)~='table' then return {Enabled=false} end; return v end
+local function _opt(t,k,d) if type(t)~='table' then return d end; local v=t[k]; if v==nil then return d end; return v end
+local function _enabled(t,d) t=_norm(t); return type(t.Enabled)=='boolean' and t.Enabled or (d or false) end
+local function _val(t,d) t=_norm(t); return t.Value~=nil and t.Value or d end
+local function _modEnabled(n) if not Bad or type(Bad.Modules)~='table' then return false end; local m=Bad.Modules[n]; if type(m)~='table' then return false end; return _enabled(m,false) end
+
 local Bad = shared.Bad
 local tween = Bad.Libraries.tween
 local targetinfo = Bad.Libraries.targetinfo

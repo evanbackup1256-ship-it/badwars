@@ -1,338 +1,175 @@
--- ============================================================
--- BadWars Loader v2.1 - Production Pipeline
--- ============================================================
-
+-- BadWars Loader v3.0 - Reliable Pipeline
 local loaderStart = os.clock()
 local collectgarbage = collectgarbage
 
--- ============================================================
 -- Stage 0: Executor API Polyfills
--- ============================================================
-isfile = isfile or function(file)
-	local suc, res = pcall(function()
-		return readfile(file)
-	end)
-	return suc and res ~= nil and res ~= ''
-end
-delfile = delfile or function(file)
-	writefile(file, '')
-end
+isfile = isfile or function(f) local s,r=pcall(readfile,f) return s and r~=nil and r~='' end
+delfile = delfile or function(f) writefile(f,'') end
 isfolder = isfolder or function() return false end
 makefolder = makefolder or function() end
 listfiles = listfiles or function() return {} end
 readfile = readfile or function() return '' end
 writefile = writefile or function() end
-cloneref = cloneref or function(obj) return obj end
+cloneref = cloneref or function(o) return o end
 setthreadidentity = setthreadidentity or function() end
 queue_on_teleport = queue_on_teleport or function() end
-local function safeHttpGet(inst, url, nocache)
-	local g = inst or game
-	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
-	if httpget then
-		return httpget(g, url, nocache)
-	end
-	local httpService = cloneref(game:GetService('HttpService'))
-	return httpService:GetAsync(url, nocache)
-end
-HttpGet = safeHttpGet
 
--- ============================================================
--- Stage 1: Status GUI Creation
--- ============================================================
-local function createStatusLabel()
-	local statusGui, statusLabel
+local function httpGet(url)
+	local g = game
+	local fn = g.HttpGet or (getgenv and type(getgenv)=='function' and getgenv().HttpGet)
+	if fn then return fn(g,url,true) end
+	pcall(function() return cloneref(g:GetService('HttpService')):GetAsync(url,true) end)
+	return nil
+end
+HttpGet = httpGet
+
+-- Stage 1: Status GUI
+local statusGui, statusLabel
+pcall(function()
+	local p = cloneref(game:GetService('CoreGui'))
+	local o = p:FindFirstChild('BadWarsLoaderStatus')
+	if o then o:Destroy() end
+	statusGui = Instance.new('ScreenGui')
+	statusGui.Name='BadWarsLoaderStatus'; statusGui.DisplayOrder=10000000; statusGui.IgnoreGuiInset=true; statusGui.ResetOnSpawn=false
+	statusGui.Parent=p
+end)
+if not statusGui then
 	pcall(function()
-		local parent = cloneref(game:GetService('CoreGui'))
-		local old = parent:FindFirstChild('BadWarsLoaderStatus')
-		if old then old:Destroy() end
-		statusGui = Instance.new('ScreenGui')
-		statusGui.Name = 'BadWarsLoaderStatus'
-		statusGui.DisplayOrder = 10000000
-		statusGui.IgnoreGuiInset = true
-		statusGui.ResetOnSpawn = false
-		statusGui.Parent = parent
-	end)
-	if not statusGui then
-		pcall(function()
-			local parent = cloneref(game:GetService('Players')).LocalPlayer.PlayerGui
-			local old = parent:FindFirstChild('BadWarsLoaderStatus')
-			if old then old:Destroy() end
-			statusGui = Instance.new('ScreenGui')
-			statusGui.Name = 'BadWarsLoaderStatus'
-			statusGui.DisplayOrder = 10000000
-			statusGui.IgnoreGuiInset = true
-			statusGui.ResetOnSpawn = false
-			statusGui.Parent = parent
-		end)
-	end
-	if statusGui then
-		statusLabel = Instance.new('TextLabel')
-		statusLabel.Name = 'Status'
-		statusLabel.Size = UDim2.new(0, 680, 0, 88)
-		statusLabel.Position = UDim2.fromOffset(12, 92)
-		statusLabel.BackgroundColor3 = Color3.fromRGB(15, 18, 24)
-		statusLabel.BackgroundTransparency = 0.15
-		statusLabel.BorderSizePixel = 0
-		statusLabel.Font = Enum.Font.GothamBold
-		statusLabel.TextSize = 14
-		statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-		statusLabel.TextColor3 = Color3.fromRGB(235, 245, 255)
-		statusLabel.TextWrapped = true
-		statusLabel.Text = 'BadWars: initializing pipeline...'
-		statusLabel.Parent = statusGui
-		local padding = Instance.new('UIPadding')
-		padding.PaddingLeft = UDim.new(0, 12)
-		padding.PaddingRight = UDim.new(0, 12)
-		padding.Parent = statusLabel
-	end
-	shared.BadStatusGui = statusGui
-	shared.BadStatus = function(message, isError)
-		local text = 'BadWars: ' .. tostring(message)
-		warn(text)
-		if statusLabel then
-			if not isError and tostring(message):find('ready', 1, true) then
-				statusGui.Enabled = false
-				return
-			end
-			statusGui.Enabled = true
-			statusLabel.Text = text
-			statusLabel.TextColor3 = isError and Color3.fromRGB(255, 120, 120) or Color3.fromRGB(235, 245, 255)
-		end
-	end
-	return shared.BadStatus
-end
-
-local setStatus = shared.BadStatus or createStatusLabel()
-setStatus('pipeline stage 1: status GUI ready')
-
--- ============================================================
--- Stage 2: Roblox Update Watch
--- ============================================================
-local function checkRobloxUpdateStatus()
-	local api = shared.BadWarsStatusApi
-	if type(api) ~= 'string' or api == '' then return end
-	task.spawn(function()
-		local ok, raw = pcall(function()
-			return safeHttpGet(game, api, true)
-		end)
-		if not ok or type(raw) ~= 'string' or raw == '' then
-			setStatus('Roblox update watch unavailable; continuing load', false)
-			return
-		end
-		local decoded
-		pcall(function()
-			decoded = cloneref(game:GetService('HttpService')):JSONDecode(raw)
-		end)
-		if type(decoded) ~= 'table' then return end
-		if decoded.changed then
-			local warning = decoded.warning or 'Roblox updated recently. Some modules may need a refresh.'
-			setStatus('WARNING: ' .. tostring(warning), true)
-			pcall(function()
-				game:GetService('StarterGui'):SetCore('SendNotification', {
-					Title = 'BadWars Roblox Watch',
-					Text = tostring(warning),
-					Duration = 12
-				})
-			end)
-			task.wait(2.5)
-		elseif decoded.ok and decoded.version then
-			setStatus('Roblox version checked: ' .. tostring(decoded.version))
-		end
+		local p = cloneref(game:GetService('Players')).LocalPlayer.PlayerGui
+		local o = p:FindFirstChild('BadWarsLoaderStatus')
+		if o then o:Destroy() end
+		statusGui=Instance.new('ScreenGui'); statusGui.Name='BadWarsLoaderStatus'; statusGui.DisplayOrder=10000000; statusGui.IgnoreGuiInset=true; statusGui.ResetOnSpawn=false
+		statusGui.Parent=p
 	end)
 end
+if statusGui then
+	statusLabel=Instance.new('TextLabel')
+	statusLabel.Name='Status'; statusLabel.Size=UDim2.new(0,680,0,88); statusLabel.Position=UDim2.fromOffset(12,92)
+	statusLabel.BackgroundColor3=Color3.fromRGB(15,18,24); statusLabel.BackgroundTransparency=0.15; statusLabel.BorderSizePixel=0
+	statusLabel.Font=Enum.Font.GothamBold; statusLabel.TextSize=14; statusLabel.TextXAlignment=Enum.TextXAlignment.Left
+	statusLabel.TextColor3=Color3.fromRGB(235,245,255); statusLabel.TextWrapped=true
+	statusLabel.Text='BadWars: initializing pipeline...'
+	statusLabel.Parent=statusGui
+	local pad=Instance.new('UIPadding'); pad.PaddingLeft=UDim.new(0,12); pad.PaddingRight=UDim.new(0,12); pad.Parent=statusLabel
+end
+shared.BadStatusGui=statusGui
+shared.BadStatus=function(msg,isErr)
+	local t='BadWars: '..tostring(msg); warn(t)
+	if statusLabel then
+		if not isErr and tostring(msg):find('ready',1,true) then statusGui.Enabled=false; return end
+		statusGui.Enabled=true; statusLabel.Text=t; statusLabel.TextColor3=isErr and Color3.fromRGB(255,120,120) or Color3.fromRGB(235,245,255)
+	end
+end
+local setStatus=shared.BadStatus
+setStatus('pipeline: status gui ready')
 
-checkRobloxUpdateStatus()
+-- Runtime error tracker
+local errors = shared.__badwars_runtime_errors
+if type(errors)~='table' then errors={}; shared.__badwars_runtime_errors=errors end
+local function recordErr(mod,err)
+	table.insert(errors,{module=tostring(mod),error=tostring(err),time=os.clock()})
+	warn('BadWars: [ERROR] '..tostring(mod)..': '..tostring(err))
+end
 
--- ============================================================
--- Stage 3: Loadstring & File System Setup
--- ============================================================
+-- Stage 2: Loadstring Setup
 local _loadstring
 pcall(function()
-	local g = getgenv
-	if type(g) == 'function' then g = g() end
-	_loadstring = (g and g.loadstring) or loadstring
+	local g=getgenv; if type(g)=='function' then g=g() end
+	_loadstring=(g and g.loadstring) or loadstring
 end)
-if not _loadstring then _loadstring = function(s) error("loadstring not available in executor") end end
+if not _loadstring then _loadstring=function(s) error('loadstring unavailable') end end
 
-local function downloadFile(path, func)
-	if not HttpGet or not game then
-		setStatus('ERROR: HttpGet or game is nil for ' .. tostring(path), true)
-		warn('BadWars: HttpGet or game is nil for ' .. tostring(path))
-		return nil, 'HttpGet or game is nil'
-	end
-	local cached = isfile(path) and readfile(path) or nil
-	if type(cached) ~= 'string' or cached == '' then
-		setStatus('downloading ' .. tostring(path))
-		local suc, res = pcall(function()
-			return safeHttpGet(game, 'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/' .. path:gsub(' ', '%%20'), true)
-		end)
-		if not suc or (type(res) == 'string' and res:match('^%s*404:%s*Not Found%s*$')) then
-			setStatus('ERROR downloading ' .. tostring(path) .. ': ' .. tostring(res), true)
-			return nil, tostring(res)
-		end
-		if path:find('.lua') then
-			res = '-- BadWars by usingINales (rebranded)\n' .. res
-		end
-		writefile(path, res)
-		cached = res
-	end
-	if type(cached) ~= 'string' or cached == '' then
-		setStatus('ERROR empty file: ' .. tostring(path), true)
-		return nil, 'empty file: ' .. tostring(path)
-	end
-	setStatus('loaded ' .. tostring(path))
-	return func and func(path) or cached
-end
-
-local badwarsCacheHeader = '-- BadWars by usingINales'
-local vapeCacheHeader = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.'
-
-local function isGeneratedCache(contents)
-	return type(contents) == 'string'
-		and (
-			contents:find(badwarsCacheHeader, 1, true) == 1
-			or contents:find(vapeCacheHeader, 1, true) == 1
-		)
-end
-
+-- Stage 3: Cache Management  
 local function wipeFolder(path)
 	if not isfolder(path) then return end
-	for _, file in listfiles(path) do
-		if file:find('loader') then continue end
-		if isfolder(file) then
-			wipeFolder(file)
-		end
-		if isfile(file) and isGeneratedCache(readfile(file)) then
-			delfile(file)
+	for _,f in listfiles(path) do
+		if f:find('loader') then continue end
+		if isfolder(f) then wipeFolder(f) end
+		if isfile(f) then
+			local c=readfile(f)
+			if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) then delfile(f) end
 		end
 	end
 end
-
-local function wipeAnyFolder(path)
+local function wipeAny(path)
 	if not isfolder(path) then return end
-	for _, file in listfiles(path) do
-		if isfolder(file) then
-			wipeAnyFolder(file)
-		elseif isfile(file) then
-			delfile(file)
-		end
+	for _,f in listfiles(path) do
+		if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end
 	end
 end
 
-for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscript/assets', 'badscript/libraries', 'badscript/guis'} do
-	if not isfolder(folder) then
-		makefolder(folder)
-	end
+for _,dir in {'badscript','badscript/games','badscript/profiles','badscript/assets','badscript/libraries','badscript/guis'} do
+	if not isfolder(dir) then makefolder(dir) end
 end
 
--- ============================================================
--- Stage 4: Cache Integrity Check
--- ============================================================
-setStatus('pipeline stage 2: cache integrity check')
-local cacheVersion = 'badwars-v3-sourcebuild'
-local cacheVersionPath = 'badscript/profiles/cache-version.txt'
-if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
+-- Cache version check
+setStatus('pipeline: cache integrity')
+local cacheVer='badwars-v4-reliable'
+local cachePath='badscript/profiles/cache-version.txt'
+if (isfile(cachePath) and readfile(cachePath) or '')~=cacheVer then
 	setStatus('clearing old cache')
-	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end
-	if isfile('badscript/NewMainScript.lua') then delfile('badscript/NewMainScript.lua') end
-	if isfile('badscript/security.lua') then delfile('badscript/security.lua') end
-	if isfile('badscript/games/universal - base/bundle.lua') then delfile('badscript/games/universal - base/bundle.lua') end
-	if isfile('badscript/games/universal - base/base.lua') then delfile('badscript/games/universal - base/base.lua') end
-	if isfile('badscript/games/universal - base/files.txt') then delfile('badscript/games/universal - base/files.txt') end
-	wipeAnyFolder('badscript/assets')
-	wipeFolder('badscript/games')
-	wipeFolder('badscript/guis')
-	wipeFolder('badscript/libraries')
-	writefile(cacheVersionPath, cacheVersion)
+	for _,f in {'badscript/main.lua','badscript/NewMainScript.lua','badscript/security.lua'} do if isfile(f) then delfile(f) end end
+	wipeAny('badscript/assets'); wipeFolder('badscript/games'); wipeFolder('badscript/guis'); wipeFolder('badscript/libraries')
+	writefile(cachePath,cacheVer)
+end
+writefile('badscript/profiles/commit.txt','main')
+
+-- Stage 4: Download main.lua
+setStatus('pipeline: downloading main orchestrator')
+local mainCode
+local dlOk, dlErr = pcall(function()
+	local raw = httpGet('https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/main.lua')
+	if type(raw)~='string' or raw=='' or raw:match('404') then error('Failed to download main.lua') end
+	mainCode='-- BadWars by usingINales\n'..raw
+	writefile('badscript/main.lua',mainCode)
+end)
+if not dlOk or type(mainCode)~='string' or mainCode=='' then
+	setStatus('ERROR: '..tostring(dlErr),true); error(tostring(dlErr),0)
 end
 
--- Simplified for reliability: always use main branch
-writefile('badscript/profiles/commit.txt', 'main')
+-- Stage 5: Compile and execute main.lua
+setStatus('pipeline: compiling main')
+local mainFunc, mainErr = _loadstring(mainCode,'main')
+if not mainFunc then setStatus('ERROR compile: '..tostring(mainErr),true); error(tostring(mainErr),0) end
 
--- ============================================================
--- Stage 5: Download & Compile main.lua
--- ============================================================
-setStatus('pipeline stage 3: loading main orchestrator')
-local mainCode = downloadFile('badscript/main.lua')
-if type(mainCode) ~= 'string' or mainCode == '' then
-	setStatus('ERROR: failed to download/read badscript/main.lua', true)
-	error('Failed to download/read badscript/main.lua', 0)
+setStatus('pipeline: executing main')
+local ok, result = xpcall(mainFunc,debug.traceback)
+if not ok then setStatus('ERROR runtime: '..tostring(result),true); recordErr('main.lua',result) end
+
+-- Stage 6: Post-Load Validation
+setStatus('pipeline: validation')
+local issues={}
+local function check(name,cond)
+	if not cond then table.insert(issues,name..' check failed') end
 end
-
-setStatus('compiling main.lua')
-local mainFunc, mainErr = _loadstring(mainCode, 'main')
-if not mainFunc then
-	setStatus('ERROR compiling main.lua: ' .. tostring(mainErr), true)
-	error('Failed to compile badscript/main.lua: ' .. tostring(mainErr), 0)
-end
-
--- ============================================================
--- Stage 6: Execute main.lua (runs full pipeline internally)
--- ============================================================
-setStatus('pipeline stage 4: executing main orchestrator')
-local ok, result = xpcall(mainFunc, debug.traceback)
-if not ok then
-	setStatus('ERROR running main.lua: ' .. tostring(result), true)
-	error(result, 0)
-end
-
--- ============================================================
--- Stage 7: Post-Load Validation
--- ============================================================
-setStatus('pipeline stage 7: post-load validation')
-local validationIssues = {}
-local function checkGlobal(name)
-	if not shared[name] then
-		table.insert(validationIssues, 'shared.' .. name .. ' is nil')
-	end
-end
-
-checkGlobal('Bad')
+check('Bad',shared.Bad~=nil)
 if shared.Bad then
-	if type(shared.Bad.CreateNotification) ~= 'function' then
-		table.insert(validationIssues, 'Bad.CreateNotification is not a function')
-	end
-	if type(shared.Bad.Modules) ~= 'table' then
-		table.insert(validationIssues, 'Bad.Modules is nil or not a table')
-	end
-	if type(shared.Bad.gui) ~= 'userdata' then
-		table.insert(validationIssues, 'Bad.gui (ScreenGui) is nil')
+	check('Bad.CreateNotification',type(shared.Bad.CreateNotification)=='function')
+	check('Bad.Modules',type(shared.Bad.Modules)=='table')
+	check('Bad.gui',typeof(shared.Bad.gui)=='Instance')
+end
+local report=shared.__badwars_universal_report
+if type(report)=='table' then
+	local fc=type(report.failed)=='table' and #report.failed or 0
+	if fc>0 then
+		for _,e in ipairs(report.failed) do table.insert(issues,'Module ['..tostring(e.name)..']: '..tostring(e.error)) end
 	end
 end
-
-if type(shared.__badwars_universal_report) == 'table' then
-	local report = shared.__badwars_universal_report
-	if report.failed and #report.failed > 0 then
-		for _, entry in ipairs(report.failed) do
-			table.insert(validationIssues, 'Universal module [' .. entry.name .. '] failed: ' .. entry.error)
-		end
-	end
+if type(errors)=='table' and #errors>0 then
+	for _,e in ipairs(errors) do table.insert(issues,'Runtime ['..tostring(e.module)..']: '..tostring(e.error)) end
 end
 
-if type(shared.__badwars_runtime_errors) == 'table' and #shared.__badwars_runtime_errors > 0 then
-	for _, re in ipairs(shared.__badwars_runtime_errors) do
-		table.insert(validationIssues, 'Runtime error [' .. tostring(re.module) .. ']: ' .. tostring(re.error))
-	end
-end
-
-if #validationIssues > 0 then
-	warn('BadWars: [VALIDATION] ' .. #validationIssues .. ' issue(s) found:')
-	for _, issue in ipairs(validationIssues) do
-		warn('  ⚠ ' .. issue)
-	end
-	setStatus(#validationIssues .. ' validation issue(s) found', true)
+if #issues>0 then
+	warn('BadWars: [VALIDATION] '..#issues..' issue(s):')
+	for _,i in ipairs(issues) do warn('  ! '..i) end
+	setStatus(#issues..' issue(s) found',true)
 else
 	setStatus('validation passed')
 end
 
--- ============================================================
--- Stage 8: Pipeline Complete
--- ============================================================
-local loaderElapsed = os.clock() - loaderStart
-local msg = 'Loader pipeline complete in ' .. string.format('%.2f', loaderElapsed) .. 's'
-if #validationIssues > 0 then
-	msg = msg .. ' (with ' .. #validationIssues .. ' issue(s))'
-end
-warn('BadWars: ' .. msg)
+local elapsed=os.clock()-loaderStart
+local final='Loader complete in '..string.format('%.2f',elapsed)..'s'
+if #issues>0 then final=final..' ('..#issues..' issue(s))' end
+warn('BadWars: '..final)
 
 return result

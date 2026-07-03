@@ -43,6 +43,22 @@ type HealthStatus = {
   checkedAt: string;
 };
 
+type GitHubCommitInfo = {
+  sha: string;
+  shortSha: string;
+  message: string;
+  htmlUrl: string;
+  syncedAt: string;
+  fallback: boolean;
+  committedAt?: string;
+  author?: string;
+};
+
+type GitHubCommitsResponse = {
+  commits: GitHubCommitInfo[];
+  syncedAt: string;
+};
+
 async function currentLoaderText() {
   const response = await fetch("/api/download/latest", { cache: "no-store" });
   if (!response.ok) {
@@ -70,6 +86,17 @@ async function fetchRobloxStatus(): Promise<RobloxStatus> {
   const response = await fetch("/api/roblox/status", { cache: "no-store" });
   if (!response.ok) throw new Error("Roblox status failed");
   return response.json();
+}
+
+async function fetchGitHubCommits(): Promise<GitHubCommitsResponse> {
+  const response = await fetch("/api/github/commits", { cache: "no-store" });
+  if (!response.ok) throw new Error("GitHub commits failed");
+  return response.json();
+}
+
+function formatCommitDate(value?: string) {
+  if (!value) return "just now";
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
 function AppFrame({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
@@ -318,17 +345,29 @@ export function ProfilePage() {
 }
 
 export function DownloadsPage() {
+  const commits = useQuery({ queryKey: ["github-commits"], queryFn: fetchGitHubCommits, refetchInterval: 60_000, retry: 1 });
+  const latestCommit = commits.data?.commits[0];
+
   return (
     <AppFrame title="Download center" description="Version history, release notes, system requirements, checksum display, copy buttons, and latest release highlight.">
       <Card className="mb-5 border-primary/40">
-        <CardHeader><Badge>Latest release</Badge><CardTitle>BadWars 2.0.0</CardTitle><CardDescription>Next.js site, live status API, dashboard shell, and runtime routing fixes.</CardDescription></CardHeader>
-        <CardContent className="flex flex-wrap gap-3"><Button onClick={() => { downloadLatestLoader(); toast.success("Download started", { description: loaderFileName }); }}><Download className="h-4 w-4" /> Download latest</Button><Button variant="outline" onClick={async () => { await navigator.clipboard?.writeText(releases[0].checksum); toast.success("Checksum copied"); }}><Copy className="h-4 w-4" /> Copy checksum</Button></CardContent>
+        <CardHeader><Badge>Latest GitHub sync</Badge><CardTitle>{latestCommit ? `BadWars ${latestCommit.shortSha}` : `BadWars ${releases[0].version}`}</CardTitle><CardDescription>{latestCommit?.message || "Next.js site, live status API, dashboard shell, and runtime routing fixes."}</CardDescription></CardHeader>
+        <CardContent className="flex flex-wrap gap-3"><Button onClick={() => { downloadLatestLoader(); toast.success("Download started", { description: loaderFileName }); }}><Download className="h-4 w-4" /> Download latest</Button><Button variant="outline" onClick={async () => { await navigator.clipboard?.writeText(latestCommit?.sha || releases[0].checksum); toast.success("Checksum copied"); }}><Copy className="h-4 w-4" /> Copy ref</Button></CardContent>
       </Card>
       <div className="grid gap-4">
-        {releases.map((release) => (
-          <Card key={release.version}>
-            <CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>{release.version}</CardTitle><Badge variant={release.channel === "Latest" ? "success" : "muted"}>{release.channel}</Badge></div><CardDescription>{release.date} · {release.checksum}</CardDescription></CardHeader>
-            <CardContent><ul className="grid gap-2 text-sm text-muted-foreground">{release.notes.map((note) => <li key={note}>• {note}</li>)}</ul><div className="mt-4 flex flex-wrap gap-2"><Button size="sm" onClick={() => { downloadLatestLoader(); toast.success(`${release.version} download started`); }}><Download className="h-4 w-4" /> Download</Button><Button size="sm" variant="outline" onClick={async () => { await navigator.clipboard?.writeText(release.checksum); toast.success("Checksum copied"); }}><Copy className="h-4 w-4" /> Checksum</Button></div></CardContent>
+        {(commits.data?.commits.length ? commits.data.commits : releases.map((release) => ({
+          sha: release.checksum,
+          shortSha: release.version,
+          message: release.notes.join(", "),
+          htmlUrl: "#",
+          syncedAt: new Date().toISOString(),
+          fallback: true,
+          committedAt: release.date,
+          author: release.channel
+        }))).map((release, index) => (
+          <Card key={release.sha}>
+            <CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>{release.shortSha}</CardTitle><Badge variant={index === 0 ? "success" : "muted"}>{index === 0 ? "Latest" : "Commit"}</Badge></div><CardDescription>{formatCommitDate(release.committedAt)} · {release.sha}</CardDescription></CardHeader>
+            <CardContent><ul className="grid gap-2 text-sm text-muted-foreground"><li>{release.message}</li>{release.author ? <li>Author: {release.author}</li> : null}</ul><div className="mt-4 flex flex-wrap gap-2"><Button size="sm" onClick={() => { downloadLatestLoader(); toast.success(`${release.shortSha} download started`); }}><Download className="h-4 w-4" /> Download</Button><Button size="sm" variant="outline" onClick={async () => { await navigator.clipboard?.writeText(release.sha); toast.success("Ref copied"); }}><Copy className="h-4 w-4" /> Ref</Button>{release.htmlUrl !== "#" ? <Button asChild size="sm" variant="ghost"><Link href={release.htmlUrl} target="_blank"><ExternalLink className="h-4 w-4" /> GitHub</Link></Button> : null}</div></CardContent>
           </Card>
         ))}
       </div>
@@ -337,11 +376,22 @@ export function DownloadsPage() {
 }
 
 export function ChangelogPage() {
+  const commits = useQuery({ queryKey: ["github-commits"], queryFn: fetchGitHubCommits, refetchInterval: 60_000, retry: 1 });
+
   return (
     <AppFrame title="Changelog" description="Timeline layout with version badges, categories, expandable-style entries, search, and filtering-ready structure.">
       <div className="mb-4 flex gap-3"><Input placeholder="Search changelog..." /><Button variant="outline"><Search className="h-4 w-4" /> Filter</Button></div>
       <div className="grid gap-4">
-        {changelog.map((entry) => <Card key={entry.title}><CardHeader><div className="flex flex-wrap gap-2"><Badge>{entry.version}</Badge><Badge variant="secondary">{entry.category}</Badge><Badge variant="muted">{entry.date}</Badge></div><CardTitle>{entry.title}</CardTitle><CardDescription>{entry.description}</CardDescription></CardHeader></Card>)}
+        {(commits.data?.commits.length ? commits.data.commits : changelog.map((entry) => ({
+          sha: entry.title,
+          shortSha: entry.version,
+          message: entry.description,
+          htmlUrl: "#",
+          syncedAt: new Date().toISOString(),
+          fallback: true,
+          committedAt: entry.date,
+          author: entry.category
+        }))).map((entry) => <Card key={entry.sha}><CardHeader><div className="flex flex-wrap gap-2"><Badge>{entry.shortSha}</Badge><Badge variant="secondary">{entry.author || "GitHub"}</Badge><Badge variant="muted">{formatCommitDate(entry.committedAt)}</Badge></div><CardTitle>{entry.message}</CardTitle><CardDescription>{entry.sha}{entry.htmlUrl !== "#" ? <Button asChild className="ml-2 h-7 px-2" size="sm" variant="ghost"><Link href={entry.htmlUrl} target="_blank"><ExternalLink className="h-3.5 w-3.5" /> GitHub</Link></Button> : null}</CardDescription></CardHeader></Card>)}
       </div>
     </AppFrame>
   );

@@ -75,6 +75,24 @@ local function _val(t,d) t=_norm(t); return t.Value~=nil and t.Value or d end
 local function _modEnabled(n) if not Bad or type(Bad.Modules)~='table' then return false end; local m=Bad.Modules[n]; if type(m)~='table' then return false end; return _enabled(m,false) end
 
 local Bad = shared.Bad
+local function normalizeSavedOptions()
+	if type(Bad)~='table' then return end
+	if type(Bad.Categories)=='table' then
+		for _,category in pairs(Bad.Categories) do
+			if type(category)=='table' and type(category.Options)=='table' then
+				for key,value in pairs(category.Options) do
+					if type(value)=='boolean' then category.Options[key]={Enabled=value} end
+				end
+			end
+		end
+	end
+	if type(Bad.Modules)=='table' then
+		for key,value in pairs(Bad.Modules) do
+			if type(value)=='boolean' then Bad.Modules[key]={Enabled=value} end
+		end
+	end
+end
+normalizeSavedOptions()
 local tween = Bad.Libraries.tween
 local targetinfo = Bad.Libraries.targetinfo
 local getfontsize = Bad.Libraries.getfontsize

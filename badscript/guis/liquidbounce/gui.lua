@@ -289,11 +289,6 @@ local function writeFont()
 	return getcustomasset('badscript/assets/liquidbounce/lbfont.json')
 end
 
-if inputService.TouchEnabled then
-	writefile('badscript/profiles/gui.txt', 'new')
-	return
-end
-
 do
 	local lbfont = writeFont()
 	uipallet.Font = Font.new(lbfont, Enum.FontWeight.Regular)

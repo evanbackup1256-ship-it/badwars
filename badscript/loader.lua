@@ -229,7 +229,7 @@ end
 -- Stage 4: Cache Integrity Check
 -- ============================================================
 setStatus('pipeline stage 2: cache integrity check')
-local cacheVersion = 'badwars-v2-fix-2026-07-02-v6'
+local cacheVersion = 'badwars-v3-sourcebuild'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	setStatus('clearing old cache')

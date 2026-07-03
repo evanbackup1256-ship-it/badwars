@@ -251,30 +251,58 @@ local function loadLuaBundle(name, basePath, manifestPath)
 		return table.concat(parts, '\n'), manifestErr
 	end
 
+	-- Wrapper that gives each module pcall isolation + error tracking
+	local preamble = {
+		'',
+		'local __badwars_module_ok = {}',
+		'local function __badwars_run_module(idx, modName, fn)',
+		'  local ok, err = pcall(fn)',
+		'  if not ok then',
+		'    warn("BadWars: [MODULE FAIL] " .. modName .. ": " .. tostring(err))',
+		'    if shared and shared.__badwars_runtime_errors then',
+		'      table.insert(shared.__badwars_runtime_errors, {module = modName, error = tostring(err), time = os.clock()})',
+		'    end',
+		'  end',
+		'  __badwars_module_ok[idx] = ok',
+		'end',
+		''
+	}
+	table.insert(parts, table.concat(preamble, '\n'))
+
 	local loaded = 0
+	local moduleIndex = 1
 	for _, modulePath in splitLines(manifestCode) do
 		if modulePath ~= basePath then
 			setStatus('loading ' .. tostring(name) .. ' module: ' .. tostring(modulePath))
 			local moduleCode, moduleErr = downloadFile(modulePath)
 			if type(moduleCode) == 'string' and moduleCode ~= '' then
-				table.insert(parts, '\n-- bundled ' .. modulePath .. '\n' .. moduleCode)
-				loaded += 1
+				local wrapped = '\n-- module ' .. tostring(moduleIndex) .. ': ' .. modulePath
+					.. '\n__badwars_run_module(' .. tostring(moduleIndex) .. ', ' 
+					.. string.format('%q', modulePath) .. ', function()'
+					.. '\n' .. moduleCode .. '\nend)'
+				table.insert(parts, wrapped)
+				loaded = loaded + 1
+				moduleIndex = moduleIndex + 1
 			else
 				setStatus('WARNING skipped ' .. tostring(modulePath) .. ': ' .. tostring(moduleErr), false)
 			end
 		end
 	end
 	setStatus('bundled ' .. tostring(loaded) .. ' ' .. tostring(name) .. ' modules')
+
+	-- Summary
+	local summary = '\nlocal __b_ok = 0; local __b_fail = 0'
+		.. '\nfor _, v in ipairs(__badwars_module_ok) do'
+		.. '\n  if v then __b_ok = __b_ok + 1 else __b_fail = __b_fail + 1 end'
+		.. '\nend'
+		.. '\nwarn("BadWars: [BUNDLE] ' .. tostring(name) .. ': " .. __b_ok .. " loaded, " .. __b_fail .. " failed")'
+	table.insert(parts, summary)
+
 	return table.concat(parts, '\n')
 end
 
 local function loadPrebuiltBundle(name, bundlePath, basePath, manifestPath)
-	local bundleCode, bundleErr = downloadFile(bundlePath)
-	if type(bundleCode) == 'string' and bundleCode ~= '' then
-		setStatus('loaded prebuilt ' .. tostring(name) .. ' bundle')
-		return bundleCode
-	end
-	setStatus('WARNING prebuilt ' .. tostring(name) .. ' bundle unavailable; building from manifest: ' .. tostring(bundleErr), false)
+	-- Build from individual source files every time for reliability
 	return loadLuaBundle(name, basePath, manifestPath)
 end
 

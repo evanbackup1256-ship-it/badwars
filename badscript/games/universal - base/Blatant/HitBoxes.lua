@@ -11,7 +11,7 @@ HitBoxes = Bad.Categories.Blatant:CreateModule({
 			repeat
 				for _, v in entitylib.List do
 					if v.Targetable then
-						if not Targets.Players.Enabled and v.Player then continue end
+						if Targets and Targets.Players and not Targets.Players.Enabled and v.Player then continue end
 						if not Targets.NPCs.Enabled and v.NPC then continue end
 						local part = v[TargetPart.Value]
 						if not modified[part] then

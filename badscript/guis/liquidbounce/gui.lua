@@ -416,6 +416,74 @@ mainapi.Components = setmetatable(components, {
 	end
 })
 
+local function makeOptionFallback(componentName)
+	return function(optionsettings, children, api)
+		optionsettings = optionsettings or {}
+		api.Options = type(api.Options) == 'table' and api.Options or {}
+		local optionapi = {
+			Type = componentName,
+			Name = optionsettings.Name or componentName,
+			Enabled = optionsettings.Default == true,
+			Value = optionsettings.Default or optionsettings.Value,
+			List = optionsettings.List or {},
+			ListEnabled = optionsettings.ListEnabled or {},
+			Bind = {}
+		}
+		function optionapi:SetValue(value, silent)
+			if type(value) == 'boolean' then self.Enabled = value else self.Value = value end
+			if not silent and type(optionsettings.Function) == 'function' then optionsettings.Function(value) end
+		end
+		function optionapi:Toggle()
+			self.Enabled = not self.Enabled
+			if type(optionsettings.Function) == 'function' then optionsettings.Function(self.Enabled) end
+		end
+		function optionapi:SetBind(tab)
+			self.Bind = type(tab) == 'table' and table.clone(tab) or {}
+		end
+		optionapi.Object = Instance.new('Frame')
+		optionapi.Object.Name = optionapi.Name..componentName
+		optionapi.Object.BackgroundTransparency = 1
+		optionapi.Object.Size = UDim2.new(1, 0, 0, 0)
+		optionapi.Object.Parent = children
+		api.Options[optionapi.Name] = optionapi
+		warn('BadWars: [PREFLIGHT] LiquidBounce component fallback registered for '..componentName..' / '..optionapi.Name)
+		return optionapi
+	end
+end
+
+local function loadComponent(name)
+	local path = 'badscript/guis/liquidbounce/components/'..name..'.lua'
+	local code = downloadFile(path)
+	if type(code) ~= 'string' or code == '' then
+		mainapi.Components[name] = makeOptionFallback(name)
+		warn('BadWars: [PREFLIGHT] missing LiquidBounce component '..path..'; using fallback')
+		return
+	end
+	local source = 'return function(optionsettings, children, api)\n'..code..'\nend'
+	local fn, compileErr = loadstring(source, 'liquidbounce-component-'..name)
+	if not fn then
+		mainapi.Components[name] = makeOptionFallback(name)
+		warn('BadWars: [PREFLIGHT] compile failed for '..path..': '..tostring(compileErr))
+		return
+	end
+	local ok, factory = pcall(fn)
+	if not ok or type(factory) ~= 'function' then
+		mainapi.Components[name] = makeOptionFallback(name)
+		warn('BadWars: [PREFLIGHT] invalid component factory for '..path..': '..tostring(factory))
+		return
+	end
+	mainapi.Components[name] = function(optionsettings, children, api)
+		local ok2, result = pcall(factory, optionsettings or {}, children, api)
+		if ok2 and type(result) == 'table' then return result end
+		warn('BadWars: [PREFLIGHT] runtime failed for component '..name..': '..tostring(result))
+		return makeOptionFallback(name)(optionsettings, children, api)
+	end
+end
+
+for _, componentName in {'Bind','Button','ColorSlider','Dropdown','Font','Slider','Targets','TargetsButton','TextBox','TextList','Toggle','TwoSlider'} do
+	loadComponent(componentName)
+end
+
 task.spawn(function()
 	repeat
 		local hue = tick() * (0.2 * mainapi.RainbowSpeed.Value) % 1
@@ -581,6 +649,12 @@ function mainapi:CreateCategory(categorysettings)
 				return v(optionsettings, modulechildren, moduleapi)
 			end
 		end
+		function moduleapi:CreateBind()
+			if self.BindObject then return self.BindObject end
+			local bindApi = (components.Bind or makeOptionFallback('Bind'))({Name = 'Bind'}, modulechildren, self)
+			self.BindObject = bindApi
+			return bindApi
+		end
 
 		moduleapi:CreateBind()
 		modulebutton.MouseEnter:Connect(function()
@@ -681,6 +755,70 @@ function mainapi:CreateCategory(categorysettings)
 	self.Categories[categorysettings.Name] = categoryapi
 
 	return categoryapi
+end
+
+function mainapi:CreateOverlay(categorysettings)
+	categorysettings = categorysettings or {}
+	local overlayapi = {
+		Enabled = false,
+		Options = {},
+		Bind = {},
+		Index = getTableSize(self.Modules),
+		Name = categorysettings.Name or 'Overlay',
+		Category = 'Overlay',
+		Pinned = categorysettings.Pinned or false
+	}
+	addMaid(overlayapi)
+	local frame = Instance.new('Frame')
+	frame.Name = overlayapi.Name..'Overlay'
+	frame.Size = categorysettings.Size or UDim2.fromOffset(200, 120)
+	frame.Position = categorysettings.Position or UDim2.fromOffset(24, 120)
+	frame.BackgroundColor3 = Color3.new()
+	frame.BackgroundTransparency = 0.25
+	frame.BorderSizePixel = 0
+	frame.Visible = false
+	frame.Parent = scaledgui
+	addCorner(frame)
+	overlayapi.Object = frame
+	overlayapi.Children = frame
+	function overlayapi:Toggle()
+		self.Enabled = not self.Enabled
+		frame.Visible = self.Enabled or self.Pinned
+		if type(categorysettings.Function)=='function' then task.spawn(categorysettings.Function, self.Enabled) end
+	end
+	for i, v in components do
+		overlayapi['Create'..i] = function(_, optionsettings)
+			return v(optionsettings, frame, overlayapi)
+		end
+	end
+	function overlayapi:CreateBind()
+		if self.BindObject then return self.BindObject end
+		local bindApi = (components.Bind or makeOptionFallback('Bind'))({Name = 'Bind'}, frame, self)
+		self.BindObject = bindApi
+		return bindApi
+	end
+	overlayapi:CreateBind()
+	self.Modules[overlayapi.Name] = overlayapi
+	table.insert(self.Windows, frame)
+	return overlayapi
+end
+
+function mainapi:CreateLegit()
+	if self.Legit and type(self.Legit.CreateModule)=='function' then return self.Legit end
+	local legit = self.Categories.Legit or self:CreateCategory({
+		Name = 'Legit',
+		Icon = getcustomasset('badscript/assets/liquidbounce/combat.png'),
+		Size = UDim2.fromOffset(16, 15)
+	})
+	self.Legit = legit
+	self.Legit.Modules = self.Legit.Modules or {}
+	local oldCreateModule = legit.CreateModule
+	function legit:CreateModule(modulesettings)
+		local moduleapi = oldCreateModule(self, modulesettings)
+		mainapi.Legit.Modules[moduleapi.Name] = moduleapi
+		return moduleapi
+	end
+	return self.Legit
 end
 
 function mainapi:CreateNotification(title, text, duration, type)

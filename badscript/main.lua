@@ -32,12 +32,32 @@ local function notify(title, text, duration)
 	end)
 end
 
+local __logHistory = {}
 local function logModule(stage, name, elapsed, success, detail)
-	local tag = success and '[SUCCESS]' or '[ERROR]'
+	local severity = success and 'SUCCESS' or 'ERROR'
+	local tag = '[MODULE][' .. severity .. ']'
 	local msg = tag .. ' [' .. stage .. '] ' .. tostring(name)
 	if elapsed then msg = msg .. ' (' .. string.format('%.3f', elapsed) .. 's)' end
 	if detail then msg = msg .. ' - ' .. tostring(detail) end
+	local dedupKey = tostring(name) .. '|' .. tostring(detail)
+	if __logHistory[dedupKey] then
+		__logHistory[dedupKey] = __logHistory[dedupKey] + 1
+		return
+	end
+	__logHistory[dedupKey] = 1
 	warn('BadWars: ' .. msg)
+end
+
+local function logEvent(category, message, isError)
+	local tag = isError and '[ERROR]' or '[INFO]'
+	local fullTag = '[' .. category .. ']' .. tag
+	local dedupKey = tostring(category) .. '|' .. tostring(message)
+	if __logHistory[dedupKey] then
+		__logHistory[dedupKey] = __logHistory[dedupKey] + 1
+		return
+	end
+	__logHistory[dedupKey] = 1
+	warn('BadWars: ' .. fullTag .. ' ' .. tostring(message))
 end
 
 local oldLoadstring
@@ -375,7 +395,7 @@ local function validateDependencies()
 	end
 
 	if #missing > 0 then
-		warn('BadWars: [WARN] Missing dependencies: ' .. table.concat(missing, ', '))
+		logEvent('DEPENDENCY', 'Missing: ' .. table.concat(missing, ', '), true)
 	end
 
 	local allOk = true
@@ -543,10 +563,29 @@ if not shared.BadIndependent then
 		end
 	end
 
-	-- Stage 10: Ready
+	-- Stage 10: Module Validation
+	setStatus('validating universal modules')
+	local report = shared.__badwars_universal_report
+	if report then
+		if report.failed and #report.failed > 0 then
+			warn('BadWars: [VALIDATION] Failed universal modules:')
+			for _, entry in ipairs(report.failed) do
+				warn('  ✗ ' .. entry.name .. ' [' .. tostring(entry.error) .. ']')
+			end
+		end
+		if report.loaded and report.loaded > 0 then
+			warn('BadWars: [VALIDATION] ' .. report.loaded .. ' modules loaded, ' .. (#report.failed or 0) .. ' failed')
+		end
+	end
+
+	-- Stage 11: Ready
 	local pipelineElapsed = os_clock() - pipelineStart
-	setStatus('ready - loaded in ' .. string.format('%.2f', pipelineElapsed) .. 's')
-	warn('BadWars: Pipeline complete in ' .. string.format('%.2f', pipelineElapsed) .. 's')
+	if #issues == 0 then
+		setStatus('ready - loaded in ' .. string.format('%.2f', pipelineElapsed) .. 's')
+	else
+		setStatus('loaded with ' .. #issues .. ' issue(s) in ' .. string.format('%.2f', pipelineElapsed) .. 's', true)
+	end
+	warn('BadWars: Pipeline complete in ' .. string.format('%.2f', pipelineElapsed) .. 's' .. (#issues > 0 and ' (with ' .. #issues .. ' issue(s))' or ''))
 else
 	Bad.Init = finishLoading
 	setStatus('independent mode ready')

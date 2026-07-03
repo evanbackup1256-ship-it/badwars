@@ -277,9 +277,56 @@ if not ok then
 end
 
 -- ============================================================
--- Stage 7: Pipeline Complete
+-- Stage 7: Post-Load Validation
+-- ============================================================
+setStatus('pipeline stage 7: post-load validation')
+local validationIssues = {}
+local function checkGlobal(name)
+	if not shared[name] then
+		table.insert(validationIssues, 'shared.' .. name .. ' is nil')
+	end
+end
+
+checkGlobal('Bad')
+if shared.Bad then
+	if type(shared.Bad.CreateNotification) ~= 'function' then
+		table.insert(validationIssues, 'Bad.CreateNotification is not a function')
+	end
+	if type(shared.Bad.Modules) ~= 'table' then
+		table.insert(validationIssues, 'Bad.Modules is nil or not a table')
+	end
+	if type(shared.Bad.gui) ~= 'userdata' then
+		table.insert(validationIssues, 'Bad.gui (ScreenGui) is nil')
+	end
+end
+
+if type(shared.__badwars_universal_report) == 'table' then
+	local report = shared.__badwars_universal_report
+	if report.failed and #report.failed > 0 then
+		for _, entry in ipairs(report.failed) do
+			table.insert(validationIssues, 'Universal module [' .. entry.name .. '] failed: ' .. entry.error)
+		end
+	end
+end
+
+if #validationIssues > 0 then
+	warn('BadWars: [VALIDATION] ' .. #validationIssues .. ' issue(s) found:')
+	for _, issue in ipairs(validationIssues) do
+		warn('  ⚠ ' .. issue)
+	end
+	setStatus(#validationIssues .. ' validation issue(s) found', true)
+else
+	setStatus('validation passed')
+end
+
+-- ============================================================
+-- Stage 8: Pipeline Complete
 -- ============================================================
 local loaderElapsed = os.clock() - loaderStart
-warn('BadWars: Loader pipeline complete in ' .. string.format('%.2f', loaderElapsed) .. 's')
+local msg = 'Loader pipeline complete in ' .. string.format('%.2f', loaderElapsed) .. 's'
+if #validationIssues > 0 then
+	msg = msg .. ' (with ' .. #validationIssues .. ' issue(s))'
+end
+warn('BadWars: ' .. msg)
 
 return result

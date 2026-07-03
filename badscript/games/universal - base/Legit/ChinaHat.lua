@@ -15,12 +15,12 @@ ChinaHat = Bad.Legit:CreateModule({
 			hat.Size = Vector3.new(3, 0.7, 3)
 			hat.Name = 'ChinaHat'
 			hat.Material = Enum.Material[Material.Value]
-			hat.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+			hat.Color = Color3.fromHSV(Color and type(Color.Hue) == 'number' and Color.Hue or 0.44, Color and type(Color.Sat) == 'number' and Color.Sat or 1, Color and type(Color.Value) == 'number' and Color.Value or 1)
 			hat.CanCollide = false
 			hat.CanQuery = false
 			hat.Massless = true
 			hat.MeshId = 'http://www.roblox.com/asset/?id=1778999'
-			hat.Transparency = 1 - Color.Opacity
+			hat.Transparency = 1 - (Color and type(Color.Opacity) == 'number' and math.clamp(Color.Opacity, 0, 1) or 0.7)
 			hat.Parent = gameCamera
 			hat.CFrame = entitylib.isAlive and entitylib.character.Head.CFrame + Vector3.new(0, 1, 0) or CFrame.identity
 			local weld = Instance.new('WeldConstraint')

@@ -15,9 +15,9 @@ AntiFall = Bad.Categories.Blatant:CreateModule({
 				local debounce = tick()
 				part = Instance.new('Part')
 				part.Size = Vector3.new(10000, 1, 10000)
-				part.Transparency = 1 - Color.Opacity
+				part.Transparency = 1 - (Color and type(Color.Opacity) == 'number' and math.clamp(Color.Opacity, 0, 1) or 0.5)
 				part.Material = Enum.Material[Material.Value]
-				part.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+				part.Color = Color3.fromHSV(Color and type(Color.Hue) == 'number' and Color.Hue or 0.44, Color and type(Color.Sat) == 'number' and Color.Sat or 1, Color and type(Color.Value) == 'number' and Color.Value or 1)
 				part.CanCollide = Mode.Value == 'Collide'
 				part.Anchored = true
 				part.CanQuery = false

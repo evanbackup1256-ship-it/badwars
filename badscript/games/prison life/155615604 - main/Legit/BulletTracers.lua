@@ -35,8 +35,8 @@ BulletTracers = Bad.Legit:CreateModule({
 					obj.CanQuery = false
 					obj.Anchored = true
 					obj.Material = Enum.Material[Material.Value]
-					obj.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
-					obj.Transparency = 1 - Color.Opacity
+					obj.Color = Color3.fromHSV(Color and type(Color.Hue) == 'number' and Color.Hue or 0.44, Color and type(Color.Sat) == 'number' and Color.Sat or 1, Color and type(Color.Value) == 'number' and Color.Value or 1)
+					obj.Transparency = 1 - (Color and type(Color.Opacity) == 'number' and math.clamp(Color.Opacity, 0, 1) or 0.5)
 					obj.Parent = workspace
 					if Fade.Enabled then
 						local tween = tweenService:Create(obj, TweenInfo.new(Lifetime.Value), {

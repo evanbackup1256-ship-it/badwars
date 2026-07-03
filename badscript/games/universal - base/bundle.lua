@@ -966,6 +966,18 @@ local rayCheck = RaycastParams.new()
 rayCheck.RespectCanCollide = true
 local part
 
+local function getAntiFallOpacity()
+	if Color and type(Color.Opacity) == 'number' then return math.clamp(Color.Opacity, 0, 1) end
+	return 0.5
+end
+
+local function getAntiFallColor3()
+	local h = Color and type(Color.Hue) == 'number' and Color.Hue or 0.44
+	local s = Color and type(Color.Sat) == 'number' and Color.Sat or 1
+	local v = Color and type(Color.Value) == 'number' and Color.Value or 1
+	return Color3.fromHSV(h, s, v)
+end
+
 AntiFall = Bad.Categories.Blatant:CreateModule({
 	Name = 'AntiFall',
 	Function = function(callback)
@@ -974,9 +986,9 @@ AntiFall = Bad.Categories.Blatant:CreateModule({
 				local debounce = tick()
 				part = Instance.new('Part')
 				part.Size = Vector3.new(10000, 1, 10000)
-				part.Transparency = 1 - Color.Opacity
+				part.Transparency = 1 - getAntiFallOpacity()
 				part.Material = Enum.Material[Material.Value]
-				part.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+				part.Color = getAntiFallColor3()
 				part.CanCollide = Mode.Value == 'Collide'
 				part.Anchored = true
 				part.CanQuery = false
@@ -1776,11 +1788,11 @@ local AngleSlider
 local Max
 local Mouse
 local Lunge
-local BoxSwingColor
-local BoxAttackColor
+local BoxSwingColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
+local BoxAttackColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local ParticleTexture
-local ParticleColor1
-local ParticleColor2
+local ParticleColor1 = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
+local ParticleColor2 = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local ParticleSize
 local Face
 local Overlay = OverlapParams.new()
@@ -2997,7 +3009,7 @@ local Targets
 local Part
 local FOV
 local Speed
-local CircleColor
+local CircleColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local CircleTransparency
 local CircleFilled
 local CircleObject
@@ -4181,6 +4193,18 @@ local Material
 local Color
 local hat
 
+local function getChinaHatOpacity()
+	if Color and type(Color.Opacity) == 'number' then return math.clamp(Color.Opacity, 0, 1) end
+	return 0.7
+end
+
+local function getChinaHatColor3()
+	local h = Color and type(Color.Hue) == 'number' and Color.Hue or 0.44
+	local s = Color and type(Color.Sat) == 'number' and Color.Sat or 1
+	local v = Color and type(Color.Value) == 'number' and Color.Value or 1
+	return Color3.fromHSV(h, s, v)
+end
+
 ChinaHat = Bad.Legit:CreateModule({
 	Name = 'China Hat',
 	Function = function(callback)
@@ -4193,12 +4217,12 @@ ChinaHat = Bad.Legit:CreateModule({
 			hat.Size = Vector3.new(3, 0.7, 3)
 			hat.Name = 'ChinaHat'
 			hat.Material = Enum.Material[Material.Value]
-			hat.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+			hat.Color = getChinaHatColor3()
 			hat.CanCollide = false
 			hat.CanQuery = false
 			hat.Massless = true
 			hat.MeshId = 'http://www.roblox.com/asset/?id=1778999'
-			hat.Transparency = 1 - Color.Opacity
+			hat.Transparency = 1 - getChinaHatOpacity()
 			hat.Parent = gameCamera
 			hat.CFrame = entitylib.isAlive and entitylib.character.Head.CFrame + Vector3.new(0, 1, 0) or CFrame.identity
 			local weld = Instance.new('WeldConstraint')
@@ -4626,16 +4650,42 @@ local Style
 local Color
 local keys, holder = {}
 
+local function getColorHue()
+	if Color and type(Color.Hue) == 'number' then return Color.Hue end
+	return 0.44
+end
+
+local function getColorSat()
+	if Color and type(Color.Sat) == 'number' then return Color.Sat end
+	return 1
+end
+
+local function getColorVal()
+	if Color and type(Color.Value) == 'number' then return Color.Value end
+	return 1
+end
+
+local function getColorOpacity()
+	if Color and type(Color.Opacity) == 'number' then return math.clamp(Color.Opacity, 0, 1) end
+	return 0.5
+end
+
+local function getColor3()
+	return Color3.fromHSV(getColorHue(), getColorSat(), getColorVal())
+end
+
 local function createKeystroke(keybutton, pos, pos2, text)
 	if keys[keybutton] then
-		keys[keybutton].Key:Destroy()
+		pcall(function()
+			keys[keybutton].Key:Destroy()
+		end)
 		keys[keybutton] = nil
 	end
 
 	local key = Instance.new('Frame')
 	key.Size = keybutton == Enum.KeyCode.Space and UDim2.new(0, 110, 0, 24) or UDim2.new(0, 34, 0, 36)
-	key.BackgroundColor3 = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
-	key.BackgroundTransparency = 1 - Color.Opacity
+	key.BackgroundColor3 = getColor3()
+	key.BackgroundTransparency = 1 - getColorOpacity()
 	key.Position = pos
 	key.Name = keybutton.Name
 	key.Parent = holder
@@ -4654,31 +4704,36 @@ local function createKeystroke(keybutton, pos, pos2, text)
 	corner.CornerRadius = UDim.new(0, 4)
 	corner.Parent = key
 
-	keys[keybutton] = {Key = key}
+	keys[keybutton] = {Key = key, Pressed = false}
 end
 
 local function updateKey(inputType)
+	if not inputType or not inputType.KeyCode then return end
 	local key = keys[inputType.KeyCode]
-	if key then
+	if key and key.Key and key.Key.Parent then
 		if key.Tween then
-			key.Tween:Cancel()
+			pcall(function() key.Tween:Cancel() end)
 		end
 
 		if key.Tween2 then
-			key.Tween2:Cancel()
+			pcall(function() key.Tween2:Cancel() end)
 		end
 
 		local pressed = inputType.UserInputState == Enum.UserInputState.Begin
 		key.Pressed = pressed
-		key.Tween = tweenService:Create(key.Key, TweenInfo.new(0.1), {
-			BackgroundColor3 = pressed and Color3.new(1, 1, 1) or Color3.fromHSV(Color.Hue, Color.Sat, Color.Value),
-			BackgroundTransparency = pressed and 0 or 1 - Color.Opacity
-		})
-		key.Tween2 = tweenService:Create(key.Key.TextLabel, TweenInfo.new(0.1), {
-			TextColor3 = pressed and Color3.new() or Color3.new(1, 1, 1)
-		})
-		key.Tween:Play()
-		key.Tween2:Play()
+		if tweenService then
+			pcall(function()
+				key.Tween = tweenService:Create(key.Key, TweenInfo.new(0.1), {
+					BackgroundColor3 = pressed and Color3.new(1, 1, 1) or getColor3(),
+					BackgroundTransparency = pressed and 0 or (1 - getColorOpacity())
+				})
+				key.Tween2 = tweenService:Create(key.Key.TextLabel, TweenInfo.new(0.1), {
+					TextColor3 = pressed and Color3.new() or Color3.new(1, 1, 1)
+				})
+				key.Tween:Play()
+				key.Tween2:Play()
+			end)
+		end
 	end
 end
 
@@ -4686,13 +4741,25 @@ Keystrokes = Bad.Legit:CreateModule({
 	Name = 'Keystrokes',
 	Function = function(callback)
 		if callback then
-			createKeystroke(Enum.KeyCode.W, UDim2.new(0, 38, 0, 0), UDim2.new(0, 6, 0, 5), Style.Value == 'Arrow' and '↑' or nil)
-			createKeystroke(Enum.KeyCode.S, UDim2.new(0, 38, 0, 42), UDim2.new(0, 8, 0, 5), Style.Value == 'Arrow' and '↓' or nil)
-			createKeystroke(Enum.KeyCode.A, UDim2.new(0, 0, 0, 42), UDim2.new(0, 7, 0, 5), Style.Value == 'Arrow' and '←' or nil)
-			createKeystroke(Enum.KeyCode.D, UDim2.new(0, 76, 0, 42), UDim2.new(0, 8, 0, 5), Style.Value == 'Arrow' and '→' or nil)
+			if not holder or not holder.Parent then
+				pcall(function()
+					holder = Instance.new('Frame')
+					holder.Size = UDim2.fromScale(1, 1)
+					holder.BackgroundTransparency = 1
+					if Keystrokes.Children then
+						holder.Parent = Keystrokes.Children
+					end
+				end)
+			end
+			createKeystroke(Enum.KeyCode.W, UDim2.new(0, 38, 0, 0), UDim2.new(0, 6, 0, 5), Style and Style.Value == 'Arrow' and '↑' or nil)
+			createKeystroke(Enum.KeyCode.S, UDim2.new(0, 38, 0, 42), UDim2.new(0, 8, 0, 5), Style and Style.Value == 'Arrow' and '↓' or nil)
+			createKeystroke(Enum.KeyCode.A, UDim2.new(0, 0, 0, 42), UDim2.new(0, 7, 0, 5), Style and Style.Value == 'Arrow' and '←' or nil)
+			createKeystroke(Enum.KeyCode.D, UDim2.new(0, 76, 0, 42), UDim2.new(0, 8, 0, 5), Style and Style.Value == 'Arrow' and '→' or nil)
 
-			Keystrokes:Clean(inputService.InputBegan:Connect(updateKey))
-			Keystrokes:Clean(inputService.InputEnded:Connect(updateKey))
+			if inputService then
+				Keystrokes:Clean(inputService.InputBegan:Connect(updateKey))
+				Keystrokes:Clean(inputService.InputEnded:Connect(updateKey))
+			end
 		end
 	end,
 	Size = UDim2.fromOffset(110, 176),
@@ -4701,7 +4768,9 @@ Keystrokes = Bad.Legit:CreateModule({
 holder = Instance.new('Frame')
 holder.Size = UDim2.fromScale(1, 1)
 holder.BackgroundTransparency = 1
-holder.Parent = Keystrokes.Children
+if Keystrokes.Children then
+	holder.Parent = Keystrokes.Children
+end
 Style = Keystrokes:CreateDropdown({
 	Name = 'Key Style',
 	List = {'Keyboard', 'Arrow'},
@@ -4717,10 +4786,14 @@ Color = Keystrokes:CreateColorSlider({
 	DefaultValue = 0,
 	DefaultOpacity = 0.5,
 	Function = function(hue, sat, val, opacity)
+		local safeHue = type(hue) == 'number' and hue or 0.44
+		local safeSat = type(sat) == 'number' and sat or 1
+		local safeVal = type(val) == 'number' and val or 1
+		local safeOpacity = type(opacity) == 'number' and math.clamp(opacity, 0, 1) or 0.5
 		for _, v in keys do
-			if not v.Pressed then
-				v.Key.BackgroundColor3 = Color3.fromHSV(hue, sat, val)
-				v.Key.BackgroundTransparency = 1 - opacity
+			if v and v.Key and v.Key.Parent and not v.Pressed then
+				v.Key.BackgroundColor3 = Color3.fromHSV(safeHue, safeSat, safeVal)
+				v.Key.BackgroundTransparency = 1 - safeOpacity
 			end
 		end
 	end
@@ -4728,20 +4801,21 @@ Color = Keystrokes:CreateColorSlider({
 Keystrokes:CreateToggle({
 	Name = 'Show Spacebar',
 	Function = function(callback)
-		Keystrokes.Children.Size = UDim2.fromOffset(110, callback and 107 or 78)
+		if Keystrokes.Children then
+			Keystrokes.Children.Size = UDim2.fromOffset(110, callback and 107 or 78)
+		end
 
 		if callback then
 			createKeystroke(Enum.KeyCode.Space, UDim2.new(0, 0, 0, 83), UDim2.new(0, 25, 0, -10), '______')
 		else
-			keys[Enum.KeyCode.Space].Key:Destroy()
-			keys[Enum.KeyCode.Space] = nil
+			if keys[Enum.KeyCode.Space] and keys[Enum.KeyCode.Space].Key then
+				pcall(function() keys[Enum.KeyCode.Space].Key:Destroy() end)
+				keys[Enum.KeyCode.Space] = nil
+			end
 		end
 	end,
 	Default = true
 })
-
-
-
 
 
 
@@ -5186,7 +5260,7 @@ __badwars_add_universal_module('badscript/games/universal - base/Render/Arrows.l
 -- bundled badscript/games/universal - base/Render/Arrows.lua
 local Arrows
 local Targets
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Teammates
 local Distance
 local DistanceLimit
@@ -5335,8 +5409,8 @@ __badwars_add_universal_module('badscript/games/universal - base/Render/Chams.lu
 local Chams
 local Targets
 local Mode
-local FillColor
-local OutlineColor
+local FillColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
+local OutlineColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local FillTransparency
 local OutlineTransparency
 local Teammates
@@ -5555,7 +5629,7 @@ __badwars_add_universal_module('badscript/games/universal - base/Render/ESP.lua'
 -- bundled badscript/games/universal - base/Render/ESP.lua
 local ESP
 local Targets
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Method
 local BoundingBox
 local Filled
@@ -5609,7 +5683,7 @@ local ESPAdded = {
 			EntityESP.HealthLine = Drawing.new('Line')
 			EntityESP.HealthLine.Thickness = 1
 			EntityESP.HealthLine.ZIndex = 2
-			EntityESP.HealthLine.Color = Color3.fromHSV(math.clamp(ent.Health / ent.MaxHealth, 0, 1) / 2.5, 0.89, 0.75)
+			EntityESP.HealthLine.Color = Color3.fromHSV(math.clamp((ent.Health or 0) / math.max(ent.MaxHealth or 1, 1), 0, 1) / 2.5, 0.89, 0.75)
 			EntityESP.HealthBorder = Drawing.new('Line')
 			EntityESP.HealthBorder.Thickness = 3
 			EntityESP.HealthBorder.Transparency = 0.35
@@ -5727,7 +5801,7 @@ local ESPUpdated = {
 			end
 			
 			if EntityESP.HealthLine then
-				EntityESP.HealthLine.Color = Color3.fromHSV(math.clamp(ent.Health / ent.MaxHealth, 0, 1) / 2.5, 0.89, 0.75)
+				EntityESP.HealthLine.Color = Color3.fromHSV(math.clamp((ent.Health or 0) / math.max(ent.MaxHealth or 1, 1), 0, 1) / 2.5, 0.89, 0.75)
 			end
 
 			if EntityESP.Text then
@@ -5793,7 +5867,7 @@ local ESPLoop = {
 			end
 
 			if EntityESP.HealthLine then
-				local healthposy = sizey * math.clamp(ent.Health / ent.MaxHealth, 0, 1)
+				local healthposy = sizey * math.clamp((ent.Health or 0) / math.max(ent.MaxHealth or 1, 1), 0, 1)
 				EntityESP.HealthLine.Visible = ent.Health > 0
 				EntityESP.HealthLine.From = Vector2.new(posx - 6, posy + (sizey - (sizey - healthposy))) // 1
 				EntityESP.HealthLine.To = Vector2.new(posx - 6, posy) // 1
@@ -6170,7 +6244,7 @@ end)
 __badwars_add_universal_module('badscript/games/universal - base/Render/GamingChair.lua', function()
 -- bundled badscript/games/universal - base/Render/GamingChair.lua
 local GamingChair = {Enabled = false}
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local wheelpositions = {
 	Vector3.new(-0.8, -0.6, -0.18),
 	Vector3.new(0.1, -0.6, -0.88),
@@ -6421,7 +6495,7 @@ Health = Bad.Categories.Render:CreateModule({
 			
 			repeat
 				label.Text = entitylib.isAlive and math.round(entitylib.character.Humanoid.Health)..' ❤️' or ''
-				label.TextColor3 = entitylib.isAlive and Color3.fromHSV((entitylib.character.Humanoid.Health / entitylib.character.Humanoid.MaxHealth) / 2.8, 0.86, 1) or Color3.new()
+				label.TextColor3 = entitylib.isAlive and entitylib.character.Humanoid.MaxHealth > 0 and Color3.fromHSV((entitylib.character.Humanoid.Health / entitylib.character.Humanoid.MaxHealth) / 2.8, 0.86, 1) or Color3.new()
 				task.wait()
 			until not Health.Enabled
 		end
@@ -6441,7 +6515,7 @@ __badwars_add_universal_module('badscript/games/universal - base/Render/NameTags
 -- bundled badscript/games/universal - base/Render/NameTags.lua
 local NameTags
 local Targets
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Background
 local Stroke
 local DisplayName
@@ -7004,7 +7078,7 @@ __badwars_add_universal_module('badscript/games/universal - base/Render/Radar.lu
 local Radar
 local Targets
 local DotStyle
-local PlayerColor
+local PlayerColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Clamp
 local Reference = {}
 local bkg
@@ -7185,7 +7259,7 @@ __badwars_add_universal_module('badscript/games/universal - base/Render/Search.l
 -- bundled badscript/games/universal - base/Render/Search.lua
 local Search
 local List
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local FillTransparency
 local Reference = {}
 local Folder = Instance.new('Folder')
@@ -7272,7 +7346,7 @@ local SessionInfo
 local FontOption
 local Hide
 local TextSize
-local BorderColor
+local BorderColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Title
 local TitleOffset = {}
 local Custom
@@ -7478,12 +7552,12 @@ __badwars_add_universal_module('badscript/games/universal - base/Render/Tracers.
 -- bundled badscript/games/universal - base/Render/Tracers.lua
 local Tracers
 local Targets
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Transparency
 local StartPosition
 local EndPosition
 local Teammates
-local DistanceColor
+local DistanceColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Distance
 local DistanceLimit
 local Behind
@@ -7688,7 +7762,7 @@ __badwars_add_universal_module('badscript/games/universal - base/Render/Waypoint
 local Waypoints
 local FontOption
 local List
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Scale
 local Background
 WaypointFolder = Instance.new('Folder')

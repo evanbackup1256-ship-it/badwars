@@ -5577,13 +5577,16 @@ mainapi.Libraries.targetinfo = targetinfo
 
 function mainapi:UpdateTextGUI(afterload)
 	if not afterload and not mainapi.Loaded then return end
+	if not BadLogo or not BadLogo.Parent then return end
 	if textgui.Button.Enabled then
-		local right = textgui.Children.AbsolutePosition.X > (gui.AbsoluteSize.X / 2)
-		BadLogo.Visible = textguiwatermark.Enabled
-		BadLogo.Position = right and UDim2.new(1 / BadTextScale.Scale, -113, 0, 6) or UDim2.fromOffset(0, 6)
-		BadLogoShadow.Visible = textguishadow.Enabled
-		BadLabelCustom.Text = textguibox.Value
-		BadLabelCustom.FontFace = textguifontcustom.Value
+		local right = textgui.Children and pcall(function() return textgui.Children.AbsolutePosition.X > (gui.AbsoluteSize.X / 2) end) or false
+		if right == nil then right = false end
+		BadLogo.Visible = textguiwatermark and textguiwatermark.Enabled or false
+		BadLogo.Position = right and UDim2.new(1 / (BadTextScale and BadTextScale.Scale or 1), -113, 0, 6) or UDim2.fromOffset(0, 6)
+		if BadLogoShadow then BadLogoShadow.Visible = textguishadow and textguishadow.Enabled or false end
+		if not BadLabelCustom then return end
+		BadLabelCustom.Text = textguibox and textguibox.Value or ''
+		BadLabelCustom.FontFace = textguifontcustom and textguifontcustom.Value or Enum.Font.Gotham
 		BadLabelCustom.Visible = BadLabelCustom.Text ~= '' and textguitext.Enabled
 		BadLabelCustomShadow.Visible = BadLabelCustom.Visible and textguishadow.Enabled
 		BadLabelSorter.HorizontalAlignment = right and Enum.HorizontalAlignment.Right or Enum.HorizontalAlignment.Left
@@ -5738,14 +5741,21 @@ function mainapi:UpdateGUI(hue, sat, val, default)
 
 	for i, v in mainapi.Categories do
 		if i == 'Main' then
-			local headerBar = v.Object and v.Object:FindFirstChild('HeaderBar')
-			local badLogo = headerBar and headerBar:FindFirstChild('BadLogo')
-			local v4Logo = badLogo and badLogo:FindFirstChild('V4Logo')
-			if v4Logo then
-				v4Logo.ImageColor3 = Color3.fromHSV(hue, sat, val)
+			local obj = v.Object
+			if obj then
+				local headerBar = obj:FindFirstChild('HeaderBar')
+				if headerBar then
+					local badLogo = headerBar:FindFirstChild('BadLogo')
+					if badLogo then
+						local v4Logo = badLogo:FindFirstChild('V4Logo')
+						if v4Logo then
+							v4Logo.ImageColor3 = Color3.fromHSV(hue, sat, val)
+						end
+					end
+				end
 			end
 			for _, button in v.Buttons do
-				if button.Enabled then
+				if button.Enabled and button.Object then
 					button.Object.TextColor3 = rainbow and Color3.fromHSV(mainapi:Color((hue - (button.Index * 0.025)) % 1)) or Color3.fromHSV(hue, sat, val)
 					if button.Icon then
 						button.Icon.ImageColor3 = button.Object.TextColor3
@@ -5762,63 +5772,99 @@ function mainapi:UpdateGUI(hue, sat, val, default)
 			end
 		end
 
-		if v.Type == 'CategoryList' then
-			v.Object.Children.Add.AddButton.ImageColor3 = rainbow and Color3.fromHSV(mainapi:Color(hue % 1)) or Color3.fromHSV(hue, sat, val)
+		if v.Type == 'CategoryList' and v.Object then
+			local addButton = v.Object.Children and v.Object.Children.Add and v.Object.Children.Add.AddButton
+			if addButton then
+				addButton.ImageColor3 = rainbow and Color3.fromHSV(mainapi:Color(hue % 1)) or Color3.fromHSV(hue, sat, val)
+			end
 			if v.Selected then
 				v.Selected.BackgroundColor3 = rainbow and Color3.fromHSV(mainapi:Color(hue % 1)) or Color3.fromHSV(hue, sat, val)
-				v.Selected.Title.TextColor3 = mainapi.GUIColor.Rainbow and Color3.new(0.19, 0.19, 0.19) or mainapi:TextColor(hue, sat, val)
-				v.Selected.Dots.Dots.ImageColor3 = v.Selected.Title.TextColor3
-				v.Selected.Bind.Icon.ImageColor3 = v.Selected.Title.TextColor3
-				v.Selected.Bind.TextLabel.TextColor3 = v.Selected.Title.TextColor3
+				if v.Selected.Title then
+					v.Selected.Title.TextColor3 = mainapi.GUIColor.Rainbow and Color3.new(0.19, 0.19, 0.19) or mainapi:TextColor(hue, sat, val)
+				end
+				if v.Selected.Dots and v.Selected.Dots.Dots then
+					v.Selected.Dots.Dots.ImageColor3 = v.Selected.Title and v.Selected.Title.TextColor3 or Color3.new()
+				end
+				if v.Selected.Bind then
+					if v.Selected.Bind.Icon then
+						v.Selected.Bind.Icon.ImageColor3 = v.Selected.Title and v.Selected.Title.TextColor3 or Color3.new()
+					end
+					if v.Selected.Bind.TextLabel then
+						v.Selected.Bind.TextLabel.TextColor3 = v.Selected.Title and v.Selected.Title.TextColor3 or Color3.new()
+					end
+				end
 			end
 		end
 	end
 
-	for _, button in mainapi.Modules do
-		if button.Enabled then
-			button.Object.BackgroundColor3 = rainbow and Color3.fromHSV(mainapi:Color((hue - (button.Index * 0.025)) % 1)) or Color3.fromHSV(hue, sat, val)
-			button.Object.TextColor3 = mainapi.GUIColor.Rainbow and Color3.new(0.19, 0.19, 0.19) or mainapi:TextColor(hue, sat, val)
-			button.Object.UIGradient.Enabled = rainbow and mainapi.RainbowMode.Value == 'Gradient'
-			if button.Object.UIGradient.Enabled then
-				button.Object.BackgroundColor3 = Color3.new(1, 1, 1)
-				button.Object.UIGradient.Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromHSV(mainapi:Color((hue - (button.Index * 0.025)) % 1))),
-					ColorSequenceKeypoint.new(1, Color3.fromHSV(mainapi:Color((hue - ((button.Index + 1) * 0.025)) % 1)))
-				})
+	if mainapi.Modules then
+		for _, button in mainapi.Modules do
+			if button.Enabled and button.Object then
+				if rainbow then
+					local moduleColor = Color3.fromHSV(mainapi:Color((hue - (button.Index * 0.025)) % 1))
+					button.Object.BackgroundColor3 = moduleColor
+					button.Object.TextColor3 = mainapi.GUIColor.Rainbow and Color3.new(0.19, 0.19, 0.19) or moduleColor
+				else
+					button.Object.BackgroundColor3 = Color3.fromHSV(hue, sat, val)
+					button.Object.TextColor3 = mainapi:TextColor(hue, sat, val)
+				end
+				if button.Object.UIGradient then
+					button.Object.UIGradient.Enabled = rainbow and mainapi.RainbowMode.Value == 'Gradient'
+					if button.Object.UIGradient.Enabled then
+						button.Object.BackgroundColor3 = Color3.new(1, 1, 1)
+						button.Object.UIGradient.Color = ColorSequence.new({
+							ColorSequenceKeypoint.new(0, Color3.fromHSV(mainapi:Color((hue - (button.Index * 0.025)) % 1))),
+							ColorSequenceKeypoint.new(1, Color3.fromHSV(mainapi:Color((hue - ((button.Index + 1) * 0.025)) % 1)))
+						})
+					end
+				end
+				if button.Object.Bind then
+					if button.Object.Bind.Icon then
+						button.Object.Bind.Icon.ImageColor3 = button.Object.TextColor3
+					end
+					if button.Object.Bind.TextLabel then
+						button.Object.Bind.TextLabel.TextColor3 = button.Object.TextColor3
+					end
+				end
+				if button.Object.Dots and button.Object.Dots.Dots then
+					button.Object.Dots.Dots.ImageColor3 = button.Object.TextColor3
+				end
 			end
-			button.Object.Bind.Icon.ImageColor3 = button.Object.TextColor3
-			button.Object.Bind.TextLabel.TextColor3 = button.Object.TextColor3
-			button.Object.Dots.Dots.ImageColor3 = button.Object.TextColor3
-		end
-
-		for _, option in button.Options do
-			if option.Color then
-				option:Color(hue, sat, val, rainbow)
+			if button.Options then
+				for _, option in button.Options do
+					if option.Color then
+						option:Color(hue, sat, val, rainbow)
+					end
+				end
 			end
 		end
 	end
 
-	for i, v in mainapi.Overlays.Toggles do
-		if v.Enabled then
-			tween:Cancel(v.Object.Knob)
-			v.Object.Knob.BackgroundColor3 = rainbow and Color3.fromHSV(mainapi:Color((hue - (i * 0.075)) % 1)) or Color3.fromHSV(hue, sat, val)
-		end
-	end
-
-	if mainapi.Legit.Icon then
-		mainapi.Legit.Icon.ImageColor3 = Color3.fromHSV(hue, sat, val)
-	end
-
-	if mainapi.Legit.Window.Visible then
-		for _, v in mainapi.Legit.Modules do
-			if v.Enabled then
+	if mainapi.Overlays and mainapi.Overlays.Toggles then
+		for i, v in mainapi.Overlays.Toggles do
+			if v.Enabled and v.Object and v.Object.Knob then
 				tween:Cancel(v.Object.Knob)
-				v.Object.Knob.BackgroundColor3 = Color3.fromHSV(hue, sat, val)
+				v.Object.Knob.BackgroundColor3 = rainbow and Color3.fromHSV(mainapi:Color((hue - (i * 0.075)) % 1)) or Color3.fromHSV(hue, sat, val)
 			end
+		end
+	end
 
-			for _, option in v.Options do
-				if option.Color then
-					option:Color(hue, sat, val, rainbow)
+	if mainapi.Legit then
+		if mainapi.Legit.Icon then
+			mainapi.Legit.Icon.ImageColor3 = Color3.fromHSV(hue, sat, val)
+		end
+		if mainapi.Legit.Window and mainapi.Legit.Window.Visible then
+			for _, v in mainapi.Legit.Modules do
+				if v.Enabled and v.Object and v.Object.Knob then
+					tween:Cancel(v.Object.Knob)
+					v.Object.Knob.BackgroundColor3 = Color3.fromHSV(hue, sat, val)
+				end
+				if v.Options then
+					for _, option in v.Options do
+						if option.Color then
+							option:Color(hue, sat, val, rainbow)
+						end
+					end
 				end
 			end
 		end

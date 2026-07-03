@@ -33,9 +33,9 @@ type RobloxStatus = {
   lastCheckedAt?: string;
 };
 
-function buildPageLoader(ref = repo.branch) {
+function buildPageLoader(ref?: string) {
   const base = typeof window === "undefined" ? "https://badwars-production.up.railway.app" : window.location.origin;
-  return buildLoader(base, ref);
+  return ref ? buildLoader(base, ref) : buildLoader(base);
 }
 
 async function fetchRobloxStatus(): Promise<RobloxStatus> {

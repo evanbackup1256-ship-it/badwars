@@ -114,6 +114,12 @@ end
 local function httpGet(url) return httpGetMulti({url}) end
 HttpGet=httpGet
 
+local function isNotFoundBody(body)
+	if type(body)~='string' then return false end
+	local trimmed=body:match('^%s*(.-)%s*$')
+	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
+end
+
 local function downloadFile(path)
 	if not HttpGet then return nil,'HttpGet nil' end
 	local cached=isfile(path) and readfile(path)
@@ -122,7 +128,7 @@ local function downloadFile(path)
 	local urls=rawUrls(path)
 	local res=httpGetMulti(urls)
 	if type(res)~='string' or #res==0 then return nil,'empty response from '..urls[1] end
-	if res:find('404: Not Found',1,true) or (#res<200 and res:find('Not Found',1,true)) then return nil,'FILE NOT FOUND: '..urls[1] end
+	if isNotFoundBody(res) then return nil,'FILE NOT FOUND: '..urls[1] end
 	if path:find('.lua') then res='-- BadWars by usingINales\n'..res end
 	pcall(function() writefile(path,res) end)
 	return res

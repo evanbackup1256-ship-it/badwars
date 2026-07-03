@@ -44,6 +44,12 @@ local function httpGet(urls)
 	return nil,nil
 end
 
+local function isNotFoundBody(body)
+	if type(body)~='string' then return false end
+	local trimmed=body:match('^%s*(.-)%s*$')
+	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
+end
+
 -- Status GUI
 local statusGui,statusLabel
 pcall(function()
@@ -134,7 +140,7 @@ if type(raw)~='string' or raw=='' then
 	local m='Empty response for '..ORCH_PATH
 	setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0)
 end
-if raw:find('404: Not Found',1,true) or raw:find('"message":"Not Found"',1,true) then
+if isNotFoundBody(raw) then
 	warn('BadWars: [404 RESPONSE BODY - first 500 chars]')
 	warn(raw:sub(1,500))
 	warn('BadWars: [END 404 BODY]')

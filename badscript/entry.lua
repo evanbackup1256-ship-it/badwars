@@ -32,6 +32,12 @@ local function httpGet(urls)
 	return nil,nil
 end
 
+local function isNotFoundBody(body)
+	if type(body)~='string' then return false end
+	local trimmed=body:match('^%s*(.-)%s*$')
+	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
+end
+
 warn('BadWars: [URL DIAGNOSTICS]')
 local urls=rawUrl(LOADER_PATH)
 warn('  Repository:   '..CFG.repo..'/'..CFG.name)
@@ -53,7 +59,7 @@ if type(loaderCode)~='string' or loaderCode=='' then
 	warn(m);error(m,0)
 end
 -- Check for 404 in both GitHub raw format and API format
-if loaderCode:find('404: Not Found',1,true) or loaderCode:find('"message":"Not Found"',1,true) then
+if isNotFoundBody(loaderCode) then
 	warn('BadWars: [404 RESPONSE BODY - first 500 chars]')
 	warn(loaderCode:sub(1,500))
 	warn('BadWars: [END 404 BODY]')

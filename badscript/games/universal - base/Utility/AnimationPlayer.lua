@@ -26,7 +26,8 @@ local function playAnimation(char)
 			end
 		end))
 	else
-		notif('AnimationPlayer', 'failed to load anim : '..(res or 'invalid animation id'), 5, 'warning')
+		local aid = animobject and animobject.AnimationId or 'unknown'
+		notif('AnimationPlayer', 'Animation ' .. aid .. ' is invalid, private, or not usable in this experience', 5, 'warning')
 	end
 end
 
@@ -37,9 +38,9 @@ AnimationPlayer = Bad.Categories.Utility:CreateModule({
 			local rawId = tostring(IDBox and IDBox.Value or '')
 			local numericId = rawId:match('^(%d+)$')
 			if not numericId then
-				numericId = rawId:match('rbxassetid://(%d+)') or rawId:match('asset/?.*%?id=(%d+)') or rawId:match('(%d+)')
+				numericId = rawId:match('rbxassetid://(%d+)') or rawId:match('asset/?.*%?id=(%d+)')
 			end
-			if not numericId or numericId == '' then
+			if not numericId or numericId == '' or #numericId < 5 then
 				notif('AnimationPlayer', 'Invalid animation ID: ' .. rawId, 5, 'warning')
 				return
 			end

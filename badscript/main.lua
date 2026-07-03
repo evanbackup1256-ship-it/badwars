@@ -58,6 +58,38 @@ local function moduleEnabled(modName)
 	return optEnabled(m,false)
 end
 
+local function ensureRuntimeCategories(api)
+	if type(api)~='table' then return end
+	api.Categories=type(api.Categories)=='table' and api.Categories or {}
+	local function makeToggle(value) return {Enabled=value==nil and false or value} end
+	local function ensureEvent(owner,key)
+		if type(owner[key])~='table' or not owner[key].Event or type(owner[key].Fire)~='function' then
+			owner[key]=Instance.new('BindableEvent')
+			warn('BadWars: [PREFLIGHT] registered missing '..tostring(owner.Name or 'service')..'.'..key..' event')
+			if type(api.Clean)=='function' then pcall(function() api:Clean(owner[key]) end) end
+		end
+	end
+	api.Categories.Main=type(api.Categories.Main)=='table' and api.Categories.Main or {Type='ServiceCategory',Name='Main',Options={}}
+	api.Categories.Main.Options=type(api.Categories.Main.Options)=='table' and api.Categories.Main.Options or {}
+	api.Categories.Main.Options['GUI bind indicator']=normalize(api.Categories.Main.Options['GUI bind indicator'])
+	api.Categories.Main.Options['Teams by server']=normalize(api.Categories.Main.Options['Teams by server'])
+	api.Categories.Main.Options['Use team color']=normalize(api.Categories.Main.Options['Use team color'])
+
+	api.Categories.Friends=type(api.Categories.Friends)=='table' and api.Categories.Friends or {Type='ServiceCategory',Name='Friends',Options={},ListEnabled={}}
+	api.Categories.Friends.Options=type(api.Categories.Friends.Options)=='table' and api.Categories.Friends.Options or {}
+	api.Categories.Friends.ListEnabled=type(api.Categories.Friends.ListEnabled)=='table' and api.Categories.Friends.ListEnabled or {}
+	api.Categories.Friends.Options['Use friends']=normalize(api.Categories.Friends.Options['Use friends'])
+	api.Categories.Friends.Options['Recolor visuals']=normalize(api.Categories.Friends.Options['Recolor visuals'])
+	api.Categories.Friends.Options['Friends color']=type(api.Categories.Friends.Options['Friends color'])=='table' and api.Categories.Friends.Options['Friends color'] or {Hue=1,Sat=1,Value=1}
+	ensureEvent(api.Categories.Friends,'Update')
+	ensureEvent(api.Categories.Friends,'ColorUpdate')
+
+	api.Categories.Targets=type(api.Categories.Targets)=='table' and api.Categories.Targets or {Type='ServiceCategory',Name='Targets',Options={},ListEnabled={}}
+	api.Categories.Targets.Options=type(api.Categories.Targets.Options)=='table' and api.Categories.Targets.Options or {}
+	api.Categories.Targets.ListEnabled=type(api.Categories.Targets.ListEnabled)=='table' and api.Categories.Targets.ListEnabled or {}
+	ensureEvent(api.Categories.Targets,'Update')
+end
+
 -- Status & notify
 local function setStatus(msg,isErr)
 	if shared.BadStatus then pcall(function() shared.BadStatus(msg,isErr) end) end
@@ -145,12 +177,44 @@ local function buildBundle(name,basePath,manifestPath)
 	local preamble={
 		'',
 		'local __m_ok={}',
+		'local __m_meta={}',
+		'local __m_path_by_name={}',
+		'local function __preflight_m(idx,path,category,moduleName,hasInit,hasUpdate)',
+		'  local issues={}',
+		'  if type(category)~="string" or category=="" then table.insert(issues,"category missing") end',
+		'  if type(moduleName)~="string" or moduleName=="" then table.insert(issues,"name missing") end',
+		'  if hasInit==nil then table.insert(issues,"enabled/init state unknown") end',
+		'  if hasUpdate==nil then table.insert(issues,"update contract unknown") end',
+		'  __m_meta[idx]={path=path,category=category,name=moduleName,hasInit=hasInit,hasUpdate=hasUpdate,issues=issues}',
+		'  __m_path_by_name[moduleName]=path',
+		'  if #issues>0 then warn("BadWars: [PREFLIGHT] "..path.." ("..tostring(moduleName).."): "..table.concat(issues,", ")) end',
+		'end',
+		'local function __postflight_m()',
+		'  local bad=shared and shared.Bad',
+		'  if type(bad)~="table" then warn("BadWars: [PREFLIGHT] Bad API missing after universal module registration"); return end',
+		'  for _,meta in pairs(__m_meta) do',
+		'    local mod=(bad.Modules and bad.Modules[meta.name]) or (bad.Legit and bad.Legit.Modules and bad.Legit.Modules[meta.name])',
+		'    local issues={}',
+		'    if not mod then table.insert(issues,"module not registered")',
+		'    else',
+		'      if type(mod.Category)~="string" or mod.Category=="" then table.insert(issues,"category missing") end',
+		'      if type(mod.Name)~="string" or mod.Name=="" then table.insert(issues,"name missing") end',
+		'      if type(mod.Enabled)~="boolean" then table.insert(issues,"enabled state invalid") end',
+		'      if type(mod.Toggle)~="function" then table.insert(issues,"init/toggle function missing") end',
+		'      if type(mod.Options)~="table" then table.insert(issues,"config/options invalid") end',
+		'      if meta.hasUpdate==false then table.insert(issues,"required update function/event missing") end',
+		'    end',
+		'    if #issues>0 then warn("BadWars: [PREFLIGHT] "..tostring(meta.name).." @ "..tostring(meta.path)..": "..table.concat(issues,", ")) end',
+		'  end',
+		'end',
 		'local function __run_m(idx,name,fn)',
 		'  local ok,err=pcall(fn)',
 		'  if not ok then',
-		'    warn("BadWars: [MODULE FAIL] "..name..": "..tostring(err))',
+		'    local meta=__m_meta[idx]',
+		'    local label=meta and ((meta.name or "?").." @ "..(meta.path or name)) or name',
+		'    warn("BadWars: [MODULE FAIL] "..label..": "..tostring(err))',
 		'    if shared and shared.__badwars_runtime_errors then',
-		'      table.insert(shared.__badwars_runtime_errors,{module=name,error=tostring(err)})',
+		'      table.insert(shared.__badwars_runtime_errors,{module=label,error=tostring(err)})',
 		'    end',
 		'  end',
 		'  __m_ok[idx]=ok',
@@ -165,6 +229,12 @@ local function buildBundle(name,basePath,manifestPath)
 				setStatus('loading module: '..tostring(mp))
 				local code=downloadFile(mp)
 				if type(code)=='string' and code~='' then
+					local category=code:match('Bad%.Categories%.([%w_]+)%s*:%s*CreateModule%s*%(') or (code:match('Bad%.Legit%s*:%s*CreateModule%s*%(') and 'Legit') or ''
+					local moduleName=code:match("Name%s*=%s*'([^']+)'") or code:match('Name%s*=%s*"([^"]+)"') or mp:match('([^/\\]+)%.lua$') or mp
+					local hasInit=code:find('CreateModule%s*%(',1,false)~=nil
+					local requiresUpdate=code:find('%.Update',1,false)~=nil
+					local hasUpdate=(not requiresUpdate) or code:find('Update%s*=',1,false)~=nil or code:find('BindableEvent',1,true)~=nil
+					table.insert(parts,'\n__preflight_m('..tostring(mi)..','..string.format('%q',mp)..','..string.format('%q',category)..','..string.format('%q',moduleName)..','..tostring(hasInit)..','..tostring(hasUpdate)..')')
 					table.insert(parts,'\n-- module '..tostring(mi)..': '..mp..'\n__run_m('..tostring(mi)..','..string.format('%q',mp)..',function()\n'..code..'\nend)')
 					loaded=loaded+1; mi=mi+1
 				end
@@ -172,7 +242,7 @@ local function buildBundle(name,basePath,manifestPath)
 		end
 	end
 	setStatus('bundled '..tostring(loaded)..' '..tostring(name)..' modules')
-	local summary='\nlocal __ok=0;local __fail=0\nfor _,v in ipairs(__m_ok) do if v then __ok=__ok+1 else __fail=__fail+1 end end\nwarn("BadWars: [BUNDLE] '..tostring(name)..': "..__ok.." ok, "..__fail.." fail")'
+	local summary='\n__postflight_m()\nlocal __ok=0;local __fail=0\nfor _,v in ipairs(__m_ok) do if v then __ok=__ok+1 else __fail=__fail+1 end end\nwarn("BadWars: [BUNDLE] '..tostring(name)..': "..__ok.." ok, "..__fail.." fail")'
 	table.insert(parts,summary)
 	return table.concat(parts,'\n')
 end
@@ -290,6 +360,7 @@ if not guiFn then error('GUI compile: '..tostring(guiErr),0) end
 local ok,api=pcall(guiFn)
 if not ok or type(api)~='table' or type(api.CreateNotification)~='function' then error('GUI returned invalid API',0) end
 shared.Bad=api
+ensureRuntimeCategories(api)
 logMod('GUI',gui,os_clock()-guiStart,true)
 setStatus('GUI loaded')
 

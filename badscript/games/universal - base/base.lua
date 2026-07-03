@@ -93,6 +93,36 @@ local function normalizeSavedOptions()
 	end
 end
 normalizeSavedOptions()
+local function ensureServiceCategory(name)
+	Bad.Categories=type(Bad.Categories)=='table' and Bad.Categories or {}
+	Bad.Categories[name]=type(Bad.Categories[name])=='table' and Bad.Categories[name] or {Type='ServiceCategory',Name=name,Options={},ListEnabled={}}
+	Bad.Categories[name].Options=type(Bad.Categories[name].Options)=='table' and Bad.Categories[name].Options or {}
+	Bad.Categories[name].ListEnabled=type(Bad.Categories[name].ListEnabled)=='table' and Bad.Categories[name].ListEnabled or {}
+	return Bad.Categories[name]
+end
+local function ensureServiceEvent(category,key,path)
+	if type(category[key])~='table' or not category[key].Event or type(category[key].Fire)~='function' then
+		warn('BadWars: [PREFLIGHT] '..tostring(path)..' requires '..tostring(category.Name)..'.'..key..' event; registered no-op BindableEvent fallback')
+		category[key]=Instance.new('BindableEvent')
+		if type(Bad.Clean)=='function' then pcall(function() Bad:Clean(category[key]) end) end
+	end
+end
+local function ensureUniversalServices()
+	if type(Bad)~='table' then error('Bad API missing before universal preflight',0) end
+	local main=ensureServiceCategory('Main')
+	main.Options['Teams by server']=_norm(main.Options['Teams by server'])
+	main.Options['Use team color']=_norm(main.Options['Use team color'])
+	main.Options['GUI bind indicator']=_norm(main.Options['GUI bind indicator'])
+	local friends=ensureServiceCategory('Friends')
+	friends.Options['Use friends']=_norm(friends.Options['Use friends'])
+	friends.Options['Recolor visuals']=_norm(friends.Options['Recolor visuals'])
+	friends.Options['Friends color']=type(friends.Options['Friends color'])=='table' and friends.Options['Friends color'] or {Hue=1,Sat=1,Value=1}
+	ensureServiceEvent(friends,'Update','badscript/games/universal - base/base.lua')
+	ensureServiceEvent(friends,'ColorUpdate','badscript/games/universal - base/base.lua')
+	local targets=ensureServiceCategory('Targets')
+	ensureServiceEvent(targets,'Update','badscript/games/universal - base/base.lua')
+end
+ensureUniversalServices()
 local tween = Bad.Libraries.tween
 local targetinfo = Bad.Libraries.targetinfo
 local getfontsize = Bad.Libraries.getfontsize

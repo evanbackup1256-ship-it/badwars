@@ -124,6 +124,116 @@ cloneref=cloneref or function(o) return o end
 setthreadidentity=setthreadidentity or function() end
 queue_on_teleport=queue_on_teleport or function() end
 
+local BadwarsLoader
+local function createCustomSignal(key, delay)
+	key=tostring(key or 'Unknown')
+	delay=delay or 0
+	return setmetatable({__conns={},__args=true,__delay=delay,__lastFire=nil},{
+		__index=function(self,k)
+			if k=='Event' then return self end
+			if k=='Destroy' then return function()
+				for i in pairs(self.__conns or {}) do self.__conns[i]=nil end
+				self.__conns=nil
+			end end
+			return rawget(self,k)
+		end,
+		__tostring=function() return 'BADWARS_INTERNAL_EVENT_'..key end
+	})
+end
+local signalApi={
+	Connect=function(self,func)
+		if BadwarsLoader and BadwarsLoader.Unloaded then return end
+		assert(type(func)=='function','req not met')
+		local conn={func=func,once=false}
+		table.insert(self.__conns,conn)
+		return {Disconnect=function()
+			local id=table.find(self.__conns,conn)
+			if id then table.remove(self.__conns,id); return true end
+			return false
+		end}
+	end,
+	Once=function(self,func)
+		if BadwarsLoader and BadwarsLoader.Unloaded then return end
+		assert(type(func)=='function','req not met')
+		local conn={func=func,once=true}
+		table.insert(self.__conns,conn)
+		return {Disconnect=function()
+			local id=table.find(self.__conns,conn)
+			if id then table.remove(self.__conns,id); return true end
+			return false
+		end}
+	end,
+	Fire=function(self,...)
+		if BadwarsLoader and BadwarsLoader.Unloaded then return end
+		if type(self.__conns)~='table' then return end
+		local args={...}
+		local bypass=not self.__args and args[1]
+		if not bypass and self.__lastFire and tick()-self.__lastFire<self.__delay then return end
+		self.__lastFire=tick()
+		local remove={}
+		for i,conn in ipairs(self.__conns) do
+			pcall(conn.func,unpack(args))
+			if conn.once then table.insert(remove,i) end
+		end
+		for i=#remove,1,-1 do table.remove(self.__conns,remove[i]) end
+		return self
+	end,
+	SetCooldown=function(self,val) self.__delay=val or 0; return self end,
+	ArgCheck=function(self,val) if val==nil then val=not self.__args end; self.__args=val; return self end
+}
+local function installVoidwareLoaderShim()
+	BadwarsLoader=setmetatable({
+		Unloaded=false,
+		Services=setmetatable({},{
+			__index=function(self,key)
+				key=tostring(key)
+				if key=='InputService' then key='UserInputService' end
+				local ok,svc=pcall(function() return game:GetService(key) end)
+				if not ok then return nil end
+				local okClone,cloned=pcall(cloneref,svc)
+				if okClone then svc=cloned end
+				rawset(self,key,svc)
+				return svc
+			end
+		}),
+		createCustomSignal=function(_,key,delay)
+			local sig=createCustomSignal(key,delay)
+			for k,v in pairs(signalApi) do sig[k]=v end
+			return sig
+		end,
+		setupDecoratedCustomSignal=function(self,id)
+			id=tostring(id)
+			return function(sigName) return self:createCustomSignal(id..'_'..tostring(sigName)) end
+		end,
+		BadwarsEvents=setmetatable({},{
+			__index=function(self,key)
+				local sig=BadwarsLoader:createCustomSignal(key)
+				rawset(self,key,sig)
+				return sig
+			end
+		}),
+		wrap=function(self,func,decorator)
+			if not func then return end
+			if type(func)~='function' then return func end
+			return function(...)
+				local ok,res=pcall(func,...)
+				if not ok then
+					local report={err=res}
+					if type(decorator)=='table' then for k,v in pairs(decorator) do report[k]=v end end
+					self:report(report)
+				end
+				return ok and res
+			end
+		end,
+		report=function(_,report)
+			warn('BadWars: [VOIDWARE UI] '..safeStr(report and (report.name or report.type) or 'Error')..' '..safeStr(report and report.err or ''))
+		end,
+		throw=function(self,err) self:report({name='Badwars Error',err=err}) end
+	},{__index=function(_,key) error('BadwarsLoader: Invalid key '..tostring(key)..'!',0) end})
+	shared.VoidwareLoader=BadwarsLoader
+	shared.BadwarsLoader=BadwarsLoader
+end
+
 local function httpGetMulti(urls)
 	for _,url in ipairs(urls) do
 		local fn=(game and game.HttpGet)
@@ -352,6 +462,7 @@ if not isfolder('badscript/assets/'..gui) then makefolder('badscript/assets/'..g
 
 -- Stage 4: Load GUI
 setStatus('loading GUI')
+installVoidwareLoaderShim()
 local guiStart=os_clock()
 local guiCode=downloadFile('badscript/guis/'..gui..'/gui.lua')
 if type(guiCode)~='string' or guiCode=='' then error('GUI download failed',0) end

@@ -3,7 +3,7 @@ local Targets
 local Part
 local FOV
 local Speed
-local CircleColor
+local CircleColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local CircleTransparency
 local CircleFilled
 local CircleObject

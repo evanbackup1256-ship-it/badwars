@@ -48,7 +48,7 @@ run(function()
 					end
 				end
 				Fly:Clean(runService.PreSimulation:Connect(function(dt)
-					if entitylib.isAlive and not InfiniteFly.Enabled and isnetworkowner(entitylib.character.RootPart) then
+					if entitylib.isAlive and not (InfiniteFly and InfiniteFly.Enabled) and isnetworkowner(entitylib.character.RootPart) then
 						local flyAllowed = (safeGetAttribute(lplr.Character, 'InflatedBalloons') > 0) or (store and store.matchState == 2)
 						local mass = (1.5 + (flyAllowed and 6 or 0) * (tick() % 0.4 < 0.2 and -1 or 1)) + ((up + down) * VerticalValue.Value)
 						local root, moveDirection = entitylib.character.RootPart, entitylib.character.Humanoid.MoveDirection

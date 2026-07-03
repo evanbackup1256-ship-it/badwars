@@ -1,8 +1,8 @@
 local Chams
 local Targets
 local Mode
-local FillColor
-local OutlineColor
+local FillColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
+local OutlineColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local FillTransparency
 local OutlineTransparency
 local Teammates

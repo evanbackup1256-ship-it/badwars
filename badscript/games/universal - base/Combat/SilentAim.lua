@@ -14,7 +14,7 @@ run(function()
 	local AutoFireMode
 	local AutoFirePosition
 	local Wallbang
-	local CircleColor
+	local CircleColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 	local CircleTransparency
 	local CircleFilled
 	local CircleObject

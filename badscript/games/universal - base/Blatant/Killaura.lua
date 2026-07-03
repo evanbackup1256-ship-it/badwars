@@ -7,11 +7,11 @@ local AngleSlider
 local Max
 local Mouse
 local Lunge
-local BoxSwingColor
-local BoxAttackColor
+local BoxSwingColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
+local BoxAttackColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local ParticleTexture
-local ParticleColor1
-local ParticleColor2
+local ParticleColor1 = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
+local ParticleColor2 = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local ParticleSize
 local Face
 local Overlay = OverlapParams.new()

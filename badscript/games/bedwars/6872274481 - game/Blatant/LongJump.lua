@@ -75,7 +75,7 @@ local LongJumpMethods = {
 		end))
 
 		if not bedwars.AbilityController:canUseAbility('CAT_POUNCE') then
-			repeat task.wait() until bedwars.AbilityController:canUseAbility('CAT_POUNCE') or not LongJump.Enabled
+			repeat task.wait() until bedwars.AbilityController:canUseAbility('CAT_POUNCE') or not (LongJump and LongJump.Enabled)
 		end
 
 		if bedwars.AbilityController:canUseAbility('CAT_POUNCE') and LongJump.Enabled then
@@ -90,7 +90,7 @@ local LongJumpMethods = {
 	end,
 	jade_hammer = function(item, _, dir)
 		if not bedwars.AbilityController:canUseAbility(item.itemType..'_jump') then
-			repeat task.wait() until bedwars.AbilityController:canUseAbility(item.itemType..'_jump') or not LongJump.Enabled
+			repeat task.wait() until bedwars.AbilityController:canUseAbility(item.itemType..'_jump') or not (LongJump and LongJump.Enabled)
 		end
 
 		if bedwars.AbilityController:canUseAbility(item.itemType..'_jump') and LongJump.Enabled then
@@ -108,7 +108,7 @@ local LongJumpMethods = {
 	end,
 	wood_dao = function(item, pos, dir)
 		if (lplr.Character:GetAttribute('CanDashNext') or 0) > workspace:GetServerTimeNow() or not bedwars.AbilityController:canUseAbility('dash') then
-			repeat task.wait() until (lplr.Character:GetAttribute('CanDashNext') or 0) < workspace:GetServerTimeNow() and bedwars.AbilityController:canUseAbility('dash') or not LongJump.Enabled
+			repeat task.wait() until (lplr.Character:GetAttribute('CanDashNext') or 0) < workspace:GetServerTimeNow() and bedwars.AbilityController:canUseAbility('dash') or not (LongJump and LongJump.Enabled)
 		end
 
 		if LongJump.Enabled then

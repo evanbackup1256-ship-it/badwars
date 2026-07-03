@@ -10,7 +10,7 @@ Speed = Bad.Categories.Blatant:CreateModule({
 		if callback then
 			if redline[redline.MoveController] and typeof(redline[redline.MoveController][redline.VelocityName]) == 'Vector3' then
 				Speed:Clean(runService.PreSimulation:Connect(function()
-					if not Fly.Enabled and not LongJump.Enabled then
+					if not (Fly and Fly.Enabled) and not (LongJump and LongJump.Enabled) then
 						local dir = (TargetStrafeVector or redline[redline.MoveController]:getMoveDirection()) * Value.Value
 						local oldvel = redline[redline.MoveController][redline.VelocityName]
 

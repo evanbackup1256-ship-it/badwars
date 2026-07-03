@@ -1,7 +1,7 @@
 local Radar
 local Targets
 local DotStyle
-local PlayerColor
+local PlayerColor = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Clamp
 local Reference = {}
 local bkg

@@ -19,9 +19,9 @@ local methodused
 
 local Added = {
 	Normal = function(ent)
-		if not Targets.Players.Enabled and ent.Player then return end
-		if not Targets.NPCs.Enabled and ent.NPC then return end
-		if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
+		if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+		if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+		if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
 
 		local nametag = Instance.new('TextLabel')
 		Strings[ent] = ent.Player and whitelist:tag(ent.Player, true, true)..(DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or ent.Character.Name
@@ -65,9 +65,9 @@ local Added = {
 		Reference[ent] = nametag
 	end,
 	Drawing = function(ent)
-		if not Targets.Players.Enabled and ent.Player then return end
-		if not Targets.NPCs.Enabled and ent.NPC then return end
-		if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
+		if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+		if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+		if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
 
 		local nametag = {}
 		nametag.BG = Drawing.new('Square')

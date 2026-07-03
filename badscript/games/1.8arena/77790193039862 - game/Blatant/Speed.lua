@@ -7,7 +7,7 @@ Speed = Bad.Categories.Blatant:CreateModule({
     Function = function(callback)
         if callback then
             Speed:Clean(runService.PreSimulation:Connect(function()
-				if not Fly.Enabled and not LongJump.Enabled then
+				if not (Fly and Fly.Enabled) and not (LongJump and LongJump.Enabled) then
 					local movedir = calculateMoveVector() * Value.Value
 					local onground = debug.getupvalue(arena.MoveFunction, 4)
 					local velocity = debug.getupvalue(arena.TickFunction, 6)

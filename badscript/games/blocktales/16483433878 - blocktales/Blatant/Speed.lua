@@ -6,7 +6,7 @@ Speed = Bad.Categories.Blatant:CreateModule({
 	Function = function(callback)
 		if callback then
 			Speed:Clean(runService.PreSimulation:Connect(function(dt)
-				if entitylib.isAlive and not Fly.Enabled and not LongJump.Enabled then
+				if entitylib.isAlive and not (Fly and Fly.Enabled) and not (LongJump and LongJump.Enabled) then
 					local root = entitylib.character.RootPart
 					local state = entitylib.character.Humanoid:GetState()
 					if state == Enum.HumanoidStateType.Climbing or bt.Variables.transitioning then return end

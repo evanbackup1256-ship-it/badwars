@@ -20,7 +20,7 @@ Reach = Bad.Categories.Combat:CreateModule({
 						for _, v in entitylib.List do
 							if v.Targetable then
 								if Targets and Targets.Players and not Targets.Players.Enabled and v.Player then continue end
-								if not Targets.NPCs.Enabled and v.NPC then continue end
+								if Targets and Targets.NPCs and not Targets.NPCs.Enabled and v.NPC then continue end
 								table.insert(entites, v.Character)
 							end
 						end

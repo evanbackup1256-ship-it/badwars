@@ -17,13 +17,6 @@ import { buildLoader } from "@/lib/loader";
 import { changelog, features, games, navItems, releases } from "@/lib/site-data";
 import { formatRelativeTime } from "@/lib/utils";
 
-const repo = {
-  owner: "evanbackup1256-ship-it",
-  name: "badwars",
-  branch: "main",
-  loaderPath: "badscript/loader.lua"
-};
-
 type RobloxStatus = {
   ok: boolean;
   changed: boolean;
@@ -31,6 +24,13 @@ type RobloxStatus = {
   channel?: string;
   warning?: string;
   lastCheckedAt?: string;
+};
+
+type GitHubCommitInfo = {
+  sha: string;
+  shortSha: string;
+  message: string;
+  fallback: boolean;
 };
 
 function buildPageLoader(ref?: string) {
@@ -45,17 +45,29 @@ async function fetchRobloxStatus(): Promise<RobloxStatus> {
 }
 
 async function fetchLatestCommit() {
-  const response = await fetch(`https://api.github.com/repos/${repo.owner}/${repo.name}/commits/${repo.branch}`, {
-    headers: { Accept: "application/vnd.github+json" }
-  });
+  const response = await fetch("/api/github/latest", { cache: "no-store" });
   if (!response.ok) throw new Error("GitHub sync unavailable");
-  return response.json() as Promise<{ sha: string; commit?: { message?: string } }>;
+  return response.json() as Promise<GitHubCommitInfo>;
 }
 
-function copyLoader(loader: string) {
+function copyLoader(loader: string, description = "Paste it once and read the status label.") {
   navigator.clipboard?.writeText(loader)
-    .then(() => toast.success("Loader copied", { description: "Paste it once and read the status label." }))
+    .then(() => toast.success("Loader copied", { description }))
     .catch(() => toast.warning("Clipboard blocked", { description: "Select the loader text manually from the download center." }));
+}
+
+async function fetchLatestLoader() {
+  const response = await fetch("/api/download/latest", { cache: "no-store" });
+  if (!response.ok) throw new Error("Loader sync failed");
+  return response.text();
+}
+
+async function copyLatestLoader() {
+  try {
+    copyLoader(await fetchLatestLoader(), "Synced from the latest GitHub commit.");
+  } catch {
+    copyLoader(buildPageLoader(), "GitHub sync fallback was copied.");
+  }
 }
 
 export function SiteNav() {
@@ -78,7 +90,7 @@ export function SiteNav() {
             <Moon className="hidden h-4 w-4 dark:block" />
           </Button>
           <Button asChild className="hidden md:inline-flex" variant="outline"><Link href="/dashboard"><LogIn className="h-4 w-4" /> Account</Link></Button>
-          <Button onClick={() => copyLoader(buildPageLoader())}><Copy className="h-4 w-4" /> Copy</Button>
+          <Button onClick={() => void copyLatestLoader()}><Copy className="h-4 w-4" /> Copy</Button>
           <Button aria-label="Open menu" className="lg:hidden" size="icon" variant="ghost" onClick={() => setOpen((value) => !value)}>{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</Button>
         </div>
       </div>
@@ -95,7 +107,7 @@ export function SiteNav() {
 export function LandingPage() {
   const status = useQuery({ queryKey: ["roblox-status"], queryFn: fetchRobloxStatus, refetchInterval: 120_000 });
   const commit = useQuery({ queryKey: ["latest-commit"], queryFn: fetchLatestCommit, retry: 1 });
-  const loader = buildPageLoader(commit.data?.sha || repo.branch);
+  const loader = buildPageLoader(commit.data?.sha);
 
   return (
     <>
@@ -109,11 +121,11 @@ export function LandingPage() {
               <p className="max-w-2xl text-lg text-muted-foreground">A dark-first interface for copying the current loader, checking Roblox risk, searching supported games, and reading exactly what the runtime is doing.</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => copyLoader(loader)}><Copy className="h-5 w-5" /> Copy Latest Loader</Button>
+              <Button size="lg" onClick={() => copyLoader(loader, commit.data?.fallback ? "GitHub sync fallback was copied." : "Synced from the latest GitHub commit.")}><Copy className="h-5 w-5" /> Copy Latest Loader</Button>
               <Button asChild size="lg" variant="outline"><Link href="/downloads"><Download className="h-5 w-5" /> Open Download Center</Link></Button>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Stat label="GitHub Sync" value={commit.data?.sha?.slice(0, 7) || (commit.isLoading ? "syncing" : "main")} detail={commit.data?.commit?.message?.split("\n")[0] || "latest loader source"} />
+              <Stat label="GitHub Sync" value={commit.data?.shortSha || (commit.isLoading ? "syncing" : "fallback")} detail={commit.data?.message || "latest loader source"} />
               <Stat label="Roblox Watch" value={status.data?.changed ? "warning" : status.data?.ok ? "steady" : "checking"} detail={status.data?.version || "Railway status"} />
               <Stat label="Runtime" value="keyless" detail="copy, paste, read status" />
             </div>
@@ -262,7 +274,7 @@ function GameCard({ game }: { game: (typeof games)[number] }) {
           <Badge variant={game.status === "testing" ? "warning" : "success"}>{game.status}</Badge>
           <h3 className="mt-3 font-display text-2xl font-black">{game.name}</h3>
         </div>
-        <Button size="sm" onClick={() => copyLoader(buildPageLoader())}><Copy className="h-4 w-4" /> Copy</Button>
+        <Button size="sm" onClick={() => void copyLatestLoader()}><Copy className="h-4 w-4" /> Copy</Button>
       </div>
       <p className="mt-3 text-sm text-muted-foreground">{game.description}</p>
       <div className="mt-5 flex flex-wrap gap-2">

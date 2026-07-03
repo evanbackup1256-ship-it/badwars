@@ -43,8 +43,12 @@ type HealthStatus = {
   checkedAt: string;
 };
 
-function currentLoaderText() {
-  return buildLoader(typeof window === "undefined" ? "https://badwars-production.up.railway.app" : window.location.origin);
+async function currentLoaderText() {
+  const response = await fetch("/api/download/latest", { cache: "no-store" });
+  if (!response.ok) {
+    return buildLoader(typeof window === "undefined" ? "https://badwars-production.up.railway.app" : window.location.origin);
+  }
+  return response.text();
 }
 
 function downloadLatestLoader() {
@@ -150,7 +154,7 @@ export function DashboardPage() {
   };
 
   const copyDashboardLoader = async () => {
-    await navigator.clipboard?.writeText(currentLoaderText());
+    await navigator.clipboard?.writeText(await currentLoaderText());
     addNotification("Loader copied", "The production loader was copied from the dashboard.", "success");
   };
 

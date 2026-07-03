@@ -351,7 +351,7 @@ local function finishLoading()
 				teleportScript = 'shared.BadDeveloper = true\n'..teleportScript
 			end
 			if shared.BadCustomProfile then
-				teleportScript = 'shared.BadCustomProfile = "'..shared.BadCustomProfile..'"\n'..teleportScript
+				teleportScript = 'shared.BadCustomProfile = "'..tostring(shared.BadCustomProfile)..'"\n'..teleportScript
 			end
 			Bad:Save()
 			queue_on_teleport(teleportScript)

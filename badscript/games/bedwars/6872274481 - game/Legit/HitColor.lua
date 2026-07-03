@@ -1,5 +1,5 @@
 local HitColor
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local done = {}
 
 HitColor = Bad.Legit:CreateModule({

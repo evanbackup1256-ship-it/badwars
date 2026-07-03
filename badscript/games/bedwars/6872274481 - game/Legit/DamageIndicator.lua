@@ -1,6 +1,6 @@
 local DamageIndicator
 local FontOption
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Size
 local Anchor
 local Stroke

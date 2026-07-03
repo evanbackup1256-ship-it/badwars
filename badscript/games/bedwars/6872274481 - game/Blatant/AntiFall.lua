@@ -47,7 +47,7 @@ run(function()
 									local lastTeleport = lplr:GetAttribute('LastTeleported')
 									local connection
 									connection = runService.PreSimulation:Connect(function()
-										if Bad.Modules.Fly.Enabled or Bad.Modules.InfiniteFly.Enabled or Bad.Modules.LongJump.Enabled then
+										if (Bad.Modules.Fly and Bad.Modules.Fly.Enabled) or (Bad.Modules.InfiniteFly and Bad.Modules.InfiniteFly.Enabled) or (Bad.Modules.LongJump and Bad.Modules.LongJump.Enabled) then
 											connection:Disconnect()
 											AntiFallDirection = nil
 											return

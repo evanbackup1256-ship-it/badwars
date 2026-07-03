@@ -1,5 +1,5 @@
 local GamingChair = {Enabled = false}
-local Color
+local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local wheelpositions = {
 	Vector3.new(-0.8, -0.6, -0.18),
 	Vector3.new(0.1, -0.6, -0.88),

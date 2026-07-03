@@ -91,8 +91,10 @@ end
 
 -- Override for runtime errors
 mainapi.CreateRuntimeError = function(title, text, stack)
-	AddLog('Error', (title or 'Runtime Error') .. ': ' .. (text or ''), stack)
-	mainapi:CreateNotification(title or 'Runtime Error', text or '', 8, 'runtime', stack)
+	local safeTitle = type(title) == 'string' and title or tostring(title or 'Runtime Error')
+	local safeText = type(text) == 'string' and text or (text and tostring(text)) or ''
+	AddLog('Error', safeTitle .. ': ' .. safeText, stack)
+	mainapi:CreateNotification(safeTitle, safeText, 8, 'runtime', stack)
 end
 
 -- Safe wrapper for module execution (now uses compile diagnostics when possible)
@@ -3997,7 +3999,9 @@ function mainapi:CreateNotification(title, text, duration, type, stack)
 		local isCompile = (type == 'compile')
 		local isError = (type == 'alert' or type == 'runtime' or type == 'error' or isCompile)
 		local container = isError and errorNotificationContainer or notifications
-		local key = title .. '|' .. (text or ''):sub(1, 80)
+		local safeTitle = type(title) == 'string' and title or tostring(title)
+		local safeText = type(text) == 'string' and text or (text and tostring(text)) or ''
+		local key = safeTitle .. '|' .. safeText:sub(1, 80)
 		-- Group duplicate errors
 		local existing = container:FindFirstChild(key)
 		if existing then
@@ -4011,8 +4015,8 @@ function mainapi:CreateNotification(title, text, duration, type, stack)
 
 		-- Rich data if stack is our compile log entry
 		local rich = (type == 'compile' or type == 'runtime') and typeof(stack) == 'table' and stack or nil
-		local displayTitle = title or (isCompile and 'Compile Error' or 'Error')
-		local displayMsg = text or ''
+		local displayTitle = safeTitle or (isCompile and 'Compile Error' or 'Error')
+		local displayMsg = safeText
 		local scriptBadge = rich and rich.script or nil
 		local lineNum = rich and rich.line or nil
 

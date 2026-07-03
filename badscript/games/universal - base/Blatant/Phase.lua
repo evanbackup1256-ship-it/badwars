@@ -30,24 +30,22 @@ local Functions = {
 
 		local parts = workspace:GetPartBoundsInBox(entitylib.character.RootPart.CFrame + Vector3.new(0, 1, 0), entitylib.character.RootPart.Size + Vector3.new(7, entitylib.character.HipHeight, 7), overlapCheck)
 		for _, part in parts do
-			if part.CanCollide and (not Spider.Enabled or SpiderShift) then
+		if part.CanCollide and (not (Spider and Spider.Enabled) or SpiderShift) then
 				modified[part] = true
 				part.CanCollide = false
 			end
 		end
 
-		for part in modified do
-			if not table.find(parts, part) then
-				modified[part] = nil
-				part.CanCollide = true
+		for _, part in parts do
+			if part:IsA('BasePart') and part.CanCollide and (not (Spider and Spider.Enabled) or SpiderShift) then
+				modified[part] = true
+				part.CanCollide = false
 			end
 		end
-	end,
-	Character = function()
-		for _, part in lplr.Character:GetDescendants() do
-			if part:IsA('BasePart') and part.CanCollide and (not Spider.Enabled or SpiderShift) then
-				modified[part] = true
-				part.CanCollide = Spider.Enabled and not SpiderShift
+
+		return function()
+			for part in modified do
+				part.CanCollide = (Spider and Spider.Enabled) and not SpiderShift
 			end
 		end
 	end,
@@ -60,7 +58,7 @@ local Functions = {
 		overlapCheck.FilterDescendantsInstances = chars
 
 		local ray = workspace:Raycast(entitylib.character.Head.CFrame.Position, entitylib.character.Humanoid.MoveDirection * 1.1, rayCheck)
-		if ray and (not Spider.Enabled or SpiderShift) then
+		if ray and (not (Spider and Spider.Enabled) or SpiderShift) then
 			local phaseDirection = grabClosestNormal(ray)
 			if ray.Instance.Size[phaseDirection] <= StudLimit.Value then
 				local root = entitylib.character.RootPart

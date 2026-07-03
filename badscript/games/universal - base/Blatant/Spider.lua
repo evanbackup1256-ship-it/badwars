@@ -34,7 +34,7 @@ Spider = Bad.Categories.Blatant:CreateModule({
 
 						Active = ray
 						if Active and ray.Normal.Y == 0 then
-							if not Phase.Enabled or not SpiderShift then
+							if not (Phase and Phase.Enabled) or not SpiderShift then
 								if State.Enabled then
 									entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Climbing)
 								end
@@ -51,7 +51,7 @@ Spider = Bad.Categories.Blatant:CreateModule({
 						end
 					else
 						local ray = workspace:Raycast(root.Position - Vector3.new(0, entitylib.character.HipHeight - 0.5, 0), entitylib.character.RootPart.CFrame.LookVector * 2, rayCheck)
-						if ray and (not Phase.Enabled or not SpiderShift) then
+						if ray and (not (Phase and Phase.Enabled) or not SpiderShift) then
 							Truss.Position = ray.Position - ray.Normal * 0.9 or Vector3.zero
 						else
 							Truss.Position = Vector3.zero

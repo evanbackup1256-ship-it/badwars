@@ -96,6 +96,8 @@ normalizeSavedOptions()
 local function ensureServiceCategory(name)
 	Bad.Categories=type(Bad.Categories)=='table' and Bad.Categories or {}
 	Bad.Categories[name]=type(Bad.Categories[name])=='table' and Bad.Categories[name] or {Type='ServiceCategory',Name=name,Options={},ListEnabled={}}
+	Bad.Categories[name].Type=Bad.Categories[name].Type or 'ServiceCategory'
+	Bad.Categories[name].Name=Bad.Categories[name].Name or name
 	Bad.Categories[name].Options=type(Bad.Categories[name].Options)=='table' and Bad.Categories[name].Options or {}
 	Bad.Categories[name].ListEnabled=type(Bad.Categories[name].ListEnabled)=='table' and Bad.Categories[name].ListEnabled or {}
 	return Bad.Categories[name]

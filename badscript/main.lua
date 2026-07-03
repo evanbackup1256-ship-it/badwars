@@ -70,12 +70,16 @@ local function ensureRuntimeCategories(api)
 		end
 	end
 	api.Categories.Main=type(api.Categories.Main)=='table' and api.Categories.Main or {Type='ServiceCategory',Name='Main',Options={}}
+	api.Categories.Main.Type=api.Categories.Main.Type or 'ServiceCategory'
+	api.Categories.Main.Name=api.Categories.Main.Name or 'Main'
 	api.Categories.Main.Options=type(api.Categories.Main.Options)=='table' and api.Categories.Main.Options or {}
 	api.Categories.Main.Options['GUI bind indicator']=normalize(api.Categories.Main.Options['GUI bind indicator'])
 	api.Categories.Main.Options['Teams by server']=normalize(api.Categories.Main.Options['Teams by server'])
 	api.Categories.Main.Options['Use team color']=normalize(api.Categories.Main.Options['Use team color'])
 
 	api.Categories.Friends=type(api.Categories.Friends)=='table' and api.Categories.Friends or {Type='ServiceCategory',Name='Friends',Options={},ListEnabled={}}
+	api.Categories.Friends.Type=api.Categories.Friends.Type or 'ServiceCategory'
+	api.Categories.Friends.Name=api.Categories.Friends.Name or 'Friends'
 	api.Categories.Friends.Options=type(api.Categories.Friends.Options)=='table' and api.Categories.Friends.Options or {}
 	api.Categories.Friends.ListEnabled=type(api.Categories.Friends.ListEnabled)=='table' and api.Categories.Friends.ListEnabled or {}
 	api.Categories.Friends.Options['Use friends']=normalize(api.Categories.Friends.Options['Use friends'])
@@ -85,6 +89,8 @@ local function ensureRuntimeCategories(api)
 	ensureEvent(api.Categories.Friends,'ColorUpdate')
 
 	api.Categories.Targets=type(api.Categories.Targets)=='table' and api.Categories.Targets or {Type='ServiceCategory',Name='Targets',Options={},ListEnabled={}}
+	api.Categories.Targets.Type=api.Categories.Targets.Type or 'ServiceCategory'
+	api.Categories.Targets.Name=api.Categories.Targets.Name or 'Targets'
 	api.Categories.Targets.Options=type(api.Categories.Targets.Options)=='table' and api.Categories.Targets.Options or {}
 	api.Categories.Targets.ListEnabled=type(api.Categories.Targets.ListEnabled)=='table' and api.Categories.Targets.ListEnabled or {}
 	ensureEvent(api.Categories.Targets,'Update')
@@ -289,13 +295,14 @@ local function buildBundle(name,basePath,manifestPath)
 		'local __m_ok={}',
 		'local __m_meta={}',
 		'local __m_path_by_name={}',
-		'local function __preflight_m(idx,path,category,moduleName,hasInit,hasUpdate)',
+		'local function __preflight_m(idx,path,kind,category,moduleName,hasInit,hasUpdate)',
 		'  local issues={}',
-		'  if type(category)~="string" or category=="" then table.insert(issues,"category missing") end',
+		'  kind=type(kind)=="string" and kind or "Module"',
+		'  if kind~="Overlay" and (type(category)~="string" or category=="") then table.insert(issues,"category missing") end',
 		'  if type(moduleName)~="string" or moduleName=="" then table.insert(issues,"name missing") end',
 		'  if hasInit==nil then table.insert(issues,"enabled/init state unknown") end',
 		'  if hasUpdate==nil then table.insert(issues,"update contract unknown") end',
-		'  __m_meta[idx]={path=path,category=category,name=moduleName,hasInit=hasInit,hasUpdate=hasUpdate,issues=issues}',
+		'  __m_meta[idx]={path=path,kind=kind,category=category,name=moduleName,hasInit=hasInit,hasUpdate=hasUpdate,issues=issues}',
 		'  __m_path_by_name[moduleName]=path',
 		'  if #issues>0 then warn("BadWars: [PREFLIGHT] "..path.." ("..tostring(moduleName).."): "..table.concat(issues,", ")) end',
 		'end',
@@ -303,14 +310,30 @@ local function buildBundle(name,basePath,manifestPath)
 		'  local bad=shared and shared.Bad',
 		'  if type(bad)~="table" then warn("BadWars: [PREFLIGHT] Bad API missing after universal module registration"); return end',
 		'  for _,meta in pairs(__m_meta) do',
-		'    local mod=(bad.Modules and bad.Modules[meta.name]) or (bad.Legit and bad.Legit.Modules and bad.Legit.Modules[meta.name])',
+		'    local mod',
+		'    if meta.kind=="Overlay" then',
+		'      mod=bad.Overlays and bad.Overlays[meta.name]',
+		'    elseif meta.kind=="Legit" then',
+		'      mod=bad.Legit and bad.Legit.Modules and bad.Legit.Modules[meta.name]',
+		'    else',
+		'      mod=bad.Modules and bad.Modules[meta.name]',
+		'    end',
 		'    local issues={}',
 		'    if not mod then table.insert(issues,"module not registered")',
 		'    else',
-		'      if type(mod.Category)~="string" or mod.Category=="" then table.insert(issues,"category missing") end',
-		'      if type(mod.Name)~="string" or mod.Name=="" then table.insert(issues,"name missing") end',
-		'      if type(mod.Enabled)~="boolean" then table.insert(issues,"enabled state invalid") end',
-		'      if type(mod.Toggle)~="function" then table.insert(issues,"init/toggle function missing") end',
+		'      if meta.kind~="Overlay" and (type(mod.Category)~="string" or mod.Category=="") then table.insert(issues,"category missing") end',
+		'      local regName=meta.kind=="Overlay" and (mod.Name or meta.name) or mod.Name',
+		'      if type(regName)~="string" or regName=="" then table.insert(issues,"name missing") end',
+		'      local enabled,toggle',
+		'      if meta.kind=="Overlay" then',
+		'        enabled=mod.Button and mod.Button.Enabled',
+		'        toggle=mod.Button and mod.Button.Toggle',
+		'      else',
+		'        enabled=mod.Enabled',
+		'        toggle=mod.Toggle',
+		'      end',
+		'      if type(enabled)~="boolean" then table.insert(issues,"enabled state invalid") end',
+		'      if type(toggle)~="function" then table.insert(issues,"init/toggle function missing") end',
 		'      if type(mod.Options)~="table" then table.insert(issues,"config/options invalid") end',
 		'      if meta.hasUpdate==false then table.insert(issues,"required update function/event missing") end',
 		'    end',
@@ -339,12 +362,15 @@ local function buildBundle(name,basePath,manifestPath)
 				setStatus('loading module: '..tostring(mp))
 				local code=downloadFile(mp)
 				if type(code)=='string' and code~='' then
-					local category=code:match('Bad%.Categories%.([%w_]+)%s*:%s*CreateModule%s*%(') or (code:match('Bad%.Legit%s*:%s*CreateModule%s*%(') and 'Legit') or ''
+					local isOverlay=code:find('Bad%s*:%s*CreateOverlay%s*%(',1,false)~=nil
+					local isLegit=code:find('Bad%.Legit%s*:%s*CreateModule%s*%(',1,false)~=nil
+					local kind=isOverlay and 'Overlay' or (isLegit and 'Legit' or 'Module')
+					local category=isOverlay and 'Overlays' or code:match('Bad%.Categories%.([%w_]+)%s*:%s*CreateModule%s*%(') or (isLegit and 'Legit') or ''
 					local moduleName=code:match("Name%s*=%s*'([^']+)'") or code:match('Name%s*=%s*"([^"]+)"') or mp:match('([^/\\]+)%.lua$') or mp
-					local hasInit=code:find('CreateModule%s*%(',1,false)~=nil
+					local hasInit=code:find('CreateModule%s*%(',1,false)~=nil or isOverlay
 					local requiresUpdate=code:find('%.Update',1,false)~=nil
 					local hasUpdate=(not requiresUpdate) or code:find('Update%s*=',1,false)~=nil or code:find('BindableEvent',1,true)~=nil
-					table.insert(parts,'\n__preflight_m('..tostring(mi)..','..string.format('%q',mp)..','..string.format('%q',category)..','..string.format('%q',moduleName)..','..tostring(hasInit)..','..tostring(hasUpdate)..')')
+					table.insert(parts,'\n__preflight_m('..tostring(mi)..','..string.format('%q',mp)..','..string.format('%q',kind)..','..string.format('%q',category)..','..string.format('%q',moduleName)..','..tostring(hasInit)..','..tostring(hasUpdate)..')')
 					table.insert(parts,'\n-- module '..tostring(mi)..': '..mp..'\n__run_m('..tostring(mi)..','..string.format('%q',mp)..',function()\n'..code..'\nend)')
 					loaded=loaded+1; mi=mi+1
 				end

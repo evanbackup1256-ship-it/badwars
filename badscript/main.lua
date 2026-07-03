@@ -65,7 +65,7 @@ local function ensureRuntimeCategories(api)
 	local function ensureEvent(owner,key)
 		if type(owner[key])~='table' or not owner[key].Event or type(owner[key].Fire)~='function' then
 			owner[key]=Instance.new('BindableEvent')
-			warn('BadWars: [PREFLIGHT] registered missing '..tostring(owner.Name or 'service')..'.'..key..' event')
+			if shared.BadwarsLoadingDebug then warn('BadWars: [PREFLIGHT] registered missing '..tostring(owner.Name or 'service')..'.'..key..' event') end
 			if type(api.Clean)=='function' then pcall(function() api:Clean(owner[key]) end) end
 		end
 	end
@@ -187,7 +187,7 @@ local signalApi={
 	SetCooldown=function(self,val) self.__delay=val or 0; return self end,
 	ArgCheck=function(self,val) if val==nil then val=not self.__args end; self.__args=val; return self end
 }
-local function installVoidwareLoaderShim()
+local function installBadWarsLoaderShim()
 	BadwarsLoader=setmetatable({
 		Unloaded=false,
 		Services=setmetatable({},{
@@ -232,11 +232,11 @@ local function installVoidwareLoaderShim()
 			end
 		end,
 		report=function(_,report)
-			warn('BadWars: [VOIDWARE UI] '..safeStr(report and (report.name or report.type) or 'Error')..' '..safeStr(report and report.err or ''))
+			warn('BadWars: [UI] '..safeStr(report and (report.name or report.type) or 'Error')..' '..safeStr(report and report.err or ''))
 		end,
 		throw=function(self,err) self:report({name='Badwars Error',err=err}) end
 	},{__index=function(_,key) error('BadwarsLoader: Invalid key '..tostring(key)..'!',0) end})
-	shared.VoidwareLoader=BadwarsLoader
+	shared.BadWarsLoader=BadwarsLoader
 	shared.BadwarsLoader=BadwarsLoader
 end
 
@@ -362,14 +362,14 @@ local function buildBundle(name,basePath,manifestPath)
 				setStatus('loading module: '..tostring(mp))
 				local code=downloadFile(mp)
 				if type(code)=='string' and code~='' then
-					local isOverlay=code:find('Bad%s*:%s*CreateOverlay%s*%(',1,false)~=nil
-					local isLegit=code:find('Bad%.Legit%s*:%s*CreateModule%s*%(',1,false)~=nil
+					local isOverlay=code:match('Bad%s*:%s*CreateOverlay%s*%(')~=nil
+					local isLegit=code:match('Bad%.Legit%s*:%s*CreateModule%s*%(')~=nil
 					local kind=isOverlay and 'Overlay' or (isLegit and 'Legit' or 'Module')
 					local category=isOverlay and 'Overlays' or code:match('Bad%.Categories%.([%w_]+)%s*:%s*CreateModule%s*%(') or (isLegit and 'Legit') or ''
 					local moduleName=code:match("Name%s*=%s*'([^']+)'") or code:match('Name%s*=%s*"([^"]+)"') or mp:match('([^/\\]+)%.lua$') or mp
-					local hasInit=code:find('CreateModule%s*%(',1,false)~=nil or isOverlay
-					local requiresUpdate=code:find('%.Update',1,false)~=nil
-					local hasUpdate=(not requiresUpdate) or code:find('Update%s*=',1,false)~=nil or code:find('BindableEvent',1,true)~=nil
+					local hasInit=code:match('CreateModule%s*%(')~=nil or isOverlay
+					local requiresUpdate=code:match('%.Update')~=nil
+					local hasUpdate=(not requiresUpdate) or code:match('Update%s*=')~=nil or code:find('BindableEvent',1,true)~=nil
 					table.insert(parts,'\n__preflight_m('..tostring(mi)..','..string.format('%q',mp)..','..string.format('%q',kind)..','..string.format('%q',category)..','..string.format('%q',moduleName)..','..tostring(hasInit)..','..tostring(hasUpdate)..')')
 					table.insert(parts,'\n-- module '..tostring(mi)..': '..mp..'\n__run_m('..tostring(mi)..','..string.format('%q',mp)..',function()\n'..code..'\nend)')
 					loaded=loaded+1; mi=mi+1
@@ -488,7 +488,7 @@ if not isfolder('badscript/assets/'..gui) then makefolder('badscript/assets/'..g
 
 -- Stage 4: Load GUI
 setStatus('loading GUI')
-installVoidwareLoaderShim()
+installBadWarsLoaderShim()
 local guiStart=os_clock()
 local guiCode=downloadFile('badscript/guis/'..gui..'/gui.lua')
 if type(guiCode)~='string' or guiCode=='' then error('GUI download failed',0) end

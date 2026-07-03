@@ -1,5 +1,5 @@
-local a=shared.VoidwareLoader
-assert(a~=nil and type(a)=="table","[GuiLibrary]: VoidwareLoader is invalid :c")
+local a=shared.BadWarsLoader
+assert(a~=nil and type(a)=="table","[BadWars GUI]: BadWarsLoader is invalid :c")
 local b=a:setupDecoratedCustomSignal"GUILIBRARY_INTERNAL"
 local c=function(c)
 return b(`TOGGLE_CUSTOM_SIGNAL_{tostring(c)}`)
@@ -893,7 +893,7 @@ return H
 end)
 if not H then
 pcall(function()
-d:CreateNotification("Vape | Icons","Failure loading custom icons :c",5,"alert")
+d:CreateNotification("BadWars | Icons","Failure loading custom icons :c",5,"alert")
 end)
 warn(`[Icons Failure]: {tostring(G)}`)
 end
@@ -3351,7 +3351,7 @@ end)
 U.Activated:Connect(function()
 if not table.find(ad.List,T.Text)then
 if T.Text==""or T.Text=="Invalid Entry!"then
-d:CreateNotification("Vape","You need to specify a value!",3)
+d:CreateNotification("BadWars","You need to specify a value!",3)
 flickerTextEffect(T,true,"Invalid Entry!")
 task.delay(0.5,function()
 flickerTextEffect(T,true,"")
@@ -3983,7 +3983,7 @@ ao.Name="Version"
 ao.Size=UDim2.new(1,0,0,16)
 ao.Position=UDim2.new(0,0,1,-16)
 ao.BackgroundTransparency=1
-ao.Text="Vape "
+ao.Text="BadWars "
 ..d.Version
 .." "
 ..(D"badscript/profiles/commit.txt"and readfile"badscript/profiles/commit.txt":sub(1,6)or"")
@@ -5062,33 +5062,8 @@ ak.Visible=false
 end)
 aj.Activated:Connect(function()
 task.spawn(function()
-local ar=l:JSONEncode{
-nonce=l:GenerateGUID(false),
-args={
-invite={code="voidware"},
-code="voidware",
-},
-cmd="INVITE_BROWSER",
-}
-
-for as=1,14 do
-task.spawn(function()
-request{
-Method="POST",
-Url="http://127.0.0.1:64"..(53+as).."/rpc?v=1",
-Headers={
-["Content-Type"]="application/json",
-Origin="https://discord.com",
-},
-Body=ar,
-}
-end)
-end
-end)
-
-task.spawn(function()
 z.Text="Copied!"
-setclipboard"https://discord.gg/voidware"
+setclipboard"BadWars support"
 end)
 end)
 ah.MouseEnter:Connect(function()
@@ -5737,7 +5712,7 @@ local N=at.Visible
 if N then
 if count(ao.Options)<=0 then
 d:CreateNotification(
-"Vape",
+"BadWars",
 `<font color="#ff8080"><b>⚠ No options found</b></font> for <font color="#7db8ff"><b>{tostring(
 an.Name
 )}</b></font> :c`,
@@ -6674,7 +6649,7 @@ if not(aa and ab~=nil and type(ab)=="table")then
 return F(
 function()
 return game:GetService"HttpService"
-:JSONDecode(readfile(`voidware_translations/LanguageFlags.json`))
+:JSONDecode(readfile(`badwars_translations/LanguageFlags.json`))
 end,
 10,
 function(ac,ad)
@@ -6687,11 +6662,11 @@ end
 )
 else
 F(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
 writefile(
-`voidware_translations/LanguageFlags.json`,
+`badwars_translations/LanguageFlags.json`,
 game:GetService"HttpService":JSONEncode(ab)
 )
 end,5)
@@ -6705,7 +6680,7 @@ d.LanguageFlags=aa
 local ab=shared.TargetLanguage and tostring(shared.TargetLanguage)
 or F(
 function()
-return readfile"voidware_translations/lang.txt"
+return readfile"badwars_translations/lang.txt"
 end,
 10,
 function(ab,ac)
@@ -6713,10 +6688,10 @@ if ab then
 return ac
 else
 pcall(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
-writefile("voidware_translations/lang.txt","en")
+writefile("badwars_translations/lang.txt","en")
 end)
 return"en"
 end
@@ -6756,7 +6731,7 @@ if not(ac and ad~=nil and type(ad)=="table")then
 return F(
 function()
 return game:GetService"HttpService"
-:JSONDecode(readfile(`voidware_translations/Languages.json`))
+:JSONDecode(readfile(`badwars_translations/Languages.json`))
 end,
 10,
 function(ae,af)
@@ -6769,11 +6744,11 @@ end
 )
 else
 F(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
 writefile(
-`voidware_translations/Languages.json`,
+`badwars_translations/Languages.json`,
 game:GetService"HttpService":JSONEncode(ad)
 )
 end,5)
@@ -6791,10 +6766,10 @@ return{}
 end
 if
 tostring(shared.environment)=="translator_env"
-and isfolder"voidware_translations"
-and D(`voidware_translations/{ab}.json`)
+and isfolder"badwars_translations"
+and D(`badwars_translations/{ab}.json`)
 then
-return decode(readfile(`voidware_translations/{ab}.json`))
+return decode(readfile(`badwars_translations/{ab}.json`))
 end
 return decode(
 d.http_function(
@@ -6809,7 +6784,7 @@ if not(ac and ad~=nil and type(ad)=="table")then
 return F(
 function()
 return game:GetService"HttpService"
-:JSONDecode(readfile(`voidware_translations/{ab}.json`))
+:JSONDecode(readfile(`badwars_translations/{ab}.json`))
 end,
 10,
 function(ae,af)
@@ -6822,10 +6797,10 @@ end
 )
 else
 F(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
-writefile(`voidware_translations/{ab}.json`,game:GetService"HttpService":JSONEncode(ad))
+writefile(`badwars_translations/{ab}.json`,game:GetService"HttpService":JSONEncode(ad))
 end,5)
 shared[`TRANSLATION_API_LANGUAGE_CACHE_{tostring(ab)}`]=ad
 return ad
@@ -7560,7 +7535,7 @@ task.delay(1.3,function()
 as()
 end)
 else
-d:CreateNotification("Vape","Click the upload icon on any of your configs to update them",5,"info")
+d:CreateNotification("BadWars","Click the upload icon on any of your configs to update them",5,"info")
 ar("Click the 'Upload' icon to update a config",true)
 end
 end
@@ -7580,7 +7555,7 @@ end)
 
 U.Activated:Connect(function()
 if not getgenv().username or not getgenv().password then
-d:CreateNotification("Vape","You must be logged in to update configs",6,"warning")
+d:CreateNotification("BadWars","You must be logged in to update configs",6,"warning")
 return
 end
 
@@ -7593,7 +7568,7 @@ n:Tween(U,TweenInfo.new(0.15),{
 BackgroundColor3=Color3.fromRGB(100,80,200),
 })
 revertToNormalMode()
-d:CreateNotification("Vape","Update mode cancelled",3,"info")
+d:CreateNotification("BadWars","Update mode cancelled",3,"info")
 else
 
 flickerTextEffect(U,true,"STOP UPDATING")
@@ -7944,12 +7919,12 @@ end)
 
 T.Activated:Connect(function()
 if not getgenv().username or not getgenv().password then
-d:CreateNotification("Vape","You must be logged in to delete configs",6,"warning")
+d:CreateNotification("BadWars","You must be logged in to delete configs",6,"warning")
 return
 end
 al:Fire"Delete"
 
-d:CreateNotification("Vape","Fetching your uploaded configs...",4,"info")
+d:CreateNotification("BadWars","Fetching your uploaded configs...",4,"info")
 ar("Fetching uploaded configs...",true)
 
 local aF,aG=pcall(function()
@@ -7981,7 +7956,7 @@ local aH=l:JSONDecode(aG.Body)
 V=aH.configs or{}
 
 if#V==0 then
-d:CreateNotification("Vape","You have no uploaded configs",5,"info")
+d:CreateNotification("BadWars","You have no uploaded configs",5,"info")
 return
 end
 
@@ -8004,18 +7979,18 @@ ar("Couldn't fetch your configs :c",true)
 task.delay(0.5,function()
 as()
 end)
-d:CreateNotification("Vape","Failed to fetch your configs: "..aH,8,"warning")
+d:CreateNotification("BadWars","Failed to fetch your configs: "..aH,8,"warning")
 end
 end)
 
 P.Activated:Connect(function()
 if at then
 if not W then
-d:CreateNotification("Vape","Please select a config to delete",5,"warning")
+d:CreateNotification("BadWars","Please select a config to delete",5,"warning")
 return
 end
 
-d:CreateNotification("Vape",`Deleting {W}...`,5,"info")
+d:CreateNotification("BadWars",`Deleting {W}...`,5,"info")
 
 local aF,aG=pcall(function()
 return request{
@@ -8032,7 +8007,7 @@ place=tostring(d.Place or game.PlaceId),
 end)
 
 if aF and aG and aG.StatusCode==200 then
-d:CreateNotification("Vape",`Successfully deleted {W}`,6,"info")
+d:CreateNotification("BadWars",`Successfully deleted {W}`,6,"info")
 az.Visible=false
 am:Fire()
 
@@ -8050,15 +8025,15 @@ if aI~=nil and type(aI)=="table"and aI.detail~=nil then
 aH=aI.detail
 end
 end
-d:CreateNotification("Vape","Delete failed: "..aH,8,"warning")
+d:CreateNotification("BadWars","Delete failed: "..aH,8,"warning")
 end
 else
 if not M then
-d:CreateNotification("Vape","Please select a local profile first",5,"warning")
+d:CreateNotification("BadWars","Please select a local profile first",5,"warning")
 return
 end
 if N.Text==""then
-d:CreateNotification("Vape","Config name is required",5,"warning")
+d:CreateNotification("BadWars","Config name is required",5,"warning")
 flickerTextEffect(N,true,"Name Required!")
 task.wait(0.3)
 flickerTextEffect(N,true,"")
@@ -8068,7 +8043,7 @@ end
 local aF="badscript/profiles/"..M..d.Place..".txt"
 if not D(aF)then
 d:CreateNotification(
-"Vape",
+"BadWars",
 "Failed to read config file. Please choose different profile :c",
 6,
 "warning"
@@ -8078,7 +8053,7 @@ end
 local aG,aH=pcall(readfile,aF)
 if not(aG and aH~=nil)then
 d:CreateNotification(
-"Vape",
+"BadWars",
 "Failed to read config file. Please choose different profile :c",
 6,
 "warning"
@@ -8086,7 +8061,7 @@ d:CreateNotification(
 return
 end
 
-d:CreateNotification("Vape","Publishing config...",5,"info")
+d:CreateNotification("BadWars","Publishing config...",5,"info")
 
 local aI={
 username=getgenv().username,
@@ -8114,7 +8089,7 @@ if aJ and aK and aK.StatusCode==200 then
 local aL=aK.Body
 local aM=string.find(aL,"isOverwritten")and true or false
 d:CreateNotification(
-"Vape",
+"BadWars",
 `Successfully published "{N.Text}"`
 ..(aM and" (overwritten)"or"")
 ..(aC and" [Place Based]"or""),
@@ -8145,7 +8120,7 @@ task.delay(2,function()
 ar("Click on the config you want to upload",true)
 end)
 end
-d:CreateNotification("Vape","Failed to publish: "..aL,10,"warning")
+d:CreateNotification("BadWars","Failed to publish: "..aL,10,"warning")
 end
 end
 end)
@@ -8491,7 +8466,7 @@ local aV,aW=F(function()
 return l:JSONDecode(d.http_function"https://configs.vapevoidware.xyz")
 end,3)
 if not aV then
-errorNotification("Voidware | Configs","Couldn't load the configs data :c Try again later",5)
+errorNotification("BadWars | Configs","Couldn't load the configs data :c Try again later",5)
 ar("Couldn't load configs :c",true)
 return
 end
@@ -8796,7 +8771,7 @@ OnConfirm=function()
 local bf="badscript/profiles/"..be..d.Place..".txt"
 if not D(bf)then
 d:CreateNotification(
-"Vape",
+"BadWars",
 "Failed to read current profile config file",
 6,
 "warning"
@@ -8807,7 +8782,7 @@ end
 local bg,bh=pcall(readfile,bf)
 if not(bg and bh~=nil)then
 d:CreateNotification(
-"Vape",
+"BadWars",
 "Failed to read current profile config file",
 6,
 "warning"
@@ -8816,7 +8791,7 @@ revertToNormalMode()
 return
 end
 
-d:CreateNotification("Vape",`Updating "{aW}"...`,5,"info")
+d:CreateNotification("BadWars",`Updating "{aW}"...`,5,"info")
 
 local bi={
 username=getgenv().username,
@@ -8843,7 +8818,7 @@ end)
 
 if bj and bk and bk.StatusCode==200 then
 d:CreateNotification(
-"Vape",
+"BadWars",
 `Successfully updated "{aW}" with profile "{be}"!`,
 8,
 "info"
@@ -8866,7 +8841,7 @@ if bm~=nil and type(bm)=="table"and bm.detail~=nil then
 bl=bm.detail
 end
 end
-d:CreateNotification("Vape","Failed to update: "..bl,10,"warning")
+d:CreateNotification("BadWars","Failed to update: "..bl,10,"warning")
 revertToNormalMode()
 end
 end,
@@ -8883,7 +8858,7 @@ ConfirmText="DELETE",
 CancelText="CANCEL",
 OnConfirm=function()
 d:CreateNotification(
-"Vape",
+"BadWars",
 (bc.ActionWord..' "%s"...'):format(aW),
 5,
 "info"
@@ -8913,7 +8888,7 @@ end)
 
 if bf and bg and bg.StatusCode==200 then
 d:CreateNotification(
-"Vape",
+"BadWars",
 (bc.DoneWord..' "%s"'):format(aW),
 6,
 "info"
@@ -8931,7 +8906,7 @@ end
 end
 
 d:CreateNotification(
-"Vape",
+"BadWars",
 (bc.FailWord..": %s"):format(bh),
 8,
 "warning"
@@ -9019,8 +8994,8 @@ local bc=string.format("%s (%s)",bb.name,bb.username)
 local bd,be=bb.link:match"^(.-/)([^/]+)$"
 if not bd or not be then
 errorNotification(
-"Voidware | Configs",
-`Invalid URL for {tostring(aW)}. Please report this to a developer in discord.gg/voidware`,
+"BadWars | Configs",
+`Invalid URL for {tostring(aW)}. Please report this to a developer in BadWars support`,
 10
 )
 warn("Invalid URL:",bb.link)
@@ -9031,8 +9006,8 @@ return bd..l:UrlEncode(be)
 end)
 if not bg then
 errorNotification(
-"Voidware | Configs",
-`Couldn't resolve the url for {tostring(aW)}. Please report this to a developer in discord.gg/voidware`,
+"BadWars | Configs",
+`Couldn't resolve the url for {tostring(aW)}. Please report this to a developer in BadWars support`,
 10
 )
 warn(`Invalid URL resolve: {tostring(bg)}`)
@@ -9079,7 +9054,7 @@ d:Save(bc)
 writefile("badscript/profiles/"..bc..d.Place..".txt",bh)
 d:Load(true,bc)
 local bk=bi and"Reinstalled"or"Downloaded"
-d:CreateNotification("Vape",`{bk} "{aW}" by @{bb.username}`,5,"info")
+d:CreateNotification("BadWars",`{bk} "{aW}" by @{bb.username}`,5,"info")
 ba.Text="REINSTALL"
 a9=true
 local bl,bm,bn=d.GUIColor.Hue,d.GUIColor.Sat,d.GUIColor.Value
@@ -9087,7 +9062,7 @@ ba.BackgroundColor3=a9 and m.Dark(Color3.fromHSV(bl,bm,bn),0.3)
 or Color3.fromHSV(bl,bm,bn)
 S()
 else
-d:CreateNotification("Vape",`Failed to fetch config ({aW})`,10,"warning")
+d:CreateNotification("BadWars",`Failed to fetch config ({aW})`,10,"warning")
 end
 end)
 task.wait(0.15)
@@ -9416,7 +9391,7 @@ ay,
 tostring(ax),
 az
 )
-d:CreateNotification("Vape",aA,3)
+d:CreateNotification("BadWars",aA,3)
 end,
 Tooltip="Transfers your current profile to the 'default' one",
 Visible=false,
@@ -9434,7 +9409,7 @@ OnConfirm=function(ax)
 if ax and ax~=""then
 for ay,az in d.Profiles do
 if tostring(az.Name)==ax then
-d:CreateNotification("Vape",`Profile {tostring(ax)} already exists!`,3)
+d:CreateNotification("BadWars",`Profile {tostring(ax)} already exists!`,3)
 return
 end
 end
@@ -9442,7 +9417,7 @@ table.insert(d.Profiles,{Name=ax,Bind={}})
 d:Save(ax,true)
 d:Load(ax)
 else
-d:CreateNotification("Vape","No Profile Name given",3)
+d:CreateNotification("BadWars","No Profile Name given",3)
 end
 end,
 }
@@ -9468,24 +9443,17 @@ d.Save=function()end
 if D("badscript/profiles/"..d.Profile..d.Place..".txt")and delfile then
 delfile("badscript/profiles/"..d.Profile..d.Place..".txt")
 end
-shared.vapereload=true
-if shared.VapeDeveloper then
+shared.BadReload=true
+if shared.BadDeveloper then
 loadstring(readfile"badscript/loader.lua","loader")()
 else
-loadstring(
-d.http_function(
-"https://files.vapevoidware.xyz/VapeVoidware/VWRewrite/"
-..readfile"badscript/profiles/commit.txt"
-.."/loader.lua",
-true
-)
-)()
+loadstring(d.http_function("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",true),"loader")()
 end
 end,
 OnCancel=function()end,
 }
 end,
-Tooltip="This will set your profile to the default settings of Vape",
+Tooltip="This will set your profile to the default BadWars settings",
 BackgroundTransparency=1,
 },ap,{Options={}})
 end
@@ -9899,7 +9867,7 @@ end)
 aA.Activated:Connect(function()
 if not table.find(ai.List,az.Text)then
 if az.Text==""or az.Text=="Invalid Name!"then
-d:CreateNotification("Vape","You need to specify a value!",3)
+d:CreateNotification("BadWars","You need to specify a value!",3)
 flickerTextEffect(az,true,"Invalid Name!")
 task.delay(0.5,function()
 flickerTextEffect(az,true,"")
@@ -11238,7 +11206,7 @@ if type(ai)~="string"then
 warn(ai,debug.traceback(type(ai)))
 end
 ai=tostring(ai or"")
-ah=tostring(ah or"Vape")
+ah=tostring(ah or"BadWars")
 aj=math.clamp(tonumber(aj)or 5,1.5,30)
 local al=ak
 task.delay(0,function()
@@ -11602,7 +11570,7 @@ if D(am)then
 ak=loadJson(am)
 if not ak then
 ak={Categories={}}
-ah:CreateNotification("Vape","Failed to load GUI settings.",10,"alert")
+ah:CreateNotification("BadWars","Failed to load GUI settings.",10,"alert")
 al=false
 end
 ah.Profile=aj or ak.Profile or"default"
@@ -11678,7 +11646,7 @@ if an then
 local ao=loadJson("badscript/profiles/"..ah.Profile..ah.Place..".txt")
 if not ao then
 ao={Categories={},Modules={},Legit={}}
-ah:CreateNotification("Vape","Failed to load "..ah.Profile.." profile.",10,"alert")
+ah:CreateNotification("BadWars","Failed to load "..ah.Profile.." profile.",10,"alert")
 if ah.Profile~="default"then
 
 pcall(function()
@@ -11780,7 +11748,7 @@ else
 ah:Save(ah.Profile,true)
 end
 
-if shared.ForceVoidwareTutorial or(not an and tostring(ah.Profile)=="default")then
+if shared.ForceBadWarsTutorial or(not an and tostring(ah.Profile)=="default")then
 ah.NewUser=true
 else
 ah.NewUser=false
@@ -11792,7 +11760,7 @@ x.Visible=false
 v.Visible=true
 ah.TutorialAPI:setText"Tutorial Complete!"
 task.wait(1)
-ah.TutorialAPI:setText"Thanks for using Voidware <3"
+ah.TutorialAPI:setText"Thanks for using BadWars <3"
 task.wait(1.5)
 ah.TutorialAPI:revertTutorialMode(true)
 end)
@@ -11887,7 +11855,7 @@ an,
 ao
 )
 
-d:CreateNotification("Vape",ap,10,"warning")
+d:CreateNotification("BadWars",ap,10,"warning")
 end
 end
 end
@@ -12028,7 +11996,7 @@ writefile("badscript/profiles/"..ah.Profile..ah.Place..".txt",l:JSONEncode(al))
 end
 
 function d.DisableSaving(ah)
-d:CreateNotification("Vape","Saving is disabled due to an error in Voidware!",30,"warning")
+d:CreateNotification("BadWars","Saving is disabled due to an error in BadWars!",30,"warning")
 ah.Loaded=false
 ah.Save=function()end
 end
@@ -12115,8 +12083,8 @@ ak"loopclean started"
 loopClean(d)
 ak"loopclean ended"
 shared.vape=nil
-shared.vapereload=nil
-shared.VapeIndependent=nil
+shared.BadReload=nil
+shared.BadIndependent=nil
 end
 
 B=Instance.new"ScreenGui"
@@ -12152,7 +12120,7 @@ local ah=Instance.new"TextLabel"
 ah.Size=UDim2.fromScale(1,0.02)
 ah.Position=UDim2.fromScale(0,0.97)
 ah.BackgroundTransparency=1
-ah.Text="discord.gg/voidware"
+ah.Text="BadWars support"
 ah.TextScaled=true
 ah.TextColor3=Color3.new(1,1,1)
 ah.TextStrokeTransparency=0.5
@@ -12187,7 +12155,7 @@ n:Tween(ai.label,TweenInfo.new(1.5),{
 TextSize=30,
 Position=UDim2.fromScale(0.5,0.6),
 })
-ai:setText"Welcome to Voidware!"
+ai:setText"Welcome to BadWars!"
 ai.label.Parent=w
 end,
 tweenToSecondPosition=function(ai)
@@ -12214,7 +12182,7 @@ ai:setText(ai.defaultText)
 ai.label.Parent=v
 end)
 if aj then
-d:CreateNotification("Tutorial Complete!","Thank you for using Voidware <3",10)
+d:CreateNotification("Tutorial Complete!","Thank you for using BadWars <3",10)
 end
 end,
 setText=function(ai,aj)
@@ -12352,14 +12320,14 @@ Tooltip="Allows multiple keys to be bound to a module (eg. G + H)",
 d.QueueTeleportEnabledToggle=am:CreateToggle{
 Name="Queue On Teleport",
 Default=true,
-Tooltip="Makes Voidware auto execute every time you teleport",
+Tooltip="Makes BadWars auto execute every time you teleport",
 Function=function(an)
 shared.DISABLED_QUEUE_ON_TELEPORT=not an
 if not d.Notifications then
 return
 end
 d:CreateNotification(
-"Voidware",
+"BadWars",
 "Auto Execute"
 .."<font color='#FFFFFF'> was </font>"
 ..(an and"<font color='#5AFF5A'>Enabled</font>"or"<font color='#FF5A5A'>Disabled</font>")
@@ -12402,10 +12370,10 @@ if aq then
 shared.TargetLanguage=aq
 
 pcall(function()
-if not isfolder"voidware_translations"then
-makefolder"voidware_translations"
+if not isfolder"badwars_translations"then
+makefolder"badwars_translations"
 end
-writefile("voidware_translations/lang.txt",tostring(shared.TargetLanguage))
+writefile("badwars_translations/lang.txt",tostring(shared.TargetLanguage))
 end)
 
 local ar=aa[aq]or""
@@ -12428,49 +12396,33 @@ d.Save=function()end
 if D("badscript/profiles/"..d.Profile..d.Place..".txt")and delfile then
 delfile("badscript/profiles/"..d.Profile..d.Place..".txt")
 end
-shared.vapereload=true
-if shared.VapeDeveloper then
+shared.BadReload=true
+if shared.BadDeveloper then
 loadstring(readfile"badscript/loader.lua","loader")()
 else
-loadstring(
-d.http_function(
-"https://files.vapevoidware.xyz/VapeVoidware/VWRewrite/"
-..readfile"badscript/profiles/commit.txt"
-.."/loader.lua",
-true
-)
-)()
+loadstring(d.http_function("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",true),"loader")()
 end
 end,
-Tooltip="This will set your profile to the default settings of Vape",
+Tooltip="This will set your profile to the default BadWars settings",
 }
 am:CreateButton{
 Name="Self destruct",
 Function=function()
 d:Uninject()
 end,
-Tooltip="Removes vape from the current game",
+Tooltip="Removes BadWars from the current game",
 }
 am:CreateButton{
 Name="Reinject",
 Function=function()
-shared.vapereload=true
-if shared.VapeDeveloper then
+shared.BadReload=true
+if shared.BadDeveloper then
 loadstring(readfile"badscript/loader.lua","loader")()
 else
-loadstring(
-d.http_function(
-"https://files.vapevoidware.xyz/"
-.."VapeVoidware"
-.."/VWRewrite/"
-..readfile"badscript/profiles/commit.txt"
-.."/loader.lua",
-true
-)
-)()
+loadstring(d.http_function("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",true),"loader")()
 end
 end,
-Tooltip="Reloads vape for debugging purposes",
+Tooltip="Reloads BadWars for debugging purposes",
 }
 
 d:CreateCategory{
@@ -12612,7 +12564,7 @@ v.Visible=false
 end
 task.wait(0.1)
 aq:CreatePrompt{
-Title="Welcome to Voidware",
+Title="Welcome to BadWars",
 Text="Would you like to pick out a pre made config?",
 ConfirmText="Yeah",
 CancelText="No, Thank you",
@@ -13092,7 +13044,7 @@ end,
 }
 local aH=aw:CreateToggle{
 Name="Watermark",
-Tooltip="Renders a vape watermark",
+Tooltip="Renders a BadWars watermark",
 Default=true,
 NoDefaultCallback=true,
 Function=function()

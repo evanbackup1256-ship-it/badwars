@@ -104,7 +104,7 @@ local function ensureServiceCategory(name)
 end
 local function ensureServiceEvent(category,key,path)
 	if type(category[key])~='table' or not category[key].Event or type(category[key].Fire)~='function' then
-		warn('BadWars: [PREFLIGHT] '..tostring(path)..' requires '..tostring(category.Name)..'.'..key..' event; registered no-op BindableEvent fallback')
+		if shared.BadwarsLoadingDebug then warn('BadWars: [PREFLIGHT] '..tostring(path)..' requires '..tostring(category.Name)..'.'..key..' event; registered no-op BindableEvent fallback') end
 		category[key]=Instance.new('BindableEvent')
 		if type(Bad.Clean)=='function' then pcall(function() Bad:Clean(category[key]) end) end
 	end

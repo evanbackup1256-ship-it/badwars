@@ -11,18 +11,28 @@ ChatSpammer = Bad.Categories.Utility:CreateModule({
 		if callback then
 			if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
 				if Hide.Enabled and coreGui:FindFirstChild('ExperienceChat') then
-					ChatSpammer:Clean(coreGui.ExperienceChat:FindFirstChild('RCTScrollContentView', true).ChildAdded:Connect(function(msg)
-						if msg.Name:sub(1, 2) == '0-' and msg.ContentText == 'You must wait before sending another message.' then
-							msg.Visible = false
-						end
-					end))
+					local scroll = coreGui.ExperienceChat:FindFirstChild('RCTScrollContentView', true)
+					if scroll and scroll.ChildAdded then
+						ChatSpammer:Clean(scroll.ChildAdded:Connect(function(msg)
+							if msg.Name:sub(1, 2) == '0-' and msg.ContentText == 'You must wait before sending another message.' then
+								msg.Visible = false
+							end
+						end))
+					else
+						notif('ChatSpammer', 'chat flood message container unavailable; continuing without hide filter', 5, 'warning')
+					end
 				end
 			elseif replicatedStorage:FindFirstChild('DefaultChatSystemChatEvents') then
 				if Hide.Enabled then
-					oldchat = hookfunction(getconnections(replicatedStorage.DefaultChatSystemChatEvents.OnNewSystemMessage.OnClientEvent)[1].Function, function(data, ...)
-						if data.Message:find('ChatFloodDetector') then return end
-						return oldchat(data, ...)
-					end)
+					local conns = getconnections and getconnections(replicatedStorage.DefaultChatSystemChatEvents.OnNewSystemMessage.OnClientEvent)
+					if hookfunction and conns and conns[1] and conns[1].Function then
+						oldchat = hookfunction(conns[1].Function, function(data, ...)
+							if type(data) == 'table' and type(data.Message) == 'string' and data.Message:find('ChatFloodDetector') then return end
+							return oldchat(data, ...)
+						end)
+					else
+						notif('ChatSpammer', 'legacy chat hook unavailable; continuing without hide filter', 5, 'warning')
+					end
 				end
 			else
 				notif('ChatSpammer', 'unsupported chat', 5, 'warning')
@@ -39,16 +49,29 @@ ChatSpammer = Bad.Categories.Utility:CreateModule({
 				end
 
 				if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-					textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(message)
+					local channel = textChatService.ChatInputBarConfiguration.TargetTextChannel
+					if not channel and textChatService:FindFirstChild('TextChannels') then
+						channel = textChatService.TextChannels:FindFirstChild('RBXGeneral')
+					end
+					if not channel then
+						notif('ChatSpammer', 'chat channel unavailable', 5, 'warning')
+						ChatSpammer:Toggle()
+						return
+					end
+					channel:SendAsync(message)
 				else
 					replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, 'All')
 				end
 
-				task.wait(Delay.Value)
+				task.wait(math.max(tonumber(Delay.Value) or 1, 0.1))
 			until not ChatSpammer.Enabled
 		else
 			if oldchat then
-				hookfunction(getconnections(replicatedStorage.DefaultChatSystemChatEvents.OnNewSystemMessage.OnClientEvent)[1].Function, oldchat)
+				local conns = getconnections and getconnections(replicatedStorage.DefaultChatSystemChatEvents.OnNewSystemMessage.OnClientEvent)
+				if hookfunction and conns and conns[1] and conns[1].Function then
+					hookfunction(conns[1].Function, oldchat)
+				end
+				oldchat = nil
 			end
 		end
 	end,

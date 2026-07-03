@@ -229,7 +229,7 @@ end
 -- Stage 4: Cache Integrity Check
 -- ============================================================
 setStatus('pipeline stage 2: cache integrity check')
-local cacheVersion = 'badwars-v2-fix-2026-07-02-v5'
+local cacheVersion = 'badwars-v2-fix-2026-07-02-v6'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	setStatus('clearing old cache')
@@ -306,6 +306,12 @@ if type(shared.__badwars_universal_report) == 'table' then
 		for _, entry in ipairs(report.failed) do
 			table.insert(validationIssues, 'Universal module [' .. entry.name .. '] failed: ' .. entry.error)
 		end
+	end
+end
+
+if type(shared.__badwars_runtime_errors) == 'table' and #shared.__badwars_runtime_errors > 0 then
+	for _, re in ipairs(shared.__badwars_runtime_errors) do
+		table.insert(validationIssues, 'Runtime error [' .. tostring(re.module) .. ']: ' .. tostring(re.error))
 	end
 end
 

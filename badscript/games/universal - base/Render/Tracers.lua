@@ -12,9 +12,9 @@ local Behind
 local Reference = {}
 
 local function Added(ent)
-	if not Targets.Players.Enabled and ent.Player then return end
-	if not Targets.NPCs.Enabled and ent.NPC then return end
-	if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
+	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+	if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
 	if Bad.ThreadFix then
 		setthreadidentity(8)
 	end

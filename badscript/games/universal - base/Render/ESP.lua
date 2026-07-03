@@ -21,9 +21,9 @@ end
 
 local ESPAdded = {
 	Drawing2D = function(ent)
-		if not Targets.Players.Enabled and ent.Player then return end
-		if not Targets.NPCs.Enabled and ent.NPC then return end
-		if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
+		if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+		if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+		if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
 		if Bad.ThreadFix then
 			setthreadidentity(8)
 		end
@@ -87,9 +87,9 @@ local ESPAdded = {
 		Reference[ent] = EntityESP
 	end,
 	Drawing3D = function(ent)
-		if not Targets.Players.Enabled and ent.Player then return end
-		if not Targets.NPCs.Enabled and ent.NPC then return end
-		if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
+		if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+		if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+		if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
 		if Bad.ThreadFix then
 			setthreadidentity(8)
 		end
@@ -116,9 +116,9 @@ local ESPAdded = {
 		Reference[ent] = EntityESP
 	end,
 	DrawingSkeleton = function(ent)
-		if not Targets.Players.Enabled and ent.Player then return end
-		if not Targets.NPCs.Enabled and ent.NPC then return end
-		if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
+		if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+		if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+		if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
 		if Bad.ThreadFix then
 			setthreadidentity(8)
 		end

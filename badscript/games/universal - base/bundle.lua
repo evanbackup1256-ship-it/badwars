@@ -5269,9 +5269,9 @@ local Folder = Instance.new('Folder')
 Folder.Parent = Bad.gui
 
 local function Added(ent)
-	if not Targets.Players.Enabled and ent.Player then return end
-	if not Targets.NPCs.Enabled and ent.NPC then return end
-	if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) and (not ent.Friend) then return end
+	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+	if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) and (not ent.Friend) then return end
 	if Bad.ThreadFix then
 		setthreadidentity(8)
 	end
@@ -5420,9 +5420,9 @@ local Folder = Instance.new('Folder')
 Folder.Parent = Bad.gui
 
 local function Added(ent)
-	if not Targets.Players.Enabled and ent.Player then return end
-	if not Targets.NPCs.Enabled and ent.NPC then return end
-	if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
+	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+	if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
 	if Bad.ThreadFix then
 		setthreadidentity(8)
 	end
@@ -7564,9 +7564,9 @@ local Behind
 local Reference = {}
 
 local function Added(ent)
-	if not Targets.Players.Enabled and ent.Player then return end
-	if not Targets.NPCs.Enabled and ent.NPC then return end
-	if Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
+	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
+	if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
 	if Bad.ThreadFix then
 		setthreadidentity(8)
 	end
@@ -7910,11 +7910,19 @@ AnimationPlayer = Bad.Categories.Utility:CreateModule({
 	Name = 'AnimationPlayer',
 	Function = function(callback)
 		if callback then
+			local rawId = tostring(IDBox and IDBox.Value or '')
+			local numericId = rawId:match('^(%d+)$')
+			if not numericId then
+				numericId = rawId:match('rbxassetid://(%d+)') or rawId:match('asset/?.*%?id=(%d+)') or rawId:match('(%d+)')
+			end
+			if not numericId or numericId == '' then
+				if Bad.CreateNotification then
+					Bad:CreateNotification('AnimationPlayer', 'Invalid ID: ' .. rawId, 5, 'warning')
+				end
+				return
+			end
 			animobject = Instance.new('Animation')
-			local suc, id = pcall(function()
-				return string.match(game:GetObjects('rbxassetid://'..IDBox.Value)[1].AnimationId, '%?id=(%d+)')
-			end)
-			animobject.AnimationId = 'rbxassetid://'..(suc and id or IDBox.Value)
+			animobject.AnimationId = 'rbxassetid://' .. numericId
 
 			if entitylib.isAlive then
 				playAnimation(entitylib.character)
@@ -8125,12 +8133,16 @@ ChatSpammer = Bad.Categories.Utility:CreateModule({
 	Function = function(callback)
 		if callback then
 			if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-				if Hide.Enabled and coreGui:FindFirstChild('ExperienceChat') then
-					ChatSpammer:Clean(coreGui.ExperienceChat:FindFirstChild('RCTScrollContentView', true).ChildAdded:Connect(function(msg)
-						if msg.Name:sub(1, 2) == '0-' and msg.ContentText == 'You must wait before sending another message.' then
-							msg.Visible = false
-						end
-					end))
+				local expChat = coreGui:FindFirstChild('ExperienceChat')
+				if Hide.Enabled and expChat then
+					local scrollView = expChat:FindFirstChild('RCTScrollContentView', true)
+					if scrollView then
+						ChatSpammer:Clean(scrollView.ChildAdded:Connect(function(msg)
+							if msg.Name:sub(1, 2) == '0-' and msg.ContentText == 'You must wait before sending another message.' then
+								msg.Visible = false
+							end
+						end))
+					end
 				end
 			elseif replicatedStorage:FindFirstChild('DefaultChatSystemChatEvents') then
 				if Hide.Enabled then

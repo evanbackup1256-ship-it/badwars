@@ -7,8 +7,8 @@ local Reference = {}
 local bkg
 
 local function Added(ent)
-	if not Targets.Players.Enabled and ent.Player then return end
-	if not Targets.NPCs.Enabled and ent.NPC then return end
+	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
+	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
 	if (not ent.Targetable) and (not ent.Friend) then return end
 	if Bad.ThreadFix then
 		setthreadidentity(8)

@@ -3990,17 +3990,18 @@ function mainapi:CreateLegit()
 	return legitapi
 end
 
-function mainapi:CreateNotification(title, text, duration, type, stack)
+function mainapi:CreateNotification(title, text, duration, notifType, stack)
 	if not self.Notifications.Enabled then return end
 	task.delay(0, function()
 		if self.ThreadFix then
 			setthreadidentity(8)
 		end
-		local isCompile = (type == 'compile')
-		local isError = (type == 'alert' or type == 'runtime' or type == 'error' or isCompile)
+		local _type = typeof
+		local isCompile = (notifType == 'compile')
+		local isError = (notifType == 'alert' or notifType == 'runtime' or notifType == 'error' or isCompile)
 		local container = isError and errorNotificationContainer or notifications
-		local safeTitle = type(title) == 'string' and title or tostring(title)
-		local safeText = type(text) == 'string' and text or (text and tostring(text)) or ''
+		local safeTitle = _type(title) == 'string' and title or tostring(title)
+		local safeText = _type(text) == 'string' and text or (text and tostring(text)) or ''
 		local key = safeTitle .. '|' .. safeText:sub(1, 80)
 		-- Group duplicate errors
 		local existing = container:FindFirstChild(key)
@@ -4014,7 +4015,7 @@ function mainapi:CreateNotification(title, text, duration, type, stack)
 		end
 
 		-- Rich data if stack is our compile log entry
-		local rich = (type == 'compile' or type == 'runtime') and typeof(stack) == 'table' and stack or nil
+		local rich = (isCompile or notifType == 'runtime') and typeof(stack) == 'table' and stack or nil
 		local displayTitle = safeTitle or (isCompile and 'Compile Error' or 'Error')
 		local displayMsg = safeText
 		local scriptBadge = rich and rich.script or nil
@@ -6132,7 +6133,7 @@ local function createConsole()
 			levelLabel.Size = UDim2.fromOffset(60, 20)
 			levelLabel.Position = UDim2.fromOffset(55, 1)
 			levelLabel.BackgroundTransparency = 1
-			levelLabel.Text = '[' .. log.level .. ']'
+			levelLabel.Text = '[' .. tostring(log.level) .. ']'
 			levelLabel.TextColor3 = mainapi.LogLevels[log.level] or Color3.fromRGB(200, 200, 200)
 			levelLabel.Font = Enum.Font.GothamBold
 			levelLabel.TextSize = 10

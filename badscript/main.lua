@@ -6,6 +6,94 @@ local collectgarbage = collectgarbage
 local os_clock = os.clock
 local pipelineStart = os_clock()
 
+-- Centralized safe helpers
+local function safeToString(v)
+	if v == nil then return '' end
+	if type(v) == 'string' then return v end
+	if type(v) == 'table' then
+		local ok, r = pcall(function() return table.concat(v, ', ') end)
+		if ok then return r end
+		ok, r = pcall(function() return tostring(v) end)
+		return ok and r or '<table>'
+	end
+	return tostring(v)
+end
+
+local function safeConcat(...)
+	local parts = {...}
+	local result = {}
+	for _, p in ipairs(parts) do
+		table.insert(result, safeToString(p))
+	end
+	return table.concat(result)
+end
+
+local function normalizeFeatureState(value)
+	if type(value) == 'boolean' then
+		return {Enabled = value}
+	end
+	if type(value) ~= 'table' then
+		return {Enabled = false}
+	end
+	return value
+end
+
+local function safeCallCallback(fn, ...)
+	if type(fn) ~= 'function' then return false, 'callback not a function' end
+	local ok, err = pcall(fn, ...)
+	if not ok then
+		warn('BadWars: [CALLBACK ERROR] ' .. tostring(err))
+	end
+	return ok, err
+end
+
+local function safeFind(root, path, timeout)
+	if not root then return nil end
+	if type(root) ~= 'userdata' then return nil end
+	local timeLimit = timeout or 5
+	local start = os_clock()
+	local current = root
+	for part in path:gmatch('[^/]+') do
+		local child = current:FindFirstChild(part)
+		while not child and (os_clock() - start < timeLimit) do
+			task.wait()
+			child = current:FindFirstChild(part)
+		end
+		if not child then return nil end
+		current = child
+	end
+	return current
+end
+
+local function safeConnect(signal, callback)
+	if not signal then return nil end
+	local ok, conn = pcall(function() return signal:Connect(callback) end)
+	if ok and conn then return conn end
+	return nil
+end
+
+local function validateAnimationId(id)
+	id = tostring(id or '')
+	local numeric = id:match('^(%d+)$')
+	if not numeric then
+		numeric = id:match('rbxassetid://(%d+)') or id:match('asset/?.*%?id=(%d+)') or id:match('(%d+)')
+	end
+	if numeric and #numeric > 0 then
+		return 'rbxassetid://' .. numeric
+	end
+	return nil
+end
+
+local __runtimeErrors = shared.__badwars_runtime_errors
+if type(__runtimeErrors) ~= 'table' then
+	__runtimeErrors = {}
+	shared.__badwars_runtime_errors = __runtimeErrors
+end
+local function recordRuntimeError(moduleName, err)
+	table.insert(__runtimeErrors, {module = moduleName, error = tostring(err), time = os_clock()})
+	warn('BadWars: [RUNTIME ERROR] ' .. tostring(moduleName) .. ': ' .. tostring(err))
+end
+
 pcall(function()
 	game:GetService("StarterGui"):SetCore("SendNotification", {
 		Title = "BadWars",
@@ -567,25 +655,38 @@ if not shared.BadIndependent then
 	setStatus('validating universal modules')
 	local report = shared.__badwars_universal_report
 	if report then
-		if report.failed and #report.failed > 0 then
+		local loadedCount = type(report.loaded) == 'table' and #report.loaded or (type(report.loaded) == 'number' and report.loaded) or 0
+		local failedCount = type(report.failed) == 'table' and #report.failed or (type(report.failed) == 'number' and report.failed) or 0
+		if failedCount > 0 then
 			warn('BadWars: [VALIDATION] Failed universal modules:')
 			for _, entry in ipairs(report.failed) do
 				warn('  ✗ ' .. entry.name .. ' [' .. tostring(entry.error) .. ']')
 			end
 		end
-		if report.loaded and report.loaded > 0 then
-			warn('BadWars: [VALIDATION] ' .. report.loaded .. ' modules loaded, ' .. (#report.failed or 0) .. ' failed')
+		if loadedCount > 0 or failedCount > 0 then
+			warn('BadWars: [VALIDATION] ' .. loadedCount .. ' modules loaded, ' .. failedCount .. ' failed')
 		end
 	end
 
 	-- Stage 11: Ready
 	local pipelineElapsed = os_clock() - pipelineStart
-	if #issues == 0 then
+	local totalErrors = #issues + #__runtimeErrors + failedCount
+	if totalErrors == 0 then
 		setStatus('ready - loaded in ' .. string.format('%.2f', pipelineElapsed) .. 's')
 	else
-		setStatus('loaded with ' .. #issues .. ' issue(s) in ' .. string.format('%.2f', pipelineElapsed) .. 's', true)
+		if #__runtimeErrors > 0 then
+			warn('BadWars: [RUNTIME ERRORS] ' .. #__runtimeErrors .. ' runtime error(s) recorded:')
+			for _, re in ipairs(__runtimeErrors) do
+				warn('  ✗ [' .. re.module .. '] ' .. re.error)
+			end
+		end
+		setStatus('loaded with ' .. totalErrors .. ' error(s) in ' .. string.format('%.2f', pipelineElapsed) .. 's', true)
 	end
-	warn('BadWars: Pipeline complete in ' .. string.format('%.2f', pipelineElapsed) .. 's' .. (#issues > 0 and ' (with ' .. #issues .. ' issue(s))' or ''))
+	local completeMsg = 'Pipeline complete in ' .. string.format('%.2f', pipelineElapsed) .. 's'
+	if totalErrors > 0 then
+		completeMsg = completeMsg .. ' (with ' .. totalErrors .. ' error(s))'
+	end
+	warn('BadWars: ' .. completeMsg)
 else
 	Bad.Init = finishLoading
 	setStatus('independent mode ready')

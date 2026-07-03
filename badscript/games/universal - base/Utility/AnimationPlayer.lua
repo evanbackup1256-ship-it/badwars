@@ -34,11 +34,17 @@ AnimationPlayer = Bad.Categories.Utility:CreateModule({
 	Name = 'AnimationPlayer',
 	Function = function(callback)
 		if callback then
+			local rawId = tostring(IDBox and IDBox.Value or '')
+			local numericId = rawId:match('^(%d+)$')
+			if not numericId then
+				numericId = rawId:match('rbxassetid://(%d+)') or rawId:match('asset/?.*%?id=(%d+)') or rawId:match('(%d+)')
+			end
+			if not numericId or numericId == '' then
+				notif('AnimationPlayer', 'Invalid animation ID: ' .. rawId, 5, 'warning')
+				return
+			end
 			animobject = Instance.new('Animation')
-			local suc, id = pcall(function()
-				return string.match(game:GetObjects('rbxassetid://'..IDBox.Value)[1].AnimationId, '%?id=(%d+)')
-			end)
-			animobject.AnimationId = 'rbxassetid://'..(suc and id or IDBox.Value)
+			animobject.AnimationId = 'rbxassetid://' .. numericId
 
 			if entitylib.isAlive then
 				playAnimation(entitylib.character)

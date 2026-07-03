@@ -11237,15 +11237,25 @@ end
 if type(ai)~="string"then
 warn(ai,debug.traceback(type(ai)))
 end
+ai=tostring(ai or"")
+ah=tostring(ah or"Vape")
+aj=math.clamp(tonumber(aj)or 5,1.5,30)
 local al=ak
 task.delay(0,function()
 if ag.ThreadFix then
 setthreadidentity(8)
 end
+local notifChildren=q:GetChildren()
+if #notifChildren>5 then
+pcall(function()
+notifChildren[1]:Destroy()
+end)
+end
 local am=#q:GetChildren()+1
+local anMax=math.max(266,math.min((B.AbsoluteSize.X/math.max(A.Scale,0.01))-24,d.isMobile and 360 or 520))
 local an=Instance.new"ImageLabel"
 an.Name="Notification"
-an.Size=UDim2.fromOffset(math.max(E(removeTags(ai),14,o.Font).X+80,266),75)
+an.Size=UDim2.fromOffset(math.min(math.max(E(removeTags(ai),14,o.Font).X+80,266),anMax),75)
 an.Position=UDim2.new(1,0,1,-(29+(78*am)))
 an.ZIndex=5
 an.BackgroundTransparency=1
@@ -11292,6 +11302,7 @@ ar.Text=removeTags(ai)
 ar.TextColor3=Color3.new()
 ar.TextTransparency=0.5
 ar.RichText=true
+ar.TextWrapped=true
 ar.FontFace=o.Font
 ar.Parent=an
 local as=ar:Clone()
@@ -11300,6 +11311,7 @@ as.Text=ai
 as.TextColor3=Color3.fromRGB(170,170,170)
 as.TextTransparency=0
 as.RichText=true
+as.TextWrapped=true
 as.Parent=ar
 local at=Instance.new"Frame"
 at.Name="Progress"
@@ -12254,6 +12266,7 @@ z.Visible=false
 z.Text=""
 z.TextColor3=m.Dark(o.Text,0.16)
 z.TextSize=15
+z.TextWrapped=true
 z.FontFace=o.Font
 z.Parent=w
 y=addBlur(z)
@@ -12269,14 +12282,23 @@ al.Color=m.Light(o.Main,0.02)
 al.Parent=ak
 addCorner(ak,UDim.new(0,4))
 A=Instance.new"UIScale"
-A.Scale=math.max(B.AbsoluteSize.X/1920,0.6)
+local function responsiveScale()
+local am=B.AbsoluteSize
+local an=am.X>0 and am.X or 1920
+local ao=am.Y>0 and am.Y or 1080
+if d.isMobile then
+return math.clamp(math.min(an/900,ao/650),0.58,0.82)
+end
+return math.clamp(an/1920,0.6,1.15)
+end
+A.Scale=responsiveScale()
 A.Parent=w
 d.guiscale=A
 w.Size=UDim2.fromScale(1/A.Scale,1/A.Scale)
 
 d:Clean(B:GetPropertyChangedSignal"AbsoluteSize":Connect(function()
 if d.Scale.Enabled then
-A.Scale=math.max(B.AbsoluteSize.X/1920,0.6)
+A.Scale=responsiveScale()
 end
 end))
 
@@ -12821,7 +12843,7 @@ Default=true,
 Function=function(av)
 au.Object.Visible=not av
 if av then
-A.Scale=math.max(B.AbsoluteSize.X/1920,0.6)
+A.Scale=responsiveScale()
 else
 A.Scale=au.Value
 end

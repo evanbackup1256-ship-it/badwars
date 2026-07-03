@@ -72,17 +72,34 @@ if not statusGui then
 end
 if statusGui then
 	statusLabel=Instance.new('TextLabel')
-	statusLabel.Name='Status';statusLabel.Size=UDim2.new(0,680,0,88);statusLabel.Position=UDim2.fromOffset(12,92)
-	statusLabel.BackgroundColor3=Color3.fromRGB(15,18,24);statusLabel.BackgroundTransparency=0.15;statusLabel.BorderSizePixel=0
+	statusLabel.Name='Status'
+	statusLabel.BackgroundColor3=Color3.fromRGB(15,18,24);statusLabel.BackgroundTransparency=0.08;statusLabel.BorderSizePixel=0
 	statusLabel.Font=Enum.Font.GothamBold;statusLabel.TextSize=14;statusLabel.TextXAlignment=Enum.TextXAlignment.Left
 	statusLabel.TextColor3=Color3.fromRGB(235,245,255);statusLabel.TextWrapped=true
 	statusLabel.Text='BadWars: initializing...';statusLabel.Parent=statusGui
+	local corner=Instance.new('UICorner');corner.CornerRadius=UDim.new(0,8);corner.Parent=statusLabel
+	local stroke=Instance.new('UIStroke');stroke.Color=Color3.fromRGB(80,100,125);stroke.Transparency=0.5;stroke.Parent=statusLabel
 	local pad=Instance.new('UIPadding');pad.PaddingLeft=UDim.new(0,12);pad.PaddingRight=UDim.new(0,12);pad.Parent=statusLabel
 end
+local function refreshStatusLayout()
+	if not statusLabel then return end
+	local cam=workspace.CurrentCamera
+	local vp=cam and cam.ViewportSize or Vector2.new(1280,720)
+	local mobile=vp.X<760 or vp.Y<460
+	statusLabel.Size=UDim2.fromOffset(math.max(260,math.min(vp.X-24,mobile and 440 or 680)),mobile and 72 or 88)
+	statusLabel.Position=UDim2.fromOffset(12,mobile and 18 or 92)
+	statusLabel.TextSize=mobile and 12 or 14
+end
+refreshStatusLayout()
+pcall(function()
+	local cam=workspace.CurrentCamera
+	if cam then cam:GetPropertyChangedSignal('ViewportSize'):Connect(refreshStatusLayout) end
+end)
 shared.BadStatusGui=statusGui
 shared.BadStatus=function(msg,isErr)
 	local t='BadWars: '..tostring(msg);warn(t)
 	if statusLabel then
+		refreshStatusLayout()
 		if not isErr and tostring(msg):find('ready',1,true) then statusGui.Enabled=false;return end
 		statusGui.Enabled=true;statusLabel.Text=t;statusLabel.TextColor3=isErr and Color3.fromRGB(255,120,120) or Color3.fromRGB(235,245,255)
 	end
@@ -108,7 +125,7 @@ end
 local function wipeAny(p) if isfolder(p) then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) then delfile(f) end end end end end
 
-local cacheVer='badwars-v6-6-module-contracts'
+local cacheVer='badwars-v6-7-polish-pass'
 local cacheFile='badscript/profiles/cache-version.txt'
 if (isfile(cacheFile) and readfile(cacheFile) or '')~=cacheVer then
 	setStatus('cache cleared (version mismatch)')

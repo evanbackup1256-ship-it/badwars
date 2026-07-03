@@ -146,7 +146,7 @@ Main=Color3.fromRGB(0,0,0),
 Text=Color3.fromRGB(255,255,255),
 Font=Font.fromEnum(Enum.Font.Arial),
 FontSemiBold=Font.fromEnum(Enum.Font.Arial,Enum.FontWeight.SemiBold),
-Tween=TweenInfo.new(0.16,Enum.EasingStyle.Linear),
+Tween=TweenInfo.new(0.18,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
 }
 
 local function getTableSize(p)
@@ -644,7 +644,7 @@ end
 
 local function addCorner(F,G)
 local H=Instance.new"UICorner"
-H.CornerRadius=G or UDim.new(0,5)
+H.CornerRadius=G or UDim.new(0,6)
 H.Parent=F
 
 return H
@@ -704,7 +704,7 @@ end
 local H={}
 H[1]=F.MouseEnter:Connect(function(I,J)
 local K=E(G,z.TextSize,o.Font)
-z.Size=UDim2.fromOffset(K.X+10,K.Y+10)
+z.Size=UDim2.fromOffset(math.min(K.X+14,360),K.Y+12)
 z.Text=G
 tooltipMoved(I,J)
 end)
@@ -11214,17 +11214,20 @@ if ag.ThreadFix then
 setthreadidentity(8)
 end
 local notifChildren=q:GetChildren()
-if #notifChildren>5 then
+local maxNotifications=d.isMobile and 3 or 5
+if #notifChildren>=maxNotifications then
 pcall(function()
 notifChildren[1]:Destroy()
 end)
 end
 local am=#q:GetChildren()+1
-local anMax=math.max(266,math.min((B.AbsoluteSize.X/math.max(A.Scale,0.01))-24,d.isMobile and 360 or 520))
+local notifHeight=d.isMobile and 82 or 75
+local notifGap=notifHeight+3
+local anMax=math.max(d.isMobile and 286 or 266,math.min((B.AbsoluteSize.X/math.max(A.Scale,0.01))-24,d.isMobile and 360 or 520))
 local an=Instance.new"ImageLabel"
 an.Name="Notification"
-an.Size=UDim2.fromOffset(math.min(math.max(E(removeTags(ai),14,o.Font).X+80,266),anMax),75)
-an.Position=UDim2.new(1,0,1,-(29+(78*am)))
+an.Size=UDim2.fromOffset(math.min(math.max(E(removeTags(ai),14,o.Font).X+80,d.isMobile and 286 or 266),anMax),notifHeight)
+an.Position=UDim2.new(1,0,1,-(29+(notifGap*am)))
 an.ZIndex=5
 an.BackgroundTransparency=1
 an.Image=u"badscript/assets/new/notification.png"
@@ -11259,18 +11262,20 @@ aq.Text="<stroke color='#FFFFFF' joins='round' thickness='0.3' transparency='0.5
 aq.TextXAlignment=Enum.TextXAlignment.Left
 aq.TextYAlignment=Enum.TextYAlignment.Top
 aq.TextColor3=Color3.fromRGB(209,209,209)
-aq.TextSize=14
+aq.TextSize=d.isMobile and 15 or 14
 aq.RichText=true
 aq.FontFace=o.FontSemiBold
 aq.Parent=an
 local ar=aq:Clone()
 ar.Name="Text"
 ar.Position=UDim2.fromOffset(47,44)
+ar.Size=UDim2.new(1,-62,0,notifHeight-46)
 ar.Text=removeTags(ai)
 ar.TextColor3=Color3.new()
 ar.TextTransparency=0.5
 ar.RichText=true
 ar.TextWrapped=true
+ar.TextTruncate=Enum.TextTruncate.AtEnd
 ar.FontFace=o.Font
 ar.Parent=an
 local as=ar:Clone()
@@ -11280,11 +11285,12 @@ as.TextColor3=Color3.fromRGB(170,170,170)
 as.TextTransparency=0
 as.RichText=true
 as.TextWrapped=true
+as.TextTruncate=Enum.TextTruncate.AtEnd
 as.Parent=ar
 local at=Instance.new"Frame"
 at.Name="Progress"
-at.Size=UDim2.new(1,-13,0,2)
-at.Position=UDim2.new(0,3,1,-4)
+at.Size=UDim2.new(1,-13,0,d.isMobile and 3 or 2)
+at.Position=UDim2.new(0,3,1,-(d.isMobile and 5 or 4))
 at.ZIndex=5
 at.BackgroundColor3=ag.NotificationsBackground
 and ag.NotificationsBackground.Enabled
@@ -11299,7 +11305,7 @@ n:Tween(an,TweenInfo.new(0.4,Enum.EasingStyle.Exponential),{
 AnchorPoint=Vector2.new(1,0),
 },n.tweenstwo)
 n:Tween(at,TweenInfo.new(aj,Enum.EasingStyle.Linear),{
-Size=UDim2.fromOffset(0,2),
+Size=UDim2.fromOffset(0,d.isMobile and 3 or 2),
 })
 end
 
@@ -12233,7 +12239,7 @@ z.BackgroundColor3=m.Dark(o.Main,0.02)
 z.Visible=false
 z.Text=""
 z.TextColor3=m.Dark(o.Text,0.16)
-z.TextSize=15
+z.TextSize=d.isMobile and 14 or 15
 z.TextWrapped=true
 z.FontFace=o.Font
 z.Parent=w
@@ -12255,9 +12261,9 @@ local am=B.AbsoluteSize
 local an=am.X>0 and am.X or 1920
 local ao=am.Y>0 and am.Y or 1080
 if d.isMobile then
-return math.clamp(math.min(an/900,ao/650),0.58,0.82)
+return math.clamp(math.min(an/820,ao/620),0.6,0.9)
 end
-return math.clamp(an/1920,0.6,1.15)
+return math.clamp(an/1920,0.62,1.1)
 end
 A.Scale=responsiveScale()
 A.Parent=w

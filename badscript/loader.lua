@@ -18,8 +18,9 @@ queue_on_teleport=queue_on_teleport or function()end
 -- Config
 local CFG={repo='evanbackup1256-ship-it',name='badwars',branch='main',folder='badscript',file='main.lua'}
 local function rawUrls(path)
-	local r=CFG.repo..'/'..CFG.name..'/'..CFG.branch..'/'
-	return {'https://github.com/'..r..'raw/'..path,'https://raw.githubusercontent.com/'..r..path}
+	local repo=CFG.repo..'/'..CFG.name
+	local p=path:gsub(' ','%%20')
+	return {'https://github.com/'..repo..'/raw/'..CFG.branch..'/'..p,'https://raw.githubusercontent.com/'..repo..'/'..CFG.branch..'/'..p}
 end
 local ORCH_PATH=CFG.folder..'/'..CFG.file
 

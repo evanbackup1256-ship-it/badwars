@@ -8,8 +8,9 @@ local LOADER_PATH='badscript/loader.lua'
 
 -- Try two URL formats: github.com/raw/ first, raw.githubusercontent.com fallback
 local function rawUrl(path)
-	local r=CFG.repo..'/'..CFG.name..'/'..CFG.branch..'/'
-	return {'https://github.com/'..r..'raw/'..path,'https://raw.githubusercontent.com/'..r..path}
+	local repo=CFG.repo..'/'..CFG.name
+	local p=path:gsub(' ','%%20')
+	return {'https://github.com/'..repo..'/raw/'..CFG.branch..'/'..p,'https://raw.githubusercontent.com/'..repo..'/'..CFG.branch..'/'..p}
 end
 
 local function httpGet(urls)

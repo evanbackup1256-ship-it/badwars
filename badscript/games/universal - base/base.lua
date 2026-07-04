@@ -876,6 +876,9 @@ run(function()
 			end)
 
 			whitelist.data = suc and type(res) == 'table' and res or whitelist.data
+whitelist.data = type(whitelist.data) == 'table' and whitelist.data or {}
+whitelist.data.WhitelistedUsers = type(whitelist.data.WhitelistedUsers) == 'table' and whitelist.data.WhitelistedUsers or {}
+whitelist.data.BlacklistedUsers = type(whitelist.data.BlacklistedUsers) == 'table' and whitelist.data.BlacklistedUsers or {}
 			whitelist.localprio = whitelist:get(lplr)
 
 			for _, v in whitelist.data.WhitelistedUsers do
@@ -921,10 +924,12 @@ run(function()
 				return true
 			end
 
-			if whitelist.data.BlacklistedUsers[tostring(lplr.UserId)] then
-				task.spawn(lplr.kick, lplr, whitelist.data.BlacklistedUsers[tostring(lplr.UserId)])
-				return true
-			end
+			local blacklistedUsers = type(whitelist.data.BlacklistedUsers) == 'table' and whitelist.data.BlacklistedUsers or {}
+local blacklistReason = blacklistedUsers[tostring(lplr.UserId)]
+if blacklistReason then
+    task.spawn(lplr.Kick, lplr, tostring(blacklistReason))
+    return true
+end
 		end
 	end
 

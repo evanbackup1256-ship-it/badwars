@@ -50,7 +50,7 @@ local function isNotFoundBody(body)
 	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
 end
 
--- Status GUI (Premium v8)
+-- Status GUI (Premium v8.1 - persistence hotfix)
 local statusGui
 local statusCard
 local statusLabel
@@ -65,6 +65,10 @@ local shimmer
 local statusProgress = 0
 local statusError = false
 local statusBackdrop
+local loaderCreatedAt = os.clock()
+local loaderStatusGeneration = 0
+local loaderDismissScheduled = false
+local MINIMUM_VISIBLE_SECONDS = 2.4
 local loaderTweenService = cloneref(game:GetService('TweenService'))
 
 local function loaderTween(object, info, properties)
@@ -99,15 +103,40 @@ local function loaderStroke(parent, color, transparency, thickness)
     return stroke
 end
 
+local function isTerminalStatus(message)
+    local lower = string.lower(tostring(message or ''))
+    return lower == 'ready' or string.sub(lower, 1, 7) == 'ready -'
+end
+
 local function resolveStatusProgress(message)
     local lower = string.lower(tostring(message or ''))
-    local stages = {
-        {'cache', 0.08}, {'self-test', 0.16}, {'validating orchestrator', 0.22}, {'downloading', 0.3}, {'loading premium interface', 0.48}, {'interface ready', 0.58}, {'loading core modules', 0.72}, {'game module', 0.84}, {'loading profile', 0.92}, {'finalizing', 0.97}, {'ready', 1},
-    }
-    for _, stage in ipairs(stages) do
-        if string.find(lower, stage[1], 1, true) then return stage[2] end
+
+    if isTerminalStatus(lower) then
+        return 1
     end
-    return math.min(math.max(statusProgress + 0.012, 0.02), 0.98)
+
+    local stages = {
+        {'cache', 0.08},
+        {'self-test', 0.16},
+        {'validating orchestrator', 0.22},
+        {'downloading', 0.3},
+        {'loading premium interface', 0.48},
+        {'interface ready', 0.58},
+        {'loading core modules', 0.72},
+        {'universal modules ready', 0.8},
+        {'loading game module', 0.84},
+        {'game module ready', 0.88},
+        {'loading profile', 0.92},
+        {'finalizing', 0.97},
+    }
+
+    for _, stage in ipairs(stages) do
+        if string.find(lower, stage[1], 1, true) then
+            return stage[2]
+        end
+    end
+
+    return math.min(math.max(statusProgress + 0.012, 0.02), 0.985)
 end
 
 local function updateChips()
@@ -384,64 +413,160 @@ createPremiumLoader()
 
 shared.BadStatus = function(msg, isErr)
     local message = tostring(msg or 'Working...')
-    statusError = isErr == true
-    statusProgress = math.max(statusProgress, resolveStatusProgress(message))
+    local terminalStatus = isTerminalStatus(message)
 
-    if not statusGui or not statusGui.Parent then return end
+    loaderStatusGeneration += 1
+    local statusGeneration = loaderStatusGeneration
+    statusError = isErr == true
+
+    local nextProgress = resolveStatusProgress(message)
+    if terminalStatus and not statusError then
+        statusProgress = 1
+    else
+        statusProgress = math.min(math.max(statusProgress, nextProgress), 0.985)
+        loaderDismissScheduled = false
+    end
+
+    if not statusGui or not statusGui.Parent then
+        return
+    end
+
     statusGui.Enabled = true
 
-    local accentColor = statusError and Color3.fromRGB(255, 91, 104) or Color3.fromRGB(16, 213, 165)
+    local accentColor = statusError and Color3.fromRGB(255, 91, 104)
+        or Color3.fromRGB(16, 213, 165)
+
     local upper = string.upper(message)
-    if #upper > 34 then upper = string.sub(upper, 1, 34) .. '...' end
+    if #upper > 34 then
+        upper = string.sub(upper, 1, 34) .. '...'
+    end
 
     if stageLabel then
         stageLabel.Text = statusError and 'PIPELINE ERROR' or upper
-        stageLabel.TextColor3 = statusError and Color3.fromRGB(255, 126, 136) or Color3.fromRGB(235, 241, 250)
+        stageLabel.TextColor3 = statusError
+            and Color3.fromRGB(255, 126, 136)
+            or Color3.fromRGB(235, 241, 250)
     end
+
     if statusLabel then
         statusLabel.Text = message
-        statusLabel.TextColor3 = statusError and Color3.fromRGB(255, 145, 153) or Color3.fromRGB(170, 184, 202)
+        statusLabel.TextColor3 = statusError
+            and Color3.fromRGB(255, 145, 153)
+            or Color3.fromRGB(170, 184, 202)
     end
+
     if detailLabel then
-        detailLabel.Text = statusError and 'review the failing stage, then retry' or 'secure launch / premium UI / minimal logging'
+        detailLabel.Text = statusError
+            and 'review the failing stage, then retry'
+            or 'secure launch / premium UI / minimal logging'
     end
+
     if progressFill then
         progressFill.BackgroundColor3 = accentColor
-        loaderTween(progressFill, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-            Size = UDim2.fromScale(math.clamp(statusProgress, 0.02, 1), 1),
-        })
+        loaderTween(
+            progressFill,
+            TweenInfo.new(
+                0.32,
+                Enum.EasingStyle.Quint,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Size = UDim2.fromScale(
+                    math.clamp(statusProgress, 0.02, 1),
+                    1
+                ),
+            }
+        )
     end
-    if progressGlow then progressGlow.BackgroundColor3 = accentColor end
-    if spinner then spinner.TextColor3 = accentColor end
-    if percentLabel then percentLabel.Text = tostring(math.floor(statusProgress * 100 + 0.5)) .. '%' end
+
+    if progressGlow then
+        progressGlow.BackgroundColor3 = accentColor
+    end
+
+    if spinner then
+        spinner.TextColor3 = accentColor
+    end
+
+    if percentLabel then
+        percentLabel.Text =
+            tostring(math.floor(statusProgress * 100 + 0.5)) .. '%'
+    end
+
     updateChips()
 
-    if statusProgress >= 1 and not statusError and statusGui and statusGui.Parent then
+    if
+        terminalStatus
+        and not statusError
+        and not loaderDismissScheduled
+        and statusGui
+        and statusGui.Parent
+    then
+        loaderDismissScheduled = true
+
         if stageLabel then
-            stageLabel.Text = "LAUNCH COMPLETE"
+            stageLabel.Text = 'LAUNCH COMPLETE'
             stageLabel.TextColor3 = Color3.fromRGB(16, 213, 165)
         end
+
         if statusLabel then
-            statusLabel.Text = "BadWars V1 is ready."
+            statusLabel.Text = 'BadWars V1 is ready.'
         end
 
-        task.delay(0.42, function()
+        local visibleFor = os.clock() - loaderCreatedAt
+        local completionHold = math.max(
+            MINIMUM_VISIBLE_SECONDS - visibleFor,
+            0
+        ) + 0.65
+
+        task.delay(completionHold, function()
+            if
+                statusGeneration ~= loaderStatusGeneration
+                or statusError
+                or not statusGui
+                or not statusGui.Parent
+            then
+                loaderDismissScheduled = false
+                return
+            end
+
             if statusCard and statusCard.Parent then
-                loaderTween(statusCard, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-                    BackgroundTransparency = 1,
-                    Position = UDim2.fromScale(0.5, 0.485),
-                    Rotation = 1,
-                })
+                loaderTween(
+                    statusCard,
+                    TweenInfo.new(
+                        0.28,
+                        Enum.EasingStyle.Quint,
+                        Enum.EasingDirection.In
+                    ),
+                    {
+                        BackgroundTransparency = 1,
+                        Position = UDim2.fromScale(0.5, 0.485),
+                        Rotation = 1,
+                    }
+                )
             end
+
             if statusBackdrop and statusBackdrop.Parent then
-                loaderTween(statusBackdrop, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-                    BackgroundTransparency = 1,
-                })
+                loaderTween(
+                    statusBackdrop,
+                    TweenInfo.new(
+                        0.3,
+                        Enum.EasingStyle.Quint,
+                        Enum.EasingDirection.In
+                    ),
+                    {
+                        BackgroundTransparency = 1,
+                    }
+                )
             end
-            task.delay(0.3, function()
-                pcall(function()
-                    if statusGui then statusGui:Destroy() end
-                end)
+
+            task.delay(0.32, function()
+                if
+                    statusGeneration == loaderStatusGeneration
+                    and statusGui
+                    and statusGui.Parent
+                then
+                    statusGui:Destroy()
+                end
             end)
         end)
     end

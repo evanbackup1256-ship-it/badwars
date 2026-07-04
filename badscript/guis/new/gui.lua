@@ -1,4 +1,4 @@
--- BadWars Studio UI | Build 2026.07.04.13.1
+-- BadWars Studio UI | Build 2026.07.04.13.2
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -38,7 +38,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.13.1-BADWARS-STUDIO-HOTFIX",
+    PremiumBuild = "2026.07.04.13.2-INTERACTION-STABILITY",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -645,6 +645,12 @@ local w
 local x
 local y
 local z
+local tooltipStroke
+local tooltipScale
+local tooltipAccent
+local tooltipFollowConnection
+local tooltipGeneration = 0
+local tooltipTarget
 local A
 local B
 
@@ -1051,97 +1057,303 @@ local getGuiScale
 local clampGuiObjectToViewport
 local setGuiAbsolutePosition
 
-local function addTooltip(F, G)
-    if d.isMobile or not G then
+local function isEffectivelyVisible(target)
+    local current = target
+    while current and current ~= B do
+        if current:IsA("GuiObject") and not current.Visible then
+            return false
+        end
+        current = current.Parent
+    end
+    return target ~= nil and target.Parent ~= nil
+end
+
+local function tooltipInterfaceVisible()
+    if v and v.Visible then
+        return true
+    end
+
+    for _, window in ipairs(d.Windows) do
+        if
+            typeof(window) == "Instance"
+            and window:IsA("GuiObject")
+            and window.Visible
+        then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function stopTooltipFollow()
+    if tooltipFollowConnection then
+        tooltipFollowConnection:Disconnect()
+        tooltipFollowConnection = nil
+    end
+end
+
+local function positionTooltip()
+    if not z or not z.Parent or not z.Visible then
         return
     end
-    G = tostring(G)
-    local connections = {}
-    local ownerToken = {}
 
-    local function tooltipMoved(mouseX, mouseY)
-        if d._tooltipOwner ~= ownerToken or not z or not z.Parent then
-            return
-        end
-        local scale = getGuiScale()
-        local viewport = (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize) / scale
-        local x = mouseX / scale
-        local yPosition = mouseY / scale
-        local width = z.Size.X.Offset
-        local height = z.Size.Y.Offset
-        local padding = 8
-        local gap = 14
+    local scale = getGuiScale()
+    local viewport =
+        (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
+        / scale
+    local mouse = h:GetMouseLocation() / scale
+    local width = z.Size.X.Offset
+    local height = z.Size.Y.Offset
+    local padding = 10
+    local gap = 16
 
-        local desiredX = x + gap
-        if desiredX + width > viewport.X - padding then
-            desiredX = x - width - gap
-        end
-        desiredX = math.clamp(desiredX, padding, math.max(padding, viewport.X - width - padding))
-        local desiredY = math.clamp(yPosition - (height / 2), padding, math.max(padding, viewport.Y - height - padding))
-        z.Position = UDim2.fromOffset(desiredX, desiredY)
+    local desiredX = mouse.X + gap
+    if desiredX + width > viewport.X - padding then
+        desiredX = mouse.X - width - gap
     end
 
-    connections[1] = F.MouseEnter:Connect(function(mouseX, mouseY)
-        local interfaceVisible = v.Visible
-        if not interfaceVisible then
-            for _, window in ipairs(d.Windows) do
-                if typeof(window) == "Instance" and window:IsA("GuiObject") and window.Visible then
-                    interfaceVisible = true
-                    break
-                end
-            end
+    local desiredY = mouse.Y + 12
+    if desiredY + height > viewport.Y - padding then
+        desiredY = mouse.Y - height - 12
+    end
+
+    z.Position = UDim2.fromOffset(
+        math.clamp(
+            desiredX,
+            padding,
+            math.max(padding, viewport.X - width - padding)
+        ),
+        math.clamp(
+            desiredY,
+            padding,
+            math.max(padding, viewport.Y - height - padding)
+        )
+    )
+end
+
+local function hideTooltip(immediate)
+    tooltipGeneration += 1
+    d._tooltipOwner = nil
+    tooltipTarget = nil
+    stopTooltipFollow()
+
+    if not z or not z.Parent then
+        return
+    end
+
+    local generation = tooltipGeneration
+
+    if immediate or not d.Loaded then
+        z.Visible = false
+        z.TextTransparency = 1
+        z.BackgroundTransparency = 1
+        if tooltipStroke then
+            tooltipStroke.Transparency = 1
+        end
+        if y then
+            y.ImageTransparency = 1
+        end
+        if tooltipAccent then
+            tooltipAccent.BackgroundTransparency = 1
+        end
+        if tooltipScale then
+            tooltipScale.Scale = 0.985
+        end
+        return
+    end
+
+    local transition = TweenInfo.new(
+        0.08,
+        Enum.EasingStyle.Quart,
+        Enum.EasingDirection.In
+    )
+
+    local fadeTween = n:Tween(z, transition, {
+        TextTransparency = 1,
+        BackgroundTransparency = 1,
+    })
+
+    if tooltipStroke then
+        n:Tween(tooltipStroke, transition, {
+            Transparency = 1,
+        })
+    end
+
+    if y then
+        n:Tween(y, transition, {
+            ImageTransparency = 1,
+        })
+    end
+
+    if tooltipAccent then
+        n:Tween(tooltipAccent, transition, {
+            BackgroundTransparency = 1,
+        })
+    end
+
+    if tooltipScale then
+        n:Tween(tooltipScale, transition, {
+            Scale = 0.985,
+        })
+    end
+
+    local function finishHide()
+        if
+            generation == tooltipGeneration
+            and d._tooltipOwner == nil
+            and z
+            and z.Parent
+        then
+            z.Visible = false
+        end
+    end
+
+    if fadeTween then
+        fadeTween.Completed:Once(finishHide)
+    else
+        task.delay(0.09, finishHide)
+    end
+end
+
+d.HideTooltip = hideTooltip
+
+local function showTooltip(ownerToken, target, tooltipText)
+    tooltipGeneration += 1
+    local generation = tooltipGeneration
+    d._tooltipOwner = ownerToken
+    tooltipTarget = target
+
+    task.delay(0.14, function()
+        if
+            generation ~= tooltipGeneration
+            or d._tooltipOwner ~= ownerToken
+            or tooltipTarget ~= target
+            or not target
+            or not target.Parent
+            or not isEffectivelyVisible(target)
+            or d.TooltipsEnabled == false
+            or not tooltipInterfaceVisible()
+            or not z
+            or not z.Parent
+        then
+            return
         end
 
-        if not z or not z.Parent or not y or y.Visible == false or not interfaceVisible or d.TooltipsEnabled == false then
-            return
-        end
-        d._tooltipOwner = ownerToken
         local scale = getGuiScale()
-        local viewport = (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize) / scale
-        local maxWidth = math.clamp(viewport.X * 0.34, 200, 420)
-        local bounds = E(G, z.TextSize, o.Font, maxWidth - 18) or Vector2.new(maxWidth - 18, z.TextSize + 4)
-        z.Size = UDim2.fromOffset(math.min(maxWidth, math.max(96, bounds.X + 22)), math.max(32, bounds.Y + 16))
-        z.Text = G
+        local viewport =
+            (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
+            / scale
+        local maxWidth = math.clamp(viewport.X * 0.28, 190, 340)
+        local bounds = E(
+            tooltipText,
+            z.TextSize,
+            o.Font,
+            maxWidth - 26
+        ) or Vector2.new(maxWidth - 26, z.TextSize + 4)
+
+        z.Size = UDim2.fromOffset(
+            math.min(maxWidth, math.max(100, bounds.X + 28)),
+            math.max(32, bounds.Y + 16)
+        )
+        z.Text = tooltipText
         z.TextColor3 = o.TextStrong
-        z.TextStrokeColor3 = o.Main
-        z.TextStrokeTransparency = 0.72
         z.TextTransparency = 1
-        z.BackgroundTransparency = 0.02
+        z.BackgroundColor3 = o.Elevated
+        z.BackgroundTransparency = 1
         z.Visible = true
-        local tooltipScale = addScale(z)
-        tooltipScale.Scale = 0.95
-        if mouseX == nil or mouseY == nil then
-            local mousePosition = h:GetMouseLocation()
-            mouseX, mouseY = mousePosition.X, mousePosition.Y
+
+        if tooltipStroke then
+            tooltipStroke.Transparency = 1
         end
-        tooltipMoved(mouseX, mouseY)
-        n:Tween(z, o.TweenFast, {
-            TextTransparency = 0,
-            BackgroundColor3 = o.ElevatedHover,
-        })
-        n:Tween(tooltipScale, o.TweenBack, { Scale = 1 })
-    end)
-    connections[2] = F.MouseMoved:Connect(tooltipMoved)
-    connections[3] = F.MouseLeave:Connect(function()
-        if d._tooltipOwner ~= ownerToken then
-            return
+        if y then
+            y.ImageTransparency = 1
         end
-        d._tooltipOwner = nil
-        local tooltipScale = addScale(z)
-        n:Tween(z, o.TweenFast, { TextTransparency = 1 })
-        n:Tween(tooltipScale, o.TweenFast, { Scale = 0.95 })
-        task.delay(0.12, function()
-            if d._tooltipOwner == nil and z and z.Parent then
-                z.Visible = false
+        if tooltipAccent then
+            tooltipAccent.BackgroundTransparency = 1
+        end
+        if tooltipScale then
+            tooltipScale.Scale = 0.985
+        end
+
+        positionTooltip()
+        stopTooltipFollow()
+        tooltipFollowConnection = k.RenderStepped:Connect(function()
+            if
+                generation ~= tooltipGeneration
+                or d._tooltipOwner ~= ownerToken
+                or tooltipTarget ~= target
+                or not target.Parent
+                or not isEffectivelyVisible(target)
+                or not tooltipInterfaceVisible()
+            then
+                hideTooltip(true)
+                return
             end
+            positionTooltip()
         end)
+
+        local transition = TweenInfo.new(
+            0.12,
+            Enum.EasingStyle.Quart,
+            Enum.EasingDirection.Out
+        )
+
+        n:Tween(z, transition, {
+            TextTransparency = 0,
+            BackgroundTransparency = 0.04,
+        })
+        if tooltipStroke then
+            n:Tween(tooltipStroke, transition, {
+                Transparency = 0.48,
+            })
+        end
+        if y then
+            n:Tween(y, transition, {
+                ImageTransparency = 0.82,
+            })
+        end
+        if tooltipAccent then
+            n:Tween(tooltipAccent, transition, {
+                BackgroundTransparency = 0.08,
+            })
+        end
+        if tooltipScale then
+            n:Tween(tooltipScale, transition, {
+                Scale = 1,
+            })
+        end
     end)
+end
+
+local function addTooltip(F, G)
+    if d.isMobile or not G or not F then
+        return
+    end
+
+    G = tostring(G)
+    local ownerToken = {}
+    local connections = {}
+
+    connections[1] = F.MouseEnter:Connect(function()
+        showTooltip(ownerToken, F, G)
+    end)
+
+    connections[2] = F.MouseLeave:Connect(function()
+        if d._tooltipOwner == ownerToken then
+            hideTooltip(false)
+        end
+    end)
+
+    connections[3] = F:GetPropertyChangedSignal("Visible"):Connect(function()
+        if not F.Visible and d._tooltipOwner == ownerToken then
+            hideTooltip(true)
+        end
+    end)
+
     F.Destroying:Once(function()
         if d._tooltipOwner == ownerToken then
-            d._tooltipOwner = nil
-            if z and z.Parent then
-                z.Visible = false
-            end
+            hideTooltip(true)
         end
         for index, connection in connections do
             pcall(function()
@@ -1151,6 +1363,8 @@ local function addTooltip(F, G)
         end
     end)
 end
+
+d.addTooltip = addTooltip
 d.addTooltip = addTooltip
 
 local function applyToggleAccent(toggleApi, hue, saturation, value, rainbow, index)
@@ -6607,7 +6821,21 @@ function d.CreateGUI(aa)
     end
 
     local function setSettingsVisible(visible)
-        if d._OpenDropdown then pcall(d._OpenDropdown, true); d._OpenDropdown = nil end
+        if d._OpenDropdown then
+            pcall(d._OpenDropdown, true)
+            d._OpenDropdown = nil
+        end
+        if d._OpenModuleOptions then
+            pcall(d._OpenModuleOptions, true)
+            d._OpenModuleOptions = nil
+        end
+        if d._OpenLegitOptions then
+            pcall(d._OpenLegitOptions, true)
+            d._OpenLegitOptions = nil
+        end
+        if d.HideTooltip then
+            d.HideTooltip(true)
+        end
         ak.Visible = visible
         playerCard.Visible = not visible
         onlineDot.Visible = not visible
@@ -6796,6 +7024,13 @@ function d.CreateGUI(aa)
 end
 
 function d.CreateCategory(aa, ab)
+    local previousCategory = aa.Categories[ab.Name]
+    if previousCategory and previousCategory.Object then
+        pcall(function()
+            previousCategory.Object:Destroy()
+        end)
+    end
+
     local ac = {
         Type = "Category",
         OriginalCategory = true,
@@ -6810,6 +7045,7 @@ function d.CreateCategory(aa, ab)
     ad.AutoButtonColor = false
     ad.Visible = false
     ad.Text = ""
+    ad.ClipsDescendants = true
     ad.Parent = v
     addShadow(ad)
     addCorner(ad, o.RadiusLarge)
@@ -6820,6 +7056,16 @@ function d.CreateCategory(aa, ab)
     local categoryScale = addScale(ad)
     local categorySweep = addV9Sweep(ad)
 
+    local headerSurface = Instance.new("Frame")
+    headerSurface.Name = "HeaderSurface"
+    headerSurface.Size = UDim2.new(1, 0, 0, 44)
+    headerSurface.Position = UDim2.fromOffset(0, 0)
+    headerSurface.BackgroundColor3 = o.MainSoft
+    headerSurface.BorderSizePixel = 0
+    headerSurface.ZIndex = ad.ZIndex + 10
+    headerSurface.Parent = ad
+    addCorner(headerSurface, o.RadiusLarge)
+
     local ae = Instance.new("ImageLabel")
     ae.Name = "Icon"
     ae.Size = ab.Size
@@ -6827,7 +7073,8 @@ function d.CreateCategory(aa, ab)
     ae.BackgroundTransparency = 1
     ae.Image = ab.Icon
     ae.ImageColor3 = o.MutedText
-    ae.Parent = ad
+    ae.ZIndex = headerSurface.ZIndex + 2
+    ae.Parent = headerSurface
     local af = Instance.new("TextLabel")
     af.Name = "Title"
     af.Size = UDim2.new(1, -(ab.Size.X.Offset > 18 and 44 or 37), 1, 0)
@@ -6838,7 +7085,8 @@ function d.CreateCategory(aa, ab)
     af.TextColor3 = o.MutedText
     af.TextSize = 13
     af.FontFace = o.FontSemiBold
-    af.Parent = ad
+    af.ZIndex = headerSurface.ZIndex + 2
+    af.Parent = headerSurface
 
     local categorySub = Instance.new("TextLabel")
     categorySub.Name = "Subtitle"
@@ -6854,7 +7102,8 @@ function d.CreateCategory(aa, ab)
     categorySub.TextXAlignment = Enum.TextXAlignment.Left
     categorySub.FontFace = o.FontBold
     categorySub.Visible = false
-    categorySub.Parent = ad
+    categorySub.ZIndex = headerSurface.ZIndex + 2
+    categorySub.Parent = headerSurface
 
     local ag = Instance.new("TextButton")
     ag.Name = "Arrow"
@@ -6863,7 +7112,8 @@ function d.CreateCategory(aa, ab)
     ag.Position = UDim2.fromOffset(0, 0)
     ag.BackgroundTransparency = 1
     ag.Text = ""
-    ag.Parent = ad
+    ag.ZIndex = headerSurface.ZIndex + 3
+    ag.Parent = headerSurface
     makeDraggable2(ag, ad)
     local ah = setupGuiMoveCheck(ag, ad)
     local ai = Instance.new("ImageLabel")
@@ -6875,6 +7125,7 @@ function d.CreateCategory(aa, ab)
     ai.Image = u("badscript/assets/new/expandup.png")
     ai.ImageColor3 = Color3.fromRGB(140, 140, 140)
     ai.Rotation = 180
+    ai.ZIndex = ag.ZIndex + 1
     ai.Parent = ag
     local aj = Instance.new("ScrollingFrame")
     aj.Name = "Children"
@@ -6893,6 +7144,7 @@ function d.CreateCategory(aa, ab)
     aj.ElasticBehavior = Enum.ElasticBehavior.Never
     aj.CanvasSize = UDim2.new()
     aj.ClipsDescendants = true
+    aj.ZIndex = ad.ZIndex + 1
     aj.Parent = ad
     local ak = Instance.new("Frame")
     ak.Name = "Divider"
@@ -6925,9 +7177,10 @@ function d.CreateCategory(aa, ab)
             or o.MutedText
         categoryAccent.BackgroundTransparency =
             active and 0.1 or 0.5
-        ad.BackgroundColor3 =
+        headerSurface.BackgroundColor3 =
             hovered and o.SurfaceHover
             or (ac.Expanded and o.Elevated or o.MainSoft)
+        ad.BackgroundColor3 = o.MainSoft
         categoryStroke.Color =
             active
             and accent:Lerp(o.BorderStrong, 0.6)
@@ -7035,7 +7288,7 @@ function d.CreateCategory(aa, ab)
         as.Rotation = 90
         as.Enabled = false
         as.Parent = ar
-        local at = Instance.new("Frame")
+        local at = Instance.new("CanvasGroup")
         local au = Instance.new("TextButton")
         addTooltip(ar, an.Tooltip)
         addTooltip(au, "Click to bind")
@@ -7240,10 +7493,17 @@ function d.CreateCategory(aa, ab)
         at.BackgroundColor3 = o.MainSoft
         at.BorderSizePixel = 0
         at.Visible = false
+        at.GroupTransparency = 1
         at.Parent = aj
         at.ClipsDescendants = true
         addCorner(at, o.Radius)
-        addStroke(at, o.Border, 0.92, 1, "OptionsStroke")
+        local optionsStroke = addStroke(
+            at,
+            o.Border,
+            1,
+            1,
+            "OptionsStroke"
+        )
         ao.Children = at
         local J = Instance.new("UIListLayout")
         J.SortOrder = Enum.SortOrder.LayoutOrder
@@ -7270,7 +7530,36 @@ function d.CreateCategory(aa, ab)
         ao.OptionsVisibilityChanged =
             a.createCustomSignal(`OPTIONS_VISIBILITY_CHANGE_{tostring(an.Name)}_{tostring(ab.Name)}`)
 
+        local closeOptions
+        local lastOptionsToggle = 0
+        local optionsTransition = TweenInfo.new(
+            0.18,
+            Enum.EasingStyle.Quart,
+            Enum.EasingDirection.InOut
+        )
+
         local function openOptions()
+            if optionsOpen then
+                return
+            end
+
+            if d.HideTooltip then
+                d.HideTooltip(true)
+            end
+
+            if d._OpenDropdown then
+                pcall(d._OpenDropdown, true)
+                d._OpenDropdown = nil
+            end
+
+            if
+                d._OpenModuleOptions
+                and d._OpenModuleOptions ~= closeOptions
+            then
+                pcall(d._OpenModuleOptions, true)
+            end
+
+            d._OpenModuleOptions = closeOptions
             optionsAnimationId += 1
             local animationId = optionsAnimationId
             optionsOpen = true
@@ -7285,11 +7574,22 @@ function d.CreateCategory(aa, ab)
             end
 
             at.Visible = true
+            at.GroupTransparency = 1
+            at.Size = UDim2.new(1, -12, 0, 0)
+            optionsStroke.Transparency = 1
             ao.OptionsVisibilityChanged:Fire(true)
 
-            local targetHeight = math.max(J.AbsoluteContentSize.Y / A.Scale, 0)
-            L = n:Tween(at, TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            local targetHeight = math.max(
+                J.AbsoluteContentSize.Y / A.Scale,
+                0
+            )
+
+            L = n:Tween(at, optionsTransition, {
                 Size = UDim2.new(1, -12, 0, targetHeight),
+                GroupTransparency = 0,
+            })
+            n:Tween(optionsStroke, optionsTransition, {
+                Transparency = 0.92,
             })
 
             if L then
@@ -7301,10 +7601,21 @@ function d.CreateCategory(aa, ab)
             end
         end
 
-        local function closeOptions()
+        closeOptions = function(instant)
+            if not optionsOpen and not at.Visible then
+                if d._OpenModuleOptions == closeOptions then
+                    d._OpenModuleOptions = nil
+                end
+                return
+            end
+
             optionsAnimationId += 1
             local animationId = optionsAnimationId
             optionsOpen = false
+
+            if d._OpenModuleOptions == closeOptions then
+                d._OpenModuleOptions = nil
+            end
 
             if L then
                 L:Cancel()
@@ -7315,27 +7626,58 @@ function d.CreateCategory(aa, ab)
                 M = nil
             end
 
-            M = n:Tween(at, TweenInfo.new(0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            local function finishClose()
+                if
+                    animationId == optionsAnimationId
+                    and not optionsOpen
+                then
+                    at.Visible = false
+                    at.GroupTransparency = 1
+                    at.Size = UDim2.new(1, -12, 0, 0)
+                    optionsStroke.Transparency = 1
+                    ao.OptionsVisibilityChanged:Fire(false)
+                    M = nil
+                end
+            end
+
+            if instant or not d.Loaded then
+                finishClose()
+                return
+            end
+
+            M = n:Tween(at, optionsTransition, {
                 Size = UDim2.new(1, -12, 0, 0),
+                GroupTransparency = 1,
+            })
+            n:Tween(optionsStroke, optionsTransition, {
+                Transparency = 1,
             })
 
             if M then
                 M.Completed:Once(function(playbackState)
-                    if
-                        playbackState == Enum.PlaybackState.Completed
-                        and animationId == optionsAnimationId
-                        and not optionsOpen
-                    then
-                        at.Visible = false
-                        ao.OptionsVisibilityChanged:Fire(false)
-                        M = nil
+                    if playbackState == Enum.PlaybackState.Completed then
+                        finishClose()
                     end
                 end)
             else
-                at.Visible = false
-                ao.OptionsVisibilityChanged:Fire(false)
+                finishClose()
             end
         end
+
+        local function toggleOptions()
+            local now = os.clock()
+            if now - lastOptionsToggle < 0.12 then
+                return
+            end
+            lastOptionsToggle = now
+
+            if optionsOpen then
+                closeOptions(false)
+            else
+                openOptions()
+            end
+        end
+
         function ao.SetBind(N, O, P, Q)
             if O.Mobile then
                 createMobileButton(ao, Vector2.new(O.X, O.Y))
@@ -7577,20 +7919,7 @@ function d.CreateCategory(aa, ab)
                 I.ImageColor3 = ao.Enabled and o.Text or m.Light(o.Main, 0.37)
             end)
         end
-        aC.Activated:Connect(function()
-            if optionsOpen then
-                closeOptions()
-            else
-                openOptions()
-            end
-        end)
-        aC.MouseButton2Click:Connect(function()
-            if optionsOpen then
-                closeOptions()
-            else
-                openOptions()
-            end
-        end)
+        aC.Activated:Connect(toggleOptions)
 
         if not d.isMobile then
             ar.MouseEnter:Connect(function()
@@ -7663,7 +7992,7 @@ function d.CreateCategory(aa, ab)
                         )}</b></font> :c`,
                         3
                     )
-                    at.Visible = false
+                    closeOptions(true)
                 end
             end
         end)
@@ -7693,11 +8022,14 @@ function d.CreateCategory(aa, ab)
             ao:Toggle()
         end)
         ar.MouseButton2Click:Connect(function()
-            if optionsOpen then
-                closeOptions()
-            else
-                openOptions()
+            if d.HideTooltip then
+                d.HideTooltip(true)
             end
+            toggleOptions()
+        end)
+
+        ar.Destroying:Once(function()
+            closeOptions(true)
         end)
         if d.isMobile then
             local N = false
@@ -7942,7 +8274,7 @@ function d.CreateCategory(aa, ab)
             and aj.CanvasSize.Y.Offset > math.max(0, targetHeight - 44)
 
         if instant or not d.Loaded or d._SuppressEntryAnimation then
-            ad.ClipsDescendants = false
+            ad.ClipsDescendants = true
             ad.Size = UDim2.fromOffset(232, targetHeight)
             ai.Rotation = ac.Expanded and 0 or 180
             aj.Visible = ac.Expanded
@@ -7954,7 +8286,7 @@ function d.CreateCategory(aa, ab)
             local function finishCategoryTransition()
                 if animationId ~= categoryAnimationId then return end
                 aj.Visible = ac.Expanded
-                ad.ClipsDescendants = false
+                ad.ClipsDescendants = true
             end
             if sizeTween then sizeTween.Completed:Once(finishCategoryTransition) else task.delay(0.35, finishCategoryTransition) end
         end
@@ -7998,9 +8330,6 @@ function d.CreateCategory(aa, ab)
         end
         ac:Expand()
     end)
-    ag.MouseButton2Click:Connect(function()
-        ac:Expand()
-    end)
     ag.MouseEnter:Connect(function()
         updateCategoryVisual(true)
         playV9Sweep(categorySweep)
@@ -8034,11 +8363,6 @@ function d.CreateCategory(aa, ab)
             setthreadidentity(8)
         end
         ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
-    end)
-    ad.InputBegan:Connect(function(am)
-        if am.Position.Y < ad.AbsolutePosition.Y + 46 and am.UserInputType == Enum.UserInputType.MouseButton2 then
-            ac:Expand()
-        end
     end)
     al:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         if aa.ThreadFix then
@@ -9147,9 +9471,6 @@ function d.CreateOverlay(af, ag)
     an.Activated:Connect(function()
         ai:Expand(true)
     end)
-    an.MouseButton2Click:Connect(function()
-        ai:Expand(true)
-    end)
     connectDoubleClick(an, function()
         if not ai.Expanded then
             ai:Expand(true)
@@ -9157,9 +9478,6 @@ function d.CreateOverlay(af, ag)
     end)
     am.Activated:Connect(function()
         ai:Pin()
-    end)
-    ah.MouseButton2Click:Connect(function()
-        ai:Expand(true)
     end)
     ar:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         if af.ThreadFix then
@@ -11817,9 +12135,6 @@ function d.CreateCategoryList(ag, ah)
     an.Activated:Connect(function()
         ai:Expand()
     end)
-    an.MouseButton2Click:Connect(function()
-        ai:Expand()
-    end)
     az.FocusLost:Connect(function(aC)
         if aC and not table.find(ai.List, az.Text) then
             ai:ChangeValue(az.Text)
@@ -11862,11 +12177,6 @@ function d.CreateCategoryList(ag, ah)
             end
         else
             aq.Visible = not aq.Visible
-        end
-    end)
-    aj.InputBegan:Connect(function(aC)
-        if aC.Position.Y < aj.AbsolutePosition.Y + 41 and aC.UserInputType == Enum.UserInputType.MouseButton2 then
-            ai:Expand()
         end
     end)
     at:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -12168,7 +12478,12 @@ function d.CreateSearch(ag)
                         ),
                     })
                 end
-                az.MouseButton2Click:Connect(navigateToModule)
+                az.MouseButton2Click:Connect(function()
+                    if d.HideTooltip then
+                        d.HideTooltip(true)
+                    end
+                    navigateToModule()
+                end)
 
                 if d.isMobile then
                     local aB
@@ -12470,6 +12785,88 @@ function d.CreateLegit(ag)
         aE.ImageColor3 = m.Light(o.Main, 0.37)
         aE.Parent = aC
         addCorner(aC)
+
+        local legitOptionsGeneration = 0
+        local legitOptionsTransition = TweenInfo.new(
+            0.18,
+            Enum.EasingStyle.Quart,
+            Enum.EasingDirection.InOut
+        )
+        local closeLegitOptions
+
+        local function openLegitOptions()
+            if d.HideTooltip then
+                d.HideTooltip(true)
+            end
+            if d._OpenDropdown then
+                pcall(d._OpenDropdown, true)
+                d._OpenDropdown = nil
+            end
+            if d._OpenModuleOptions then
+                pcall(d._OpenModuleOptions, true)
+                d._OpenModuleOptions = nil
+            end
+            if
+                d._OpenLegitOptions
+                and d._OpenLegitOptions ~= closeLegitOptions
+            then
+                pcall(d._OpenLegitOptions, true)
+            end
+
+            d._OpenLegitOptions = closeLegitOptions
+            legitOptionsGeneration += 1
+            aB.Visible = true
+            aB.Active = true
+            aB.BackgroundTransparency = 1
+            aC.Position = UDim2.fromScale(1, 0)
+
+            n:Tween(aB, legitOptionsTransition, {
+                BackgroundTransparency = 0.5,
+            })
+            n:Tween(aC, legitOptionsTransition, {
+                Position = UDim2.new(1, -220, 0, 0),
+            })
+        end
+
+        closeLegitOptions = function(instant)
+            legitOptionsGeneration += 1
+            local generation = legitOptionsGeneration
+            if d._OpenLegitOptions == closeLegitOptions then
+                d._OpenLegitOptions = nil
+            end
+
+            if not aB.Visible then
+                return
+            end
+
+            aB.Active = false
+
+            local function finishClose()
+                if generation == legitOptionsGeneration then
+                    aB.Visible = false
+                    aB.BackgroundTransparency = 1
+                    aC.Position = UDim2.fromScale(1, 0)
+                end
+            end
+
+            if instant or not d.Loaded then
+                finishClose()
+                return
+            end
+
+            local fadeTween = n:Tween(aB, legitOptionsTransition, {
+                BackgroundTransparency = 1,
+            })
+            n:Tween(aC, legitOptionsTransition, {
+                Position = UDim2.fromScale(1, 0),
+            })
+
+            if fadeTween then
+                fadeTween.Completed:Once(finishClose)
+            else
+                task.delay(0.19, finishClose)
+            end
+        end
 
         local aF = Instance.new("ScrollingFrame")
         aF.Name = "Children"
@@ -12835,25 +13232,10 @@ function d.CreateLegit(ag)
             aE.ImageColor3 = m.Light(o.Main, 0.37)
         end)
         aE.Activated:Connect(function()
-            n:Tween(aB, o.Tween, {
-                BackgroundTransparency = 1,
-            })
-            n:Tween(aC, o.Tween, {
-                Position = UDim2.fromScale(1, 0),
-            })
-            task.wait(0.2)
-            aB.Visible = false
+            closeLegitOptions(false)
         end)
 
-        az.Activated:Connect(function()
-            aB.Visible = true
-            n:Tween(aB, o.Tween, {
-                BackgroundTransparency = 0.5,
-            })
-            n:Tween(aC, o.Tween, {
-                Position = UDim2.new(1, -220, 0, 0),
-            })
-        end)
+        az.Activated:Connect(openLegitOptions)
 
         az.MouseEnter:Connect(function()
             local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
@@ -12899,25 +13281,14 @@ function d.CreateLegit(ag)
             ar:Toggle()
         end)
 
-        av.MouseButton2Click:Connect(function()
-            aB.Visible = true
-            n:Tween(aB, o.Tween, {
-                BackgroundTransparency = 0.5,
-            })
-            n:Tween(aC, o.Tween, {
-                Position = UDim2.new(1, -220, 0, 0),
-            })
-        end)
+        av.MouseButton2Click:Connect(openLegitOptions)
 
         aB.Activated:Connect(function()
-            n:Tween(aB, o.Tween, {
-                BackgroundTransparency = 1,
-            })
-            n:Tween(aC, o.Tween, {
-                Position = UDim2.fromScale(1, 0),
-            })
-            task.wait(0.2)
-            aB.Visible = false
+            closeLegitOptions(false)
+        end)
+
+        av.Destroying:Once(function()
+            closeLegitOptions(true)
         end)
 
         aH:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -14420,17 +14791,21 @@ z.RichText = false
 z.TextXAlignment = Enum.TextXAlignment.Left
 z.TextYAlignment = Enum.TextYAlignment.Center
 z.FontFace = o.FontSemiBold
-z.BackgroundTransparency = 0.02
+z.BackgroundTransparency = 1
 z.Parent = w
 addCorner(z, o.Radius)
-local tooltipStroke = addStroke(z, o.BorderStrong, 0.36, 1, "TooltipStroke")
+tooltipStroke = addStroke(z, o.BorderStrong, 1, 1, "TooltipStroke")
 y = addShadow(z, true)
-local tooltipAccent = Instance.new("Frame")
+y.ImageTransparency = 1
+tooltipScale = addScale(z)
+tooltipScale.Scale = 0.985
+tooltipAccent = Instance.new("Frame")
 tooltipAccent.Name = "Accent"
 tooltipAccent.Size = UDim2.new(0, 2, 1, -12)
 tooltipAccent.Position = UDim2.fromOffset(5, 6)
 tooltipAccent.BorderSizePixel = 0
 tooltipAccent.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+tooltipAccent.BackgroundTransparency = 1
 tooltipAccent.ZIndex = z.ZIndex + 1
 tooltipAccent.Parent = z
 addCorner(tooltipAccent, UDim.new(1, 0))
@@ -14446,6 +14821,21 @@ tooltipPadding.PaddingRight = UDim.new(0, 11)
 tooltipPadding.PaddingTop = UDim.new(0, 7)
 tooltipPadding.PaddingBottom = UDim.new(0, 7)
 tooltipPadding.Parent = z
+d:Clean(h.InputBegan:Connect(function(input)
+    if
+        input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.MouseButton2
+        or input.UserInputType == Enum.UserInputType.Touch
+    then
+        hideTooltip(true)
+    end
+end))
+
+d:Clean(h.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        hideTooltip(true)
+    end
+end))
 local ak = Instance.new("Frame")
 ak.Size = UDim2.fromScale(1, 1)
 ak.Position = UDim2.fromOffset(0, 0)
@@ -14521,6 +14911,23 @@ d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
 end))
 
 d:Clean(v:GetPropertyChangedSignal("Visible"):Connect(function()
+    if not v.Visible then
+        if d.HideTooltip then
+            d.HideTooltip(true)
+        end
+        if d._OpenDropdown then
+            pcall(d._OpenDropdown, true)
+            d._OpenDropdown = nil
+        end
+        if d._OpenModuleOptions then
+            pcall(d._OpenModuleOptions, true)
+            d._OpenModuleOptions = nil
+        end
+        if d._OpenLegitOptions then
+            pcall(d._OpenLegitOptions, true)
+            d._OpenLegitOptions = nil
+        end
+    end
     d:UpdateGUI(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value, true)
     if v.Visible and h.MouseEnabled then
         repeat

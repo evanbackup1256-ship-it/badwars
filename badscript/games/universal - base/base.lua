@@ -306,7 +306,7 @@ end))
 local frictionTable, oldfrict, entitylib = {}, {}
 local function updateVelocity()
 	if getTableSize(frictionTable) > 0 then
-		if entitylib.isAlive then
+		if entitylib.isAlive and entitylib.character and entitylib.character.Character then
 			for _, v in entitylib.character.Character:GetChildren() do
 				if v:IsA('BasePart') and v.Name ~= 'HumanoidRootPart' and not oldfrict[v] then
 					oldfrict[v] = v.CustomPhysicalProperties or 'none'
@@ -393,10 +393,12 @@ local SpeedMethods
 local SpeedMethodList = {'Velocity'}
 SpeedMethods = {
 	Velocity = function(options, moveDirection)
+		if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart then return end
 		local root = entitylib.character.RootPart
 		root.AssemblyLinearVelocity = (moveDirection * options.Value.Value) + Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
 	end,
 	Impulse = function(options, moveDirection)
+		if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart then return end
 		local root = entitylib.character.RootPart
 		local diff = ((moveDirection * options.Value.Value) - root.AssemblyLinearVelocity) * Vector3.new(1, 0, 1)
 		if diff.Magnitude > (moveDirection == Vector3.zero and 10 or 2) then
@@ -404,6 +406,7 @@ SpeedMethods = {
 		end
 	end,
 	CFrame = function(options, moveDirection, dt)
+		if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart or not entitylib.character.Humanoid then return end
 		local root = entitylib.character.RootPart
 		local dest = (moveDirection * math.max(options.Value.Value - entitylib.character.Humanoid.WalkSpeed, 0) * dt)
 		if options.WallCheck.Enabled then
@@ -417,16 +420,19 @@ SpeedMethods = {
 		root.CFrame += dest
 	end,
 	TP = function(options, moveDirection)
+		if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart then return end
 		if options.TPTiming < tick() then
 			options.TPTiming = tick() + options.TPFrequency.Value
 			SpeedMethods.CFrame(options, moveDirection, 1)
 		end
 	end,
 	WalkSpeed = function(options)
+		if not entitylib.isAlive or not entitylib.character or not entitylib.character.Humanoid then return end
 		if not options.WalkSpeed then options.WalkSpeed = entitylib.character.Humanoid.WalkSpeed end
 		entitylib.character.Humanoid.WalkSpeed = options.Value.Value
 	end,
 	Pulse = function(options, moveDirection)
+		if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart or not entitylib.character.Humanoid then return end
 		local root = entitylib.character.RootPart
 		local dt = math.max(options.Value.Value - entitylib.character.Humanoid.WalkSpeed, 0)
 		dt = dt * (1 - math.min((tick() % (options.PulseLength.Value + options.PulseDelay.Value)) / options.PulseLength.Value, 1))
@@ -441,6 +447,7 @@ end
 
 run(function()
 	entitylib.getUpdateConnections = function(ent)
+		if not ent or not ent.Humanoid then return {} end
 		local hum = ent.Humanoid
 		return {
 			hum:GetPropertyChangedSignal('Health'),
@@ -464,7 +471,7 @@ run(function()
 		if ent.NPC then return true end
 		if isFriend(ent.Player) then return false end
 		if not select(2, whitelist:get(ent.Player)) then return false end
-		if Bad.Categories.Main.Options['Teams by server'].Enabled then
+		if Bad.Categories and Bad.Categories.Main and Bad.Categories.Main.Options and Bad.Categories.Main.Options['Teams by server'] and Bad.Categories.Main.Options['Teams by server'].Enabled then
 			if not lplr.Team then return true end
 			if not ent.Player.Team then return true end
 			if ent.Player.Team ~= lplr.Team then return true end
@@ -475,9 +482,14 @@ run(function()
 
 	entitylib.getEntityColor = function(ent)
 		ent = ent.Player
-		if not (ent and Bad.Categories.Main.Options['Use team color'].Enabled) then return end
+		local mainOpts = Bad.Categories and Bad.Categories.Main and Bad.Categories.Main.Options
+		if not (ent and mainOpts and mainOpts['Use team color'] and mainOpts['Use team color'].Enabled) then return end
 		if isFriend(ent, true) then
-			return Color3.fromHSV(Bad.Categories.Friends.Options['Friends color'].Hue, Bad.Categories.Friends.Options['Friends color'].Sat, Bad.Categories.Friends.Options['Friends color'].Value)
+			local friendOpts = Bad.Categories and Bad.Categories.Friends and Bad.Categories.Friends.Options
+			if friendOpts and friendOpts['Friends color'] then
+				return Color3.fromHSV(friendOpts['Friends color'].Hue, friendOpts['Friends color'].Sat, friendOpts['Friends color'].Value)
+			end
+			return nil
 		end
 		return tostring(ent.TeamColor) ~= 'White' and ent.TeamColor.Color or nil
 	end
@@ -486,8 +498,12 @@ run(function()
 		entitylib.kill()
 		entitylib = nil
 	end)
-	Bad:Clean(Bad.Categories.Friends.Update.Event:Connect(function() entitylib.refresh() end))
-	Bad:Clean(Bad.Categories.Targets.Update.Event:Connect(function() entitylib.refresh() end))
+	if Bad.Categories and Bad.Categories.Friends and Bad.Categories.Friends.Update then
+		Bad:Clean(Bad.Categories.Friends.Update.Event:Connect(function() entitylib.refresh() end))
+	end
+	if Bad.Categories and Bad.Categories.Targets and Bad.Categories.Targets.Update then
+		Bad:Clean(Bad.Categories.Targets.Update.Event:Connect(function() entitylib.refresh() end))
+	end
 	Bad:Clean(entitylib.Events.LocalAdded:Connect(updateVelocity))
 	Bad:Clean(workspace:GetPropertyChangedSignal('CurrentCamera'):Connect(function()
 		gameCamera = workspace.CurrentCamera or workspace:FindFirstChildWhichIsA('Camera')
@@ -886,9 +902,9 @@ run(function()
 			end
 
 			if whitelist.textdata ~= whitelist.olddata then
-				if whitelist.data.Announcement.expiretime > os.time() then
+				if whitelist.data and whitelist.data.Announcement and whitelist.data.Announcement.expiretime and whitelist.data.Announcement.expiretime > os.time() then
 					local targets = whitelist.data.Announcement.targets
-					targets = targets == 'all' and {tostring(lplr.UserId)} or targets:split(',')
+					targets = targets == 'all' and {tostring(lplr.UserId)} or (type(targets) == 'string' and targets:split(',') or {})
 
 					if table.find(targets, tostring(lplr.UserId)) then
 						whitelist:announce(whitelist.data.Announcement.text)
@@ -938,7 +954,7 @@ run(function()
 			workspace.Gravity = tonumber(args[1]) or workspace.Gravity
 		end,
 		jump = function()
-			if entitylib.isAlive and entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air then
+			if entitylib.isAlive and entitylib.character and entitylib.character.Humanoid and entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air then
 				entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 			end
 		end,
@@ -948,7 +964,7 @@ run(function()
 			end)
 		end,
 		kill = function()
-			if entitylib.isAlive then
+			if entitylib.isAlive and entitylib.character and entitylib.character.Humanoid then
 				entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Dead)
 				entitylib.character.Humanoid.Health = 0
 			end
@@ -964,15 +980,16 @@ run(function()
 		end,
 		toggle = function(args)
 			if #args < 1 then return end
+			if not Bad.Modules then return end
 			if args[1]:lower() == 'all' then
 				for i, v in Bad.Modules do
-					if i ~= 'Panic' and i ~= 'ServerHop' and i ~= 'Rejoin' then
+					if i ~= 'Panic' and i ~= 'ServerHop' and i ~= 'Rejoin' and v and type(v.Toggle) == 'function' then
 						v:Toggle()
 					end
 				end
 			else
 				for i, v in Bad.Modules do
-					if i:lower() == args[1]:lower() then
+					if i:lower() == args[1]:lower() and v and type(v.Toggle) == 'function' then
 						v:Toggle()
 						break
 					end
@@ -980,7 +997,7 @@ run(function()
 			end
 		end,
 		trip = function()
-			if entitylib.isAlive then
+			if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.Humanoid then
 				if entitylib.character.RootPart.Velocity.Magnitude < 15 then
 					entitylib.character.RootPart.Velocity = entitylib.character.RootPart.CFrame.LookVector * 15
 				end
@@ -998,7 +1015,7 @@ run(function()
 			end
 		end,
 		void = function()
-			if entitylib.isAlive then
+			if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 				entitylib.character.RootPart.CFrame += Vector3.new(0, -1000, 0)
 			end
 		end

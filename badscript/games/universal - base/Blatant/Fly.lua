@@ -139,7 +139,7 @@ run(function()
 					end))
 				end
 
-				if inputService.TouchEnabled then
+				if inputService and inputService.TouchEnabled then
 					pcall(function()
 						local jumpButton = lplr.PlayerGui.TouchGui.TouchControlFrame.JumpButton
 						Fly:Clean(jumpButton:GetPropertyChangedSignal('ImageRectOffset'):Connect(function()

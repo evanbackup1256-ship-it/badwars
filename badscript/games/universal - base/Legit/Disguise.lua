@@ -56,7 +56,9 @@ local function characterAdded(char)
 			end
 		end
 
-		clone.Humanoid:ApplyDescriptionClientServer(desc)
+		pcall(function()
+			clone.Humanoid:ApplyDescription(desc)
+		end)
 		for _, v in char.Character:GetChildren() do
 			itemAdded(v)
 		end

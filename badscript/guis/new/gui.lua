@@ -30,7 +30,7 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "4.18",
+    Version = "4.18", PremiumBuild = "2026.07.04.3-FONT-FIX",
     PremiumBuild = "2026.07.04.2-EXE6-RAYFIELD-FONT-HOTFIX",
     Windows = {},
     Indicators = {},

@@ -6393,10 +6393,45 @@ end
 
 local function updateCount()
 success,err=pcall(function()
-au.Text=tostring(#ao.Modules)
+local az=0
+local aA={}
+for _,aB in ao.Modules do
+if not aA[aB]then
+aA[aB]=true
+az+=1
+end
+end
+au.Text=tostring(az)
 end)
 if not success then
 warn("[ModuleCategory] updateCount failed:",err)
+end
+end
+
+local function refreshModuleCategory()
+success,err=pcall(function()
+local az=ay.AbsoluteContentSize.Y/A.Scale
+if ao.Expanded then
+ax.Visible=true
+ax.Size=UDim2.new(1,0,0,az)
+ap.Size=UDim2.fromOffset(220,45+az)
+if ao.UpExpand then
+ap.Position=UDim2.fromOffset(0,-az)
+end
+else
+ax.Size=UDim2.new(1,0,0,0)
+ap.Size=UDim2.fromOffset(220,45)
+if ao.UpExpand then
+ap.Position=UDim2.fromOffset(0,0)
+end
+end
+aj.CanvasSize=UDim2.fromOffset(0,al.AbsoluteContentSize.Y/A.Scale)
+if ac.Expanded then
+ad.Size=UDim2.fromOffset(220,math.min(41+al.AbsoluteContentSize.Y/A.Scale,601))
+end
+end)
+if not success then
+warn("[ModuleCategory] refresh failed:",err)
 end
 end
 
@@ -6505,14 +6540,21 @@ if not aA or not aA.Object then
 return
 end
 
-table.insert(az.Modules,aA)
-updateCount()
+local aB=aA.SavingID or aA.Name or tostring(aA)
+az.Modules[aB]=aA
+if aA.Name and aA.Name~=aB then
+az.Modules[aA.Name]=aA
+end
 
 aA.Object.Parent=ax
 if aA.Children then
 aA.Children.Parent=ax
 end
+aA.Category=az.Name
+aA.CategoryApi=ac
 aA.ModuleCategory=ao
+updateCount()
+task.defer(refreshModuleCategory)
 end)
 if not success then
 warn("[ModuleCategory] AddModule failed:",err)
@@ -6606,15 +6648,7 @@ end
 end)
 
 ay:GetPropertyChangedSignal"AbsoluteContentSize":Connect(function()
-if ao.Expanded then
-local az=ay.AbsoluteContentSize.Y/A.Scale
-ax.Size=UDim2.new(1,0,0,az)
-ap.Size=UDim2.fromOffset(220,45+az)
-
-if ao.UpExpand then
-ap.Position=UDim2.fromOffset(0,-az)
-end
-end
+refreshModuleCategory()
 end)
 end)
 if not success then

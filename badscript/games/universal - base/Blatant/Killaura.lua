@@ -19,8 +19,8 @@ Overlay.FilterType = Enum.RaycastFilterType.Include
 local Particles, Boxes, AttackDelay = {}, {}, tick()
 
 local function getAttackData()
-	if Mouse.Enabled then
-		if not inputService:IsMouseButtonPressed(0) then return false end
+	if Mouse and Mouse.Enabled then
+		if not inputService or not inputService:IsMouseButtonPressed(0) then return false end
 	end
 
 	local tool = getTool()
@@ -34,13 +34,13 @@ Killaura = Bad.Categories.Blatant:CreateModule({
 			repeat
 				local interest, tool = getAttackData()
 				local attacked = {}
-				if interest then
+				if interest and entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 					local plrs = entitylib.AllPosition({
 						Range = SwingRange.Value,
-						Wallcheck = Targets.Walls.Enabled or nil,
+						Wallcheck = Targets and Targets.Walls and Targets.Walls.Enabled or nil,
 						Part = 'RootPart',
-						Players = Targets.Players.Enabled,
-						NPCs = Targets.NPCs.Enabled,
+						Players = Targets and Targets.Players and Targets.Players.Enabled,
+						NPCs = Targets and Targets.NPCs and Targets.NPCs.Enabled,
 						Limit = Max.Value
 					})
 
@@ -49,6 +49,7 @@ Killaura = Bad.Categories.Blatant:CreateModule({
 						local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 						for _, v in plrs do
+							if not v or not v.RootPart then continue end
 							local delta = (v.RootPart.Position - selfpos)
 							local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
 							if angle > (math.rad(AngleSlider.Value) / 2) then continue end
@@ -57,27 +58,31 @@ Killaura = Bad.Categories.Blatant:CreateModule({
 								Entity = v,
 								Check = delta.Magnitude > AttackRange.Value and BoxSwingColor or BoxAttackColor
 							})
-							targetinfo.Targets[v] = tick() + 1
+							if targetinfo and targetinfo.Targets then
+								targetinfo.Targets[v] = tick() + 1
+							end
 
 							if AttackDelay < tick() then
 								AttackDelay = tick() + (1 / CPS.GetRandomValue())
 								tool:Activate()
 							end
 
-							if Lunge.Enabled and tool.GripUp.X == 0 then break end
+							if Lunge and Lunge.Enabled and tool.GripUp.X == 0 then break end
 							if delta.Magnitude > AttackRange.Value then continue end
 
-							Overlay.FilterDescendantsInstances = {v.Character}
-							for _, part in workspace:GetPartBoundsInBox(v.RootPart.CFrame, Vector3.new(4, 4, 4), Overlay) do
-								firetouchinterest(interest.Parent, part, 1)
-								firetouchinterest(interest.Parent, part, 0)
+							if v.Character then
+								Overlay.FilterDescendantsInstances = {v.Character}
+								for _, part in workspace:GetPartBoundsInBox(v.RootPart.CFrame, Vector3.new(4, 4, 4), Overlay) do
+									firetouchinterest(interest.Parent, part, 1)
+									firetouchinterest(interest.Parent, part, 0)
+								end
 							end
 						end
 					end
 				end
 
 				for i, v in Boxes do
-					v.Adornee = attacked[i] and attacked[i].Entity.RootPart or nil
+					v.Adornee = attacked[i] and attacked[i].Entity and attacked[i].Entity.RootPart or nil
 					if v.Adornee then
 						v.Color3 = Color3.fromHSV(attacked[i].Check.Hue, attacked[i].Check.Sat, attacked[i].Check.Value)
 						v.Transparency = 1 - attacked[i].Check.Opacity

@@ -275,7 +275,7 @@ local function downloadFile(path)
 	setStatus('downloading '..tostring(path))
 	local urls=rawUrls(path)
 	local res=httpGetMulti(urls)
-	if type(res)~='string' or #res==0 then return nil,'empty response from '..urls[1] end
+	if type(res)~='string' or #res==0 then return nil,'ERROR empty file: empty response from '..urls[1] end
 	if isNotFoundBody(res) then return nil,'FILE NOT FOUND: '..urls[1] end
 	if path:find('.lua') then res='-- BadWars by usingINales\n'..res end
 	pcall(function() writefile(path,res) end)
@@ -309,6 +309,25 @@ local function repoTreeFiles(prefix)
 		return a<b
 	end)
 	return files
+end
+
+-- Universal module bundle loader (tries prebuilt first, then builds dynamically)
+local function loadPrebuiltBundle(name)
+	if name~='universal' then return nil end
+	local bundlePath='badscript/games/universal - base/bundle.lua'
+	if isfile(bundlePath) then
+		local bundled=readfile(bundlePath)
+		if type(bundled)=='string' and bundled~='' then
+			return bundled,'prebuilt'
+		end
+	end
+	return nil,'not found'
+end
+
+-- Lua bundle loading function for universal feature modules
+local function loadLuaBundle(name,basePath,manifestPath)
+	-- Alias for buildBundle for compatibility
+	return buildBundle(name,basePath,manifestPath)
 end
 
 -- Universal module bundle builder (no pre-built bundle, builds from sources with pcall isolation)
@@ -412,7 +431,7 @@ local function buildBundle(name,basePath,manifestPath)
 end
 
 -- Game module path map
-local gamePaths={
+local gameModulePaths={
 	[606849621]='badscript/games/jailbreak/606849621 - main/base.lua',
 	[893973440]='badscript/games/893973440 - flee the facility/base.lua',
 	[6872265039]='badscript/games/bedwars/6872265039 - lobby/base.lua',
@@ -430,7 +449,9 @@ local gamePaths={
 	[8542259458]='badscript/games/skywars voxel/8542259458 - skywars lobby.lua',
 }
 
-local function gamePath(placeId) return gamePaths[tonumber(placeId)] or ('badscript/games/'..tostring(placeId)..'.lua') end
+local function resolveGameModulePath(placeId) return gameModulePaths[tonumber(placeId)] or ('badscript/games/'..tostring(placeId)..'.lua') end
+
+local function gamePath(placeId) return resolveGameModulePath(placeId) end
 
 local function runGameMod(path,label)
 	setStatus('loading game module: '..tostring(path))
@@ -518,7 +539,8 @@ pcall(function() game:GetService('StarterGui'):SetCore('SendNotification',{Title
 local defaultGui='new'
 local validGuis={liquidbounce=true,new=true,old=true,rise=true,wurst=true}
 local savedGui=isfile('badscript/profiles/gui.txt') and readfile('badscript/profiles/gui.txt') or ''
-if not validGuis[savedGui] or savedGui=='liquidbounce' then writefile('badscript/profiles/gui.txt',defaultGui) end
+setStatus('selecting current GUI profile')
+if not validGuis[savedGui] or savedGui=='liquidbounce' then writefile('badscript/profiles/gui.txt', 'new') end
 local gui=readfile('badscript/profiles/gui.txt')
 if not isfolder('badscript/assets/'..gui) then makefolder('badscript/assets/'..gui) end
 
@@ -533,6 +555,7 @@ if not guiFn then error('GUI compile: '..tostring(guiErr),0) end
 local ok,api=pcall(guiFn)
 if not ok or type(api)~='table' or type(api.CreateNotification)~='function' then error('GUI returned invalid API',0) end
 shared.Bad=api
+local Bad=api
 ensureRuntimeCategories(api)
 logMod('GUI',gui,os_clock()-guiStart,true)
 setStatus('GUI loaded')
@@ -544,9 +567,9 @@ local secCode=downloadFile('badscript/security.lua')
 if type(secCode)=='string' and secCode~='' then
 	local secFn,secErr=_loadstring(secCode,'security')
 	if secFn then
-		local ok2,sec=pcall(secFn)
-		if ok2 and type(sec)=='table' and type(sec.Start)=='function' then
-			local verified,status=sec:Start(api)
+		local ok2,security=pcall(secFn)
+		if ok2 and type(security)=='table' and type(security.Start)=='function' then
+			local verified,status=security:Start(Bad)
 			if verified then logMod('Security','security.lua',os_clock()-secStart,true,tostring(status)) end
 		end
 	end
@@ -554,9 +577,12 @@ end
 
 -- Stage 6: Universal Modules
 if not shared.BadIndependent then
-	setStatus('pipeline: universal modules')
+	setStatus('loading universal modules')
 	local uniStart=os_clock()
-	local uniCode,uniErr=buildBundle('universal','badscript/games/universal - base/base.lua','badscript/games/universal - base/files.txt')
+	local uniCode,uniSource=loadPrebuiltBundle('universal')
+	if not uniCode then
+		uniCode,uniSource=buildBundle('universal','badscript/games/universal - base/base.lua','badscript/games/universal - base/files.txt')
+	end
 	if type(uniCode)=='string' and uniCode~='' then
 		local uniFn,uniCompile=_loadstring(uniCode,'universal')
 		if uniFn then
@@ -567,14 +593,13 @@ if not shared.BadIndependent then
 		setStatus('WARNING: universal modules unavailable',true)
 	end
 	logMod('Universal','build',os_clock()-uniStart,true)
-	setStatus('universal modules loaded')
+	setStatus('universal modules ready')
 
 	-- Stage 7: Game Module
 	local gPath=gamePath(game.PlaceId)
-	if isfile(gPath) or gamePaths[tonumber(game.PlaceId)] then
-		runGameMod(gPath,isfile(gPath) and 'cached' or 'mapped')
-	else
-		setStatus('no game module for place '..tostring(game.PlaceId))
+	if isfile(gPath) or gameModulePaths[tonumber(game.PlaceId)] then
+		runGameMod(gPath,isfile(gPath) and 'cached' or 'mapped')		setStatus('game module ready')	else
+		setStatus('universal active; no game-specific module found')
 	end
 
 	-- Stage 8: Finish

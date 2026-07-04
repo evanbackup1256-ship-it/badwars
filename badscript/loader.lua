@@ -117,6 +117,34 @@ local _loadstring
 pcall(function()local g=getgenv;if type(g)=='function'then g=g()end;_loadstring=(g and g.loadstring)or loadstring end)
 if type(_loadstring)~='function' then local m='loadstring unavailable';setStatus('ERROR: '..m,true);error(m,0) end
 
+-- Roblox update watch integration
+local function watchRobloxUpdates()
+	task.spawn(function()
+		local badStatus=shared.BadStatus
+		if type(badStatus)~='function' then return end
+		while true do
+			task.wait(300)
+			local ok,res=pcall(function()
+				local api='https://api.github.com/repos/evanbackup1256-ship-it/badwars/raw/main/badscript/profiles/roblox-version.txt'
+				local httpService=cloneref(game:GetService('HttpService'))
+				local body=httpService:GetAsync(api,true)
+				return body
+			end)
+			if ok and type(res)=='string' and #res>0 then
+				local currentVersion=(game:GetService('HttpService')):JSONDecode(res or '{}')
+				if type(currentVersion)=='table' then
+					shared.BadWarsStatusApi=currentVersion
+					if type(badStatus)=='function' then
+						badStatus('Roblox update watch: '..tostring(currentVersion.status or 'ok'))
+					end
+				end
+			end
+		end
+	end)
+end
+watchRobloxUpdates()
+shared.BadWarsStatusApi={status='ok'}
+
 -- Cache setup
 setStatus('pipeline: cache setup')
 for _,d in {'badscript','badscript/games','badscript/profiles','badscript/assets','badscript/libraries','badscript/guis'} do
@@ -125,13 +153,13 @@ end
 local function wipeAny(p) if isfolder(p) then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) then delfile(f) end end end end end
 
-local cacheVer='badwars-v6-10-game-bundles'
-local cacheFile='badscript/profiles/cache-version.txt'
-if (isfile(cacheFile) and readfile(cacheFile) or '')~=cacheVer then
+local cacheVersion = 'badwars-v2-game-router-v2-2026-07-02-03'
+local cacheFile = 'badscript/profiles/cache-version.txt'
+if (isfile(cacheFile) and readfile(cacheFile) or '') ~= cacheVersion then
 	setStatus('cache cleared (version mismatch)')
 	for _,f in {'badscript/main.lua','badscript/NewMainScript.lua','badscript/security.lua'} do if isfile(f) then delfile(f) end end
 	wipeAny('badscript/assets');wipeGen('badscript/games');wipeGen('badscript/guis');wipeGen('badscript/libraries')
-	writefile(cacheFile,cacheVer)
+	writefile(cacheFile,cacheVersion)
 end
 writefile('badscript/profiles/commit.txt','main')
 
@@ -154,7 +182,7 @@ if raw==nil then
 	setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0)
 end
 if type(raw)~='string' or raw=='' then
-	local m='Empty response for '..ORCH_PATH
+	local m='ERROR empty file: Empty response for '..ORCH_PATH
 	setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0)
 end
 if isNotFoundBody(raw) then

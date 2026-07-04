@@ -1215,9 +1215,11 @@ end
 
 return O
 else
+pcall(function()
 for O,P in pairs(K)do
 I[O]=P
 end
+end)
 end
 end
 n.tween=n.Tween
@@ -1965,6 +1967,12 @@ I.Rotation=90
 J:Destroy()
 J=nil
 af.Size=aa.Size or UDim2.new(1,0,0,40)
+n:Tween(ag,o.Tween,{
+BackgroundColor3=m.Light(o.Main,0.034),
+})
+n:Tween(ah,o.Tween,{
+Transparency=1,
+})
 end
 pcall(function()
 ab.Parent.ScrollingEnabled=true
@@ -2115,17 +2123,17 @@ P.Visible=false
 af.Size=aa.Size~=nil
 and aa.Size+UDim2.fromOffset(
 0,
-#Q*(d.isMobile and 40 or 26)
+#Q*R
 )
-or UDim2.new(1,0,0,40+(#Q*(d.isMobile and 40 or 26)))
+or UDim2.new(1,0,0,40+(#Q*R))
 J.Size=aa.Size~=nil
 and UDim2.new(
 aa.Size.X.Scale,
 aa.Size.X.Offset,
 aa.Size.Y.Scale,
 0
-)+UDim2.fromOffset(0,#Q*26)
-or UDim2.new(1,0,0,#Q*26)
+)+UDim2.fromOffset(0,#Q*R)
+or UDim2.new(1,0,0,#Q*R)
 return
 end
 
@@ -2162,9 +2170,9 @@ end
 
 local W=U>0 and U or 1
 
-local X=L*26
+local X=L*R
 local Y=O and 26 or 0
-local Z=math.min(X,W*26)
+local Z=math.min(X,W*R)
 af.Size=aa.Size
 and aa.Size+UDim2.fromOffset(0,Y+Z)
 or UDim2.new(1,0,0,40+Y+Z)
@@ -7536,16 +7544,20 @@ BackgroundColor3=Color3.fromRGB(70,60,140),
 })
 
 
+local oldStroke=X.deleteIcon:FindFirstChild"UpdateStroke"
+if oldStroke then
+oldStroke:Destroy()
+end
 local Y=Instance.new"UIStroke"
 Y.Name="UpdateStroke"
 Y.Color=Color3.fromRGB(130,100,230)
 Y.Thickness=0
 Y.Transparency=1
+Y.Parent=X.deleteIcon
 n:Tween(Y,TweenInfo.new(0.3,Enum.EasingStyle.Quad),{
 Thickness=1.5,
 Transparency=0.3,
 })
-Y.Parent=X.deleteIcon
 end
 end
 if V==0 then
@@ -11238,21 +11250,48 @@ task.delay(0,function()
 if ag.ThreadFix then
 setthreadidentity(8)
 end
+for am,an in q:GetChildren()do
+if an:IsA("GuiObject")and an:GetAttribute("NotifTitle")==ah and an:GetAttribute("NotifText")==ai then
+an:Destroy()
+end
+end
 local notifChildren=q:GetChildren()
 local maxNotifications=d.isMobile and 3 or 5
-if #notifChildren>=maxNotifications then
+local function updateNotificationPositions()
+local notifList=q:GetChildren()
+table.sort(notifList,function(am,an)
+return (am.LayoutOrder or 0)<(an.LayoutOrder or 0)
+end)
+for am,an in notifList do
+if an:IsA("GuiObject")then
+local ao=an:GetAttribute("NotifHeight")or an.AbsoluteSize.Y
+local ap=(d.isMobile and 36 or 29)+((ao+6)*am)
+an.Position=UDim2.new(1,0,1,-ap)
+end
+end
+end
+table.sort(notifChildren,function(am,an)
+return (am.LayoutOrder or 0)<(an.LayoutOrder or 0)
+end)
+while #notifChildren>=maxNotifications do
 pcall(function()
 notifChildren[1]:Destroy()
 end)
+notifChildren=q:GetChildren()
 end
 local am=#q:GetChildren()+1
-local notifHeight=d.isMobile and 82 or 75
-local notifGap=notifHeight+3
-local anMax=math.max(d.isMobile and 286 or 266,math.min((B.AbsoluteSize.X/math.max(A.Scale,0.01))-24,d.isMobile and 360 or 520))
+local notifHeight=d.isMobile and 88 or 78
+local anMax=math.max(d.isMobile and 310 or 280,math.min((B.AbsoluteSize.X/math.max(A.Scale,0.01))-24,d.isMobile and 380 or 520))
+local bodyBounds=E(removeTags(ai),d.isMobile and 14 or 13,o.Font)or Vector2.zero
+local titleBounds=E(removeTags(ah),d.isMobile and 15 or 14,o.FontSemiBold)or Vector2.zero
 local an=Instance.new"ImageLabel"
 an.Name="Notification"
-an.Size=UDim2.fromOffset(math.min(math.max(E(removeTags(ai),14,o.Font).X+80,d.isMobile and 286 or 266),anMax),notifHeight)
-an.Position=UDim2.new(1,0,1,-(29+(notifGap*am)))
+an.Size=UDim2.fromOffset(math.min(math.max(math.max(bodyBounds.X,titleBounds.X)+86,d.isMobile and 310 or 280),anMax),notifHeight)
+an.Position=UDim2.new(1,0,1,-((d.isMobile and 36 or 29)+((notifHeight+6)*am)))
+an.LayoutOrder=math.floor(os.clock()*1000)
+an:SetAttribute("NotifHeight",notifHeight)
+an:SetAttribute("NotifTitle",ah)
+an:SetAttribute("NotifText",ai)
 an.ZIndex=5
 an.BackgroundTransparency=1
 an.Image=u"badscript/assets/new/notification.png"
@@ -11293,8 +11332,8 @@ aq.FontFace=o.FontSemiBold
 aq.Parent=an
 local ar=aq:Clone()
 ar.Name="Text"
-ar.Position=UDim2.fromOffset(47,44)
-ar.Size=UDim2.new(1,-62,0,notifHeight-46)
+ar.Position=UDim2.fromOffset(47,42)
+ar.Size=UDim2.new(1,-62,0,notifHeight-48)
 ar.Text=removeTags(ai)
 ar.TextColor3=Color3.new()
 ar.TextTransparency=0.5
@@ -11325,6 +11364,7 @@ or al=="warning"and Color3.fromRGB(236,129,43)
 or Color3.fromRGB(220,220,220)
 at.BorderSizePixel=0
 at.Parent=an
+updateNotificationPositions()
 if n.Tween then
 n:Tween(an,TweenInfo.new(0.4,Enum.EasingStyle.Exponential),{
 AnchorPoint=Vector2.new(1,0),
@@ -11350,6 +11390,7 @@ if an and an.Parent then
 an:ClearAllChildren()
 an:Destroy()
 end
+updateNotificationPositions()
 end
 
 

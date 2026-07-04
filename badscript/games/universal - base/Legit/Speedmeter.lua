@@ -6,11 +6,13 @@ Speedmeter = Bad.Legit:CreateModule({
 	Function = function(callback)
 		if callback then
 			repeat
-				local lastpos = entitylib.isAlive and entitylib.character.HumanoidRootPart.Position * Vector3.new(1, 0, 1) or Vector3.zero
+				local lastpos = entitylib.isAlive and entitylib.character and entitylib.character.HumanoidRootPart and entitylib.character.HumanoidRootPart.Position * Vector3.new(1, 0, 1) or Vector3.zero
 				local dt = task.wait(0.2)
-				local newpos = entitylib.isAlive and entitylib.character.HumanoidRootPart.Position * Vector3.new(1, 0, 1) or Vector3.zero
-				label.Text = math.round(((lastpos - newpos) / dt).Magnitude)..' sps'
-			until not Speedmeter.Enabled
+				local newpos = entitylib.isAlive and entitylib.character and entitylib.character.HumanoidRootPart and entitylib.character.HumanoidRootPart.Position * Vector3.new(1, 0, 1) or Vector3.zero
+				if label then
+					label.Text = math.round(((lastpos - newpos) / dt).Magnitude)..' sps'
+				end
+			until not Speedmeter or not Speedmeter.Enabled
 		end
 	end,
 	Size = UDim2.fromOffset(100, 41),

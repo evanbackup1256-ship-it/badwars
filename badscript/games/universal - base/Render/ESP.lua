@@ -320,27 +320,44 @@ local ESPLoop = {
 				end
 			end
 
-			local _, rootVis = gameCamera:WorldToViewportPoint(ent.RootPart.Position)
+			local _, rootVis = ent.RootPart and gameCamera:WorldToViewportPoint(ent.RootPart.Position)
+			if not rootVis then
+				for _, obj in EntityESP do
+					obj.Visible = false
+				end
+				continue
+			end
 			for _, obj in EntityESP do
 				obj.Visible = rootVis
 			end
-			if not rootVis then continue end
 			
+			if not ent.Humanoid or not ent.Head or not ent.Character then continue end
 			local rigcheck = ent.Humanoid.RigType == Enum.HumanoidRigType.R6
 			pcall(function()
 				local offset = rigcheck and CFrame.new(0, -0.8, 0) or CFrame.identity
+				local torsoName = rigcheck and 'Torso' or 'UpperTorso'
+				local torso = ent.Character:FindFirstChild(torsoName)
+				if not torso then return end
 				local head = ESPWorldToViewport((ent.Head.CFrame).p)
 				local headfront = ESPWorldToViewport((ent.Head.CFrame * CFrame.new(0, 0, -0.5)).p)
-				local toplefttorso = ESPWorldToViewport((ent.Character[(rigcheck and 'Torso' or 'UpperTorso')].CFrame * CFrame.new(-1.5, 0.8, 0)).p)
-				local toprighttorso = ESPWorldToViewport((ent.Character[(rigcheck and 'Torso' or 'UpperTorso')].CFrame * CFrame.new(1.5, 0.8, 0)).p)
-				local toptorso = ESPWorldToViewport((ent.Character[(rigcheck and 'Torso' or 'UpperTorso')].CFrame * CFrame.new(0, 0.8, 0)).p)
-				local bottomtorso = ESPWorldToViewport((ent.Character[(rigcheck and 'Torso' or 'UpperTorso')].CFrame * CFrame.new(0, -0.8, 0)).p)
-				local bottomlefttorso = ESPWorldToViewport((ent.Character[(rigcheck and 'Torso' or 'UpperTorso')].CFrame * CFrame.new(-0.5, -0.8, 0)).p)
-				local bottomrighttorso = ESPWorldToViewport((ent.Character[(rigcheck and 'Torso' or 'UpperTorso')].CFrame * CFrame.new(0.5, -0.8, 0)).p)
-				local leftarm = ESPWorldToViewport((ent.Character[(rigcheck and 'Left Arm' or 'LeftHand')].CFrame * offset).p)
-				local rightarm = ESPWorldToViewport((ent.Character[(rigcheck and 'Right Arm' or 'RightHand')].CFrame * offset).p)
-				local leftleg = ESPWorldToViewport((ent.Character[(rigcheck and 'Left Leg' or 'LeftFoot')].CFrame * offset).p)
-				local rightleg = ESPWorldToViewport((ent.Character[(rigcheck and 'Right Leg' or 'RightFoot')].CFrame * offset).p)
+				local toplefttorso = ESPWorldToViewport((torso.CFrame * CFrame.new(-1.5, 0.8, 0)).p)
+				local toprighttorso = ESPWorldToViewport((torso.CFrame * CFrame.new(1.5, 0.8, 0)).p)
+				local toptorso = ESPWorldToViewport((torso.CFrame * CFrame.new(0, 0.8, 0)).p)
+				local bottomtorso = ESPWorldToViewport((torso.CFrame * CFrame.new(0, -0.8, 0)).p)
+				local bottomlefttorso = ESPWorldToViewport((torso.CFrame * CFrame.new(-0.5, -0.8, 0)).p)
+				local bottomrighttorso = ESPWorldToViewport((torso.CFrame * CFrame.new(0.5, -0.8, 0)).p)
+				local leftArmName = rigcheck and 'Left Arm' or 'LeftHand'
+				local rightArmName = rigcheck and 'Right Arm' or 'RightHand'
+				local leftLegName = rigcheck and 'Left Leg' or 'LeftFoot'
+				local rightLegName = rigcheck and 'Right Leg' or 'RightFoot'
+				local leftarm = ent.Character:FindFirstChild(leftArmName)
+				local rightarm = ent.Character:FindFirstChild(rightArmName)
+				local leftleg = ent.Character:FindFirstChild(leftLegName)
+				local rightleg = ent.Character:FindFirstChild(rightLegName)
+				if leftarm then leftarm = ESPWorldToViewport((leftarm.CFrame * offset).p) end
+				if rightarm then rightarm = ESPWorldToViewport((rightarm.CFrame * offset).p) end
+				if leftleg then leftleg = ESPWorldToViewport((leftleg.CFrame * offset).p) end
+				if rightleg then rightleg = ESPWorldToViewport((rightleg.CFrame * offset).p) end
 				EntityESP.Head.From = toptorso
 				EntityESP.Head.To = head
 				EntityESP.HeadFacing.From = head

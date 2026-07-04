@@ -1,4 +1,4 @@
--- BadWars Nexus UI | Original V9 Design System | Build 2026.07.04.9
+-- BadWars Frame UI | Build 2026.07.04.12
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -38,7 +38,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.9-NEXUS-ORIGINAL",
+    PremiumBuild = "2026.07.04.12-BADWARS-FRAME",
     Windows = {},
     Indicators = {},
 }
@@ -152,32 +152,32 @@ local n = {
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
-    Main = Color3.fromRGB(7, 8, 15),
-    MainSoft = Color3.fromRGB(10, 11, 21),
-    Text = Color3.fromRGB(229, 234, 246),
-    TextStrong = Color3.fromRGB(248, 250, 255),
-    Surface = Color3.fromRGB(14, 15, 28),
-    SurfaceSoft = Color3.fromRGB(18, 19, 35),
-    SurfaceHover = Color3.fromRGB(24, 25, 44),
-    Elevated = Color3.fromRGB(27, 28, 49),
-    ElevatedHover = Color3.fromRGB(34, 35, 59),
-    Border = Color3.fromRGB(52, 55, 81),
-    BorderStrong = Color3.fromRGB(87, 92, 132),
-    MutedText = Color3.fromRGB(151, 158, 184),
-    FaintText = Color3.fromRGB(99, 106, 132),
+    Main = Color3.fromRGB(9, 12, 16),
+    MainSoft = Color3.fromRGB(12, 16, 21),
+    Text = Color3.fromRGB(219, 226, 234),
+    TextStrong = Color3.fromRGB(244, 247, 250),
+    Surface = Color3.fromRGB(16, 21, 27),
+    SurfaceSoft = Color3.fromRGB(19, 25, 32),
+    SurfaceHover = Color3.fromRGB(23, 30, 38),
+    Elevated = Color3.fromRGB(27, 35, 44),
+    ElevatedHover = Color3.fromRGB(32, 42, 53),
+    Border = Color3.fromRGB(42, 52, 64),
+    BorderStrong = Color3.fromRGB(70, 86, 104),
+    MutedText = Color3.fromRGB(145, 157, 171),
+    FaintText = Color3.fromRGB(91, 103, 117),
     Danger = Color3.fromRGB(248, 101, 122),
     Warning = Color3.fromRGB(247, 188, 91),
     Success = Color3.fromRGB(80, 221, 167),
-    Shadow = Color3.fromRGB(1, 2, 8),
-    RadiusSmall = UDim.new(0, 7),
-    Radius = UDim.new(0, 11),
-    RadiusLarge = UDim.new(0, 17),
+    Shadow = Color3.fromRGB(0, 2, 5),
+    RadiusSmall = UDim.new(0, 5),
+    Radius = UDim.new(0, 8),
+    RadiusLarge = UDim.new(0, 12),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
     TweenPress = TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenFast = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    Tween = TweenInfo.new(0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenFast = TweenInfo.new(0.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    Tween = TweenInfo.new(0.15, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
     TweenSlow = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     TweenSpring = TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
     TweenBack = TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -812,19 +812,19 @@ local function addScale(F)
 end
 
 local function addShadow(F, G)
-    local H = F:FindFirstChild("PremiumShadow")
+    local H = F:FindFirstChild("SoftShadow")
     if H and H:IsA("ImageLabel") then
         return H
     end
 
     H = Instance.new("ImageLabel")
-    H.Name = "PremiumShadow"
-    H.Size = UDim2.new(1, G and 28 or 22, 1, G and 28 or 22)
-    H.Position = UDim2.fromOffset(G and -14 or -11, G and -14 or -11)
+    H.Name = "SoftShadow"
+    H.Size = UDim2.new(1, G and 18 or 14, 1, G and 18 or 14)
+    H.Position = UDim2.fromOffset(G and -9 or -7, G and -9 or -7)
     H.BackgroundTransparency = 1
     H.Image = u("badscript/assets/new/" .. (G and "blurnotif" or "blur") .. ".png")
     H.ImageColor3 = o.Shadow
-    H.ImageTransparency = G and 0.7 or 0.76
+    H.ImageTransparency = G and 0.78 or 0.83
     H.ScaleType = Enum.ScaleType.Slice
     H.SliceCenter = Rect.new(52, 31, 261, 502)
     H.ZIndex = math.max(F.ZIndex - 1, 0)
@@ -842,11 +842,7 @@ local function getV9AccentPair()
         d.GUIColor.Sat,
         d.GUIColor.Value
     )
-    local secondary = Color3.fromHSV(
-        (d.GUIColor.Hue + 0.13) % 1,
-        math.clamp(d.GUIColor.Sat * 0.72, 0.35, 0.88),
-        math.clamp(d.GUIColor.Value + 0.04, 0, 1)
-    )
+    local secondary = primary:Lerp(Color3.fromRGB(103, 132, 168), 0.62)
     return primary, secondary
 end
 
@@ -860,16 +856,15 @@ local function addSurfaceGradient(F, G)
 
     H.Color = G
         or ColorSequence.new({
-            ColorSequenceKeypoint.new(0, o.Elevated),
-            ColorSequenceKeypoint.new(0.38, o.SurfaceSoft),
+            ColorSequenceKeypoint.new(0, o.SurfaceSoft),
+            ColorSequenceKeypoint.new(0.55, o.Surface),
             ColorSequenceKeypoint.new(1, o.MainSoft),
         })
     H.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.01),
-        NumberSequenceKeypoint.new(0.5, 0.06),
-        NumberSequenceKeypoint.new(1, 0.16),
+        NumberSequenceKeypoint.new(0, 0.03),
+        NumberSequenceKeypoint.new(1, 0.12),
     })
-    H.Rotation = 118
+    H.Rotation = 90
     return H
 end
 
@@ -883,36 +878,36 @@ local function addAccentLine(F, G)
         H.Parent = F
         addCorner(H, UDim.new(1, 0))
 
-        local gradient = Instance.new("UIGradient")
-        gradient.Name = "AccentGradient"
-        gradient.Parent = H
-
         connectguicolorchange(function()
             if H.Parent then
-                local primary, secondary = getV9AccentPair()
-                H.BackgroundColor3 = primary
-                gradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, primary),
-                    ColorSequenceKeypoint.new(1, secondary),
-                })
+                H.BackgroundColor3 = Color3.fromHSV(
+                    d.GUIColor.Hue,
+                    d.GUIColor.Sat,
+                    d.GUIColor.Value
+                )
             end
         end)
     end
 
-    H.Size = UDim2.fromOffset(58, G or 2)
-    H.Position = UDim2.fromOffset(14, 1)
+    H.Size = UDim2.fromOffset(G or 3, 18)
+    H.Position = UDim2.fromOffset(1, 10)
+    H.BackgroundColor3 = Color3.fromHSV(
+        d.GUIColor.Hue,
+        d.GUIColor.Sat,
+        d.GUIColor.Value
+    )
     H.BackgroundTransparency = 0.08
     return H
 end
 
 local function addV9Chrome(F, label)
-    local existing = F:FindFirstChild("V9Chrome")
+    local existing = F:FindFirstChild("FrameGuide")
     if existing then
         return existing
     end
 
     local root = Instance.new("Frame")
-    root.Name = "V9Chrome"
+    root.Name = "FrameGuide"
     root.Size = UDim2.fromScale(1, 1)
     root.BackgroundTransparency = 1
     root.BorderSizePixel = 0
@@ -920,67 +915,41 @@ local function addV9Chrome(F, label)
     root.Active = false
     root.Parent = F
 
-    local cornerA = Instance.new("Frame")
-    cornerA.Name = "CornerA"
-    cornerA.Size = UDim2.fromOffset(18, 1)
-    cornerA.Position = UDim2.fromOffset(9, 8)
-    cornerA.BorderSizePixel = 0
-    cornerA.Parent = root
+    local topTick = Instance.new("Frame")
+    topTick.Name = "TopTick"
+    topTick.Size = UDim2.fromOffset(22, 1)
+    topTick.Position = UDim2.fromOffset(12, 1)
+    topTick.BorderSizePixel = 0
+    topTick.BackgroundTransparency = 0.26
+    topTick.Parent = root
 
-    local cornerB = Instance.new("Frame")
-    cornerB.Name = "CornerB"
-    cornerB.Size = UDim2.fromOffset(1, 12)
-    cornerB.Position = UDim2.fromOffset(9, 8)
-    cornerB.BorderSizePixel = 0
-    cornerB.Parent = root
+    local sideTick = Instance.new("Frame")
+    sideTick.Name = "SideTick"
+    sideTick.Size = UDim2.fromOffset(1, 12)
+    sideTick.Position = UDim2.fromOffset(1, 12)
+    sideTick.BorderSizePixel = 0
+    sideTick.BackgroundTransparency = 0.34
+    sideTick.Parent = root
 
-    local nodes = Instance.new("Frame")
-    nodes.Name = "SignalNodes"
-    nodes.Size = UDim2.fromOffset(34, 8)
-    nodes.Position = UDim2.new(1, -78, 0, 9)
-    nodes.BackgroundTransparency = 1
-    nodes.Parent = root
-
-    local nodeFrames = {}
-    for index = 1, 3 do
-        local node = Instance.new("Frame")
-        node.Name = "Node" .. tostring(index)
-        node.Size = UDim2.fromOffset(
-            index == 1 and 6 or 4,
-            index == 1 and 6 or 4
-        )
-        node.Position = UDim2.fromOffset(
-            (index - 1) * 11,
-            index == 1 and 1 or 2
-        )
-        node.BorderSizePixel = 0
-        node.BackgroundTransparency = index == 1 and 0.1 or 0.42
-        node.Parent = nodes
-        addCorner(node, UDim.new(1, 0))
-        nodeFrames[index] = node
-    end
-
-    if label then
-        local stamp = Instance.new("TextLabel")
-        stamp.Name = "Stamp"
-        stamp.Size = UDim2.fromOffset(108, 12)
-        stamp.Position = UDim2.new(1, -120, 1, -16)
-        stamp.BackgroundTransparency = 1
-        stamp.Text = string.upper(tostring(label))
-        stamp.TextColor3 = o.FaintText
-        stamp.TextSize = 8
-        stamp.TextXAlignment = Enum.TextXAlignment.Right
-        stamp.FontFace = o.FontBold
-        stamp.Parent = root
-    end
+    local endCap = Instance.new("Frame")
+    endCap.Name = "EndCap"
+    endCap.Size = UDim2.fromOffset(4, 4)
+    endCap.AnchorPoint = Vector2.new(1, 1)
+    endCap.Position = UDim2.new(1, -8, 1, -8)
+    endCap.BorderSizePixel = 0
+    endCap.BackgroundTransparency = 0.42
+    endCap.Parent = root
+    addCorner(endCap, UDim.new(1, 0))
 
     local function recolor()
-        local primary, secondary = getV9AccentPair()
-        cornerA.BackgroundColor3 = primary
-        cornerB.BackgroundColor3 = secondary
-        nodeFrames[1].BackgroundColor3 = primary
-        nodeFrames[2].BackgroundColor3 = secondary
-        nodeFrames[3].BackgroundColor3 = primary:Lerp(secondary, 0.5)
+        local accent = Color3.fromHSV(
+            d.GUIColor.Hue,
+            d.GUIColor.Sat,
+            d.GUIColor.Value
+        )
+        topTick.BackgroundColor3 = accent
+        sideTick.BackgroundColor3 = accent:Lerp(o.BorderStrong, 0.45)
+        endCap.BackgroundColor3 = accent
     end
 
     recolor()
@@ -989,50 +958,11 @@ local function addV9Chrome(F, label)
 end
 
 local function addV9Sweep(F)
-    local sweep = F:FindFirstChild("V9Sweep")
-    if sweep then
-        return sweep
-    end
-
-    sweep = Instance.new("Frame")
-    sweep.Name = "V9Sweep"
-    sweep.Size = UDim2.new(0.34, 0, 1, 0)
-    sweep.Position = UDim2.new(-0.42, 0, 0, 0)
-    sweep.BackgroundColor3 = Color3.new(1, 1, 1)
-    sweep.BackgroundTransparency = 0.9
-    sweep.BorderSizePixel = 0
-    sweep.ZIndex = F.ZIndex + 1
-    sweep.Active = false
-    sweep.Parent = F
-
-    local gradient = Instance.new("UIGradient")
-    gradient.Rotation = 16
-    gradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.45, 0.88),
-        NumberSequenceKeypoint.new(0.55, 0.72),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    gradient.Parent = sweep
-
-    return sweep
+    return nil
 end
 
 local function playV9Sweep(sweep)
-    if not sweep or not sweep.Parent then
-        return
-    end
-    sweep.Position = UDim2.new(-0.42, 0, 0, 0)
-    n:Tween(
-        sweep,
-        TweenInfo.new(
-            0.34,
-            Enum.EasingStyle.Quint,
-            Enum.EasingDirection.Out
-        ),
-        { Position = UDim2.new(1.08, 0, 0, 0) },
-        n.tweenstwo
-    )
+    return
 end
 
 local function bindPremiumMotion(F, G, H, I)
@@ -1046,7 +976,7 @@ local function bindPremiumMotion(F, G, H, I)
     local L = I or {}
 
     F.MouseEnter:Connect(function()
-        n:Tween(J, o.TweenFast, { Scale = L.HoverScale or 1.004 })
+        n:Tween(J, o.TweenFast, { Scale = 1 })
         if K then
             n:Tween(K, o.TweenFast, {
                 Color = L.HoverStroke or Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
@@ -3646,7 +3576,7 @@ H = {
         ag.BorderSizePixel = 0
         ag.Parent = ae
         addCorner(ag, o.Radius)
-        local ah = addStroke(ag, o.Border, 0.76, 1, "TextBoxStroke")
+        local ah = addStroke(ag, o.Border, 0.82, 1, "TextBoxStroke")
 
         local ai = Instance.new("TextBox")
         ai.Name = "Input"
@@ -3743,7 +3673,7 @@ H = {
             })
             n:Tween(ah, o.TweenFast, {
                 Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-                Transparency = 0.34,
+                Transparency = 0.52,
             })
             n:Tween(aj, o.Tween, {
                 Size = UDim2.new(1, 0, 0, 2),
@@ -4971,7 +4901,7 @@ function d.CreateGUI(aa)
     local mainStroke = addStroke(ac, o.BorderStrong, 0.54, 1, "MainStroke")
     addSurfaceGradient(ac)
     local mainAccent = addAccentLine(ac, 2)
-    addV9Chrome(ac, "CORE // V9")
+    addV9Chrome(ac)
     local mainScale = addScale(ac)
     makeDraggable(ac)
 
@@ -4998,12 +4928,12 @@ function d.CreateGUI(aa)
 
     local ae = Instance.new("TextLabel")
     ae.Name = "V4Logo"
-    ae.Size = UDim2.fromOffset(28, 16)
+    ae.Size = UDim2.fromOffset(34, 16)
     ae.Position = UDim2.fromOffset(78, 4)
     ae.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
     ae.BackgroundTransparency = 0.08
     ae.BorderSizePixel = 0
-    ae.Text = "V1"
+    ae.Text = "12"
     ae.TextColor3 = o.Main
     ae.TextSize = 10
     ae.FontFace = o.FontBold
@@ -5016,7 +4946,7 @@ function d.CreateGUI(aa)
     brandSub.Size = UDim2.fromOffset(120, 10)
     brandSub.Position = UDim2.fromOffset(12, 28)
     brandSub.BackgroundTransparency = 1
-    brandSub.Text = "NEXUS INTERFACE"
+    brandSub.Text = "CLIENT"
     brandSub.TextColor3 = o.FaintText
     brandSub.TextSize = 7
     brandSub.TextXAlignment = Enum.TextXAlignment.Left
@@ -5031,7 +4961,7 @@ function d.CreateGUI(aa)
     local ag = Instance.new("UIListLayout")
     ag.SortOrder = Enum.SortOrder.LayoutOrder
     ag.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    ag.Padding = UDim.new(0, 2)
+    ag.Padding = UDim.new(0, 4)
     ag.Parent = af
     local ah = Instance.new("TextButton")
     ah.Name = "Settings"
@@ -5102,7 +5032,7 @@ function d.CreateGUI(aa)
     discordLabel.Size = UDim2.new(1, -66, 1, 0)
     discordLabel.Position = UDim2.fromOffset(30, 0)
     discordLabel.BackgroundTransparency = 1
-    discordLabel.Text = "NEXUS COMMUNITY"
+    discordLabel.Text = "BADWARS COMMUNITY"
     discordLabel.TextColor3 = o.TextStrong
     discordLabel.TextSize = 11
     discordLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -5291,7 +5221,7 @@ function d.CreateGUI(aa)
 
         local au = Instance.new("TextButton")
         au.Name = as.Name
-        au.Size = UDim2.new(1, -12, 0, 42)
+        au.Size = UDim2.new(1, -12, 0, 40)
         au.BackgroundColor3 = o.Surface
         au.BorderSizePixel = 0
         au.AutoButtonColor = false
@@ -5307,24 +5237,10 @@ function d.CreateGUI(aa)
         local avScale = addScale(au)
         local avSweep = addV9Sweep(au)
 
-        if as.Name ~= "Profiles" then
-            local indexLabel = Instance.new("TextLabel")
-            indexLabel.Name = "Index"
-            indexLabel.Size = UDim2.fromOffset(24, 10)
-            indexLabel.Position = UDim2.new(1, -54, 0, 5)
-            indexLabel.BackgroundTransparency = 1
-            indexLabel.Text = string.format("%02d", at.Index + 1)
-            indexLabel.TextColor3 = o.FaintText
-            indexLabel.TextSize = 7
-            indexLabel.TextXAlignment = Enum.TextXAlignment.Right
-            indexLabel.FontFace = o.FontBold
-            indexLabel.Parent = au
-        end
-
         local avRail = Instance.new("Frame")
         avRail.Name = "ActiveRail"
-        avRail.Size = UDim2.new(0, 3, 1, -12)
-        avRail.Position = UDim2.fromOffset(0, 6)
+        avRail.Size = UDim2.new(0, 3, 1, -16)
+        avRail.Position = UDim2.fromOffset(0, 8)
         avRail.BorderSizePixel = 0
         avRail.Visible = false
         avRail.Parent = au
@@ -5454,6 +5370,16 @@ function d.CreateGUI(aa)
         au.Activated:Connect(function()
             at:Toggle()
         end)
+
+        if as.Window and as.Window.GetPropertyChangedSignal then
+            d:Clean(as.Window:GetPropertyChangedSignal("Visible"):Connect(function()
+                local visible = as.Window.Visible == true
+                if at.Enabled ~= visible then
+                    at.Enabled = visible
+                    applyNavigationVisual()
+                end
+            end))
+        end
 
         ab.Buttons[as.Name] = at
         return at
@@ -6453,7 +6379,7 @@ function d.CreateCategory(aa, ab)
 
     local ad = Instance.new("TextButton")
     ad.Name = ab.Name .. "Category"
-    ad.Size = UDim2.fromOffset(232, 46)
+    ad.Size = UDim2.fromOffset(232, 44)
     ad.Position = UDim2.fromOffset(250, 60)
     ad.BackgroundColor3 = o.MainSoft
     ad.AutoButtonColor = false
@@ -6479,8 +6405,8 @@ function d.CreateCategory(aa, ab)
     ae.Parent = ad
     local af = Instance.new("TextLabel")
     af.Name = "Title"
-    af.Size = UDim2.new(1, -(ab.Size.X.Offset > 18 and 44 or 37), 0, 28)
-    af.Position = UDim2.fromOffset(math.abs(af.Size.X.Offset) + 2, 1)
+    af.Size = UDim2.new(1, -(ab.Size.X.Offset > 18 and 44 or 37), 1, 0)
+    af.Position = UDim2.fromOffset(math.abs(af.Size.X.Offset) + 2, 0)
     af.BackgroundTransparency = 1
     af.Text = ab.Name
     af.TextXAlignment = Enum.TextXAlignment.Left
@@ -6497,11 +6423,12 @@ function d.CreateCategory(aa, ab)
         27
     )
     categorySub.BackgroundTransparency = 1
-    categorySub.Text = "BADWARS // MODULE SYSTEM"
+    categorySub.Text = ""
     categorySub.TextColor3 = o.FaintText
     categorySub.TextSize = 7
     categorySub.TextXAlignment = Enum.TextXAlignment.Left
     categorySub.FontFace = o.FontBold
+    categorySub.Visible = false
     categorySub.Parent = ad
 
     local ag = Instance.new("TextButton")
@@ -6557,9 +6484,10 @@ function d.CreateCategory(aa, ab)
         local active = ac.Expanded or hovered
         ae.ImageColor3 = active and accent or o.MutedText
         af.TextColor3 = active and accent or o.MutedText
-        categoryAccent.BackgroundTransparency = active and 0 or 0.18
+        categoryAccent.BackgroundTransparency = active and 0.12 or 0.46
         ad.BackgroundColor3 = active and o.Elevated or o.MainSoft
-        categoryStroke.Transparency = active and (hovered and 0.16 or 0.34) or 0.42
+        categoryStroke.Color = active and accent:Lerp(o.BorderStrong, 0.48) or o.Border
+        categoryStroke.Transparency = active and (hovered and 0.5 or 0.64) or 0.78
     end
 
     function ac.CreateModule(am, an)
@@ -6588,7 +6516,7 @@ function d.CreateCategory(aa, ab)
         local aq = false
         local ar = Instance.new("TextButton")
         ar.Name = an.Name
-        ar.Size = UDim2.new(1, -12, 0, d.isMobile and 52 or 42)
+        ar.Size = UDim2.new(1, -12, 0, d.isMobile and 50 or 40)
         ar.BackgroundColor3 = o.Surface
         ar.BorderSizePixel = 0
         ar.AutoButtonColor = false
@@ -6616,9 +6544,9 @@ function d.CreateCategory(aa, ab)
 
         local activeRail = Instance.new("Frame")
         activeRail.Name = "ActiveRail"
-        activeRail.Size = UDim2.fromOffset(7, 7)
-        activeRail.AnchorPoint = Vector2.new(0.5, 0.5)
-        activeRail.Position = UDim2.new(0, 10, 0.5, 0)
+        activeRail.Size = UDim2.fromOffset(3, 18)
+        activeRail.AnchorPoint = Vector2.new(0, 0.5)
+        activeRail.Position = UDim2.new(0, 1, 0.5, 0)
         activeRail.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
         activeRail.BorderSizePixel = 0
         activeRail.Visible = false
@@ -6628,8 +6556,8 @@ function d.CreateCategory(aa, ab)
 
         local activeHalo = Instance.new("Frame")
         activeHalo.Name = "ActiveHalo"
-        activeHalo.Size = UDim2.fromOffset(13, 13)
-        activeHalo.AnchorPoint = Vector2.new(0.5, 0.5)
+        activeHalo.Size = UDim2.fromOffset(0, 0)
+        activeHalo.AnchorPoint = Vector2.new(0, 0.5)
         activeHalo.Position = activeRail.Position
         activeHalo.BackgroundTransparency = 1
         activeHalo.Visible = false
@@ -6656,42 +6584,6 @@ function d.CreateCategory(aa, ab)
                 moduleStroke.Color = o.BorderStrong
             end
         end)
-        if an.Premium then
-            local as = Instance.new("TextLabel")
-            as.Parent = ar
-            as.SizeConstraint = Enum.SizeConstraint.RelativeXX
-            as.AutomaticSize = Enum.AutomaticSize.X
-            as.Size = UDim2.new(0, 0, 0, 21)
-            as.BackgroundColor3 = Color3.new(1, 1, 1)
-            as.TextSize = 14
-            as.TextTransparency = 1
-            as.AnchorPoint = Vector2.new(0, 0.5)
-            as.Text = "Premium"
-            as.Position = UDim2.new(0, 128, 0.5, 0)
-            as.TextColor3 = Color3.new(0, 0, 0)
-            as.FontFace = o.Font
-
-            connectvisibilitychange(function(at)
-                n:Tween(as, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-                    BackgroundTransparency = at and 0 or 1,
-                })
-            end)
-
-            addCorner(as, UDim.new(0, 5))
-
-            local at = as:Clone()
-            at.Parent = as
-            at.Position = UDim2.new()
-            at.Size = UDim2.fromScale(1, 1)
-            at.BackgroundTransparency = 1
-            at.AnchorPoint = Vector2.new()
-            at.AutomaticSize = Enum.AutomaticSize.None
-            at.TextSize = 12
-            at.TextTransparency = 0
-            at.SizeConstraint = Enum.SizeConstraint.RelativeXY
-
-            table.insert(d.Indicators, as)
-        end
         local as = Instance.new("UIGradient")
         as.Rotation = 90
         as.Enabled = false
@@ -6783,52 +6675,60 @@ function d.CreateCategory(aa, ab)
             ao.InternalAddOnChange:Fire()
         end)
 
-        local function updateModuleSorting()
-            local aC = {}
+        function d.SortAllModules()
+            local grouped = {}
 
-            for I, J in d.Modules do
-                aC[J.Category] = aC[J.Category] or { starred = {}, normal = {} }
-
-                local K = {
-                    name = J.Name,
-
-                    textSize = E(J.Name, J.Object.TextSize, J.Object.Font).X,
-                }
-
-                if J.StarActive then
-                    table.insert(aC[J.Category].starred, K)
-                else
-                    table.insert(aC[J.Category].normal, K)
+            for _, module in pairs(d.Modules or {}) do
+                if type(module) == "table" and module.Object and module.Object.Parent then
+                    local category = tostring(module.Category or "Other")
+                    grouped[category] = grouped[category] or {}
+                    table.insert(grouped[category], module)
                 end
             end
 
-            local function sortByTextSize(I, J)
-                if I.textSize == J.textSize then
-                    return I.name > J.name
-                end
-                return I.textSize > J.textSize
-            end
+            for _, modules in pairs(grouped) do
+                table.sort(modules, function(left, right)
+                    local leftFavorite = left.StarActive == true
+                    local rightFavorite = right.StarActive == true
+                    if leftFavorite ~= rightFavorite then
+                        return leftFavorite
+                    end
 
-            for I, J in aC do
-                table.sort(J.starred, sortByTextSize)
-                table.sort(J.normal, sortByTextSize)
+                    local leftName = string.lower(tostring(left.Name or ""))
+                    local rightName = string.lower(tostring(right.Name or ""))
+                    if leftName == rightName then
+                        return tostring(left.Name or "") < tostring(right.Name or "")
+                    end
+                    return leftName < rightName
+                end)
 
-                local K = {}
-                for L, M in J.starred do
-                    table.insert(K, M.name)
-                end
-                for L, M in J.normal do
-                    table.insert(K, M.name)
-                end
-
-                for L, M in K do
-                    if d.Modules[M] then
-                        d.Modules[M].Index = L
-                        d.Modules[M].Object.LayoutOrder = L
-                        d.Modules[M].Children.LayoutOrder = L
+                for index, module in ipairs(modules) do
+                    module.Index = index
+                    if module.Object then
+                        module.Object.LayoutOrder = index * 2
+                    end
+                    if module.Children then
+                        module.Children.LayoutOrder = (index * 2) + 1
                     end
                 end
             end
+
+            local legitModules = {}
+            for _, module in pairs(d.Legit and d.Legit.Modules or {}) do
+                if type(module) == "table" and module.Object and module.Object.Parent then
+                    table.insert(legitModules, module)
+                end
+            end
+            table.sort(legitModules, function(left, right)
+                return string.lower(tostring(left.Name or "")) < string.lower(tostring(right.Name or ""))
+            end)
+            for index, module in ipairs(legitModules) do
+                module.Object.LayoutOrder = index
+            end
+        end
+
+        local function updateModuleSorting()
+            d:SortAllModules()
         end
 
         for aC, I in { az, au } do
@@ -7058,23 +6958,28 @@ function d.CreateCategory(aa, ab)
             activeRail.Visible = N.Enabled
 
             local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            local enabledSurface = o.Elevated:Lerp(accent, 0.16)
+            local enabledText = o.TextStrong:Lerp(accent, 0.42)
             n:Tween(ar, o.TweenFast, {
-                BackgroundColor3 = N.Enabled and o.Elevated or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
+                BackgroundColor3 = N.Enabled and enabledSurface or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
             })
             n:Tween(moduleStroke, o.TweenFast, {
-                Color = N.Enabled and o.BorderStrong or o.Border,
-                Transparency = N.Enabled and 0.58 or ((aq or optionsOpen) and 0.7 or 0.88),
+                Color = N.Enabled and accent or o.Border,
+                Transparency = N.Enabled and 0.34 or ((aq or optionsOpen) and 0.7 or 0.9),
             })
-            n:Tween(moduleScale, o.TweenFast, {
-                Scale = 1,
-            })
+            n:Tween(moduleScale, o.TweenFast, { Scale = 1 })
 
-            ar.TextColor3 = N.Enabled and o.TextStrong or ((aq or optionsOpen) and o.Text or o.MutedText)
-
-            I.ImageColor3 = N.Enabled and o.TextStrong or o.FaintText
-
-            av.ImageColor3 = N.Enabled and o.Text or o.FaintText
-            aw.TextColor3 = N.Enabled and o.Text or o.FaintText
+            ar.TextColor3 = N.Enabled and enabledText or ((aq or optionsOpen) and o.Text or o.MutedText)
+            activeHalo.BackgroundTransparency = N.Enabled and 0.62 or 1
+            activeHaloStroke.Transparency = N.Enabled and 0.18 or 1
+            I.ImageColor3 = N.Enabled and accent or o.FaintText
+            av.ImageColor3 = N.Enabled and enabledText or o.FaintText
+            aw.TextColor3 = N.Enabled and enabledText or o.FaintText
+            task.defer(function()
+                if d.SortAllModules then
+                    d:SortAllModules()
+                end
+            end)
             if not N.Enabled then
                 for P, Q in N.Connections do
                     if type(Q) == "function" then
@@ -7234,7 +7139,7 @@ function d.CreateCategory(aa, ab)
                     })
                 end
 
-                n:Tween(moduleScale, o.TweenFast, { Scale = 1.004 })
+                n:Tween(moduleScale, o.TweenFast, { Scale = 1 })
                 au.Visible = #ao.Bind > 0 or aq or optionsOpen
                 az.Visible = ao.StarActive or aq or optionsOpen
             end)
@@ -7577,17 +7482,17 @@ function d.CreateCategory(aa, ab)
     ag.MouseEnter:Connect(function()
         updateCategoryVisual(true)
         playV9Sweep(categorySweep)
-        n:Tween(categoryScale, o.TweenFast, { Scale = 1.004 })
+        n:Tween(categoryScale, o.TweenFast, { Scale = 1 })
     end)
     ag.MouseLeave:Connect(function()
         updateCategoryVisual(false)
         n:Tween(categoryScale, o.TweenFast, { Scale = 1 })
     end)
     ag.MouseButton1Down:Connect(function()
-        n:Tween(categoryScale, o.TweenPress, { Scale = 0.992 })
+        n:Tween(categoryScale, o.TweenPress, { Scale = 0.997 })
     end)
     ag.MouseButton1Up:Connect(function()
-        n:Tween(categoryScale, o.TweenFast, { Scale = 1.004 })
+        n:Tween(categoryScale, o.TweenFast, { Scale = 1 })
     end)
 
     ad:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -10726,7 +10631,7 @@ function d.CreateCategoryList(ag, ah)
     local categoryListStroke = addStroke(aj, o.BorderStrong, 0.3, 1, "CategoryListStroke")
     addSurfaceGradient(aj)
     local categoryListAccent = addAccentLine(aj, 2)
-    addV9Chrome(aj, "LIST // V9")
+    addV9Chrome(aj)
     local categoryListScale = addScale(aj)
     makeDraggable(aj)
 
@@ -11549,7 +11454,7 @@ function d.CreateSearch(ag)
     addSurfaceGradient(ah)
     local searchStroke = addStroke(ah, o.BorderStrong, 0.36, 1, "SearchStroke")
     local searchAccent = addAccentLine(ah, 2)
-    addV9Chrome(ah, "COMMAND // SEARCH")
+    addV9Chrome(ah)
     local am
 
     if not d.isMobile then
@@ -11617,8 +11522,15 @@ function d.CreateSearch(ag)
 
     ak.Activated:Connect(function()
         v.Visible = false
-        ag.Legit.Window.Visible = true
-        ag.Legit.Window.Position = UDim2.new(0.5, -350, 0.5, -194)
+        local legitCategory = ag.Categories and ag.Categories.Legit
+        if legitCategory and legitCategory.Button then
+            legitCategory.Button:Toggle(true)
+        elseif ag.Legit and ag.Legit.Window then
+            ag.Legit.Window.Visible = true
+        end
+        if ag.Legit and ag.Legit.Window then
+            ag.Legit.Window.Position = UDim2.new(0.5, -350, 0.5, -194)
+        end
     end)
 
     local aq = false
@@ -11829,7 +11741,7 @@ function d.CreateLegit(ag)
     local legitStroke = addStroke(aj, o.BorderStrong, 0.24, 1, "LegitStroke")
     addSurfaceGradient(aj)
     local legitAccent = addAccentLine(aj, 3)
-    addV9Chrome(aj, "VISUAL // MATRIX")
+    addV9Chrome(aj)
     local legitScale = addScale(aj)
     makeDraggable(aj)
 
@@ -12228,17 +12140,18 @@ function d.CreateLegit(ag)
             end
 
             local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-            local dimAccent = accent:Lerp(o.MutedText, 0.26)
+            local dimAccent = accent:Lerp(o.MutedText, 0.2)
+            local enabledSurface = o.Elevated:Lerp(accent, 0.18)
             cardAccent.Visible = ar.Enabled
             n:Tween(aw, o.TweenFast, {
-                TextColor3 = ar.Enabled and accent or o.MutedText,
+                TextColor3 = ar.Enabled and o.TextStrong:Lerp(accent, 0.44) or o.MutedText,
             })
             n:Tween(av, o.TweenFast, {
-                BackgroundColor3 = ar.Enabled and o.Elevated or o.Surface,
+                BackgroundColor3 = ar.Enabled and enabledSurface or o.Surface,
             })
             n:Tween(cardStroke, o.TweenFast, {
                 Color = ar.Enabled and accent or o.Border,
-                Transparency = ar.Enabled and 0.5 or 0.78,
+                Transparency = ar.Enabled and 0.28 or 0.82,
             })
             n:Tween(cardScale, o.TweenFast, { Scale = 1 })
             n:Tween(ax, o.Tween, {
@@ -12257,6 +12170,11 @@ function d.CreateLegit(ag)
             end
 
             aI._syncing = false
+            task.defer(function()
+                if d.SortAllModules then
+                    d:SortAllModules()
+                end
+            end)
             task.spawn(aq.Function, ar.Enabled)
         end
 
@@ -12344,7 +12262,7 @@ function d.CreateLegit(ag)
         end
 
         aE.MouseEnter:Connect(function()
-            aE.ImageColor3 = o.Text
+            aE.ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
         end)
         aE.MouseLeave:Connect(function()
             aE.ImageColor3 = m.Light(o.Main, 0.37)
@@ -12917,7 +12835,7 @@ function d.CreatePrompt(ah, ai)
         local panelScale = addScale(panel)
         panelScale.Scale = 0.92
         local accent = addAccentLine(panel, 3)
-        addV9Chrome(panel, "PROMPT // V9")
+        addV9Chrome(panel, "CONFIRM")
 
         local iconContainer = Instance.new("Frame")
         iconContainer.Name = "IconContainer"
@@ -15716,5 +15634,69 @@ end)
 if d.Blur then
     d.Blur.Default = false
 end
+
+
+do
+    local quietStrokeNames = {
+        MainStroke = 0.62,
+        NavigationStroke = 0.82,
+        CategoryStroke = 0.72,
+        ModuleStroke = 0.86,
+        ModuleCategoryStroke = 0.84,
+        LegitStroke = 0.64,
+        LegitCardStroke = 0.78,
+        LegitWidgetStroke = 0.68,
+        OptionsStroke = 0.92,
+        TextBoxStroke = 0.82,
+        OverlayStroke = 0.68,
+        NotificationStroke = 0.62,
+        TooltipStroke = 0.52,
+    }
+
+    local function applyFrameDesign(instance)
+        if instance.Name == "V9Sweep" or instance.Name == "SignalNodes" then
+            instance:Destroy()
+            return
+        end
+
+        if instance:IsA("UIStroke") then
+            local minimum = quietStrokeNames[instance.Name]
+            if minimum then
+                instance.Thickness = 1
+                instance.LineJoinMode = Enum.LineJoinMode.Round
+                instance.Transparency = math.max(instance.Transparency, minimum)
+            end
+            return
+        end
+
+        if instance:IsA("UICorner") then
+            local parent = instance.Parent
+            if parent and parent:IsA("GuiObject") then
+                local height = parent.AbsoluteSize.Y
+                if height > 0 and height <= 46 then
+                    instance.CornerRadius = o.RadiusSmall
+                elseif height > 46 and height <= 120 then
+                    instance.CornerRadius = o.Radius
+                else
+                    instance.CornerRadius = o.RadiusLarge
+                end
+            end
+            return
+        end
+
+        if instance:IsA("UIGradient") and instance.Name == "SurfaceGradient" then
+            instance.Rotation = 90
+        end
+    end
+
+    for _, descendant in ipairs(B:GetDescendants()) do
+        applyFrameDesign(descendant)
+    end
+
+    d:Clean(B.DescendantAdded:Connect(function(descendant)
+        task.defer(applyFrameDesign, descendant)
+    end))
+end
+
 
 return d

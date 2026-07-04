@@ -29,20 +29,23 @@ run(function()
 	local oldnamecall, oldray
 
 	local function getTarget(origin, obj)
-		if rand.NextNumber(rand, 0, 100) > (AutoFire.Enabled and 100 or HitChance.Value) then return end
-		local targetPart = (rand.NextNumber(rand, 0, 100) < (AutoFire.Enabled and 100 or HeadshotChance.Value)) and 'Head' or 'RootPart'
+		if not AutoFire or rand.NextNumber(rand, 0, 100) > (AutoFire.Enabled and 100 or (HitChance and HitChance.Value or 100)) then return end
+		local targetPart = (rand.NextNumber(rand, 0, 100) < (AutoFire.Enabled and 100 or (HeadshotChance and HeadshotChance.Value or 0))) and 'Head' or 'RootPart'
+		if not entitylib['Entity'..(Mode and Mode.Value or 'Mouse')] then return end
 		local ent = entitylib['Entity'..Mode.Value]({
-			Range = Range.Value,
-			Wallcheck = Target.Walls.Enabled and (obj or true) or nil,
+			Range = Range and Range.Value or 1000,
+			Wallcheck = Target and Target.Walls and Target.Walls.Enabled and (obj or true) or nil,
 			Part = targetPart,
 			Origin = origin,
-			Players = Target.Players.Enabled,
-			NPCs = Target.NPCs.Enabled
+			Players = Target and Target.Players and Target.Players.Enabled,
+			NPCs = Target and Target.NPCs and Target.NPCs.Enabled
 		})
 
-		if ent then
-			targetinfo.Targets[ent] = tick() + 1
-			if Projectile.Enabled then
+		if ent and ent[targetPart] then
+			if targetinfo and targetinfo.Targets then
+				targetinfo.Targets[ent] = tick() + 1
+			end
+			if Projectile and Projectile.Enabled then
 				ProjectileRaycast.FilterDescendantsInstances = {gameCamera, ent.Character}
 				ProjectileRaycast.CollisionGroup = ent[targetPart].CollisionGroup
 			end

@@ -5,12 +5,13 @@ local Distance
 local rayCheck, delayCheck = RaycastParams.new(), tick()
 
 local function getTriggerBotTarget()
+	if not lplr or not lplr.Character or not gameCamera then return nil end
 	rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
 
-	local ray = workspace:Raycast(gameCamera.CFrame.Position, gameCamera.CFrame.LookVector * Distance.Value, rayCheck)
+	local ray = workspace:Raycast(gameCamera.CFrame.Position, gameCamera.CFrame.LookVector * (Distance and Distance.Value or 1000), rayCheck)
 	if ray and ray.Instance then
 		for _, v in entitylib.List do
-			if v.Targetable and v.Character and (Targets.Players.Enabled and v.Player or Targets.NPCs.Enabled and v.NPC) then
+			if v.Targetable and v.Character and ((Targets and Targets.Players and Targets.Players.Enabled and v.Player) or (Targets and Targets.NPCs and Targets.NPCs.Enabled and v.NPC)) then
 				if ray.Instance:IsDescendantOf(v.Character) then
 					return entitylib.isVulnerable(v) and v
 				end

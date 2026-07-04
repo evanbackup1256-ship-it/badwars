@@ -1,4 +1,4 @@
--- BadWars Main v3.5 - Premium Overlay Discord UX
+-- BadWars Main v3.6 - Premium Deep Scan Pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -427,6 +427,28 @@ local function installBadWarsLoaderShim()
     shared.BadwarsLoader = BadwarsLoader
 end
 
+local function callWithTimeout(callback, timeoutSeconds)
+    local finished = false
+    local success = false
+    local result
+    local worker = task.spawn(function()
+        success, result = pcall(callback)
+        finished = true
+    end)
+
+    local deadline = os.clock() + (tonumber(timeoutSeconds) or 12)
+    repeat
+        task.wait(0.05)
+    until finished or os.clock() >= deadline
+
+    if not finished then
+        pcall(task.cancel, worker)
+        return false, "request timed out"
+    end
+
+    return success, result
+end
+
 local function httpGetMulti(urls)
     for _, url in ipairs(urls) do
         local fn = (game and game.HttpGet)
@@ -435,14 +457,16 @@ local function httpGetMulti(urls)
             fn = env and env.HttpGet
         end
         if type(fn) == "function" then
-            local ok, res = pcall(fn, game, url, true)
+            local ok, res = callWithTimeout(function()
+                return fn(game, url, true)
+            end, 12)
             if ok and type(res) == "string" and #res > 0 then
                 return res
             end
         end
-        local ok, res = pcall(function()
+        local ok, res = callWithTimeout(function()
             return cloneref(game:GetService("HttpService")):GetAsync(url, true)
-        end)
+        end, 12)
         if ok and type(res) == "string" and #res > 0 then
             return res
         end
@@ -473,7 +497,7 @@ local function downloadFile(path)
     if type(cached) == "string" and #cached > 0 then
         return cached
     end
-    setStatus("downloading " .. tostring(path))
+    setStatus("downloading required files")
     local urls = rawUrls(path)
     local res = httpGetMulti(urls)
     if type(res) ~= "string" or #res == 0 then
@@ -647,11 +671,11 @@ buildBundle = function(name, basePath, manifestPath)
         '  if hasUpdate==nil then table.insert(issues,"update contract unknown") end',
         "  __m_meta[idx]={path=path,kind=kind,category=category,name=moduleName,hasInit=hasInit,hasUpdate=hasUpdate,issues=issues}",
         "  __m_path_by_name[moduleName]=path",
-        '  if #issues>0 then warn("BadWars: [PREFLIGHT] "..path.." ("..tostring(moduleName).."): "..table.concat(issues,", ")) end',
+        "  if #issues>0 and shared then shared.__badwars_preflight_issues=shared.__badwars_preflight_issues or {}; table.insert(shared.__badwars_preflight_issues,{path=path,name=moduleName,issues=issues}) end",
         "end",
         "local function __postflight_m()",
         "  local bad=shared and shared.Bad",
-        '  if type(bad)~="table" then warn("BadWars: [PREFLIGHT] Bad API missing after universal module registration"); return end',
+        '  if type(bad)~="table" then return end',
         "  for _,meta in pairs(__m_meta) do",
         "    local mod",
         '    if meta.kind=="Overlay" then',
@@ -680,7 +704,7 @@ buildBundle = function(name, basePath, manifestPath)
         '      if type(mod.Options)~="table" then table.insert(issues,"config/options invalid") end',
         '      if meta.hasUpdate==false then table.insert(issues,"required update function/event missing") end',
         "    end",
-        '    if #issues>0 then warn("BadWars: [PREFLIGHT] "..tostring(meta.name).." @ "..tostring(meta.path)..": "..table.concat(issues,", ")) end',
+        "    if #issues>0 and shared then shared.__badwars_preflight_issues=shared.__badwars_preflight_issues or {}; table.insert(shared.__badwars_preflight_issues,{path=meta.path,name=meta.name,issues=issues}) end",
         "  end",
         "end",
         "local function __run_m(idx,name,fn)",
@@ -688,7 +712,7 @@ buildBundle = function(name, basePath, manifestPath)
         "  if not ok then",
         "    local meta=__m_meta[idx]",
         '    local label=meta and ((meta.name or "?").." @ "..(meta.path or name)) or name',
-        '    warn("BadWars: [MODULE FAIL] "..label..": "..tostring(err))',
+        '    local _silentModuleError=true',
         "    if shared and shared.__badwars_runtime_errors then",
         "      table.insert(shared.__badwars_runtime_errors,{module=label,error=tostring(err)})",
         "    end",
@@ -706,7 +730,7 @@ buildBundle = function(name, basePath, manifestPath)
     if type(manifestFiles) == "table" then
         for _, mp in ipairs(manifestFiles) do
             if mp ~= basePath then
-                setStatus("loading module: " .. tostring(mp))
+                setStatus("loading core modules")
                 local code = downloadFile(mp)
                 if type(code) == "string" and code ~= "" then
                     code = repairKnownSourceDefects(mp, code)
@@ -789,9 +813,9 @@ buildBundle = function(name, basePath, manifestPath)
     if loaded == 0 then
         return nil, "bundle contains zero valid modules"
     end
-    local summary = '\n__postflight_m()\nlocal __ok=0;local __fail=0\nfor _,v in ipairs(__m_ok) do if v then __ok=__ok+1 else __fail=__fail+1 end end\nwarn("BadWars: [BUNDLE] '
-        .. tostring(name)
-        .. ': "..__ok.." ok, "..__fail.." fail")'
+    local summary = '\n__postflight_m()\nlocal __ok=0;local __fail=0\nfor _,v in ipairs(__m_ok) do if v then __ok=__ok+1 else __fail=__fail+1 end end\nif shared then shared.__badwars_bundle_summary={name='
+        .. string.format("%q", tostring(name))
+        .. ',ok=__ok,fail=__fail} end'
     table.insert(parts, summary)
     local bundle = table.concat(parts, "\n")
     local compileProbe, compileErr = _loadstring(bundle, "bundle-preflight:" .. tostring(name))

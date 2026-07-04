@@ -50,7 +50,7 @@ local function isNotFoundBody(body)
 	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
 end
 
--- Status GUI (Premium v7)
+-- Status GUI (Premium v8)
 local statusGui
 local statusCard
 local statusLabel
@@ -64,6 +64,7 @@ local chipFrames = {}
 local shimmer
 local statusProgress = 0
 local statusError = false
+local statusBackdrop
 local loaderTweenService = cloneref(game:GetService('TweenService'))
 
 local function loaderTween(object, info, properties)
@@ -147,22 +148,23 @@ local function createPremiumLoader()
     statusGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     statusGui.Parent = parent
 
-    local backdrop = Instance.new('Frame')
-    backdrop.Size = UDim2.fromScale(1, 1)
-    backdrop.BackgroundColor3 = Color3.fromRGB(2, 6, 10)
-    backdrop.BackgroundTransparency = 1
-    backdrop.BorderSizePixel = 0
-    backdrop.Parent = statusGui
-    loaderTween(backdrop, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.28})
+    statusBackdrop = Instance.new('Frame')
+    statusBackdrop.Size = UDim2.fromScale(1, 1)
+    statusBackdrop.BackgroundColor3 = Color3.fromRGB(2, 6, 10)
+    statusBackdrop.BackgroundTransparency = 1
+    statusBackdrop.BorderSizePixel = 0
+    statusBackdrop.Parent = statusGui
+    loaderTween(statusBackdrop, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.24})
 
     statusCard = Instance.new('Frame')
     statusCard.Name = 'PremiumLoader'
     statusCard.AnchorPoint = Vector2.new(0.5, 0.5)
-    statusCard.Position = UDim2.fromScale(0.5, 0.5)
+    statusCard.Position = UDim2.fromScale(0.5, 0.515)
     statusCard.Size = UDim2.fromOffset(520, 286)
     statusCard.BackgroundColor3 = Color3.fromRGB(9, 14, 21)
     statusCard.BorderSizePixel = 0
     statusCard.ClipsDescendants = true
+    statusCard.Rotation = -1
     statusCard.Parent = statusGui
     loaderCorner(statusCard, 18)
     loaderStroke(statusCard, Color3.fromRGB(54, 72, 94), 0.2, 1)
@@ -170,7 +172,11 @@ local function createPremiumLoader()
     local cardScale = Instance.new('UIScale')
     cardScale.Scale = 0.94
     cardScale.Parent = statusCard
-    loaderTween(cardScale, TweenInfo.new(0.36, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+    loaderTween(cardScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+    loaderTween(statusCard, TweenInfo.new(0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+        Rotation = 0,
+        Position = UDim2.fromScale(0.5, 0.5),
+    })
 
     local gradient = Instance.new('UIGradient')
     gradient.Color = ColorSequence.new({
@@ -411,9 +417,26 @@ shared.BadStatus = function(msg, isErr)
     updateChips()
 
     if statusProgress >= 1 and not statusError and statusGui and statusGui.Parent then
-        task.delay(0.35, function()
+        if stageLabel then
+            stageLabel.Text = "LAUNCH COMPLETE"
+            stageLabel.TextColor3 = Color3.fromRGB(16, 213, 165)
+        end
+        if statusLabel then
+            statusLabel.Text = "BadWars V1 is ready."
+        end
+
+        task.delay(0.42, function()
             if statusCard and statusCard.Parent then
-                loaderTween(statusCard, TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {BackgroundTransparency = 1})
+                loaderTween(statusCard, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+                    BackgroundTransparency = 1,
+                    Position = UDim2.fromScale(0.5, 0.485),
+                    Rotation = 1,
+                })
+            end
+            if statusBackdrop and statusBackdrop.Parent then
+                loaderTween(statusBackdrop, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+                    BackgroundTransparency = 1,
+                })
             end
             task.delay(0.3, function()
                 pcall(function()
@@ -475,7 +498,7 @@ end
 local function wipeAny(p) if isfolder(p) then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-premium-stability-2026-07-04-07'
+local cacheVersion = 'badwars-premium-stability-2026-07-04-08'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheFile) and readfile(cacheFile) or '') ~= cacheVersion then
 	setStatus('cache cleared (version mismatch)')
@@ -550,4 +573,4 @@ end
 local el=os.clock()-loaderStart
 local final='Loader complete in '..string.format('%.2f',el)..'s'
 if #issues>0 then final=final..' ('..#issues..' issue(s))' end
-warn('BadWars: '..final) setStatus(final,#issues>0) if statusCard and #issues == 0 then task.wait(0.22) loaderTween(statusCard,TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1}) task.delay(0.22,function() if statusGui then statusGui:Destroy() end end) end return result
+ setStatus(final,#issues>0) if statusCard and #issues == 0 then task.wait(0.22) loaderTween(statusCard,TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1}) task.delay(0.22,function() if statusGui then statusGui:Destroy() end end) end return result

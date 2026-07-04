@@ -1,4 +1,4 @@
--- BadWars Premium UI Revamp | Overlay + Discord UX | Build 2026.07.04.7
+-- BadWars Premium UI Revamp | Deep UI Scan | Build 2026.07.04.8
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -38,7 +38,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.7-PREMIUM-OVERLAY-DISCORD",
+    PremiumBuild = "2026.07.04.8-PREMIUM-DEEP-SCAN",
     Windows = {},
     Indicators = {},
 }
@@ -992,7 +992,17 @@ local function addTooltip(F, G)
     end
 
     connections[1] = F.MouseEnter:Connect(function(mouseX, mouseY)
-        if not z or not z.Parent or not y or y.Visible == false or not v.Visible then
+        local interfaceVisible = v.Visible
+        if not interfaceVisible then
+            for _, window in ipairs(d.Windows) do
+                if typeof(window) == "Instance" and window:IsA("GuiObject") and window.Visible then
+                    interfaceVisible = true
+                    break
+                end
+            end
+        end
+
+        if not z or not z.Parent or not y or y.Visible == false or not interfaceVisible or d.TooltipsEnabled == false then
             return
         end
         d._tooltipOwner = ownerToken
@@ -1010,6 +1020,10 @@ local function addTooltip(F, G)
         z.Visible = true
         local tooltipScale = addScale(z)
         tooltipScale.Scale = 0.95
+        if mouseX == nil or mouseY == nil then
+            local mousePosition = h:GetMouseLocation()
+            mouseX, mouseY = mousePosition.X, mousePosition.Y
+        end
         tooltipMoved(mouseX, mouseY)
         n:Tween(z, o.TweenFast, {
             TextTransparency = 0,
@@ -4834,20 +4848,39 @@ function d.CreateGUI(aa)
     ai.Parent = ah
     local aj = Instance.new("TextButton")
     aj.Name = "DiscordInvite"
-    aj.Size = UDim2.fromOffset(82, 24)
-    aj.Position = UDim2.new(1, -132, 0, 8)
-    aj.BackgroundColor3 = o.Surface
-    aj.BackgroundTransparency = 0.08
+    aj.Size = UDim2.fromOffset(236, 32)
+    aj.AnchorPoint = Vector2.new(0.5, 1)
+    aj.Position = UDim2.new(0.5, 0, 1, -18)
+    aj.BackgroundColor3 = o.MainSoft
+    aj.BackgroundTransparency = 0.06
     aj.BorderSizePixel = 0
     aj.AutoButtonColor = false
-    aj.Text = "Discord"
+    aj.Text = "BadWars Discord  |  Copy Invite"
     aj.TextColor3 = o.MutedText
     aj.TextSize = 11
     aj.FontFace = o.FontSemiBold
-    aj.Parent = ac
+    aj.ZIndex = 220
+    aj.Parent = v
     addCorner(aj, UDim.new(1, 0))
-    local discordStroke = addStroke(aj, o.Border, 0.72, 1, "DiscordStroke")
-    addTooltip(aj, "Copy Discord invite")
+    addSurfaceGradient(aj)
+    addShadow(aj)
+    local discordStroke = addStroke(aj, o.BorderStrong, 0.62, 1, "DiscordStroke")
+    local discordAccent = Instance.new("Frame")
+    discordAccent.Name = "Accent"
+    discordAccent.Size = UDim2.fromOffset(6, 6)
+    discordAccent.AnchorPoint = Vector2.new(0.5, 0.5)
+    discordAccent.Position = UDim2.fromOffset(17, 16)
+    discordAccent.BorderSizePixel = 0
+    discordAccent.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+    discordAccent.ZIndex = aj.ZIndex + 1
+    discordAccent.Parent = aj
+    addCorner(discordAccent, UDim.new(1, 0))
+    connectguicolorchange(function(hue, saturation, value)
+        if discordAccent.Parent then
+            discordAccent.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
+        end
+    end)
+    addTooltip(aj, "Copy https://discord.gg/K2TQx4vyR7")
     local ak = Instance.new("TextButton")
     ak.Size = UDim2.fromScale(1, 1)
     ak.BackgroundColor3 = o.MainSoft
@@ -5072,22 +5105,23 @@ function d.CreateGUI(aa)
 
         local function applyNavigationVisual()
             local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            local dimAccent = accent:Lerp(o.MutedText, 0.28)
             avRail.Visible = at.Enabled
             n:Tween(au, o.TweenFast, {
                 BackgroundColor3 = at.Enabled and o.Elevated or o.Surface,
-                TextColor3 = at.Enabled and o.TextStrong or o.MutedText,
+                TextColor3 = at.Enabled and accent or o.MutedText,
             })
             n:Tween(avStroke, o.TweenFast, {
                 Color = at.Enabled and accent or o.Border,
-                Transparency = at.Enabled and 0.24 or 0.78,
+                Transparency = at.Enabled and 0.46 or 0.82,
             })
             n:Tween(aw, o.TweenFast, {
                 Position = UDim2.new(1, at.Enabled and -16 or -20, 0.5, -4),
-                ImageColor3 = at.Enabled and o.Text or o.FaintText,
+                ImageColor3 = at.Enabled and dimAccent or o.FaintText,
             })
             if av then
                 n:Tween(av, o.TweenFast, {
-                    ImageColor3 = at.Enabled and o.Text or o.MutedText,
+                    ImageColor3 = at.Enabled and accent or o.MutedText,
                 })
             end
         end
@@ -5113,30 +5147,31 @@ function d.CreateGUI(aa)
 
         if not d.isMobile then
             au.MouseEnter:Connect(function()
-                if not at.Enabled then
-                    n:Tween(au, o.TweenFast, {
-                        BackgroundColor3 = o.SurfaceHover,
-                        TextColor3 = o.Text,
-                    })
-                    n:Tween(avStroke, o.TweenFast, {
-                        Color = o.BorderStrong,
-                        Transparency = 0.48,
-                    })
-                    if av then
-                        n:Tween(av, o.TweenFast, { ImageColor3 = o.Text })
-                    end
+                local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+                local hoverAccent = accent:Lerp(o.MutedText, 0.3)
+                n:Tween(au, o.TweenFast, {
+                    BackgroundColor3 = o.SurfaceHover,
+                    TextColor3 = hoverAccent,
+                })
+                n:Tween(avStroke, o.TweenFast, {
+                    Color = accent,
+                    Transparency = at.Enabled and 0.4 or 0.62,
+                })
+                n:Tween(aw, o.TweenFast, { ImageColor3 = hoverAccent })
+                if av then
+                    n:Tween(av, o.TweenFast, { ImageColor3 = hoverAccent })
                 end
-                n:Tween(avScale, o.TweenFast, { Scale = 1.012 })
+                n:Tween(avScale, o.TweenFast, { Scale = 1 })
             end)
             au.MouseLeave:Connect(function()
                 applyNavigationVisual()
-                n:Tween(avScale, o.TweenFast, { Scale = at.Enabled and 1.006 or 1 })
+                n:Tween(avScale, o.TweenFast, { Scale = 1 })
             end)
             au.MouseButton1Down:Connect(function()
-                n:Tween(avScale, o.TweenPress, { Scale = 0.988 })
+                n:Tween(avScale, o.TweenPress, { Scale = 0.996 })
             end)
             au.MouseButton1Up:Connect(function()
-                n:Tween(avScale, o.TweenFast, { Scale = 1.012 })
+                n:Tween(avScale, o.TweenFast, { Scale = 1 })
             end)
         end
 
@@ -7557,8 +7592,12 @@ function d.CreateCategory(aa, ab)
 
             ao.Refresh = refreshModuleCategory
 
+            local moduleCategoryAnimationId = 0
+
             function ao.Toggle(az, aA)
                 success, err = pcall(function()
+                    moduleCategoryAnimationId += 1
+                    local animationId = moduleCategoryAnimationId
                     if aA ~= nil then
                         if aA == az.Expanded then
                             return
@@ -7571,10 +7610,6 @@ function d.CreateCategory(aa, ab)
                     ao.ExpandEvent:Fire()
 
                     local aB = az.Expanded and ay.AbsoluteContentSize.Y / A.Scale or 0
-
-                    task.spawn(function()
-                        flickerTextEffect(at, true, an.Name)
-                    end)
 
                     local aC = az.UpExpand and 180 or 0
                     local I = az.UpExpand and 0 or 180
@@ -7590,10 +7625,6 @@ function d.CreateCategory(aa, ab)
                         ImageColor3 = az.Expanded
                                 and (an.AccentColor or an.StrokeColor or Color3.fromRGB(100, 150, 255))
                             or o.Text,
-                    })
-
-                    n:Tween(as, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-                        Rotation = az.Expanded and 360 or 0,
                     })
 
                     n:Tween(ap, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
@@ -7619,7 +7650,7 @@ function d.CreateCategory(aa, ab)
 
                     if not az.Expanded then
                         task.delay(0.3, function()
-                            if not az.Expanded then
+                            if animationId == moduleCategoryAnimationId and not az.Expanded then
                                 ax.Visible = false
                             end
                         end)
@@ -7694,7 +7725,6 @@ function d.CreateCategory(aa, ab)
                 })
                 aA.Toggled:Connect(function()
                     if aB.Enabled ~= aA.Enabled then
-                        print("toggleapi called", aA.Name, aA.Enabled, aB.Enabled)
                         aB:Toggle()
                     end
                 end)
@@ -7734,28 +7764,6 @@ function d.CreateCategory(aa, ab)
 
                 av.Activated:Connect(function()
                     ao:Toggle()
-                end)
-
-                aq.MouseEnter:Connect(function()
-                    if not ao.Expanded then
-                        n:Tween(ap, o.TweenFast, {
-                            BackgroundColor3 = o.SurfaceHover,
-                        })
-                        n:Tween(aw, o.TweenFast, {
-                            ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-                        })
-                    end
-                end)
-
-                aq.MouseLeave:Connect(function()
-                    if not ao.Expanded then
-                        n:Tween(ap, o.TweenFast, {
-                            BackgroundColor3 = o.Surface,
-                        })
-                        n:Tween(aw, o.TweenFast, {
-                            ImageColor3 = o.MutedText,
-                        })
-                    end
                 end)
 
                 ay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -11658,18 +11666,177 @@ function d.CreateLegit(ag)
         aH.Parent = aF
 
         if aq.Size then
+            ah.WidgetCount = (ah.WidgetCount or 0) + 1
+            local widgetIndex = ah.WidgetCount
             local aI = Instance.new("Frame")
+            aI.Name = aq.Name .. "Widget"
             aI.Size = aq.Size
-            aI.BackgroundTransparency = 1
+
+            local widgetWidth = math.max(aq.Size.X.Offset, 100)
+            local widgetHeight = math.max(aq.Size.Y.Offset, 41)
+            local widgetColumn = math.floor((widgetIndex - 1) / 7)
+            local widgetRow = (widgetIndex - 1) % 7
+            aI.Position = UDim2.new(
+                1,
+                -(widgetWidth + 18 + (widgetColumn * (widgetWidth + 10))),
+                0,
+                72 + (widgetRow * (widgetHeight + 8))
+            )
+
+            aI.BackgroundColor3 = o.MainSoft
+            aI.BackgroundTransparency = 0.03
+            aI.BorderSizePixel = 0
+            aI.Active = true
+            aI.ClipsDescendants = false
             aI.Visible = false
             aI.Parent = w
-            makeDraggable(aI, aj)
-            local aJ = Instance.new("UIStroke")
-            aJ.Color = Color3.fromRGB(5, 134, 105)
-            aJ.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-            aJ.Thickness = 0
-            aJ.Parent = aI
+            aI:SetAttribute("PremiumLegitWidget", true)
+
+            addCorner(aI, o.Radius)
+            addSurfaceGradient(aI)
+            addShadow(aI)
+            local widgetStroke = addStroke(aI, o.BorderStrong, 0.58, 1, "LegitWidgetStroke")
+
+            local widgetTint = Instance.new("Frame")
+            widgetTint.Name = "WidgetTint"
+            widgetTint.Size = UDim2.fromScale(1, 1)
+            widgetTint.BackgroundColor3 = o.Main
+            widgetTint.BackgroundTransparency = 0.86
+            widgetTint.BorderSizePixel = 0
+            widgetTint.ZIndex = aI.ZIndex
+            widgetTint:SetAttribute("PremiumWidgetInternal", true)
+            widgetTint.Parent = aI
+            addCorner(widgetTint, o.Radius)
+
+            local widgetAccent = Instance.new("Frame")
+            widgetAccent.Name = "WidgetAccent"
+            widgetAccent.Size = UDim2.new(1, -16, 0, 2)
+            widgetAccent.Position = UDim2.fromOffset(8, 1)
+            widgetAccent.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            widgetAccent.BackgroundTransparency = 0.26
+            widgetAccent.BorderSizePixel = 0
+            widgetAccent.ZIndex = aI.ZIndex + 4
+            widgetAccent:SetAttribute("PremiumWidgetInternal", true)
+            widgetAccent.Parent = aI
+            addCorner(widgetAccent, UDim.new(1, 0))
+
+            local widgetTitle = Instance.new("TextLabel")
+            widgetTitle.Name = "WidgetTitle"
+            widgetTitle.Size = UDim2.new(1, -30, 0, 11)
+            widgetTitle.Position = UDim2.fromOffset(9, 4)
+            widgetTitle.BackgroundTransparency = 1
+            widgetTitle.Text = string.upper(aq.Name)
+            widgetTitle.TextColor3 = o.FaintText
+            widgetTitle.TextSize = 8
+            widgetTitle.TextXAlignment = Enum.TextXAlignment.Left
+            widgetTitle.FontFace = o.FontBold
+            widgetTitle.ZIndex = aI.ZIndex + 5
+            widgetTitle:SetAttribute("PremiumWidgetInternal", true)
+            widgetTitle.Parent = aI
+
+            local grip = Instance.new("Frame")
+            grip.Name = "DragGrip"
+            grip.Size = UDim2.fromOffset(18, 12)
+            grip.Position = UDim2.new(1, -23, 0, 4)
+            grip.BackgroundTransparency = 1
+            grip.ZIndex = aI.ZIndex + 5
+            grip:SetAttribute("PremiumWidgetInternal", true)
+            grip.Parent = aI
+
+            for dotIndex = 0, 2 do
+                local dot = Instance.new("Frame")
+                dot.Size = UDim2.fromOffset(2, 2)
+                dot.Position = UDim2.fromOffset(4 + (dotIndex * 5), 5)
+                dot.BackgroundColor3 = o.FaintText
+                dot.BackgroundTransparency = 0.2
+                dot.BorderSizePixel = 0
+                dot.ZIndex = grip.ZIndex
+                dot:SetAttribute("PremiumWidgetInternal", true)
+                dot.Parent = grip
+                addCorner(dot, UDim.new(1, 0))
+            end
+
+            connectguicolorchange(function(hue, saturation, value)
+                if widgetAccent.Parent then
+                    widgetAccent.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
+                end
+            end)
+
+            local metricModules = {
+                Clock = true,
+                FPS = true,
+                Memory = true,
+                Ping = true,
+                Speedmeter = true,
+            }
+
+            local function styleWidgetChild(child)
+                if child:GetAttribute("PremiumWidgetInternal") then
+                    return
+                end
+
+                if child:IsA("TextLabel") then
+                    local syncingBackground = false
+                    local function syncBackground()
+                        if syncingBackground or not child.Parent then
+                            return
+                        end
+                        local requestedTransparency = child.BackgroundTransparency
+                        widgetTint.BackgroundColor3 = child.BackgroundColor3
+                        widgetTint.BackgroundTransparency =
+                            math.clamp(0.94 - ((1 - requestedTransparency) * 0.38), 0.54, 0.94)
+                        syncingBackground = true
+                        child.BackgroundTransparency = 1
+                        syncingBackground = false
+                    end
+
+                    child.TextColor3 = o.TextStrong
+                    child.TextStrokeTransparency = 1
+                    child.ZIndex = aI.ZIndex + 3
+
+                    if metricModules[aq.Name] then
+                        child.Position = UDim2.fromOffset(9, 13)
+                        child.Size = UDim2.new(1, -18, 1, -15)
+                        child.TextXAlignment = Enum.TextXAlignment.Left
+                        child.TextYAlignment = Enum.TextYAlignment.Center
+                        child.TextSize = math.min(math.max(child.TextSize, 14), 16)
+                        child.FontFace = o.FontSemiBold
+                    end
+
+                    child:GetPropertyChangedSignal("BackgroundColor3"):Connect(syncBackground)
+                    child:GetPropertyChangedSignal("BackgroundTransparency"):Connect(syncBackground)
+                    task.defer(syncBackground)
+                end
+            end
+
+            for _, child in ipairs(aI:GetChildren()) do
+                styleWidgetChild(child)
+            end
+            aI.ChildAdded:Connect(styleWidgetChild)
+
+            aI.MouseEnter:Connect(function()
+                local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+                n:Tween(aI, o.TweenFast, { BackgroundColor3 = o.Elevated })
+                n:Tween(widgetStroke, o.TweenFast, {
+                    Color = accent,
+                    Transparency = 0.44,
+                })
+            end)
+
+            aI.MouseLeave:Connect(function()
+                n:Tween(aI, o.TweenFast, { BackgroundColor3 = o.MainSoft })
+                n:Tween(widgetStroke, o.TweenFast, {
+                    Color = o.BorderStrong,
+                    Transparency = 0.58,
+                })
+            end)
+
+            addTooltip(aI, "Drag to reposition " .. aq.Name)
+            makeDraggable(aI)
+
             ar.Children = aI
+            ar.WidgetStroke = widgetStroke
+            ar.WidgetAccent = widgetAccent
         end
 
         aq.Function = aq.Function or function() end
@@ -11694,26 +11861,25 @@ function d.CreateLegit(ag)
             end
 
             local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            local dimAccent = accent:Lerp(o.MutedText, 0.26)
             cardAccent.Visible = ar.Enabled
             n:Tween(aw, o.TweenFast, {
-                TextColor3 = ar.Enabled and o.TextStrong or o.MutedText,
+                TextColor3 = ar.Enabled and accent or o.MutedText,
             })
             n:Tween(av, o.TweenFast, {
                 BackgroundColor3 = ar.Enabled and o.Elevated or o.Surface,
             })
             n:Tween(cardStroke, o.TweenFast, {
                 Color = ar.Enabled and accent or o.Border,
-                Transparency = ar.Enabled and 0.2 or 0.68,
+                Transparency = ar.Enabled and 0.5 or 0.78,
             })
-            n:Tween(cardScale, o.TweenFast, {
-                Scale = ar.Enabled and 1.008 or 1,
-            })
+            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
             n:Tween(ax, o.Tween, {
                 BackgroundColor3 = ar.Enabled and accent or o.Elevated,
             })
             n:Tween(ay, o.Tween, {
                 Position = UDim2.fromOffset(ar.Enabled and 12 or 2, 2),
-                BackgroundColor3 = ar.Enabled and o.TextStrong or o.MutedText,
+                BackgroundColor3 = ar.Enabled and dimAccent or o.MutedText,
             })
 
             if not ar.Enabled then
@@ -11838,39 +12004,43 @@ function d.CreateLegit(ag)
         end)
 
         az.MouseEnter:Connect(function()
-            aA.ImageColor3 = o.Text
+            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            aA.ImageColor3 = accent:Lerp(o.MutedText, 0.28)
         end)
         az.MouseLeave:Connect(function()
             aA.ImageColor3 = m.Light(o.Main, 0.37)
         end)
 
         av.MouseEnter:Connect(function()
-            if not ar.Enabled then
-                n:Tween(av, o.TweenFast, { BackgroundColor3 = o.SurfaceHover })
-                n:Tween(cardStroke, o.TweenFast, {
-                    Color = o.BorderStrong,
-                    Transparency = 0.42,
-                })
-                aw.TextColor3 = o.Text
-            end
-            n:Tween(cardScale, o.TweenFast, { Scale = 1.014 })
+            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            local hoverAccent = accent:Lerp(o.MutedText, 0.3)
+            n:Tween(av, o.TweenFast, {
+                BackgroundColor3 = ar.Enabled and o.Elevated or o.SurfaceHover,
+            })
+            n:Tween(cardStroke, o.TweenFast, {
+                Color = accent,
+                Transparency = ar.Enabled and 0.46 or 0.64,
+            })
+            aw.TextColor3 = hoverAccent
+            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
         end)
         av.MouseLeave:Connect(function()
-            if not ar.Enabled then
-                n:Tween(av, o.TweenFast, { BackgroundColor3 = o.Surface })
-                n:Tween(cardStroke, o.TweenFast, {
-                    Color = o.Border,
-                    Transparency = 0.68,
-                })
-                aw.TextColor3 = o.MutedText
-            end
-            n:Tween(cardScale, o.TweenFast, { Scale = ar.Enabled and 1.008 or 1 })
+            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            n:Tween(av, o.TweenFast, {
+                BackgroundColor3 = ar.Enabled and o.Elevated or o.Surface,
+            })
+            n:Tween(cardStroke, o.TweenFast, {
+                Color = ar.Enabled and accent or o.Border,
+                Transparency = ar.Enabled and 0.5 or 0.78,
+            })
+            aw.TextColor3 = ar.Enabled and accent or o.MutedText
+            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
         end)
         av.MouseButton1Down:Connect(function()
-            n:Tween(cardScale, o.TweenPress, { Scale = 0.985 })
+            n:Tween(cardScale, o.TweenPress, { Scale = 0.996 })
         end)
         av.MouseButton1Up:Connect(function()
-            n:Tween(cardScale, o.TweenFast, { Scale = 1.014 })
+            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
         end)
 
         av.Activated:Connect(function()
@@ -12008,7 +12178,24 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         for _, existing in ipairs(notificationChildren()) do
             if existing:GetAttribute("NotifTitle") == ah and existing:GetAttribute("NotifText") == ai then
-                existing:Destroy()
+                local duplicateCount = (existing:GetAttribute("DuplicateCount") or 1) + 1
+                existing:SetAttribute("DuplicateCount", duplicateCount)
+                existing.LayoutOrder = math.floor(os.clock() * 100000)
+
+                local duplicateBadge = existing:FindFirstChild("DuplicateBadge")
+                if duplicateBadge and duplicateBadge:IsA("TextLabel") then
+                    duplicateBadge.Text = "x" .. tostring(duplicateCount)
+                    duplicateBadge.Visible = true
+                end
+
+                local existingScale = existing:FindFirstChildOfClass("UIScale")
+                if existingScale then
+                    existingScale.Scale = 0.97
+                    n:Tween(existingScale, o.TweenBack, { Scale = 1 })
+                end
+
+                updateNotificationPositions(true)
+                return
             end
         end
 
@@ -12049,6 +12236,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         card:SetAttribute("NotifHeight", height)
         card:SetAttribute("NotifTitle", ah)
         card:SetAttribute("NotifText", ai)
+        card:SetAttribute("DuplicateCount", 1)
+        card.Active = true
         card.ZIndex = 100
         card.BackgroundColor3 = o.MainSoft
         card.BackgroundTransparency = 0.02
@@ -12123,6 +12312,22 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         statusBadge.ZIndex = 103
         statusBadge.Parent = card
         addCorner(statusBadge, UDim.new(1, 0))
+
+        local duplicateBadge = Instance.new("TextLabel")
+        duplicateBadge.Name = "DuplicateBadge"
+        duplicateBadge.Size = UDim2.fromOffset(30, 18)
+        duplicateBadge.Position = UDim2.new(1, -68, 0, 13)
+        duplicateBadge.BackgroundColor3 = o.Elevated
+        duplicateBadge.BackgroundTransparency = 0.12
+        duplicateBadge.BorderSizePixel = 0
+        duplicateBadge.Visible = false
+        duplicateBadge.Text = "x1"
+        duplicateBadge.TextColor3 = o.MutedText
+        duplicateBadge.TextSize = 10
+        duplicateBadge.FontFace = o.FontBold
+        duplicateBadge.ZIndex = 103
+        duplicateBadge.Parent = card
+        addCorner(duplicateBadge, UDim.new(1, 0))
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
@@ -13309,10 +13514,46 @@ s = Instance.new("Folder")
 s.Name = "Prompts"
 s.Parent = w
 
+local premiumStrokeMinimums = {
+    MainStroke = 0.42,
+    NavigationStroke = 0.72,
+    CategoryStroke = 0.42,
+    ModuleStroke = 0.82,
+    ModuleCategoryStroke = 0.82,
+    LegitStroke = 0.42,
+    LegitCardStroke = 0.72,
+    LegitWidgetStroke = 0.58,
+    OptionsStroke = 0.9,
+    TextBoxStroke = 0.72,
+    OverlayStroke = 0.58,
+    NotificationStroke = 0.52,
+    TooltipStroke = 0.38,
+}
+
+local function normalizePremiumStroke(instance)
+    if not instance:IsA("UIStroke") then
+        return
+    end
+
+    local minimumTransparency = premiumStrokeMinimums[instance.Name]
+    if minimumTransparency == nil then
+        return
+    end
+
+    instance.Thickness = 1
+    instance.LineJoinMode = Enum.LineJoinMode.Round
+    instance.Transparency = math.max(instance.Transparency, minimumTransparency)
+end
+
+for _, descendant in ipairs(B:GetDescendants()) do
+    normalizePremiumStroke(descendant)
+end
+d:Clean(B.DescendantAdded:Connect(normalizePremiumStroke))
+
 z = Instance.new("TextLabel")
 z.Name = "Tooltip"
 z.Position = UDim2.fromScale(-1, -1)
-z.ZIndex = 240
+z.ZIndex = 100000
 z.BackgroundColor3 = o.Elevated
 z.Visible = false
 z.Text = ""

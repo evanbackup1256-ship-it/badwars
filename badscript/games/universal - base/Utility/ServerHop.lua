@@ -6,7 +6,7 @@ ServerHop = Bad.Categories.Utility:CreateModule({
 	Function = function(callback)
 		if callback then
 			ServerHop:Toggle()
-			serverHop(nil, Sort.Value)
+			serverHop(nil, Sort and Sort.Value or 'Descending')
 		end
 	end,
 	Tooltip = 'Teleports into a unique server'
@@ -20,7 +20,7 @@ ServerHop:CreateButton({
 	Name = 'Rejoin Previous Server',
 	Function = function()
 		notif('ServerHop', shared.Badserverhopprevious and 'Rejoining previous server...' or 'Cannot find previous server', 5)
-		if shared.Badserverhopprevious then
+		if shared.Badserverhopprevious and teleportService then
 			teleportService:TeleportToPlaceInstance(game.PlaceId, shared.Badserverhopprevious)
 		end
 	end

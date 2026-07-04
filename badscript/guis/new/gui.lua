@@ -10747,7 +10747,8 @@ Enabled=false,
 Options={},
 Name=aq.Name,
 Legit=true,
-CategoryModule=categoryModule,
+Category="Legit",
+CategoryModule=ai,
 _syncing=false,
 }
 local as=function(as)

@@ -207,6 +207,40 @@ local function notif(...)
 	return Bad:CreateNotification(...)
 end
 
+local function getTextChannel()
+	if textChatService.ChatVersion ~= Enum.ChatVersion.TextChatService then return nil end
+	local config = textChatService:FindFirstChild('ChatInputBarConfiguration') or textChatService.ChatInputBarConfiguration
+	local channel = config and config.TargetTextChannel
+	if not channel then
+		local channels = textChatService:FindFirstChild('TextChannels')
+		channel = channels and (channels:FindFirstChild('RBXGeneral') or channels:FindFirstChildWhichIsA('TextChannel'))
+	end
+	return channel
+end
+
+local function sendChatMessage(message)
+	message = tostring(message or '')
+	if message == '' then return false, 'empty message' end
+	if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+		local channel = getTextChannel()
+		if channel and type(channel.SendAsync) == 'function' then
+			local ok, err = pcall(channel.SendAsync, channel, message)
+			return ok, ok and nil or err
+		end
+		return false, 'chat channel unavailable'
+	end
+	local events = replicatedStorage:FindFirstChild('DefaultChatSystemChatEvents')
+	local say = events and events:FindFirstChild('SayMessageRequest')
+	if say and type(say.FireServer) == 'function' then
+		local ok, err = pcall(say.FireServer, say, message, 'All')
+		return ok, ok and nil or err
+	end
+	return false, 'legacy chat unavailable'
+end
+
+Bad.SendChatMessage = sendChatMessage
+Bad.GetTextChannel = getTextChannel
+
 local function removeTags(str)
 	str = str:gsub('<br%s*/>', '\n')
 	return (str:gsub('<[^<>]->', ''))
@@ -921,11 +955,8 @@ run(function()
 		end,
 		reveal = function()
 			task.delay(0.1, function()
-				if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-					textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync('I am using the inhaler client')
-				else
-					replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('I am using the inhaler client', 'All')
-				end
+				local ok, err = sendChatMessage('I am using the BadWars client')
+				if not ok then notif('Bad', 'Chat unavailable: '..tostring(err), 5, 'warning') end
 			end)
 		end,
 		shutdown = function()

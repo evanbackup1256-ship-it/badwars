@@ -42,25 +42,18 @@ ChatSpammer = Bad.Categories.Utility:CreateModule({
 			
 			local ind = 1
 			repeat
-				local message = (#Lines.ListEnabled > 0 and Lines.ListEnabled[math.random(1, #Lines.ListEnabled)] or 'vxpe on top')
+				local message = (#Lines.ListEnabled > 0 and Lines.ListEnabled[math.random(1, #Lines.ListEnabled)] or 'BadWars on top')
 				if Mode.Value == 'Order' and #Lines.ListEnabled > 0 then
 					message = Lines.ListEnabled[ind] or Lines.ListEnabled[1]
 					ind = (ind % #Lines.ListEnabled) + 1
 				end
 
-				if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-					local channel = textChatService.ChatInputBarConfiguration.TargetTextChannel
-					if not channel and textChatService:FindFirstChild('TextChannels') then
-						channel = textChatService.TextChannels:FindFirstChild('RBXGeneral')
-					end
-					if not channel then
-						notif('ChatSpammer', 'chat channel unavailable', 5, 'warning')
-						ChatSpammer:Toggle()
-						return
-					end
-					channel:SendAsync(message)
-				else
-					replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, 'All')
+				local ok, err = false, 'chat helper unavailable'
+				if Bad.SendChatMessage then ok, err = Bad.SendChatMessage(message) end
+				if not ok then
+					notif('ChatSpammer', 'chat unavailable: '..tostring(err), 5, 'warning')
+					ChatSpammer:Toggle()
+					return
 				end
 
 				task.wait(math.max(tonumber(Delay.Value) or 1, 0.1))

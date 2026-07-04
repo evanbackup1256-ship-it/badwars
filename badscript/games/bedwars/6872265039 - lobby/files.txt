@@ -1,0 +1,3 @@
+badscript/games/bedwars/6872265039 - lobby/base.lua
+badscript/games/bedwars/6872265039 - lobby/Combat/Sprint.lua
+badscript/games/bedwars/6872265039 - lobby/Minigames/AutoGamble.lua

@@ -15,11 +15,9 @@ local function sendMessage(name, obj, default)
 	said[name] = custommsg
 
 	custommsg = custommsg and custommsg:gsub('<obj>', obj or '') or ''
-	if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-		textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(custommsg)
-	else
-		replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(custommsg, 'All')
-	end
+	local ok, err = false, 'chat helper unavailable'
+	if Bad.SendChatMessage then ok, err = Bad.SendChatMessage(custommsg) end
+	if not ok then notif('AutoToxic', 'chat unavailable: '..tostring(err), 5, 'warning') end
 end
 
 AutoToxic = Bad.Categories.Utility:CreateModule({
@@ -45,17 +43,15 @@ AutoToxic = Bad.Categories.Utility:CreateModule({
 							sendMessage('Death', (killer.DisplayName or killer.Name), 'my gaming chair subscription expired :( | <obj>')
 						end
 					elseif killer == lplr and Toggles.Kill.Enabled then
-						sendMessage('Kill', (killed.DisplayName or killed.Name), 'vxp on top | <obj>')
+						sendMessage('Kill', (killed.DisplayName or killed.Name), 'BadWars on top | <obj>')
 					end
 				end
 			end))
 			AutoToxic:Clean(BadEvents.MatchEndEvent.Event:Connect(function(winstuff)
 				if GG.Enabled then
-					if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-						textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync('gg')
-					else
-						replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('gg', 'All')
-					end
+					local ok, err = false, 'chat helper unavailable'
+					if Bad.SendChatMessage then ok, err = Bad.SendChatMessage('gg') end
+					if not ok then notif('AutoToxic', 'chat unavailable: '..tostring(err), 5, 'warning') end
 				end
 				
 				local myTeam = bedwars.Store:getState().Game.myTeam

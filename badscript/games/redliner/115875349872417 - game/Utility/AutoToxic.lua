@@ -15,11 +15,9 @@ local function sendMessage(name, obj, default)
 	said[name] = custommsg
 
 	custommsg = custommsg and custommsg:gsub('<obj>', obj or '') or ''
-	if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-		textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(custommsg)
-	else
-		replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(custommsg, 'All')
-	end
+	local ok, err = false, 'chat helper unavailable'
+	if Bad.SendChatMessage then ok, err = Bad.SendChatMessage(custommsg) end
+	if not ok then notif('AutoToxic', 'chat unavailable: '..tostring(err), 5, 'warning') end
 end
 
 AutoToxic = Bad.Categories.Utility:CreateModule({
@@ -28,11 +26,9 @@ AutoToxic = Bad.Categories.Utility:CreateModule({
 		if callback then
 			AutoToxic:Clean(BadEvents.MatchEnded.Event:Connect(function(won)
 				if GG.Enabled then
-					if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-						textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync('gg')
-					else
-						replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('gg', 'All')
-					end
+					local ok, err = false, 'chat helper unavailable'
+					if Bad.SendChatMessage then ok, err = Bad.SendChatMessage('gg') end
+					if not ok then notif('AutoToxic', 'chat unavailable: '..tostring(err), 5, 'warning') end
 				end
 
 				if won then

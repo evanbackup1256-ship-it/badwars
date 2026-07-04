@@ -14,11 +14,9 @@ local function sendMessage(name, obj, default)
 	said[name] = custommsg
 
 	custommsg = custommsg and custommsg:gsub('<obj>', obj or '') or ''
-	if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-		textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(custommsg)
-	else
-		replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(custommsg, 'All')
-	end
+	local ok, err = false, 'chat helper unavailable'
+	if Bad.SendChatMessage then ok, err = Bad.SendChatMessage(custommsg) end
+	if not ok then notif('AutoToxic', 'chat unavailable: '..tostring(err), 5, 'warning') end
 end
 
 AutoToxic = Bad.Categories.Utility:CreateModule({

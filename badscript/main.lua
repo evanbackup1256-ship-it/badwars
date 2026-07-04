@@ -283,6 +283,33 @@ local function downloadFile(path)
 end
 
 local function splitLines(t) local r={}; for l in tostring(t):gmatch('[^\r\n]+') do l=l:match('^%s*(.-)%s*$'); if l~='' and not l:find('^#') then table.insert(r,l) end end; return r end
+local __repoTree
+local function repoTreeFiles(prefix)
+	if type(prefix)~='string' or prefix=='' then return {} end
+	if not __repoTree then
+		local repo=CFG.repo..'/'..CFG.name
+		local url='https://api.github.com/repos/'..repo..'/git/trees/'..CFG.branch..'?recursive=1'
+		local body=httpGetMulti({url})
+		local ok,res=pcall(function()
+			return cloneref(game:GetService('HttpService')):JSONDecode(body or '')
+		end)
+		__repoTree=ok and type(res)=='table' and type(res.tree)=='table' and res.tree or {}
+	end
+	local files={}
+	local normalizedPrefix=prefix:gsub('\\','/')
+	for _,item in ipairs(__repoTree) do
+		local path=type(item)=='table' and tostring(item.path or '') or ''
+		if type(item)=='table' and item.type=='blob' and path:find(normalizedPrefix,1,true)==1 and path:sub(-4)=='.lua' then
+			table.insert(files,path)
+		end
+	end
+	table.sort(files,function(a,b)
+		if a:sub(-8)=='base.lua' then return true end
+		if b:sub(-8)=='base.lua' then return false end
+		return a<b
+	end)
+	return files
+end
 
 -- Universal module bundle builder (no pre-built bundle, builds from sources with pcall isolation)
 local function buildBundle(name,basePath,manifestPath)
@@ -356,8 +383,9 @@ local function buildBundle(name,basePath,manifestPath)
 	}
 	table.insert(parts,table.concat(preamble,'\n'))
 	local loaded=0; local mi=1
-	if type(manifest)=='string' then
-		for _,mp in splitLines(manifest) do
+	local manifestFiles=type(manifest)=='string' and splitLines(manifest) or repoTreeFiles((basePath:match('^(.*[/\\])base%.lua$') or ''):gsub('\\','/'))
+	if type(manifestFiles)=='table' then
+		for _,mp in ipairs(manifestFiles) do
 			if mp~=basePath then
 				setStatus('loading module: '..tostring(mp))
 				local code=downloadFile(mp)
@@ -407,7 +435,15 @@ local function gamePath(placeId) return gamePaths[tonumber(placeId)] or ('badscr
 local function runGameMod(path,label)
 	setStatus('loading game module: '..tostring(path))
 	local start=os_clock()
-	local code=downloadFile(path)
+	local manifest=path:match('^(.*[/\\])base%.lua$')
+	manifest=manifest and (manifest..'files.txt') or nil
+	local code
+	if manifest then
+		local bundled,bundleErr=buildBundle('game',path,manifest)
+		code=type(bundled)=='string' and bundled or nil
+		if not code and bundleErr then warn('BadWars: game bundle unavailable for '..tostring(path)..': '..tostring(bundleErr)) end
+	end
+	code=code or downloadFile(path)
 	if type(code)~='string' or code=='' then return false,'download failed' end
 	local fn,err=_loadstring(code,tostring(game.PlaceId))
 	if not fn then return false,err or 'compile failed' end

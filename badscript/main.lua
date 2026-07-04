@@ -333,6 +333,7 @@ end
 local function buildBundle(name,basePath,manifestPath)
 	local baseCode=downloadFile(basePath)
 	if type(baseCode)~='string' or baseCode=='' then return nil,'missing base' end
+	baseCode=baseCode:gsub('%s*return%s+[^%c]+%s*$','')
 	local parts={baseCode}
 	local manifest=downloadFile(manifestPath)
 	local preamble={
@@ -474,6 +475,31 @@ local function runGameMod(path,label)
 	return true
 end
 
+local function repairModuleCategories(stage)
+	local B=shared.Bad
+	if type(B)~='table' then return end
+	if type(B.RepairModuleCategories)=='function' then
+		local ok,err=pcall(function() B:RepairModuleCategories() end)
+		if not ok then warn('BadWars: [CATEGORY REPAIR] '..tostring(stage)..' failed: '..tostring(err)) end
+	end
+	local counts={}
+	if type(B.Categories)=='table' and type(B.Modules)=='table' then
+		for name,cat in pairs(B.Categories) do
+			if type(cat)=='table' and cat.Type=='ModuleCategory' then
+				counts[name]=0
+			end
+		end
+		for _,mod in pairs(B.Modules) do
+			if type(mod)=='table' and counts[mod.Category]~=nil then
+				counts[mod.Category]+=1
+			end
+		end
+		for name,count in pairs(counts) do
+			warn('BadWars: [CATEGORY] '..tostring(name)..' modules visible='..tostring(count)..' stage='..tostring(stage))
+		end
+	end
+end
+
 -- Health check
 local function healthCheck()
 	local issues={}; local warns={}
@@ -577,18 +603,22 @@ if not shared.BadIndependent then
 		setStatus('WARNING: universal modules unavailable',true)
 	end
 	logMod('Universal','build',os_clock()-uniStart,true)
+	repairModuleCategories('universal')
 	setStatus('universal modules ready')
 
 	-- Stage 7: Game Module
 	local gPath=gamePath(game.PlaceId)
 	if isfile(gPath) or gameModulePaths[tonumber(game.PlaceId)] then
-		runGameMod(gPath,isfile(gPath) and 'cached' or 'mapped')		setStatus('game module ready')	else
+		runGameMod(gPath,isfile(gPath) and 'cached' or 'mapped')
+		repairModuleCategories('game')
+		setStatus('game module ready')	else
 		setStatus('universal active; no game-specific module found')
 	end
 
 	-- Stage 8: Finish
 	setStatus('pipeline: finalizing')
 	finish()
+	repairModuleCategories('profile')
 
 	-- Stage 9: Health Check
 	local issues,warns=healthCheck()

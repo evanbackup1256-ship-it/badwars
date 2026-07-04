@@ -6435,6 +6435,8 @@ warn("[ModuleCategory] refresh failed:",err)
 end
 end
 
+ao.Refresh=refreshModuleCategory
+
 function ao.Toggle(az,aA)
 success,err=pcall(function()
 if aA~=nil then
@@ -11665,6 +11667,27 @@ end
 end)
 end
 
+function d.RepairModuleCategories(ah)
+local ai={}
+for aj,ak in ah.Categories do
+if type(ak)=="table"and ak.Type=="ModuleCategory"and type(ak.AddModule)=="function"then
+ai[aj]=ak
+end
+end
+for aj,ak in ah.Modules do
+local al=ak and ak.Category
+local am=al and ai[al]
+if am then
+am:AddModule(ak)
+end
+end
+for aj,ak in ai do
+if type(ak.Refresh)=="function"then
+ak:Refresh()
+end
+end
+end
+
 function d.Load(ah,ai,aj)
 if not ah._profile_loaded then
 ah.PreloadEvent:Fire()
@@ -11858,6 +11881,9 @@ end
 end
 end
 ah:UpdateTextGUI(true)
+if type(ah.RepairModuleCategories)=="function"then
+ah:RepairModuleCategories()
+end
 else
 ah:Save(ah.Profile,true)
 end

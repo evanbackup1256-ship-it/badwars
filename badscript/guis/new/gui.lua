@@ -13611,31 +13611,49 @@ function d.UpdateGUI(I, J, K, L, M)
     end
 
     for O, P in d.Modules do
-        if P.Enabled then
-            P.Object.BackgroundColor3 = N and Color3.fromHSV(d:Color((J - (P.Index * 0.025)) % 1))
-                or Color3.fromHSV(J, K, L)
-            P.Object.TextColor3 = d.GUIColor.Rainbow and Color3.new(0.19, 0.19, 0.19) or d:TextColor(J, K, L)
-            P.Object.UIGradient.Enabled = N and d.RainbowMode.Value == "Gradient"
-            if P.Object.UIGradient.Enabled then
-                P.Object.BackgroundColor3 = Color3.new(1, 1, 1)
-                P.Object.UIGradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromHSV(d:Color((J - (P.Index * 0.025)) % 1))),
-                    ColorSequenceKeypoint.new(1, Color3.fromHSV(d:Color((J - ((P.Index + 1) * 0.025)) % 1))),
-                })
-            end
-            P.Object.Bind.Icon.ImageColor3 = P.Object.TextColor3
-            P.Object.Bind.TextLabel.TextColor3 = P.Object.TextColor3
-            P.Object.Dots.Dots.ImageColor3 = P.Object.TextColor3
-        end
+	local rail = P.Object:FindFirstChild("ActiveRail")
 
-        for Q, R in P.Options do
-            if R.Color then
-                R:Color(J, K, L, N)
-            end
-        end
-    end
+	if not rail then
+		rail = Instance.new("Frame")
+		rail.Name = "ActiveRail"
+		rail.Size = UDim2.new(0, 3, 1, 0)
+		rail.Position = UDim2.fromOffset(0, 0)
+		rail.BorderSizePixel = 0
+		rail.ZIndex = P.Object.ZIndex + 1
+		rail.Parent = P.Object
+	end
 
-    for O, P in d.Overlays.Toggles do
+	local gradient = P.Object:FindFirstChildOfClass("UIGradient")
+	if gradient then
+		gradient.Enabled = false
+	end
+
+	if P.Enabled then
+		local accent = N
+			and Color3.fromHSV(
+				d:Color((J - (P.Index * 0.025)) % 1)
+			)
+			or Color3.fromHSV(J, K, L)
+
+		rail.BackgroundColor3 = accent
+		rail.Visible = true
+
+		P.Object.BackgroundColor3 = o.Elevated
+		P.Object.TextColor3 = o.Text
+		P.Object.Bind.Icon.ImageColor3 = o.Text
+		P.Object.Bind.TextLabel.TextColor3 = o.Text
+		P.Object.Dots.Dots.ImageColor3 = o.Text
+	else
+		rail.Visible = false
+	end
+
+	for Q, R in P.Options do
+		if R.Color then
+			R:Color(J, K, L, N)
+		end
+	end
+end
+for O, P in d.Overlays.Toggles do
         if P.Enabled then
             n:Cancel(P.Object.Knob)
             P.Object.Knob.BackgroundColor3 = N and Color3.fromHSV(d:Color((J - (O * 0.075)) % 1))

@@ -1,4 +1,4 @@
--- BadWars Studio UI | Build 2026.07.04.13.2
+-- BadWars Studio UI | Build 2026.07.04.13.3
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -38,7 +38,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.13.2-INTERACTION-STABILITY",
+    PremiumBuild = "2026.07.04.13.3-INPUT-TOOLTIP-STABILITY",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -1093,9 +1093,9 @@ local function stopTooltipFollow()
     end
 end
 
-local function positionTooltip()
-    if not z or not z.Parent or not z.Visible then
-        return
+local function getTooltipPosition()
+    if not z or not z.Parent then
+        return nil
     end
 
     local scale = getGuiScale()
@@ -1106,19 +1106,19 @@ local function positionTooltip()
     local width = z.Size.X.Offset
     local height = z.Size.Y.Offset
     local padding = 10
-    local gap = 16
+    local gap = 14
 
     local desiredX = mouse.X + gap
     if desiredX + width > viewport.X - padding then
         desiredX = mouse.X - width - gap
     end
 
-    local desiredY = mouse.Y + 12
+    local desiredY = mouse.Y + 10
     if desiredY + height > viewport.Y - padding then
-        desiredY = mouse.Y - height - 12
+        desiredY = mouse.Y - height - 10
     end
 
-    z.Position = UDim2.fromOffset(
+    return UDim2.fromOffset(
         math.clamp(
             desiredX,
             padding,
@@ -1132,22 +1132,74 @@ local function positionTooltip()
     )
 end
 
+local function positionTooltip(smooth)
+    if not z or not z.Parent or not z.Visible then
+        return
+    end
+
+    local targetPosition = getTooltipPosition()
+    if not targetPosition then
+        return
+    end
+
+    if smooth then
+        z.Position = UDim2.fromOffset(
+            z.Position.X.Offset
+                + ((targetPosition.X.Offset - z.Position.X.Offset) * 0.48),
+            z.Position.Y.Offset
+                + ((targetPosition.Y.Offset - z.Position.Y.Offset) * 0.48)
+        )
+    else
+        z.Position = targetPosition
+    end
+end
+
+local function ensureTooltipFollow()
+    if tooltipFollowConnection then
+        return
+    end
+
+    tooltipFollowConnection = k.RenderStepped:Connect(function()
+        local target = tooltipTarget
+
+        if
+            not target
+            or not target.Parent
+            or not isEffectivelyVisible(target)
+            or not tooltipInterfaceVisible()
+            or d.TooltipsEnabled == false
+        then
+            if z and z.Visible then
+                z.Visible = false
+            end
+            d._tooltipOwner = nil
+            tooltipTarget = nil
+            stopTooltipFollow()
+            return
+        end
+
+        positionTooltip(true)
+    end)
+end
+
 local function hideTooltip(immediate)
     tooltipGeneration += 1
     d._tooltipOwner = nil
     tooltipTarget = nil
-    stopTooltipFollow()
 
     if not z or not z.Parent then
+        stopTooltipFollow()
         return
     end
 
     local generation = tooltipGeneration
 
     if immediate or not d.Loaded then
+        stopTooltipFollow()
         z.Visible = false
         z.TextTransparency = 1
         z.BackgroundTransparency = 1
+
         if tooltipStroke then
             tooltipStroke.Transparency = 1
         end
@@ -1158,13 +1210,13 @@ local function hideTooltip(immediate)
             tooltipAccent.BackgroundTransparency = 1
         end
         if tooltipScale then
-            tooltipScale.Scale = 0.985
+            tooltipScale.Scale = 0.99
         end
         return
     end
 
     local transition = TweenInfo.new(
-        0.08,
+        0.045,
         Enum.EasingStyle.Quart,
         Enum.EasingDirection.In
     )
@@ -1194,7 +1246,7 @@ local function hideTooltip(immediate)
 
     if tooltipScale then
         n:Tween(tooltipScale, transition, {
-            Scale = 0.985,
+            Scale = 0.99,
         })
     end
 
@@ -1206,13 +1258,14 @@ local function hideTooltip(immediate)
             and z.Parent
         then
             z.Visible = false
+            stopTooltipFollow()
         end
     end
 
     if fadeTween then
         fadeTween.Completed:Once(finishHide)
     else
-        task.delay(0.09, finishHide)
+        task.delay(0.05, finishHide)
     end
 end
 
@@ -1220,48 +1273,66 @@ d.HideTooltip = hideTooltip
 
 local function showTooltip(ownerToken, target, tooltipText)
     tooltipGeneration += 1
-    local generation = tooltipGeneration
     d._tooltipOwner = ownerToken
     tooltipTarget = target
 
-    task.delay(0.14, function()
-        if
-            generation ~= tooltipGeneration
-            or d._tooltipOwner ~= ownerToken
-            or tooltipTarget ~= target
-            or not target
-            or not target.Parent
-            or not isEffectivelyVisible(target)
-            or d.TooltipsEnabled == false
-            or not tooltipInterfaceVisible()
-            or not z
-            or not z.Parent
-        then
-            return
-        end
+    if
+        not target
+        or not target.Parent
+        or not isEffectivelyVisible(target)
+        or d.TooltipsEnabled == false
+        or not tooltipInterfaceVisible()
+        or not z
+        or not z.Parent
+    then
+        return
+    end
 
-        local scale = getGuiScale()
-        local viewport =
-            (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
-            / scale
-        local maxWidth = math.clamp(viewport.X * 0.28, 190, 340)
-        local bounds = E(
-            tooltipText,
-            z.TextSize,
-            o.Font,
-            maxWidth - 26
-        ) or Vector2.new(maxWidth - 26, z.TextSize + 4)
+    local scale = getGuiScale()
+    local viewport =
+        (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
+        / scale
+    local maxWidth = math.clamp(viewport.X * 0.28, 190, 340)
+    local bounds = E(
+        tooltipText,
+        z.TextSize,
+        o.Font,
+        maxWidth - 26
+    ) or Vector2.new(maxWidth - 26, z.TextSize + 4)
 
-        z.Size = UDim2.fromOffset(
-            math.min(maxWidth, math.max(100, bounds.X + 28)),
-            math.max(32, bounds.Y + 16)
+    local targetSize = UDim2.fromOffset(
+        math.min(maxWidth, math.max(100, bounds.X + 28)),
+        math.max(32, bounds.Y + 16)
+    )
+
+    local alreadyVisible =
+        z.Visible
+        and z.TextTransparency < 0.9
+        and z.BackgroundTransparency < 0.9
+
+    z.Visible = true
+    z.Text = tooltipText
+    z.TextColor3 = o.TextStrong
+
+    if alreadyVisible then
+        n:Tween(
+            z,
+            TweenInfo.new(
+                0.055,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Size = targetSize,
+                TextTransparency = 0,
+                BackgroundTransparency = 0.04,
+            }
         )
-        z.Text = tooltipText
-        z.TextColor3 = o.TextStrong
+    else
+        z.Size = targetSize
         z.TextTransparency = 1
         z.BackgroundColor3 = o.Elevated
         z.BackgroundTransparency = 1
-        z.Visible = true
 
         if tooltipStroke then
             tooltipStroke.Transparency = 1
@@ -1273,57 +1344,81 @@ local function showTooltip(ownerToken, target, tooltipText)
             tooltipAccent.BackgroundTransparency = 1
         end
         if tooltipScale then
-            tooltipScale.Scale = 0.985
+            tooltipScale.Scale = 0.99
         end
 
-        positionTooltip()
-        stopTooltipFollow()
-        tooltipFollowConnection = k.RenderStepped:Connect(function()
-            if
-                generation ~= tooltipGeneration
-                or d._tooltipOwner ~= ownerToken
-                or tooltipTarget ~= target
-                or not target.Parent
-                or not isEffectivelyVisible(target)
-                or not tooltipInterfaceVisible()
-            then
-                hideTooltip(true)
-                return
-            end
-            positionTooltip()
-        end)
-
-        local transition = TweenInfo.new(
-            0.12,
-            Enum.EasingStyle.Quart,
-            Enum.EasingDirection.Out
+        n:Tween(
+            z,
+            TweenInfo.new(
+                0.065,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            {
+                TextTransparency = 0,
+                BackgroundTransparency = 0.04,
+            }
         )
+    end
 
-        n:Tween(z, transition, {
-            TextTransparency = 0,
-            BackgroundTransparency = 0.04,
-        })
-        if tooltipStroke then
-            n:Tween(tooltipStroke, transition, {
+    if tooltipStroke then
+        n:Tween(
+            tooltipStroke,
+            TweenInfo.new(
+                0.065,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            {
                 Transparency = 0.48,
-            })
-        end
-        if y then
-            n:Tween(y, transition, {
+            }
+        )
+    end
+
+    if y then
+        n:Tween(
+            y,
+            TweenInfo.new(
+                0.065,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            {
                 ImageTransparency = 0.82,
-            })
-        end
-        if tooltipAccent then
-            n:Tween(tooltipAccent, transition, {
+            }
+        )
+    end
+
+    if tooltipAccent then
+        n:Tween(
+            tooltipAccent,
+            TweenInfo.new(
+                0.065,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            {
                 BackgroundTransparency = 0.08,
-            })
-        end
-        if tooltipScale then
-            n:Tween(tooltipScale, transition, {
+            }
+        )
+    end
+
+    if tooltipScale then
+        n:Tween(
+            tooltipScale,
+            TweenInfo.new(
+                0.065,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            {
                 Scale = 1,
-            })
-        end
-    end)
+            }
+        )
+    end
+
+    positionTooltip(false)
+    ensureTooltipFollow()
 end
 
 local function addTooltip(F, G)
@@ -1340,9 +1435,15 @@ local function addTooltip(F, G)
     end)
 
     connections[2] = F.MouseLeave:Connect(function()
-        if d._tooltipOwner == ownerToken then
-            hideTooltip(false)
-        end
+        local leaveGeneration = tooltipGeneration
+        task.delay(0.035, function()
+            if
+                leaveGeneration == tooltipGeneration
+                and d._tooltipOwner == ownerToken
+            then
+                hideTooltip(false)
+            end
+        end)
     end)
 
     connections[3] = F:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -1355,6 +1456,7 @@ local function addTooltip(F, G)
         if d._tooltipOwner == ownerToken then
             hideTooltip(true)
         end
+
         for index, connection in connections do
             pcall(function()
                 connection:Disconnect()
@@ -1364,7 +1466,6 @@ local function addTooltip(F, G)
     end)
 end
 
-d.addTooltip = addTooltip
 d.addTooltip = addTooltip
 
 local function applyToggleAccent(toggleApi, hue, saturation, value, rainbow, index)
@@ -7573,9 +7674,19 @@ function d.CreateCategory(aa, ab)
                 M = nil
             end
 
+            local preservedCanvasPosition =
+                aj.CanvasPosition
+
             at.Visible = true
             at.GroupTransparency = 1
             at.Size = UDim2.new(1, -12, 0, 0)
+
+            task.defer(function()
+                if aj and aj.Parent then
+                    aj.CanvasPosition =
+                        preservedCanvasPosition
+                end
+            end)
             optionsStroke.Transparency = 1
             ao.OptionsVisibilityChanged:Fire(true)
 
@@ -7764,11 +7875,6 @@ function d.CreateCategory(aa, ab)
             I.ImageColor3 = N.Enabled and accent or o.FaintText
             av.ImageColor3 = N.Enabled and enabledText or o.FaintText
             aw.TextColor3 = N.Enabled and enabledText or o.FaintText
-            task.defer(function()
-                if d.SortAllModules then
-                    d:SortAllModules()
-                end
-            end)
             if not N.Enabled then
                 for P, Q in N.Connections do
                     if type(Q) == "function" then
@@ -7919,7 +8025,10 @@ function d.CreateCategory(aa, ab)
                 I.ImageColor3 = ao.Enabled and o.Text or m.Light(o.Main, 0.37)
             end)
         end
-        aC.Activated:Connect(toggleOptions)
+        aC.Activated:Connect(function()
+            ao._SuppressPrimaryUntil = os.clock() + 0.12
+            toggleOptions()
+        end)
 
         if not d.isMobile then
             ar.MouseEnter:Connect(function()
@@ -7996,7 +8105,24 @@ function d.CreateCategory(aa, ab)
                 end
             end
         end)
-        ar.Activated:Connect(function()
+        ar.Activated:Connect(function(inputObject)
+            if
+                os.clock() < (ao._SuppressPrimaryUntil or 0)
+                or ao._PrimaryClickBusy
+                or (
+                    inputObject
+                    and inputObject.UserInputType
+                        == Enum.UserInputType.MouseButton2
+                )
+            then
+                return
+            end
+
+            ao._PrimaryClickBusy = true
+            task.delay(0.075, function()
+                ao._PrimaryClickBusy = false
+            end)
+
             if d.isMobile then
                 local N = Instance.new("Frame")
                 N.Size = UDim2.fromScale(1, 1)
@@ -8022,9 +8148,12 @@ function d.CreateCategory(aa, ab)
             ao:Toggle()
         end)
         ar.MouseButton2Click:Connect(function()
+            ao._SuppressPrimaryUntil = os.clock() + 0.12
+
             if d.HideTooltip then
                 d.HideTooltip(true)
             end
+
             toggleOptions()
         end)
 
@@ -8239,6 +8368,7 @@ function d.CreateCategory(aa, ab)
     end
 
     local categoryAnimationId = 0
+    local renderedExpanded = ac.Expanded == true
 
     local function getExpandedCategoryHeight()
         local scale = math.max(A.Scale, 0.01)
@@ -8261,17 +8391,31 @@ function d.CreateCategory(aa, ab)
     local function refreshCategoryLayout(instant)
         categoryAnimationId += 1
         local animationId = categoryAnimationId
+        local stateChanged = renderedExpanded ~= ac.Expanded
+        renderedExpanded = ac.Expanded
+
         local targetHeight = ac.Expanded
             and getExpandedCategoryHeight()
             or 44
 
         aj.CanvasSize = UDim2.fromOffset(
             0,
-            math.max(0, al.AbsoluteContentSize.Y / math.max(A.Scale, 0.01) + 8)
+            math.max(
+                0,
+                al.AbsoluteContentSize.Y
+                    / math.max(A.Scale, 0.01)
+                    + 8
+            )
         )
+
         aj.ScrollingEnabled =
             ac.Expanded
-            and aj.CanvasSize.Y.Offset > math.max(0, targetHeight - 44)
+            and aj.CanvasSize.Y.Offset
+                > math.max(0, targetHeight - 44)
+
+        local currentHeight = ad.Size.Y.Offset
+        local needsResize =
+            math.abs(currentHeight - targetHeight) > 0.5
 
         if instant or not d.Loaded or d._SuppressEntryAnimation then
             ad.ClipsDescendants = true
@@ -8280,24 +8424,58 @@ function d.CreateCategory(aa, ab)
             aj.Visible = ac.Expanded
         else
             ad.ClipsDescendants = true
-            if ac.Expanded then aj.Visible = false end
-            n:Tween(ai, o.TweenSlow, { Rotation = ac.Expanded and 0 or 180 })
-            local sizeTween = n:Tween(ad, o.TweenSlow, { Size = UDim2.fromOffset(232, targetHeight) })
+
+            if ac.Expanded then
+                aj.Visible = true
+            end
+
+            if stateChanged then
+                n:Tween(ai, o.TweenSlow, {
+                    Rotation = ac.Expanded and 0 or 180,
+                })
+            else
+                ai.Rotation = ac.Expanded and 0 or 180
+            end
+
+            local sizeTween
+            if needsResize then
+                sizeTween = n:Tween(ad, o.TweenSlow, {
+                    Size = UDim2.fromOffset(232, targetHeight),
+                })
+            else
+                ad.Size = UDim2.fromOffset(232, targetHeight)
+            end
+
             local function finishCategoryTransition()
-                if animationId ~= categoryAnimationId then return end
+                if animationId ~= categoryAnimationId then
+                    return
+                end
+
                 aj.Visible = ac.Expanded
                 ad.ClipsDescendants = true
             end
-            if sizeTween then sizeTween.Completed:Once(finishCategoryTransition) else task.delay(0.35, finishCategoryTransition) end
+
+            if sizeTween then
+                sizeTween.Completed:Once(
+                    finishCategoryTransition
+                )
+            else
+                finishCategoryTransition()
+            end
         end
 
         local maxCanvasY = math.max(
             0,
             aj.AbsoluteCanvasSize.Y - aj.AbsoluteWindowSize.Y
         )
+
         aj.CanvasPosition = Vector2.new(
             0,
-            math.clamp(aj.CanvasPosition.Y, 0, maxCanvasY)
+            math.clamp(
+                aj.CanvasPosition.Y,
+                0,
+                maxCanvasY
+            )
         )
 
         ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
@@ -13110,11 +13288,6 @@ function d.CreateLegit(ag)
             end
 
             aI._syncing = false
-            task.defer(function()
-                if d.SortAllModules then
-                    d:SortAllModules()
-                end
-            end)
             d._PendingModuleCallbacks += 1
             task.spawn(function()
                 local success, callbackError = xpcall(
@@ -13235,7 +13408,10 @@ function d.CreateLegit(ag)
             closeLegitOptions(false)
         end)
 
-        az.Activated:Connect(openLegitOptions)
+        az.Activated:Connect(function()
+            ar._SuppressPrimaryUntil = os.clock() + 0.12
+            openLegitOptions()
+        end)
 
         az.MouseEnter:Connect(function()
             local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
@@ -13277,11 +13453,36 @@ function d.CreateLegit(ag)
             n:Tween(cardScale, o.TweenFast, { Scale = 1 })
         end)
 
-        av.Activated:Connect(function()
+        av.Activated:Connect(function(inputObject)
+            if
+                os.clock() < (ar._SuppressPrimaryUntil or 0)
+                or ar._PrimaryClickBusy
+                or (
+                    inputObject
+                    and inputObject.UserInputType
+                        == Enum.UserInputType.MouseButton2
+                )
+            then
+                return
+            end
+
+            ar._PrimaryClickBusy = true
+            task.delay(0.075, function()
+                ar._PrimaryClickBusy = false
+            end)
+
             ar:Toggle()
         end)
 
-        av.MouseButton2Click:Connect(openLegitOptions)
+        av.MouseButton2Click:Connect(function()
+            ar._SuppressPrimaryUntil = os.clock() + 0.12
+
+            if d.HideTooltip then
+                d.HideTooltip(true)
+            end
+
+            openLegitOptions()
+        end)
 
         aB.Activated:Connect(function()
             closeLegitOptions(false)

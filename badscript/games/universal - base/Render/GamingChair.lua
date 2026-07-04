@@ -105,7 +105,7 @@ GamingChair = Bad.Categories.Render:CreateModule({
 			local oldmoving = false
 			local oldflying = false
 			repeat
-				if entitylib.isAlive and entitylib.character.Humanoid.Health > 0 then
+				if entitylib.isAlive and entitylib.character and entitylib.character.Humanoid and entitylib.character.Humanoid.Health > 0 and entitylib.character.RootPart then
 					if not chairanim.IsPlaying then
 						local temp2 = Instance.new('Animation')
 						temp2.AnimationId = entitylib.character.Humanoid.RigType == Enum.HumanoidRigType.R15 and 'http://www.roblox.com/asset/?id=2506281703' or 'http://www.roblox.com/asset/?id=178130996'
@@ -115,13 +115,17 @@ GamingChair = Bad.Categories.Render:CreateModule({
 						chairanim:Play()
 					end
 					chair.CFrame = entitylib.character.RootPart.CFrame * CFrame.Angles(0, math.rad(-90), 0)
-					chairweld.Part1 = entitylib.character.RootPart
-					chairlegs.Velocity = Vector3.zero
-					chairlegs.CFrame = chair.CFrame * CFrame.new(0.047, -2.324, 0)
-					chairfan.Velocity = Vector3.zero
-					chairfan.CFrame = chair.CFrame * CFrame.new(0.047, -1.873, 0) * CFrame.Angles(0, math.rad(tick() * 180 % 360), math.rad(180))
+					if chairweld then chairweld.Part1 = entitylib.character.RootPart end
+					if chairlegs then
+						chairlegs.Velocity = Vector3.zero
+						chairlegs.CFrame = chair.CFrame * CFrame.new(0.047, -2.324, 0)
+					end
+					if chairfan then
+						chairfan.Velocity = Vector3.zero
+						chairfan.CFrame = chair.CFrame * CFrame.new(0.047, -1.873, 0) * CFrame.Angles(0, math.rad(tick() * 180 % 360), math.rad(180))
+					end
 					local moving = entitylib.character.Humanoid:GetState() == Enum.HumanoidStateType.Running and entitylib.character.Humanoid.MoveDirection ~= Vector3.zero
-					local flying = Bad.Modules.Fly and Bad.Modules.Fly.Enabled or Bad.Modules.LongJump and Bad.Modules.LongJump.Enabled or Bad.Modules.InfiniteFly and Bad.Modules.InfiniteFly.Enabled
+					local flying = Bad.Modules and Bad.Modules.Fly and Bad.Modules.Fly.Enabled or Bad.Modules and Bad.Modules.LongJump and Bad.Modules.LongJump.Enabled or Bad.Modules and Bad.Modules.InfiniteFly and Bad.Modules.InfiniteFly.Enabled
 					if movingsound.TimePosition > 1.9 then
 						movingsound.TimePosition = 0.2
 					end

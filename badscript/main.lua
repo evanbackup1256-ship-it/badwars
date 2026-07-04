@@ -1,4 +1,4 @@
--- BadWars Main v4.1 - BedWars V11 module health pipeline
+-- BadWars Main v4.2 - Studio V13 readiness pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -1216,16 +1216,6 @@ local function finish()
         end
     end)
 
-    if not shared.BadReload then
-        pcall(function()
-            local cg = api.gui and api.gui.ScaledGui and api.gui.ScaledGui.ClickGui
-            if cg then
-                cg.Visible = true
-                setStatus("ready")
-            end
-        end)
-    end
-
     task.spawn(function()
         while shared.Bad == api and api.Loaded do
             local saved, saveError = pcall(function()
@@ -1254,7 +1244,7 @@ local function finish()
             .. "repeat task.wait() until game:IsLoaded()\n"
             .. "local ok,src=pcall(function() return game:HttpGet('"
             .. loaderUrl
-            .. "?v=10&t='..tostring(os.time()),true) end)\n"
+            .. "?v=13&t='..tostring(os.time()),true) end)\n"
             .. "if ok and type(src)=='string' then local fn=loadstring(src,'badwars-loader'); if fn then fn() end end"
     end
 
@@ -1281,7 +1271,7 @@ local function finish()
             task.delay(1.5, function()
                 if not shared.Bad and not shared.DISABLED_QUEUE_ON_TELEPORT then
                     local ok, source = pcall(function()
-                        return game:HttpGet(loaderUrl .. "?v=10&arrival=" .. tostring(os.time()), true)
+                        return game:HttpGet(loaderUrl .. "?v=13&arrival=" .. tostring(os.time()), true)
                     end)
                     if ok and type(source) == "string" then
                         local fn = _loadstring(source, "badwars-arrival-loader")
@@ -1294,17 +1284,58 @@ local function finish()
         end))
     end)
 
+    return api
+end
+
+local function showInterface(api)
+    if type(api) ~= "table" then
+        return false
+    end
+
+    if type(api.WaitForModuleReadiness) == "function" then
+        pcall(api.WaitForModuleReadiness, api, 4)
+    end
+
+    local runService = cloneref(game:GetService("RunService"))
+    pcall(function()
+        runService.Heartbeat:Wait()
+        runService.Heartbeat:Wait()
+    end)
+
+    if type(api.FinalizeInitialLayout) == "function" then
+        pcall(api.FinalizeInitialLayout, api, false)
+    end
+
+    local clickGui =
+        api.gui
+        and api.gui:FindFirstChild("ScaledGui")
+        and api.gui.ScaledGui:FindFirstChild("ClickGui")
+
+    if not clickGui then
+        return false
+    end
+
+    clickGui.Visible = true
+
     if
-        not shared.BadReload
-        and api.Categories
+        api.Categories
         and api.Categories.Main
         and api.Categories.Main.Options
         and api.Categories.Main.Options["GUI bind indicator"]
         and api.Categories.Main.Options["GUI bind indicator"].Enabled
         and type(api.CreateNotification) == "function"
     then
-        api:CreateNotification("BadWars V1", "Press your GUI keybind to open the menu.", 6, "info")
+        task.defer(function()
+            api:CreateNotification(
+                "BadWars",
+                "The interface is ready.",
+                4,
+                "success"
+            )
+        end)
     end
+
+    return true
 end
 
 -- ============ PIPELINE ============
@@ -1489,7 +1520,7 @@ if not shared.BadIndependent then
 
     -- Stage 8: Finish
     setStatus("finalizing launch")
-    finish()
+    local finalizedApi = finish()
     repairModuleCategories("profile")
 
     -- Stage 9: Health Check
@@ -1528,7 +1559,9 @@ if not shared.BadIndependent then
             mwarn("BadWars: [RUNTIME] " .. tostring(e.module) .. ": " .. tostring(e.error))
         end
     end
+    showInterface(finalizedApi or api)
     setStatus("ready - " .. string.format("%.2f", el) .. "s")
+
     if totalErr > 0 and api and type(api.CreateNotification) == "function" then
         api:CreateNotification(
             "Compatibility",

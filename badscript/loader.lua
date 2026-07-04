@@ -50,7 +50,7 @@ local function isNotFoundBody(body)
 	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
 end
 
--- Status GUI (BadWars Frame V12)
+-- Status GUI (BadWars Studio V13)
 local statusGui
 local statusCard
 local statusLabel
@@ -292,7 +292,7 @@ local function createBadWarsLoader()
 	version.BackgroundColor3 = Color3.fromRGB(25, 33, 42)
 	version.BorderSizePixel = 0
 	version.Font = Enum.Font.GothamBold
-	version.Text = "12"
+	version.Text = "13"
 	version.TextSize = 10
 	version.TextColor3 = Color3.fromRGB(156, 171, 188)
 	version.Parent = statusCard

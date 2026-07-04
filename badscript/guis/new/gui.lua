@@ -1,4 +1,4 @@
--- BadWars Frame UI | Build 2026.07.04.12
+-- BadWars Studio UI | Build 2026.07.04.13
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -38,9 +38,12 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.12-BADWARS-FRAME",
+    PremiumBuild = "2026.07.04.13-BADWARS-STUDIO",
     Windows = {},
     Indicators = {},
+    _PendingModuleCallbacks = 0,
+    _InitialLayoutReady = false,
+    _SuppressEntryAnimation = true,
 }
 d.DefaultColor = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
 for e, f in
@@ -175,12 +178,12 @@ local o = {
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
-    TweenPress = TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenFast = TweenInfo.new(0.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Tween = TweenInfo.new(0.15, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    TweenSlow = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSpring = TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    TweenBack = TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    TweenPress = TweenInfo.new(0.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenFast = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    Tween = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSlow = TweenInfo.new(0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSpring = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenBack = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 }
 
 local function getTableSize(p)
@@ -1000,7 +1003,7 @@ local function bindPremiumMotion(F, G, H, I)
     end)
 
     F.MouseButton1Up:Connect(function()
-        n:Tween(J, o.TweenFast, { Scale = L.HoverScale or 1.004 })
+        n:Tween(J, o.TweenFast, { Scale = 1 })
     end)
 end
 
@@ -2470,16 +2473,22 @@ H = {
             return false
         end
 
-        local initialValue = containsValue(settings.List, settings.Default) and settings.Default
+        local initialValue =
+            containsValue(settings.List, settings.Default)
+                and settings.Default
             or settings.List[1]
             or "None"
+
         local api = {
             Type = "Dropdown",
             Value = initialValue,
             Index = 0,
         }
 
-        local baseSize = settings.Size or UDim2.new(1, 0, 0, d.isMobile and 46 or 40)
+        local baseSize =
+            settings.Size
+            or UDim2.new(1, 0, 0, d.isMobile and 46 or 40)
+
         local root = Instance.new("TextButton")
         root.Name = tostring(settings.Name) .. "Dropdown"
         root.Size = baseSize
@@ -2494,22 +2503,27 @@ H = {
 
         local background = Instance.new("Frame")
         background.Name = "BKG"
-        background.Size = UDim2.new(1, -16, 0, baseSize.Y.Offset - 7)
+        background.Size = UDim2.new(
+            1,
+            -16,
+            0,
+            baseSize.Y.Offset - 7
+        )
         background.Position = UDim2.fromOffset(8, 3)
-        background.BackgroundColor3 = settings.Darker and o.MainSoft or o.Surface
+        background.BackgroundColor3 =
+            settings.Darker and o.MainSoft or o.Surface
         background.BorderSizePixel = 0
         background.Parent = root
         addCorner(background, o.Radius)
         addSurfaceGradient(background)
 
-        local stroke = Instance.new("UIStroke")
-        stroke.Name = "GlowStroke"
-        stroke.Thickness = 1
-        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        stroke.LineJoinMode = Enum.LineJoinMode.Round
-        stroke.Color = o.Border
-        stroke.Transparency = 0.58
-        stroke.Parent = background
+        local stroke = addStroke(
+            background,
+            o.Border,
+            0.76,
+            1,
+            "DropdownStroke"
+        )
 
         local button = Instance.new("TextButton")
         button.Name = "Dropdown"
@@ -2520,7 +2534,7 @@ H = {
         button.AutoButtonColor = false
         button.Text = ""
         button.Parent = background
-        addCorner(button, UDim.new(0, 6))
+        addCorner(button, o.RadiusSmall)
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
@@ -2545,71 +2559,77 @@ H = {
         arrow.Parent = button
 
         local popup
+        local popupScale
         local outsideConnection
-        local parentScrolling
-        local previousParentScrolling
+        local scrollConnection
+        local popupGeneration = 0
 
         local function updateTitle()
-            title.Text = tostring(settings.Name) .. " - " .. tostring(api.Value)
+            title.Text =
+                tostring(settings.Name)
+                .. "  |  "
+                .. tostring(api.Value)
         end
-        updateTitle()
 
-        local function setParentScrolling(enabled)
-            local scrollingParent = parent.Parent
-            if scrollingParent and scrollingParent:IsA("ScrollingFrame") then
-                if previousParentScrolling == nil then
-                    previousParentScrolling = scrollingParent.ScrollingEnabled
-                end
-                scrollingParent.ScrollingEnabled = enabled and (previousParentScrolling ~= false) or false
-                parentScrolling = scrollingParent
+        local function pointInObject(point, object)
+            if not object or not object.Parent then
+                return false
             end
+
+            local position = object.AbsolutePosition
+            local size = object.AbsoluteSize
+
+            return point.X >= position.X
+                and point.X <= position.X + size.X
+                and point.Y >= position.Y
+                and point.Y <= position.Y + size.Y
         end
 
         local function closeDropdown()
+            popupGeneration += 1
+
             if outsideConnection then
                 outsideConnection:Disconnect()
                 outsideConnection = nil
             end
 
-            local closingPopup = popup
-            popup = nil
+            if scrollConnection then
+                scrollConnection:Disconnect()
+                scrollConnection = nil
+            end
 
             if d._OpenDropdown == closeDropdown then
                 d._OpenDropdown = nil
             end
 
-            if parentScrolling then
-                parentScrolling.ScrollingEnabled = previousParentScrolling ~= false
-                parentScrolling = nil
-                previousParentScrolling = nil
-            end
-
-            n:Tween(root, o.TweenSpring, {
-                Size = baseSize,
-            })
-            n:Tween(arrow, o.TweenSpring, {
+            n:Tween(arrow, o.Tween, {
                 Rotation = 90,
+                ImageColor3 = o.MutedText,
             })
             n:Tween(background, o.TweenFast, {
-                BackgroundColor3 = settings.Darker and o.MainSoft or o.Surface,
+                BackgroundColor3 =
+                    settings.Darker and o.MainSoft or o.Surface,
             })
-            n:Tween(stroke, o.Tween, {
-                Transparency = 0.45,
+            n:Tween(stroke, o.TweenFast, {
                 Color = o.Border,
+                Transparency = 0.76,
             })
 
+            local closingPopup = popup
+            local closingScale = popupScale
+            popup = nil
+            popupScale = nil
+
             if closingPopup and closingPopup.Parent then
-                local closingScale = closingPopup:FindFirstChildOfClass("UIScale")
-                if closingScale then
-                    n:Tween(closingScale, o.TweenFast, {
-                        Scale = 0.965,
-                    })
-                end
-                n:Tween(closingPopup, o.TweenFast, {
-                    BackgroundTransparency = 1,
+                n:Tween(closingScale, o.TweenFast, {
+                    Scale = 0.99,
                 })
-                task.delay(0.12, function()
-                    if closingPopup and closingPopup.Parent then
+                n:Tween(closingPopup, o.TweenFast, {
+                    GroupTransparency = 1,
+                })
+
+                task.delay(0.18, function()
+                    if closingPopup.Parent then
                         closingPopup:Destroy()
                     end
                 end)
@@ -2618,7 +2638,9 @@ H = {
 
         function api.Save(self, target)
             if not settings.NoSave then
-                target[settings.Name] = { Value = self.Value }
+                target[settings.Name] = {
+                    Value = self.Value,
+                }
             end
         end
 
@@ -2626,21 +2648,34 @@ H = {
             if settings.NoSave or type(saved) ~= "table" then
                 return
             end
+
             self:SetValue(saved.Value, false)
         end
 
         function api.Change(self, newList, suppressCallback)
-            settings.List = type(newList) == "table" and newList or {}
-            local desired = containsValue(settings.List, self.Value) and self.Value or settings.List[1] or "None"
+            settings.List =
+                type(newList) == "table" and newList or {}
+
+            local desired =
+                containsValue(settings.List, self.Value)
+                    and self.Value
+                or settings.List[1]
+                or "None"
+
             self:SetValue(desired, not suppressCallback)
         end
 
         function api.SetValues(self, newList, newValue)
-            settings.List = type(newList) == "table" and newList or {}
-            local desired = newValue ~= nil and newValue or self.Value
+            settings.List =
+                type(newList) == "table" and newList or {}
+
+            local desired =
+                newValue ~= nil and newValue or self.Value
+
             if not containsValue(settings.List, desired) then
                 desired = settings.List[1] or "None"
             end
+
             self:SetValue(desired, false)
         end
 
@@ -2651,11 +2686,17 @@ H = {
         end
 
         function api.SetValue(self, value, fromUser)
-            local selected = containsValue(settings.List, value) and value or settings.List[1] or "None"
+            local selected =
+                containsValue(settings.List, value)
+                    and value
+                or settings.List[1]
+                or "None"
+
             local changed = self.Value ~= selected
             self.Value = selected
             updateTitle()
             closeDropdown()
+
             if changed or fromUser then
                 settings.Function(self.Value, fromUser)
             end
@@ -2666,194 +2707,417 @@ H = {
                 closeDropdown()
                 return
             end
+
             if d._OpenDropdown and d._OpenDropdown ~= closeDropdown then
                 pcall(d._OpenDropdown)
             end
+
+            popupGeneration += 1
+            local openGeneration = popupGeneration
             d._OpenDropdown = closeDropdown
-            n:Tween(arrow, o.TweenSpring, {
+
+            n:Tween(arrow, o.Tween, {
                 Rotation = 270,
+                ImageColor3 = Color3.fromHSV(
+                    d.GUIColor.Hue,
+                    d.GUIColor.Sat,
+                    d.GUIColor.Value
+                ),
+            })
+            n:Tween(background, o.TweenFast, {
+                BackgroundColor3 = o.SurfaceHover,
             })
             n:Tween(stroke, o.TweenFast, {
-                Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-                Transparency = 0.14,
+                Color = Color3.fromHSV(
+                    d.GUIColor.Hue,
+                    d.GUIColor.Sat,
+                    d.GUIColor.Value
+                ),
+                Transparency = 0.52,
             })
-            setParentScrolling(false)
 
-            local rowHeight = d.isMobile and 44 or 30
-            local searchHeight = 32
+            local rowHeight = d.isMobile and 42 or 32
+            local searchHeight = 34
             local maxRows = 7
-            popup = Instance.new("Frame")
-            popup.Name = "Children"
-            popup.Position = UDim2.fromOffset(8, baseSize.Y.Offset - 2)
-            popup.Size = UDim2.new(1, -16, 0, searchHeight + rowHeight)
+
+            popup = Instance.new("CanvasGroup")
+            popup.Name = tostring(settings.Name) .. "DropdownPopup"
+            popup.Size = UDim2.fromOffset(
+                math.max(160, root.AbsoluteSize.X / math.max(A.Scale, 0.01) - 16),
+                searchHeight + rowHeight + 8
+            )
             popup.BackgroundColor3 = o.Elevated
+            popup.BackgroundTransparency = 0.01
+            popup.GroupTransparency = 1
             popup.BorderSizePixel = 0
-            popup.ZIndex = 40
             popup.ClipsDescendants = true
-            popup.Parent = root
-            addCorner(popup, o.RadiusLarge)
+            popup.ZIndex = 10000
+            popup.Parent = w
+            addCorner(popup, o.Radius)
             addSurfaceGradient(popup)
             addShadow(popup, true)
-            local popupScale = addScale(popup)
-            popupScale.Scale = 0.96
-            n:Tween(popupScale, o.TweenBack, { Scale = 1 })
-            local popupStroke = Instance.new("UIStroke")
-            popupStroke.Color = o.BorderStrong
-            popupStroke.Transparency = 0.28
-            popupStroke.Thickness = 1
-            popupStroke.LineJoinMode = Enum.LineJoinMode.Round
-            popupStroke.Parent = popup
+            addStroke(
+                popup,
+                o.BorderStrong,
+                0.54,
+                1,
+                "DropdownPopupStroke"
+            )
+
+            popupScale = addScale(popup)
+            popupScale.Scale = 0.99
 
             local search = Instance.new("TextBox")
             search.Name = "SearchBar"
-            search.Size = UDim2.new(1, -12, 0, searchHeight - 6)
+            search.Size = UDim2.new(
+                1,
+                -12,
+                0,
+                searchHeight - 7
+            )
             search.Position = UDim2.fromOffset(6, 4)
             search.BackgroundColor3 = o.MainSoft
             search.BorderSizePixel = 0
             search.PlaceholderText = "Search options"
-            search.PlaceholderColor3 = o.MutedText
+            search.PlaceholderColor3 = o.FaintText
             search.Text = ""
             search.TextColor3 = o.Text
             search.TextSize = d.isMobile and 14 or 13
             search.FontFace = o.Font
             search.ClearTextOnFocus = false
-            search.ZIndex = 42
+            search.ZIndex = 10002
             search.Parent = popup
-            addCorner(search, o.Radius)
-            addStroke(search, o.Border, 0.62, 1, "SearchStroke")
+            addCorner(search, o.RadiusSmall)
+            addStroke(
+                search,
+                o.Border,
+                0.76,
+                1,
+                "DropdownSearchStroke"
+            )
 
             local scroll = Instance.new("ScrollingFrame")
             scroll.Name = "Scroll"
-            scroll.Position = UDim2.fromOffset(4, searchHeight)
-            scroll.Size = UDim2.new(1, -8, 0, rowHeight)
+            scroll.Position = UDim2.fromOffset(5, searchHeight)
+            scroll.Size = UDim2.new(
+                1,
+                -10,
+                0,
+                rowHeight
+            )
             scroll.BackgroundTransparency = 1
             scroll.BorderSizePixel = 0
-            scroll.ScrollBarImageTransparency = d.isMobile and 0.25 or 0.5
-            scroll.ScrollBarThickness = d.isMobile and 7 or 4
+            scroll.ScrollBarImageColor3 = o.BorderStrong
+            scroll.ScrollBarImageTransparency =
+                d.isMobile and 0.25 or 0.56
+            scroll.ScrollBarThickness =
+                d.isMobile and 7 or 3
+            scroll.VerticalScrollBarInset =
+                Enum.ScrollBarInset.ScrollBar
+            scroll.ElasticBehavior =
+                Enum.ElasticBehavior.Never
+            scroll.AutomaticCanvasSize =
+                Enum.AutomaticSize.None
             scroll.CanvasSize = UDim2.new()
-            scroll.ScrollingDirection = Enum.ScrollingDirection.Y
-            scroll.ZIndex = 41
+            scroll.ScrollingDirection =
+                Enum.ScrollingDirection.Y
+            scroll.ZIndex = 10001
             scroll.Parent = popup
 
             local noResults = Instance.new("TextLabel")
             noResults.Name = "NoResults"
-            noResults.Size = UDim2.new(1, 0, 0, rowHeight)
+            noResults.Size = UDim2.new(
+                1,
+                0,
+                0,
+                rowHeight
+            )
             noResults.BackgroundTransparency = 1
             noResults.Text = "No matching options"
             noResults.TextColor3 = o.MutedText
             noResults.TextSize = d.isMobile and 14 or 13
             noResults.FontFace = o.Font
             noResults.Visible = false
-            noResults.ZIndex = 42
+            noResults.ZIndex = 10002
             noResults.Parent = scroll
 
             local entries = {}
+
             for index, item in ipairs(settings.List) do
                 local display = tostring(item)
                 local option = Instance.new("TextButton")
                 option.Name = "Option_" .. tostring(index)
-                option.Size = UDim2.new(1, 0, 0, rowHeight)
-                option.BackgroundColor3 = item == api.Value and o.SurfaceHover or Color3.fromRGB(0, 0, 0)
-                option.BackgroundTransparency = item == api.Value and 0 or 1
+                option.Size = UDim2.new(
+                    1,
+                    -4,
+                    0,
+                    rowHeight - 2
+                )
+                option.BackgroundColor3 =
+                    item == api.Value
+                        and o.SurfaceHover
+                        or o.Surface
+                option.BackgroundTransparency =
+                    item == api.Value and 0.08 or 0.74
                 option.BorderSizePixel = 0
                 option.AutoButtonColor = false
                 option.Text = "   " .. display
-                option.TextColor3 = item == api.Value and o.TextStrong or o.MutedText
-                option.TextXAlignment = Enum.TextXAlignment.Left
-                option.TextSize = d.isMobile and 14 or 13
-                option.FontFace = item == api.Value and o.FontSemiBold or o.Font
-                option.ZIndex = 42
+                option.TextColor3 =
+                    item == api.Value
+                        and o.TextStrong
+                        or o.MutedText
+                option.TextXAlignment =
+                    Enum.TextXAlignment.Left
+                option.TextSize =
+                    d.isMobile and 14 or 13
+                option.FontFace =
+                    item == api.Value
+                        and o.FontSemiBold
+                        or o.Font
+                option.ZIndex = 10002
                 option.Parent = scroll
                 addCorner(option, o.RadiusSmall)
+
                 if not d.isMobile then
                     option.MouseEnter:Connect(function()
-                        n:Tween(option, o.TweenFast, { BackgroundColor3 = o.SurfaceHover, BackgroundTransparency = 0 })
+                        n:Tween(option, o.TweenFast, {
+                            BackgroundColor3 = o.SurfaceHover,
+                            BackgroundTransparency = 0.08,
+                            TextColor3 = o.TextStrong,
+                        })
                     end)
+
                     option.MouseLeave:Connect(function()
-                        n:Tween(option, o.Tween, {
-                            BackgroundColor3 = item == api.Value and o.SurfaceHover or Color3.fromRGB(0, 0, 0),
-                            BackgroundTransparency = item == api.Value and 0 or 1,
+                        n:Tween(option, o.TweenFast, {
+                            BackgroundColor3 =
+                                item == api.Value
+                                    and o.SurfaceHover
+                                    or o.Surface,
+                            BackgroundTransparency =
+                                item == api.Value and 0.08 or 0.74,
+                            TextColor3 =
+                                item == api.Value
+                                    and o.TextStrong
+                                    or o.MutedText,
                         })
                     end)
                 end
+
                 option.Activated:Connect(function()
                     api:SetValue(item, true)
                 end)
-                entries[#entries + 1] = { Button = option, Value = item, Search = display:lower() }
+
+                entries[#entries + 1] = {
+                    Button = option,
+                    Value = item,
+                    Search = display:lower(),
+                }
+            end
+
+            local function positionPopup(height)
+                if
+                    not popup
+                    or openGeneration ~= popupGeneration
+                then
+                    return
+                end
+
+                local scale = math.max(A.Scale, 0.01)
+                local rootPosition = root.AbsolutePosition
+                local rootSize = root.AbsoluteSize
+                local scaledRootX =
+                    (rootPosition.X - w.AbsolutePosition.X) / scale
+                local scaledRootY =
+                    (rootPosition.Y - w.AbsolutePosition.Y) / scale
+                local viewportHeight = B.AbsoluteSize.Y / scale
+
+                local x = scaledRootX + 8
+                local belowY =
+                    scaledRootY
+                    + (rootSize.Y / scale)
+                    - 3
+                local aboveY =
+                    scaledRootY
+                    - height
+                    + 3
+
+                local y =
+                    belowY + height <= viewportHeight - 8
+                        and belowY
+                        or math.max(8, aboveY)
+
+                popup.Position = UDim2.fromOffset(x, y)
+                popup.Size = UDim2.fromOffset(
+                    math.max(
+                        160,
+                        (rootSize.X / scale) - 16
+                    ),
+                    height
+                )
             end
 
             local function filter(query)
                 query = tostring(query or ""):lower()
                 local visibleCount = 0
+
                 for _, entry in ipairs(entries) do
-                    local visible = query == "" or string.find(entry.Search, query, 1, true) ~= nil
+                    local visible =
+                        query == ""
+                        or string.find(
+                            entry.Search,
+                            query,
+                            1,
+                            true
+                        ) ~= nil
+
                     entry.Button.Visible = visible
+
                     if visible then
-                        entry.Button.Position = UDim2.fromOffset(0, visibleCount * rowHeight)
+                        entry.Button.Position =
+                            UDim2.fromOffset(
+                                2,
+                                visibleCount * rowHeight
+                            )
                         visibleCount += 1
                     end
                 end
+
                 noResults.Visible = visibleCount == 0
-                local rows = math.max(1, math.min(maxRows, visibleCount))
+
+                local rows = math.max(
+                    1,
+                    math.min(maxRows, visibleCount)
+                )
                 local listHeight = rows * rowHeight
-                scroll.CanvasSize = UDim2.fromOffset(0, math.max(rowHeight, visibleCount * rowHeight))
-                scroll.Size = UDim2.new(1, -8, 0, listHeight)
-                popup.Size = UDim2.new(1, -16, 0, searchHeight + listHeight + 6)
-                n:Tween(root, o.TweenSpring, {
-                    Size = baseSize + UDim2.fromOffset(0, searchHeight + listHeight + 4),
-                })
+                local popupHeight =
+                    searchHeight + listHeight + 7
+
+                scroll.CanvasSize = UDim2.fromOffset(
+                    0,
+                    math.max(
+                        rowHeight,
+                        visibleCount * rowHeight
+                    )
+                )
+                scroll.Size = UDim2.new(
+                    1,
+                    -10,
+                    0,
+                    listHeight
+                )
+
+                local maxCanvasY = math.max(
+                    0,
+                    scroll.AbsoluteCanvasSize.Y
+                        - scroll.AbsoluteWindowSize.Y
+                )
+                scroll.CanvasPosition = Vector2.new(
+                    0,
+                    math.clamp(
+                        scroll.CanvasPosition.Y,
+                        0,
+                        maxCanvasY
+                    )
+                )
+
+                positionPopup(popupHeight)
             end
 
             search:GetPropertyChangedSignal("Text"):Connect(function()
                 filter(search.Text)
             end)
+
             filter("")
 
-            n:Tween(background, o.TweenFast, { BackgroundColor3 = o.SurfaceHover })
-            n:Tween(
-                stroke,
-                o.Tween,
-                { Transparency = 0.16, Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value) }
-            )
+            n:Tween(popup, o.TweenSlow, {
+                GroupTransparency = 0,
+            })
+            n:Tween(popupScale, o.TweenSlow, {
+                Scale = 1,
+            })
+
+            local scrollingParent = parent
+            while
+                scrollingParent
+                and not scrollingParent:IsA("ScrollingFrame")
+            do
+                scrollingParent = scrollingParent.Parent
+            end
+
+            if scrollingParent then
+                scrollConnection =
+                    scrollingParent:GetPropertyChangedSignal(
+                        "CanvasPosition"
+                    ):Connect(closeDropdown)
+            end
 
             task.defer(function()
-                if not popup then
+                if
+                    not popup
+                    or openGeneration ~= popupGeneration
+                then
                     return
                 end
-                outsideConnection = h.InputBegan:Connect(function(input)
-                    if input.KeyCode == Enum.KeyCode.Escape then
-                        closeDropdown()
-                        return
-                    end
-                    if
-                        input.UserInputType == Enum.UserInputType.MouseButton1
-                        or input.UserInputType == Enum.UserInputType.Touch
-                    then
-                        local point = input.Position
-                        local position = root.AbsolutePosition
-                        local size = root.AbsoluteSize
-                        if
-                            point.X < position.X
-                            or point.X > position.X + size.X
-                            or point.Y < position.Y
-                            or point.Y > position.Y + size.Y
-                        then
+
+                outsideConnection = h.InputBegan:Connect(
+                    function(input)
+                        if input.KeyCode == Enum.KeyCode.Escape then
                             closeDropdown()
+                            return
+                        end
+
+                        if
+                            input.UserInputType
+                                == Enum.UserInputType.MouseButton1
+                            or input.UserInputType
+                                == Enum.UserInputType.Touch
+                        then
+                            local point = input.Position
+                            if
+                                not pointInObject(point, root)
+                                and not pointInObject(point, popup)
+                            then
+                                closeDropdown()
+                            end
                         end
                     end
-                end)
+                )
             end)
         end
 
+        updateTitle()
+
         button.Activated:Connect(openDropdown)
-        bindPremiumMotion(root, background, stroke, {
-            HoverColor = o.SurfaceHover,
-            BaseColor = settings.Darker and o.MainSoft or o.Surface,
-            HoverStroke = o.BorderStrong,
-            BaseStroke = o.Border,
-            HoverScale = 1.006,
-            PressScale = 0.994,
-        })
+
+        root.MouseEnter:Connect(function()
+            if popup then
+                return
+            end
+
+            n:Tween(background, o.TweenFast, {
+                BackgroundColor3 = o.SurfaceHover,
+            })
+            n:Tween(stroke, o.TweenFast, {
+                Color = o.BorderStrong,
+                Transparency = 0.66,
+            })
+        end)
+
+        root.MouseLeave:Connect(function()
+            if popup then
+                return
+            end
+
+            n:Tween(background, o.TweenFast, {
+                BackgroundColor3 =
+                    settings.Darker and o.MainSoft or o.Surface,
+            })
+            n:Tween(stroke, o.TweenFast, {
+                Color = o.Border,
+                Transparency = 0.76,
+            })
+        end)
+
         root.Destroying:Once(closeDropdown)
 
         api.Object = root
@@ -4906,11 +5170,16 @@ function d.CreateGUI(aa)
     makeDraggable(ac)
 
     ac:GetPropertyChangedSignal("Visible"):Connect(function()
-        if ac.Visible then
-            mainScale.Scale = 0.975
-            mainAccent.BackgroundTransparency = 1
-            n:Tween(mainScale, o.TweenBack, { Scale = 1 })
-            n:Tween(mainAccent, o.TweenSlow, { BackgroundTransparency = 0 })
+        if not ac.Visible then
+            return
+        end
+
+        mainScale.Scale = 1
+        mainAccent.BackgroundTransparency = 0.08
+
+        if d._InitialLayoutReady and not d._SuppressEntryAnimation then
+            mainScale.Scale = 0.992
+            n:Tween(mainScale, o.TweenSlow, { Scale = 1 })
         end
     end)
 
@@ -4952,11 +5221,126 @@ function d.CreateGUI(aa)
     brandSub.TextXAlignment = Enum.TextXAlignment.Left
     brandSub.FontFace = o.FontBold
     brandSub.Parent = ac
-    local af = Instance.new("Frame")
+    local localPlayer = f.Players.LocalPlayer
+
+    local playerCard = Instance.new("Frame")
+    playerCard.Name = "PlayerCard"
+    playerCard.Size = UDim2.fromOffset(208, 48)
+    playerCard.Position = UDim2.fromOffset(12, 43)
+    playerCard.BackgroundColor3 = o.Surface
+    playerCard.BackgroundTransparency = 0.08
+    playerCard.BorderSizePixel = 0
+    playerCard.ClipsDescendants = true
+    playerCard.Parent = ac
+    addCorner(playerCard, o.Radius)
+    local playerCardStroke = addStroke(
+        playerCard,
+        o.Border,
+        0.82,
+        1,
+        "PlayerCardStroke"
+    )
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Name = "Avatar"
+    avatar.Size = UDim2.fromOffset(34, 34)
+    avatar.Position = UDim2.fromOffset(7, 7)
+    avatar.BackgroundColor3 = o.Elevated
+    avatar.BorderSizePixel = 0
+    avatar.Image = "rbxthumb://type=AvatarHeadShot&id="
+        .. tostring(localPlayer.UserId)
+        .. "&w=150&h=150"
+    avatar.Parent = playerCard
+    addCorner(avatar, UDim.new(1, 0))
+    addStroke(avatar, o.BorderStrong, 0.62, 1, "AvatarStroke")
+
+    local onlineDot = Instance.new("Frame")
+    onlineDot.Name = "Online"
+    onlineDot.Size = UDim2.fromOffset(7, 7)
+    onlineDot.AnchorPoint = Vector2.new(0.5, 0.5)
+    onlineDot.Position = UDim2.new(0, 38, 1, -8)
+    onlineDot.BackgroundColor3 = Color3.fromHSV(
+        d.GUIColor.Hue,
+        d.GUIColor.Sat,
+        d.GUIColor.Value
+    )
+    onlineDot.BorderSizePixel = 0
+    onlineDot.ZIndex = avatar.ZIndex + 2
+    onlineDot.Parent = playerCard
+    addCorner(onlineDot, UDim.new(1, 0))
+    addStroke(onlineDot, o.Main, 0, 2, "OnlineStroke")
+
+    local displayName = Instance.new("TextLabel")
+    displayName.Name = "DisplayName"
+    displayName.Size = UDim2.new(1, -54, 0, 20)
+    displayName.Position = UDim2.fromOffset(49, 6)
+    displayName.BackgroundTransparency = 1
+    displayName.Text = localPlayer.DisplayName
+    displayName.TextColor3 = o.TextStrong
+    displayName.TextSize = 12
+    displayName.TextTruncate = Enum.TextTruncate.AtEnd
+    displayName.TextXAlignment = Enum.TextXAlignment.Left
+    displayName.FontFace = o.FontSemiBold
+    displayName.Parent = playerCard
+
+    local userName = Instance.new("TextLabel")
+    userName.Name = "Username"
+    userName.Size = UDim2.new(1, -54, 0, 16)
+    userName.Position = UDim2.fromOffset(49, 24)
+    userName.BackgroundTransparency = 1
+    userName.Text = "@" .. localPlayer.Name
+    userName.TextColor3 = o.FaintText
+    userName.TextSize = 9
+    userName.TextTruncate = Enum.TextTruncate.AtEnd
+    userName.TextXAlignment = Enum.TextXAlignment.Left
+    userName.FontFace = o.Font
+    userName.Parent = playerCard
+
+    connectguicolorchange(function(hue, saturation, value)
+        if onlineDot.Parent then
+            onlineDot.BackgroundColor3 = Color3.fromHSV(
+                hue,
+                saturation,
+                value
+            )
+        end
+    end)
+
+    playerCard.MouseEnter:Connect(function()
+        n:Tween(playerCard, o.TweenFast, {
+            BackgroundColor3 = o.SurfaceHover,
+        })
+        n:Tween(playerCardStroke, o.TweenFast, {
+            Color = o.BorderStrong,
+            Transparency = 0.66,
+        })
+    end)
+
+    playerCard.MouseLeave:Connect(function()
+        n:Tween(playerCard, o.TweenFast, {
+            BackgroundColor3 = o.Surface,
+        })
+        n:Tween(playerCardStroke, o.TweenFast, {
+            Color = o.Border,
+            Transparency = 0.82,
+        })
+    end)
+
+    local af = Instance.new("ScrollingFrame")
     af.Name = "Children"
-    af.Size = UDim2.new(1, 0, 1, -40)
-    af.Position = UDim2.fromOffset(0, 42)
+    af.Size = UDim2.fromOffset(232, 320)
+    af.Position = UDim2.fromOffset(0, 98)
     af.BackgroundTransparency = 1
+    af.BorderSizePixel = 0
+    af.CanvasSize = UDim2.new()
+    af.AutomaticCanvasSize = Enum.AutomaticSize.None
+    af.ScrollingDirection = Enum.ScrollingDirection.Y
+    af.ScrollingEnabled = true
+    af.ElasticBehavior = Enum.ElasticBehavior.Never
+    af.ScrollBarThickness = d.isMobile and 7 or 3
+    af.ScrollBarImageColor3 = o.BorderStrong
+    af.ScrollBarImageTransparency = d.isMobile and 0.28 or 0.58
+    af.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     af.Parent = ac
     local ag = Instance.new("UIListLayout")
     ag.SortOrder = Enum.SortOrder.LayoutOrder
@@ -6351,17 +6735,66 @@ function d.CreateGUI(aa)
         d.MainGuiSettingsOpenedEvent:Fire()
         ak.Visible = true
     end)
-    ag:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    local function refreshMainWindowSize()
         if aa.ThreadFix then
             setthreadidentity(8)
         end
-        ac.Size = UDim2.fromOffset(232, 46 + ag.AbsoluteContentSize.Y / A.Scale)
-        for ar, as in ab.Buttons do
-            if as.Icon then
-                as.Object.Text = string.rep(" ", 36 * A.Scale) .. as.Name
+
+        local scale = math.max(A.Scale, 0.01)
+        local contentHeight = math.max(
+            0,
+            ag.AbsoluteContentSize.Y / scale
+        )
+        local viewportHeight = math.max(
+            180,
+            (B.AbsoluteSize.Y / scale) - 132
+        )
+        local visibleHeight = math.min(
+            contentHeight + 8,
+            viewportHeight
+        )
+
+        af.CanvasSize = UDim2.fromOffset(
+            0,
+            contentHeight + 8
+        )
+        af.Size = UDim2.fromOffset(
+            232,
+            math.max(100, visibleHeight)
+        )
+        ac.Size = UDim2.fromOffset(
+            232,
+            102 + math.max(100, visibleHeight)
+        )
+
+        local maxCanvasY = math.max(
+            0,
+            af.AbsoluteCanvasSize.Y - af.AbsoluteWindowSize.Y
+        )
+        af.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(af.CanvasPosition.Y, 0, maxCanvasY)
+        )
+
+        for _, buttonApi in ab.Buttons do
+            if buttonApi.Icon then
+                buttonApi.Object.Text =
+                    string.rep(" ", 36 * A.Scale)
+                    .. buttonApi.Name
             end
         end
+    end
+
+    ag:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(
+        refreshMainWindowSize
+    )
+    B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        task.defer(refreshMainWindowSize)
     end)
+    A:GetPropertyChangedSignal("Scale"):Connect(function()
+        task.defer(refreshMainWindowSize)
+    end)
+    task.defer(refreshMainWindowSize)
 
     ab.MainGui = af
 
@@ -6459,8 +6892,13 @@ function d.CreateCategory(aa, ab)
     aj.BorderSizePixel = 0
     aj.Visible = false
 
-    aj.ScrollBarThickness = d.isMobile and 8 or 2
-    aj.ScrollBarImageTransparency = d.isMobile and 0.4 or 0.75
+    aj.ScrollBarThickness = d.isMobile and 7 or 3
+    aj.ScrollBarImageColor3 = o.BorderStrong
+    aj.ScrollBarImageTransparency = d.isMobile and 0.28 or 0.58
+    aj.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    aj.ScrollingDirection = Enum.ScrollingDirection.Y
+    aj.AutomaticCanvasSize = Enum.AutomaticSize.None
+    aj.ElasticBehavior = Enum.ElasticBehavior.Never
     aj.CanvasSize = UDim2.new()
     aj.ClipsDescendants = true
     aj.Parent = ad
@@ -6476,18 +6914,35 @@ function d.CreateCategory(aa, ab)
     local al = Instance.new("UIListLayout")
     al.SortOrder = Enum.SortOrder.LayoutOrder
     al.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    al.Padding = UDim.new(0, 2)
+    al.Padding = UDim.new(0, 4)
     al.Parent = aj
 
     local function updateCategoryVisual(hovered)
-        local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+        local accent = Color3.fromHSV(
+            d.GUIColor.Hue,
+            d.GUIColor.Sat,
+            d.GUIColor.Value
+        )
         local active = ac.Expanded or hovered
-        ae.ImageColor3 = active and accent or o.MutedText
-        af.TextColor3 = active and accent or o.MutedText
-        categoryAccent.BackgroundTransparency = active and 0.12 or 0.46
-        ad.BackgroundColor3 = active and o.Elevated or o.MainSoft
-        categoryStroke.Color = active and accent:Lerp(o.BorderStrong, 0.48) or o.Border
-        categoryStroke.Transparency = active and (hovered and 0.5 or 0.64) or 0.78
+
+        ae.ImageColor3 = active
+            and accent:Lerp(o.TextStrong, 0.18)
+            or o.MutedText
+        af.TextColor3 = active
+            and o.TextStrong
+            or o.MutedText
+        categoryAccent.BackgroundTransparency =
+            active and 0.1 or 0.5
+        ad.BackgroundColor3 =
+            hovered and o.SurfaceHover
+            or (ac.Expanded and o.Elevated or o.MainSoft)
+        categoryStroke.Color =
+            active
+            and accent:Lerp(o.BorderStrong, 0.6)
+            or o.Border
+        categoryStroke.Transparency =
+            hovered and 0.58
+            or (ac.Expanded and 0.7 or 0.82)
     end
 
     function ac.CreateModule(am, an)
@@ -6999,6 +7454,21 @@ function d.CreateCategory(aa, ab)
             N._ToggleSerial = (N._ToggleSerial or 0) + 1
             local toggleSerial = N._ToggleSerial
 
+            d._PendingModuleCallbacks += 1
+            local callbackFinished = false
+
+            local function finishCallback()
+                if callbackFinished then
+                    return
+                end
+
+                callbackFinished = true
+                d._PendingModuleCallbacks = math.max(
+                    0,
+                    d._PendingModuleCallbacks - 1
+                )
+            end
+
             local callbackThread = coroutine.create(function()
                 local trace = debug and debug.traceback
                     or function(err)
@@ -7020,24 +7490,32 @@ function d.CreateCategory(aa, ab)
                         pcall(function()
                             d:CreateNotification(
                                 "Module Error",
-                                tostring(an.Name) .. " failed to enable. Check the console.",
+                                tostring(an.Name)
+                                    .. " failed to enable.",
                                 5,
                                 "alert"
                             )
                         end)
 
-                        -- Do not leave a failed module visually enabled.
                         task.defer(function()
-                            if N.Enabled == desiredState and N._ToggleSerial == toggleSerial then
+                            if
+                                N.Enabled == desiredState
+                                and N._ToggleSerial == toggleSerial
+                            then
                                 N:Toggle(true)
                             end
                         end)
                     end
                 end
+
+                finishCallback()
             end)
 
-            local started, startError = coroutine.resume(callbackThread)
+            local started, startError =
+                coroutine.resume(callbackThread)
+
             if not started then
+                finishCallback()
                 a:report({
                     type = "module-toggle-start",
                     err = startError,
@@ -7046,7 +7524,10 @@ function d.CreateCategory(aa, ab)
 
                 if desiredState then
                     task.defer(function()
-                        if N.Enabled == desiredState and N._ToggleSerial == toggleSerial then
+                        if
+                            N.Enabled == desiredState
+                            and N._ToggleSerial == toggleSerial
+                        then
                             N:Toggle(true)
                         end
                     end)
@@ -7433,39 +7914,106 @@ function d.CreateCategory(aa, ab)
         return ao
     end
 
-    function ac.Expand(am, an)
+    local categoryAnimationId = 0
+
+    local function getExpandedCategoryHeight()
+        local scale = math.max(A.Scale, 0.01)
+        local contentHeight = math.max(
+            0,
+            al.AbsoluteContentSize.Y / scale
+        )
+        local viewportLimit = math.max(
+            160,
+            (B.AbsoluteSize.Y / scale) - 96
+        )
+
+        return math.min(
+            44 + contentHeight + 8,
+            viewportLimit,
+            606
+        )
+    end
+
+    local function refreshCategoryLayout(instant)
+        categoryAnimationId += 1
+        local animationId = categoryAnimationId
+        local targetHeight = ac.Expanded
+            and getExpandedCategoryHeight()
+            or 44
+
+        aj.CanvasSize = UDim2.fromOffset(
+            0,
+            math.max(0, al.AbsoluteContentSize.Y / math.max(A.Scale, 0.01) + 8)
+        )
+        aj.ScrollingEnabled =
+            ac.Expanded
+            and aj.CanvasSize.Y.Offset > math.max(0, targetHeight - 44)
+
+        if ac.Expanded then
+            aj.Visible = true
+        end
+
+        if instant or not d.Loaded or d._SuppressEntryAnimation then
+            ad.Size = UDim2.fromOffset(232, targetHeight)
+            ai.Rotation = ac.Expanded and 0 or 180
+            if not ac.Expanded then
+                aj.Visible = false
+            end
+        else
+            n:Tween(ai, o.Tween, {
+                Rotation = ac.Expanded and 0 or 180,
+            })
+            local sizeTween = n:Tween(ad, o.TweenSlow, {
+                Size = UDim2.fromOffset(232, targetHeight),
+            })
+
+            if not ac.Expanded then
+                local function hideChildren()
+                    if
+                        animationId == categoryAnimationId
+                        and not ac.Expanded
+                    then
+                        aj.Visible = false
+                    end
+                end
+
+                if sizeTween then
+                    sizeTween.Completed:Once(hideChildren)
+                else
+                    task.delay(0.35, hideChildren)
+                end
+            end
+        end
+
+        local maxCanvasY = math.max(
+            0,
+            aj.AbsoluteCanvasSize.Y - aj.AbsoluteWindowSize.Y
+        )
+        aj.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(aj.CanvasPosition.Y, 0, maxCanvasY)
+        )
+
+        ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
+        updateCategoryVisual(false)
+    end
+
+    function ac.Expand(am, an, instant)
         if an ~= nil then
             if an == am.Expanded then
+                refreshCategoryLayout(instant == true)
                 return
             end
             am.Expanded = an
         else
             am.Expanded = not am.Expanded
         end
-        n:Tween(ai, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-            Rotation = am.Expanded and 0 or 180,
-        })
-        if not d.Loaded then
-            aj.Visible = am.Expanded
-            ad.Size =
-                UDim2.fromOffset(232, am.Expanded and math.min(46 + al.AbsoluteContentSize.Y / A.Scale, 606) or 46)
-        else
-            if am.Expanded then
-                aj.Visible = true
-            end
-            n:Tween(ad, TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                Size = UDim2.fromOffset(
-                    232,
-                    am.Expanded and math.min(46 + al.AbsoluteContentSize.Y / A.Scale, 606) or 46
-                ),
-            })
-        end
-        ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
-        updateCategoryVisual(false)
+
+        refreshCategoryLayout(instant == true)
     end
 
-    if not ac.Expanded and ab.Visible then
-        ac:Expand()
+    if ab.Visible then
+        ac:Expand(true, true)
     else
         updateCategoryVisual(false)
     end
@@ -7496,11 +8044,15 @@ function d.CreateCategory(aa, ab)
     end)
 
     ad:GetPropertyChangedSignal("Visible"):Connect(function()
-        if ad.Visible then
-            categoryScale.Scale = 0.975
-            n:Tween(categoryScale, o.TweenBack, { Scale = 1 })
-            categoryAccent.BackgroundTransparency = 1
-            n:Tween(categoryAccent, o.TweenSlow, { BackgroundTransparency = 0 })
+        if not ad.Visible then
+            return
+        end
+
+        categoryScale.Scale = 1
+        updateCategoryVisual(false)
+
+        if d._InitialLayoutReady then
+            refreshCategoryLayout(true)
         end
     end)
     aj:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
@@ -7518,9 +8070,23 @@ function d.CreateCategory(aa, ab)
         if aa.ThreadFix then
             setthreadidentity(8)
         end
-        aj.CanvasSize = UDim2.fromOffset(0, al.AbsoluteContentSize.Y / A.Scale)
+
+        task.defer(function()
+            refreshCategoryLayout(
+                not d._InitialLayoutReady
+            )
+        end)
+    end)
+
+    B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
         if ac.Expanded then
-            ad.Size = UDim2.fromOffset(232, math.min(46 + al.AbsoluteContentSize.Y / A.Scale, 606))
+            task.defer(refreshCategoryLayout, true)
+        end
+    end)
+
+    A:GetPropertyChangedSignal("Scale"):Connect(function()
+        if ac.Expanded then
+            task.defer(refreshCategoryLayout, true)
         end
     end)
 
@@ -8089,6 +8655,9 @@ function d.CreateCategory(aa, ab)
     end
 
     ac.Object = ad
+    ac.Scroll = aj
+    ac.Layout = al
+    ac.RefreshLayout = refreshCategoryLayout
     aa.Categories[ab.Name] = ac
 
     return ac
@@ -12175,7 +12744,31 @@ function d.CreateLegit(ag)
                     d:SortAllModules()
                 end
             end)
-            task.spawn(aq.Function, ar.Enabled)
+            d._PendingModuleCallbacks += 1
+            task.spawn(function()
+                local success, callbackError = xpcall(
+                    function()
+                        aq.Function(ar.Enabled)
+                    end,
+                    debug and debug.traceback
+                        or function(err)
+                            return tostring(err)
+                        end
+                )
+
+                d._PendingModuleCallbacks = math.max(
+                    0,
+                    d._PendingModuleCallbacks - 1
+                )
+
+                if not success then
+                    a:report({
+                        type = "legit-toggle-callback",
+                        err = callbackError,
+                        args = { tostring(aq.Name), ar.Enabled },
+                    })
+                end
+            end)
         end
 
         local function createSyncedOption(aI, aJ, aK, aL, aM, aN)
@@ -13888,23 +14481,48 @@ ak.Parent = z
 addCorner(ak, o.Radius)
 A = Instance.new("UIScale")
 local function responsiveScale()
-    local am = B.AbsoluteSize
-    local an = am.X > 0 and am.X or 1920
-    local ao = am.Y > 0 and am.Y or 1080
+    local viewport = B.AbsoluteSize
+    local width = viewport.X > 0 and viewport.X or 1920
+    local height = viewport.Y > 0 and viewport.Y or 1080
+
     if d.isMobile then
-        return math.clamp(math.min(an / 820, ao / 620), 0.6, 0.9)
+        return math.clamp(
+            math.min(width / 820, height / 620),
+            0.58,
+            0.9
+        )
     end
-    return math.clamp(an / 1920, 0.62, 1.1)
+
+    return math.clamp(
+        math.min(width / 1920, height / 1080),
+        0.62,
+        1.05
+    )
 end
 A.Scale = responsiveScale()
 A.Parent = w
 d.guiscale = A
 w.Size = UDim2.fromScale(1 / A.Scale, 1 / A.Scale)
 
+local resizeGeneration = 0
+
 d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-    if d.Scale.Enabled then
-        A.Scale = responsiveScale()
-    end
+    resizeGeneration += 1
+    local generation = resizeGeneration
+
+    task.delay(0.08, function()
+        if generation ~= resizeGeneration then
+            return
+        end
+
+        if d.Scale.Enabled then
+            A.Scale = responsiveScale()
+        end
+
+        if d._InitialLayoutReady and d.FinalizeInitialLayout then
+            d:FinalizeInitialLayout(true)
+        end
+    end)
 end))
 
 d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
@@ -14531,6 +15149,91 @@ d.SortGuiCallback = function(av)
             ay += 1
         end
     end
+end
+
+function d.WaitForModuleReadiness(self, timeoutSeconds)
+    local deadline = os.clock() + (tonumber(timeoutSeconds) or 4)
+
+    repeat
+        task.wait()
+    until
+        self._PendingModuleCallbacks <= 0
+        or os.clock() >= deadline
+        or self.Loaded == nil
+
+    task.wait()
+    return self._PendingModuleCallbacks <= 0
+end
+
+function d.FinalizeInitialLayout(self, resizeOnly)
+    self._SuppressEntryAnimation = true
+
+    if self._OpenDropdown then
+        pcall(self._OpenDropdown)
+    end
+
+    pcall(function()
+        self:RepairModuleCategories()
+    end)
+
+    pcall(function()
+        self:SortAllModules()
+    end)
+
+    for _, category in self.Categories do
+        if
+            type(category) == "table"
+            and category.OriginalCategory
+            and category.Object
+            and category.Object.Parent
+        then
+            local shouldShow =
+                not category.Button
+                or category.Button.Enabled ~= false
+
+            category.Object.Visible = shouldShow
+
+            if shouldShow and category.Expand then
+                category:Expand(true, true)
+            end
+
+            if category.Scroll then
+                category.Scroll.CanvasPosition =
+                    resizeOnly
+                        and category.Scroll.CanvasPosition
+                        or Vector2.zero
+            end
+
+            if category.RefreshLayout then
+                category.RefreshLayout(true)
+            end
+        end
+    end
+
+    local mainCategory = self.Categories.Main
+    if mainCategory and mainCategory.Object then
+        mainCategory.Object.Visible = true
+    end
+
+    if self.SortGuiCallback then
+        self.SortGuiCallback(false)
+    end
+
+    for _, window in self.Windows do
+        if
+            typeof(window) == "Instance"
+            and window:IsA("GuiObject")
+            and window.Parent
+        then
+            local scale = window:FindFirstChildOfClass("UIScale")
+            if scale then
+                scale.Scale = 1
+            end
+        end
+    end
+
+    self._InitialLayoutReady = true
+    self._SuppressEntryAnimation = false
 end
 at:CreateButton({
     Name = "Sort GUI",

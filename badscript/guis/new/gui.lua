@@ -145,12 +145,12 @@ local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
     Main = Color3.fromRGB(7, 9, 12),
     Text = Color3.fromRGB(244, 247, 251),
-    Surface = Color3.fromRGB(13, 17, 22),
-    SurfaceHover = Color3.fromRGB(18, 23, 30),
-    Elevated = Color3.fromRGB(21, 27, 35),
-    Border = Color3.fromRGB(43, 54, 68),
-    BorderStrong = Color3.fromRGB(68, 83, 102),
-    MutedText = Color3.fromRGB(159, 169, 183),
+    Surface = Color3.fromRGB(12, 16, 22),
+    SurfaceHover = Color3.fromRGB(18, 25, 34),
+    Elevated = Color3.fromRGB(22, 30, 40),
+    Border = Color3.fromRGB(48, 62, 79),
+    BorderStrong = Color3.fromRGB(79, 98, 121),
+    MutedText = Color3.fromRGB(168, 178, 192),
     Danger = Color3.fromRGB(239, 83, 91),
     Warning = Color3.fromRGB(242, 166, 72),
     Success = Color3.fromRGB(76, 211, 154),
@@ -771,7 +771,7 @@ end
 
 local function addStroke(F, G, H, I)
     local J = Instance.new("UIStroke")
-    J.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    J.ApplyStrokeMode = Enum.ApplyStrokeMode.Border J.LineJoinMode = Enum.LineJoinMode.Round
     J.Color = G or o.Border
     J.Transparency = H == nil and 0.45 or H
     J.Thickness = I or 1
@@ -5426,7 +5426,7 @@ function d.CreateCategory(aa, ab)
     ad.Parent = v
     addBlur(ad)
     addCorner(ad, o.RadiusLarge)
-    addStroke(ad, o.Border, 0.28, 1)
+    addStroke(ad, o.Border, 0.18, 1)
     addSurfaceGradient(ad)
 
     local ae = Instance.new("ImageLabel")
@@ -5522,16 +5522,39 @@ function d.CreateCategory(aa, ab)
         local ar = Instance.new("TextButton")
         ar.Name = an.Name
 
-        ar.Size = UDim2.fromOffset(220, d.isMobile and 52 or 40)
-        ar.BackgroundColor3 = o.Surface
-        ar.BorderSizePixel = 0
-        ar.AutoButtonColor = false
-        ar.Text = "            " .. ap
-        ar.TextXAlignment = Enum.TextXAlignment.Left
-        ar.TextColor3 = m.Dark(o.Text, 0.16)
-        ar.TextSize = d.isMobile and 15 or 14
-        ar.FontFace = o.Font
-        ar.Parent = aj
+        ar.Size = UDim2.new(1, -8, 0, d.isMobile and 52 or 40)
+ar.BackgroundColor3 = o.Surface
+ar.BorderSizePixel = 0
+ar.AutoButtonColor = false
+ar.Text = "   " .. ap
+ar.TextXAlignment = Enum.TextXAlignment.Left
+ar.TextColor3 = o.MutedText
+ar.TextSize = d.isMobile and 15 or 14
+ar.FontFace = o.Font
+ar.Parent = aj
+addCorner(ar, o.RadiusSmall)
+
+local moduleStroke = addStroke(ar, o.Border, 0.72, 1)
+moduleStroke.Name = "ModuleStroke"
+
+local activeRail = Instance.new("Frame")
+activeRail.Name = "ActiveRail"
+activeRail.Size = UDim2.new(0, 3, 1, -12)
+activeRail.Position = UDim2.fromOffset(0, 6)
+activeRail.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+activeRail.BorderSizePixel = 0
+activeRail.Visible = false
+activeRail.ZIndex = ar.ZIndex + 1
+activeRail.Parent = ar
+addCorner(activeRail, UDim.new(1, 0))
+
+connectguicolorchange(function(hue, saturation, value)
+	local accent = Color3.fromHSV(hue, saturation, value)
+	activeRail.BackgroundColor3 = accent
+	if ao.Enabled then
+		moduleStroke.Color = accent
+	end
+end)
         if an.Premium then
             local as = Instance.new("TextLabel")
             as.Parent = ar
@@ -5640,12 +5663,15 @@ function d.CreateCategory(aa, ab)
         addTooltip(az, "Click to favorite")
 
         local aA = Instance.new("UIStroke")
-        aA.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        aA.Transparency = 0
-        aA.Thickness = 2
-        aA.Color = Color3.fromRGB(255, 255, 0)
-        aA.Parent = ar
-        local aB = aA
+aA.Name = "FavoriteStroke"
+aA.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+aA.LineJoinMode = Enum.LineJoinMode.Round
+aA.Transparency = 0.12
+aA.Thickness = 1.5
+aA.Color = Color3.fromRGB(255, 214, 92)
+aA.Enabled = false
+aA.Parent = ar
+local aB = aA
         connectvisibilitychange(function(aC)
             aB.Enabled = ao.StarActive
             if not aB.Enabled then
@@ -5754,10 +5780,13 @@ function d.CreateCategory(aa, ab)
 
         aC.Size = d.isMobile and UDim2.fromOffset(44, 40) or UDim2.fromOffset(25, 40)
         aC.Position = d.isMobile and UDim2.new(1, -44, 0, 0) or UDim2.new(1, -25, 0, 0)
-        aC.BackgroundTransparency = 1
-        aC.Text = ""
-        aC.Parent = ar
-        local I = Instance.new("ImageLabel")
+        aC.BackgroundColor3 = o.Elevated
+aC.BackgroundTransparency = 1
+aC.BorderSizePixel = 0
+aC.Text = ""
+aC.Parent = ar
+addCorner(aC, o.RadiusSmall)
+local I = Instance.new("ImageLabel")
         I.Name = "Dots"
         I.Size = UDim2.fromOffset(3, 16)
 
@@ -5767,12 +5796,14 @@ function d.CreateCategory(aa, ab)
         I.ImageColor3 = m.Light(o.Main, 0.37)
         I.Parent = aC
         at.Name = an.Name .. "Children"
-        at.Size = UDim2.new(1, 0, 0, 0)
-        at.BackgroundColor3 = o.Main
-        at.BorderSizePixel = 0
-        at.Visible = false
-        at.Parent = aj
-        at.ClipsDescendants = true
+at.Size = UDim2.new(1, -8, 0, 0)
+at.BackgroundColor3 = o.Surface
+at.BorderSizePixel = 0
+at.Visible = false
+at.Parent = aj
+at.ClipsDescendants = true
+addCorner(at, o.RadiusSmall)
+addStroke(at, o.Border, 0.78, 1)
         ao.Children = at
         local J = Instance.new("UIListLayout")
         J.SortOrder = Enum.SortOrder.LayoutOrder
@@ -5902,11 +5933,24 @@ function d.CreateCategory(aa, ab)
                     end)
                 end)
             end
-            K.Visible = N.Enabled
-            as.Enabled = N.Enabled
-            ar.TextColor3 = (aq or at.Visible) and o.Text or m.Dark(o.Text, 0.16)
-            ar.BackgroundColor3 = (aq or at.Visible) and o.SurfaceHover or o.Surface
-            I.ImageColor3 = N.Enabled and Color3.fromRGB(50, 50, 50) or m.Light(o.Main, 0.37)
+            K.Visible = false
+as.Enabled = false
+
+local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+activeRail.Visible = N.Enabled
+
+n:Tween(ar, o.TweenFast, {
+	BackgroundColor3 = N.Enabled and o.Elevated or ((aq or at.Visible) and o.SurfaceHover or o.Surface),
+})
+
+n:Tween(moduleStroke, o.TweenFast, {
+	Color = N.Enabled and accent or ((aq or at.Visible) and o.BorderStrong or o.Border),
+	Transparency = N.Enabled and 0.12 or ((aq or at.Visible) and 0.42 or 0.72),
+	Thickness = N.Enabled and 1.35 or 1,
+})
+
+ar.TextColor3 = N.Enabled and o.Text or ((aq or at.Visible) and o.Text or o.MutedText)
+I.ImageColor3 = N.Enabled and o.Text or m.Light(o.Main, 0.37)
             av.ImageColor3 = m.Dark(o.Text, 0.43)
             aw.TextColor3 = m.Dark(o.Text, 0.43)
             if not N.Enabled then
@@ -5963,17 +6007,20 @@ function d.CreateCategory(aa, ab)
             ao:ToggleStar()
         end)
         if not d.isMobile then
-            aC.MouseEnter:Connect(function()
-                if not ao.Enabled then
-                    I.ImageColor3 = o.Text
-                end
-            end)
-            aC.MouseLeave:Connect(function()
-                if not ao.Enabled then
-                    I.ImageColor3 = m.Light(o.Main, 0.37)
-                end
-            end)
-        end
+	aC.MouseEnter:Connect(function()
+		n:Tween(aC, o.TweenFast, {
+			BackgroundTransparency = 0.35,
+		})
+		I.ImageColor3 = o.Text
+	end)
+
+	aC.MouseLeave:Connect(function()
+		n:Tween(aC, o.TweenFast, {
+			BackgroundTransparency = 1,
+		})
+		I.ImageColor3 = ao.Enabled and o.Text or m.Light(o.Main, 0.37)
+	end)
+end
         aC.Activated:Connect(function()
             if at.Visible then
                 closeOptions()
@@ -5990,25 +6037,42 @@ function d.CreateCategory(aa, ab)
         end)
 
         if not d.isMobile then
-            ar.MouseEnter:Connect(function()
-                aq = true
-                if not ao.Enabled and not at.Visible then
-                    ar.TextColor3 = o.Text
-                    ar.BackgroundColor3 = o.SurfaceHover
-                end
-                au.Visible = #ao.Bind > 0 or aq or at.Visible
-                az.Visible = ao.StarActive or aq or at.Visible
-            end)
-            ar.MouseLeave:Connect(function()
-                aq = false
-                if not ao.Enabled and not at.Visible then
-                    ar.TextColor3 = m.Dark(o.Text, 0.16)
-                    ar.BackgroundColor3 = o.Surface
-                end
-                au.Visible = #ao.Bind > 0 or aq or at.Visible
-                az.Visible = ao.StarActive or aq or at.Visible
-            end)
-        end
+	ar.MouseEnter:Connect(function()
+		aq = true
+
+		if not ao.Enabled and not at.Visible then
+			ar.TextColor3 = o.Text
+			n:Tween(ar, o.TweenFast, {
+				BackgroundColor3 = o.SurfaceHover,
+			})
+			n:Tween(moduleStroke, o.TweenFast, {
+				Color = o.BorderStrong,
+				Transparency = 0.38,
+			})
+		end
+
+		au.Visible = #ao.Bind > 0 or aq or at.Visible
+		az.Visible = ao.StarActive or aq or at.Visible
+	end)
+
+	ar.MouseLeave:Connect(function()
+		aq = false
+
+		if not ao.Enabled and not at.Visible then
+			ar.TextColor3 = o.MutedText
+			n:Tween(ar, o.TweenFast, {
+				BackgroundColor3 = o.Surface,
+			})
+			n:Tween(moduleStroke, o.TweenFast, {
+				Color = o.Border,
+				Transparency = 0.72,
+			})
+		end
+
+		au.Visible = #ao.Bind > 0 or aq or at.Visible
+		az.Visible = ao.StarActive or aq or at.Visible
+	end)
+end
         at:GetPropertyChangedSignal("Visible"):Connect(function()
             local N = at.Visible
             if N then

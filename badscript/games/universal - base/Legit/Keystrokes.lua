@@ -6,12 +6,12 @@ local ShowSpacebar
 local keys = {}
 local holder
 
-local PremiumKeystrokesBuild = "2026.07.04.8.2"
+local PremiumKeystrokesBuild = "2026.07.04.9-NEXUS"
 
-local NORMAL_BACKGROUND = Color3.fromRGB(14, 20, 29)
+local NORMAL_BACKGROUND = Color3.fromRGB(15, 16, 29)
 local NORMAL_TEXT = Color3.fromRGB(218, 227, 240)
 local MUTED_TEXT = Color3.fromRGB(155, 171, 192)
-local BORDER_COLOR = Color3.fromRGB(68, 86, 109)
+local BORDER_COLOR = Color3.fromRGB(78, 82, 119)
 
 local function getColorHue()
 	if Color and type(Color.Hue) == "number" then

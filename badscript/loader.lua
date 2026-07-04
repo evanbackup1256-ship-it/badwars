@@ -50,7 +50,7 @@ local function isNotFoundBody(body)
 	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
 end
 
--- Status GUI (Premium v8.1 - persistence hotfix)
+-- Status GUI (Nexus V9 - persistence safe)
 local statusGui
 local statusCard
 local statusLabel
@@ -68,7 +68,7 @@ local statusBackdrop
 local loaderCreatedAt = os.clock()
 local loaderStatusGeneration = 0
 local loaderDismissScheduled = false
-local MINIMUM_VISIBLE_SECONDS = 2.4
+local MINIMUM_VISIBLE_SECONDS = 2.8
 local loaderTweenService = cloneref(game:GetService('TweenService'))
 
 local function loaderTween(object, info, properties)
@@ -189,7 +189,7 @@ local function createPremiumLoader()
     statusCard.Name = 'PremiumLoader'
     statusCard.AnchorPoint = Vector2.new(0.5, 0.5)
     statusCard.Position = UDim2.fromScale(0.5, 0.515)
-    statusCard.Size = UDim2.fromOffset(520, 286)
+    statusCard.Size = UDim2.fromOffset(548, 306)
     statusCard.BackgroundColor3 = Color3.fromRGB(9, 14, 21)
     statusCard.BorderSizePixel = 0
     statusCard.ClipsDescendants = true
@@ -236,7 +236,7 @@ local function createPremiumLoader()
     logo.Position = UDim2.fromOffset(28, 26)
     logo.BackgroundTransparency = 1
     logo.Font = Enum.Font.GothamBold
-    logo.Text = 'BADWARS V1'
+    logo.Text = 'BADWARS // V9'
     logo.TextSize = 26
     logo.TextColor3 = Color3.fromRGB(245, 249, 255)
     logo.TextXAlignment = Enum.TextXAlignment.Left
@@ -247,7 +247,7 @@ local function createPremiumLoader()
     edition.Position = UDim2.fromOffset(29, 57)
     edition.BackgroundTransparency = 1
     edition.Font = Enum.Font.GothamMedium
-    edition.Text = 'PREMIUM LAUNCH SYSTEM'
+    edition.Text = 'NEXUS BOOT SEQUENCE'
     edition.TextSize = 11
     edition.TextColor3 = Color3.fromRGB(102, 122, 147)
     edition.TextXAlignment = Enum.TextXAlignment.Left
@@ -267,9 +267,40 @@ local function createPremiumLoader()
     loaderCorner(spinner, 10)
     loaderStroke(spinner, Color3.fromRGB(56, 73, 95), 0.42, 1)
 
+    local orbit = Instance.new('Frame')
+    orbit.Name = 'NexusOrbit'
+    orbit.AnchorPoint = Vector2.new(0.5, 0.5)
+    orbit.Position = spinner.Position
+    orbit.Size = UDim2.fromOffset(48, 48)
+    orbit.BackgroundTransparency = 1
+    orbit.Parent = statusCard
+    loaderCorner(orbit, 99)
+    local orbitStroke = loaderStroke(
+        orbit,
+        Color3.fromRGB(105, 116, 255),
+        0.54,
+        1
+    )
+
+    local orbitGradient = Instance.new('UIGradient')
+    orbitGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(94, 113, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(16, 213, 165)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 91, 255)),
+    })
+    orbitGradient.Parent = orbitStroke
+
+    local orbitNode = Instance.new('Frame')
+    orbitNode.Size = UDim2.fromOffset(6, 6)
+    orbitNode.Position = UDim2.new(0.5, -3, 0, -3)
+    orbitNode.BackgroundColor3 = Color3.fromRGB(16, 213, 165)
+    orbitNode.BorderSizePixel = 0
+    orbitNode.Parent = orbit
+    loaderCorner(orbitNode, 99)
+
     local chipHolder = Instance.new('Frame')
     chipHolder.Size = UDim2.new(1, -56, 0, 26)
-    chipHolder.Position = UDim2.fromOffset(28, 86)
+    chipHolder.Position = UDim2.fromOffset(28, 92)
     chipHolder.BackgroundTransparency = 1
     chipHolder.Parent = statusCard
     local chipLayout = Instance.new('UIListLayout')
@@ -300,7 +331,7 @@ local function createPremiumLoader()
 
     stageLabel = Instance.new('TextLabel')
     stageLabel.Size = UDim2.new(1, -56, 0, 24)
-    stageLabel.Position = UDim2.fromOffset(28, 124)
+    stageLabel.Position = UDim2.fromOffset(28, 132)
     stageLabel.BackgroundTransparency = 1
     stageLabel.Font = Enum.Font.GothamSemibold
     stageLabel.Text = 'INITIALIZING'
@@ -311,7 +342,7 @@ local function createPremiumLoader()
 
     statusLabel = Instance.new('TextLabel')
     statusLabel.Size = UDim2.new(1, -56, 0, 48)
-    statusLabel.Position = UDim2.fromOffset(28, 149)
+    statusLabel.Position = UDim2.fromOffset(28, 158)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Font = Enum.Font.Gotham
     statusLabel.Text = 'Preparing your premium BadWars session...'
@@ -324,7 +355,7 @@ local function createPremiumLoader()
 
     local progressTrack = Instance.new('Frame')
     progressTrack.Size = UDim2.new(1, -96, 0, 10)
-    progressTrack.Position = UDim2.fromOffset(28, 220)
+    progressTrack.Position = UDim2.fromOffset(28, 238)
     progressTrack.BackgroundColor3 = Color3.fromRGB(26, 36, 49)
     progressTrack.BorderSizePixel = 0
     progressTrack.Parent = statusCard
@@ -370,7 +401,7 @@ local function createPremiumLoader()
 
     percentLabel = Instance.new('TextLabel')
     percentLabel.Size = UDim2.fromOffset(58, 24)
-    percentLabel.Position = UDim2.new(1, -74, 0, 211)
+    percentLabel.Position = UDim2.new(1, -74, 0, 229)
     percentLabel.BackgroundTransparency = 1
     percentLabel.Font = Enum.Font.GothamSemibold
     percentLabel.Text = '2%'
@@ -381,7 +412,7 @@ local function createPremiumLoader()
 
     detailLabel = Instance.new('TextLabel')
     detailLabel.Size = UDim2.new(1, -56, 0, 24)
-    detailLabel.Position = UDim2.fromOffset(28, 244)
+    detailLabel.Position = UDim2.fromOffset(28, 264)
     detailLabel.BackgroundTransparency = 1
     detailLabel.Font = Enum.Font.Code
     detailLabel.Text = 'secure launch / polished UI / minimal logging'
@@ -392,7 +423,16 @@ local function createPremiumLoader()
 
     task.spawn(function()
         while spinner and spinner.Parent do
-            loaderTween(spinner, TweenInfo.new(0.34, Enum.EasingStyle.Linear), {Rotation = spinner.Rotation + 90})
+            loaderTween(
+                spinner,
+                TweenInfo.new(0.34, Enum.EasingStyle.Linear),
+                { Rotation = spinner.Rotation + 90 }
+            )
+            loaderTween(
+                orbit,
+                TweenInfo.new(0.7, Enum.EasingStyle.Linear),
+                { Rotation = orbit.Rotation + 90 }
+            )
             task.wait(0.34)
         end
     end)
@@ -509,7 +549,7 @@ shared.BadStatus = function(msg, isErr)
         end
 
         if statusLabel then
-            statusLabel.Text = 'BadWars V1 is ready.'
+            statusLabel.Text = 'Nexus V9 is ready.'
         end
 
         local visibleFor = os.clock() - loaderCreatedAt

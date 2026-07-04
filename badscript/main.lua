@@ -1,4 +1,4 @@
--- BadWars Main v3.6 - Premium Deep Scan Pipeline
+-- BadWars Main v4.0 - Nexus V9 Pipeline
 repeat
     task.wait()
 until game:IsLoaded()

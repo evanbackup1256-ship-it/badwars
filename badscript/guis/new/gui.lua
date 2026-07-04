@@ -1,4 +1,4 @@
--- BadWars Premium UI Revamp | Deep UI Scan | Build 2026.07.04.8
+-- BadWars Premium UI Revamp | Keystrokes + Discord Hotfix | Build 2026.07.04.8.2
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -38,7 +38,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.8-PREMIUM-DEEP-SCAN",
+    PremiumBuild = "2026.07.04.8.2-KEYSTROKES-DISCORD",
     Windows = {},
     Indicators = {},
 }
@@ -4848,38 +4848,88 @@ function d.CreateGUI(aa)
     ai.Parent = ah
     local aj = Instance.new("TextButton")
     aj.Name = "DiscordInvite"
-    aj.Size = UDim2.fromOffset(236, 32)
+    aj.Size = UDim2.fromOffset(220, 32)
     aj.AnchorPoint = Vector2.new(0.5, 1)
-    aj.Position = UDim2.new(0.5, 0, 1, -18)
+    aj.Position = UDim2.new(0.5, 0, 1, d.isMobile and -138 or -112)
     aj.BackgroundColor3 = o.MainSoft
-    aj.BackgroundTransparency = 0.06
+    aj.BackgroundTransparency = 0.03
     aj.BorderSizePixel = 0
     aj.AutoButtonColor = false
-    aj.Text = "BadWars Discord  |  Copy Invite"
-    aj.TextColor3 = o.MutedText
-    aj.TextSize = 11
-    aj.FontFace = o.FontSemiBold
-    aj.ZIndex = 220
+    aj.Text = ""
+    aj.ClipsDescendants = false
+    aj.ZIndex = 100000
     aj.Parent = v
     addCorner(aj, UDim.new(1, 0))
     addSurfaceGradient(aj)
     addShadow(aj)
-    local discordStroke = addStroke(aj, o.BorderStrong, 0.62, 1, "DiscordStroke")
+
+    local discordStroke = addStroke(
+        aj,
+        o.BorderStrong,
+        0.5,
+        1,
+        "DiscordStroke"
+    )
+
     local discordAccent = Instance.new("Frame")
     discordAccent.Name = "Accent"
     discordAccent.Size = UDim2.fromOffset(6, 6)
     discordAccent.AnchorPoint = Vector2.new(0.5, 0.5)
     discordAccent.Position = UDim2.fromOffset(17, 16)
     discordAccent.BorderSizePixel = 0
-    discordAccent.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-    discordAccent.ZIndex = aj.ZIndex + 1
+    discordAccent.BackgroundColor3 =
+        Color3.fromHSV(
+            d.GUIColor.Hue,
+            d.GUIColor.Sat,
+            d.GUIColor.Value
+        )
+    discordAccent.ZIndex = aj.ZIndex + 2
     discordAccent.Parent = aj
     addCorner(discordAccent, UDim.new(1, 0))
+
+    local discordLabel = Instance.new("TextLabel")
+    discordLabel.Name = "Label"
+    discordLabel.Size = UDim2.new(1, -66, 1, 0)
+    discordLabel.Position = UDim2.fromOffset(30, 0)
+    discordLabel.BackgroundTransparency = 1
+    discordLabel.Text = "BadWars Discord"
+    discordLabel.TextColor3 = o.TextStrong
+    discordLabel.TextSize = 11
+    discordLabel.TextXAlignment = Enum.TextXAlignment.Left
+    discordLabel.FontFace = o.FontSemiBold
+    discordLabel.ZIndex = aj.ZIndex + 3
+    discordLabel.Parent = aj
+
+    local discordAction = Instance.new("TextLabel")
+    discordAction.Name = "Action"
+    discordAction.Size = UDim2.fromOffset(54, 20)
+    discordAction.AnchorPoint = Vector2.new(1, 0.5)
+    discordAction.Position = UDim2.new(1, -7, 0.5, 0)
+    discordAction.BackgroundColor3 = o.Elevated
+    discordAction.BackgroundTransparency = 0.1
+    discordAction.BorderSizePixel = 0
+    discordAction.Text = "COPY"
+    discordAction.TextColor3 = o.MutedText
+    discordAction.TextSize = 9
+    discordAction.FontFace = o.FontBold
+    discordAction.ZIndex = aj.ZIndex + 3
+    discordAction.Parent = aj
+    addCorner(discordAction, UDim.new(1, 0))
+    addStroke(
+        discordAction,
+        o.Border,
+        0.7,
+        1,
+        "DiscordActionStroke"
+    )
+
     connectguicolorchange(function(hue, saturation, value)
         if discordAccent.Parent then
-            discordAccent.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
+            discordAccent.BackgroundColor3 =
+                Color3.fromHSV(hue, saturation, value)
         end
     end)
+
     addTooltip(aj, "Copy https://discord.gg/K2TQx4vyR7")
     local ak = Instance.new("TextButton")
     ak.Size = UDim2.fromScale(1, 1)
@@ -6056,28 +6106,50 @@ function d.CreateGUI(aa)
         ak.Visible = false
     end)
     aj.MouseEnter:Connect(function()
+        local accent =
+            Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            )
+
         n:Tween(aj, o.TweenFast, {
             BackgroundColor3 = o.SurfaceHover,
-            TextColor3 = o.TextStrong,
         })
         n:Tween(discordStroke, o.TweenFast, {
-            Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-            Transparency = 0.34,
+            Color = accent,
+            Transparency = 0.28,
+        })
+        n:Tween(discordLabel, o.TweenFast, {
+            TextColor3 = accent:Lerp(o.TextStrong, 0.24),
+        })
+        n:Tween(discordAction, o.TweenFast, {
+            BackgroundColor3 = o.ElevatedHover,
+            TextColor3 = accent,
         })
     end)
+
     aj.MouseLeave:Connect(function()
         n:Tween(aj, o.TweenFast, {
-            BackgroundColor3 = o.Surface,
-            TextColor3 = o.MutedText,
+            BackgroundColor3 = o.MainSoft,
         })
         n:Tween(discordStroke, o.TweenFast, {
-            Color = o.Border,
-            Transparency = 0.72,
+            Color = o.BorderStrong,
+            Transparency = 0.5,
+        })
+        n:Tween(discordLabel, o.TweenFast, {
+            TextColor3 = o.TextStrong,
+        })
+        n:Tween(discordAction, o.TweenFast, {
+            BackgroundColor3 = o.Elevated,
+            TextColor3 = o.MutedText,
         })
     end)
+
     aj.Activated:Connect(function()
         local invite = "https://discord.gg/K2TQx4vyR7"
         local copied = false
+
         pcall(function()
             if type(setclipboard) == "function" then
                 setclipboard(invite)
@@ -6088,10 +6160,20 @@ function d.CreateGUI(aa)
             end
         end)
 
+        local previousText = discordAction.Text
+        discordAction.Text = copied and "COPIED" or "LINK"
+        task.delay(1.25, function()
+            if discordAction.Parent then
+                discordAction.Text = previousText
+            end
+        end)
+
         if d.CreateNotification then
             d:CreateNotification(
                 "BadWars V1",
-                copied and "Discord invite copied to clipboard." or invite,
+                copied
+                    and "Discord invite copied to clipboard."
+                    or invite,
                 5,
                 copied and "success" or "info"
             )

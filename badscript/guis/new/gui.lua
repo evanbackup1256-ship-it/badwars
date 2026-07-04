@@ -143,26 +143,35 @@ local n = {
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
-    Main = Color3.fromRGB(7, 9, 12),
-    Text = Color3.fromRGB(244, 247, 251),
-    Surface = Color3.fromRGB(12, 16, 22),
-    SurfaceHover = Color3.fromRGB(18, 25, 34),
-    Elevated = Color3.fromRGB(22, 30, 40),
-    Border = Color3.fromRGB(48, 62, 79),
-    BorderStrong = Color3.fromRGB(79, 98, 121),
-    MutedText = Color3.fromRGB(168, 178, 192),
-    Danger = Color3.fromRGB(239, 83, 91),
-    Warning = Color3.fromRGB(242, 166, 72),
-    Success = Color3.fromRGB(76, 211, 154),
+    Main = Color3.fromRGB(5, 8, 12),
+    Panel = Color3.fromRGB(8, 12, 18),
+    Surface = Color3.fromRGB(10, 15, 22),
+    SurfaceHover = Color3.fromRGB(15, 22, 31),
+    Elevated = Color3.fromRGB(18, 26, 37),
+    Card = Color3.fromRGB(12, 18, 26),
+    CardHover = Color3.fromRGB(18, 27, 38),
+    Input = Color3.fromRGB(7, 11, 17),
+    InputHover = Color3.fromRGB(12, 18, 26),
+    Text = Color3.fromRGB(245, 248, 252),
+    MutedText = Color3.fromRGB(154, 166, 184),
+    SubtleText = Color3.fromRGB(104, 118, 138),
+    Border = Color3.fromRGB(37, 51, 69),
+    BorderStrong = Color3.fromRGB(62, 82, 108),
+    Danger = Color3.fromRGB(244, 91, 101),
+    Warning = Color3.fromRGB(244, 174, 79),
+    Success = Color3.fromRGB(72, 214, 157),
     Shadow = Color3.fromRGB(0, 0, 0),
-    RadiusSmall = UDim.new(0, 5),
-    Radius = UDim.new(0, 8),
-    RadiusLarge = UDim.new(0, 11),
+    RadiusSmall = UDim.new(0, 6),
+    Radius = UDim.new(0, 9),
+    RadiusLarge = UDim.new(0, 12),
+    RadiusXL = UDim.new(0, 16),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
-    TweenFast = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    Tween = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    TweenSlow = TweenInfo.new(0.24, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
+    TweenFast = TweenInfo.new(0.10, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    Tween = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenSlow = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSpring = TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 }
 
 local function getTableSize(p)
@@ -703,59 +712,62 @@ local D = isfile
     end
 
 local E = function(E, F, G, H)
-	p.Text = tostring(E or "")
+    p.Text = tostring(E or "")
 
-	local fontSize = F
-	if typeof(fontSize) == "Vector2" then
-		fontSize = fontSize.Y
-	end
-	fontSize = tonumber(fontSize) or 14
-	if fontSize ~= fontSize or fontSize == math.huge or fontSize == -math.huge then
-		fontSize = 14
-	end
-	p.Size = math.max(fontSize, 1)
+    local fontSize = F
+    if typeof(fontSize) == "Vector2" then
+        fontSize = fontSize.Y
+    end
+    fontSize = tonumber(fontSize) or 14
+    if fontSize ~= fontSize or fontSize == math.huge or fontSize == -math.huge then
+        fontSize = 14
+    end
+    p.Size = math.max(fontSize, 1)
 
-	local maxWidth = H
-	if typeof(maxWidth) == "Vector2" then
-		maxWidth = maxWidth.X
-	end
-	maxWidth = tonumber(maxWidth) or math.huge
-	if maxWidth ~= maxWidth or maxWidth <= 0 then
-		maxWidth = math.huge
-	end
-	p.Width = maxWidth
+    local maxWidth = H
+    if typeof(maxWidth) == "Vector2" then
+        maxWidth = maxWidth.X
+    end
+    maxWidth = tonumber(maxWidth) or math.huge
+    if maxWidth ~= maxWidth or maxWidth <= 0 then
+        maxWidth = math.huge
+    end
+    p.Width = maxWidth
 
-	if typeof(G) == "Font" then
-		p.Font = G
-	elseif typeof(G) == "EnumItem" and G.EnumType == Enum.Font then
-		p.Font = Font.fromEnum(G)
-	end
+    if typeof(G) == "Font" then
+        p.Font = G
+    elseif typeof(G) == "EnumItem" and G.EnumType == Enum.Font then
+        p.Font = Font.fromEnum(G)
+    end
 
-	local I, J = pcall(function()
-		return i:GetTextBoundsAsync(p)
-	end)
+    local I, J = pcall(function()
+        return i:GetTextBoundsAsync(p)
+    end)
 
-	if not I then
-		a:report({
-			type = "getfontsize-function",
-			err = J,
-			args = { E, F, G, H },
-			notifyBlacklisted = true,
-		})
-		return Vector2.zero
-	end
+    if not I then
+        a:report({
+            type = "getfontsize-function",
+            err = J,
+            args = { E, F, G, H },
+            notifyBlacklisted = true,
+        })
+        return Vector2.zero
+    end
 
-	return J
+    return J
 end
 local function addBlur(F, G)
     local H = Instance.new("ImageLabel")
     H.Name = "Blur"
-    H.Size = UDim2.new(1, 89, 1, 52)
-    H.Position = UDim2.fromOffset(-48, -31)
+    H.Size = UDim2.new(1, 96, 1, 60)
+    H.Position = UDim2.fromOffset(-52, -35)
     H.BackgroundTransparency = 1
     H.Image = u("badscript/assets/new/" .. (G and "blurnotif" or "blur") .. ".png")
+    H.ImageColor3 = o.Shadow
+    H.ImageTransparency = G and 0.34 or 0.42
     H.ScaleType = Enum.ScaleType.Slice
     H.SliceCenter = Rect.new(52, 31, 261, 502)
+    H.ZIndex = math.max(0, F.ZIndex - 1)
     H.Parent = F
 
     return H
@@ -771,7 +783,8 @@ end
 
 local function addStroke(F, G, H, I)
     local J = Instance.new("UIStroke")
-    J.ApplyStrokeMode = Enum.ApplyStrokeMode.Border J.LineJoinMode = Enum.LineJoinMode.Round
+    J.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    J.LineJoinMode = Enum.LineJoinMode.Round
     J.Color = G or o.Border
     J.Transparency = H == nil and 0.45 or H
     J.Thickness = I or 1
@@ -781,11 +794,17 @@ end
 
 local function addSurfaceGradient(F)
     local G = Instance.new("UIGradient")
+    G.Name = "SurfaceGradient"
     G.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, o.Elevated),
-        ColorSequenceKeypoint.new(1, o.Surface),
+        ColorSequenceKeypoint.new(0.52, o.Surface),
+        ColorSequenceKeypoint.new(1, o.Main),
     })
-    G.Rotation = 90
+    G.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.02),
+        NumberSequenceKeypoint.new(1, 0.12),
+    })
+    G.Rotation = 100
     G.Parent = F
     return G
 end
@@ -2183,8 +2202,8 @@ H = {
         local previousParentScrolling
 
         local function updateTitle()
-	title.Text = tostring(settings.Name) .. " - " .. tostring(api.Value)
-end
+            title.Text = tostring(settings.Name) .. " - " .. tostring(api.Value)
+        end
         updateTitle()
 
         local function setParentScrolling(enabled)
@@ -4394,11 +4413,7 @@ function d.CreateGUI(aa)
         au.BackgroundColor3 = o.Main
         au.BorderSizePixel = 0
         au.AutoButtonColor = false
-        au.Text = (
-            as.Icon
-                and "                                 "
-            or "             "
-        ) .. as.Name
+        au.Text = (as.Icon and "                                 " or "             ") .. as.Name
         au.TextXAlignment = Enum.TextXAlignment.Left
         au.TextColor3 = m.Dark(o.Text, 0.16)
         au.TextSize = 14
@@ -5523,35 +5538,31 @@ function d.CreateCategory(aa, ab)
         ar.Name = an.Name
 
         ar.Size = UDim2.new(1, 0, 0, d.isMobile and 52 or 40)
-ar.BackgroundColor3 = o.Surface
-ar.BorderSizePixel = 0
-ar.AutoButtonColor = false
-ar.ClipsDescendants = true
-ar.Text = "  " .. ap
-ar.TextXAlignment = Enum.TextXAlignment.Left
-ar.TextColor3 = o.MutedText
-ar.TextSize = d.isMobile and 15 or 14
-ar.FontFace = o.Font
-ar.Parent = aj
+        ar.BackgroundColor3 = o.Surface
+        ar.BorderSizePixel = 0
+        ar.AutoButtonColor = false
+        ar.ClipsDescendants = true
+        ar.Text = "  " .. ap
+        ar.TextXAlignment = Enum.TextXAlignment.Left
+        ar.TextColor3 = o.MutedText
+        ar.TextSize = d.isMobile and 15 or 14
+        ar.FontFace = o.Font
+        ar.Parent = aj
 
-local activeRail = Instance.new("Frame")
-activeRail.Name = "ActiveRail"
-activeRail.Size = UDim2.new(0, 2, 1, 0)
-activeRail.Position = UDim2.fromOffset(0, 0)
-activeRail.BackgroundColor3 = Color3.fromHSV(
-	d.GUIColor.Hue,
-	d.GUIColor.Sat,
-	d.GUIColor.Value
-)
-activeRail.BorderSizePixel = 0
-activeRail.Visible = false
-activeRail.ZIndex = ar.ZIndex + 1
-activeRail.Parent = ar
+        local activeRail = Instance.new("Frame")
+        activeRail.Name = "ActiveRail"
+        activeRail.Size = UDim2.new(0, 2, 1, 0)
+        activeRail.Position = UDim2.fromOffset(0, 0)
+        activeRail.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+        activeRail.BorderSizePixel = 0
+        activeRail.Visible = false
+        activeRail.ZIndex = ar.ZIndex + 1
+        activeRail.Parent = ar
 
-connectguicolorchange(function(hue, saturation, value)
-	activeRail.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
-end)
-if an.Premium then
+        connectguicolorchange(function(hue, saturation, value)
+            activeRail.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
+        end)
+        if an.Premium then
             local as = Instance.new("TextLabel")
             as.Parent = ar
             as.SizeConstraint = Enum.SizeConstraint.RelativeXX
@@ -5659,18 +5670,18 @@ if an.Premium then
         addTooltip(az, "Click to favorite")
 
         local aA = Instance.new("UIStroke")
-aA.Name = "FavoriteStroke"
-aA.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-aA.Transparency = 1
-aA.Thickness = 0
-aA.Enabled = false
-aA.Parent = ar
-local aB = aA
+        aA.Name = "FavoriteStroke"
+        aA.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        aA.Transparency = 1
+        aA.Thickness = 0
+        aA.Enabled = false
+        aA.Parent = ar
+        local aB = aA
 
-connectvisibilitychange(function()
-	aB.Enabled = false
-end)
-ao.InternalAddOnChange = Instance.new("BindableEvent")
+        connectvisibilitychange(function()
+            aB.Enabled = false
+        end)
+        ao.InternalAddOnChange = Instance.new("BindableEvent")
         ao.InternalAddOnChange.Event:Connect(function()
             az.Position = au.Visible and UDim2.new(1, -70, 0, 9) or UDim2.new(1, -36, 0, 9)
         end)
@@ -5769,12 +5780,12 @@ ao.InternalAddOnChange = Instance.new("BindableEvent")
         aC.Size = d.isMobile and UDim2.fromOffset(44, 40) or UDim2.fromOffset(25, 40)
         aC.Position = d.isMobile and UDim2.new(1, -44, 0, 0) or UDim2.new(1, -25, 0, 0)
         aC.BackgroundColor3 = o.Elevated
-aC.BackgroundTransparency = 1
-aC.BorderSizePixel = 0
-aC.Text = ""
-aC.Parent = ar
-addCorner(aC, o.RadiusSmall)
-local I = Instance.new("ImageLabel")
+        aC.BackgroundTransparency = 1
+        aC.BorderSizePixel = 0
+        aC.Text = ""
+        aC.Parent = ar
+        addCorner(aC, o.RadiusSmall)
+        local I = Instance.new("ImageLabel")
         I.Name = "Dots"
         I.Size = UDim2.fromOffset(3, 16)
 
@@ -5784,13 +5795,13 @@ local I = Instance.new("ImageLabel")
         I.ImageColor3 = m.Light(o.Main, 0.37)
         I.Parent = aC
         at.Name = an.Name .. "Children"
-at.Size = UDim2.new(1, 0, 0, 0)
-at.BackgroundColor3 = o.Main
-at.BorderSizePixel = 0
-at.Visible = false
-at.Parent = aj
-at.ClipsDescendants = true
-ao.Children = at
+        at.Size = UDim2.new(1, 0, 0, 0)
+        at.BackgroundColor3 = o.Main
+        at.BorderSizePixel = 0
+        at.Visible = false
+        at.Parent = aj
+        at.ClipsDescendants = true
+        ao.Children = at
         local J = Instance.new("UIListLayout")
         J.SortOrder = Enum.SortOrder.LayoutOrder
         J.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -5808,98 +5819,80 @@ ao.Children = at
         addMaid(ao)
 
         local L
-local M
-local optionsOpen = false
-local optionsAnimationId = 0
+        local M
+        local optionsOpen = false
+        local optionsAnimationId = 0
 
-ao.OptionsVisibilityChanged =
-	a.createCustomSignal(
-		`OPTIONS_VISIBILITY_CHANGE_{tostring(an.Name)}_{tostring(ab.Name)}`
-	)
+        ao.OptionsVisibilityChanged =
+            a.createCustomSignal(`OPTIONS_VISIBILITY_CHANGE_{tostring(an.Name)}_{tostring(ab.Name)}`)
 
-local function openOptions()
-	optionsAnimationId += 1
-	local animationId = optionsAnimationId
-	optionsOpen = true
+        local function openOptions()
+            optionsAnimationId += 1
+            local animationId = optionsAnimationId
+            optionsOpen = true
 
-	if L then
-		L:Cancel()
-		L = nil
-	end
-	if M then
-		M:Cancel()
-		M = nil
-	end
+            if L then
+                L:Cancel()
+                L = nil
+            end
+            if M then
+                M:Cancel()
+                M = nil
+            end
 
-	at.Visible = true
-	ao.OptionsVisibilityChanged:Fire(true)
+            at.Visible = true
+            ao.OptionsVisibilityChanged:Fire(true)
 
-	local targetHeight = math.max(J.AbsoluteContentSize.Y / A.Scale, 0)
-	L = n:Tween(
-		at,
-		TweenInfo.new(
-			0.16,
-			Enum.EasingStyle.Quart,
-			Enum.EasingDirection.Out
-		),
-		{
-			Size = UDim2.new(1, 0, 0, targetHeight),
-		}
-	)
+            local targetHeight = math.max(J.AbsoluteContentSize.Y / A.Scale, 0)
+            L = n:Tween(at, TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, 0, 0, targetHeight),
+            })
 
-	if L then
-		L.Completed:Once(function()
-			if animationId == optionsAnimationId then
-				L = nil
-			end
-		end)
-	end
-end
+            if L then
+                L.Completed:Once(function()
+                    if animationId == optionsAnimationId then
+                        L = nil
+                    end
+                end)
+            end
+        end
 
-local function closeOptions()
-	optionsAnimationId += 1
-	local animationId = optionsAnimationId
-	optionsOpen = false
+        local function closeOptions()
+            optionsAnimationId += 1
+            local animationId = optionsAnimationId
+            optionsOpen = false
 
-	if L then
-		L:Cancel()
-		L = nil
-	end
-	if M then
-		M:Cancel()
-		M = nil
-	end
+            if L then
+                L:Cancel()
+                L = nil
+            end
+            if M then
+                M:Cancel()
+                M = nil
+            end
 
-	M = n:Tween(
-		at,
-		TweenInfo.new(
-			0.13,
-			Enum.EasingStyle.Quad,
-			Enum.EasingDirection.In
-		),
-		{
-			Size = UDim2.new(1, 0, 0, 0),
-		}
-	)
+            M = n:Tween(at, TweenInfo.new(0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, 0, 0, 0),
+            })
 
-	if M then
-		M.Completed:Once(function(playbackState)
-			if
-				playbackState == Enum.PlaybackState.Completed
-				and animationId == optionsAnimationId
-				and not optionsOpen
-			then
-				at.Visible = false
-				ao.OptionsVisibilityChanged:Fire(false)
-				M = nil
-			end
-		end)
-	else
-		at.Visible = false
-		ao.OptionsVisibilityChanged:Fire(false)
-	end
-end
-function ao.SetBind(N, O, P, Q)
+            if M then
+                M.Completed:Once(function(playbackState)
+                    if
+                        playbackState == Enum.PlaybackState.Completed
+                        and animationId == optionsAnimationId
+                        and not optionsOpen
+                    then
+                        at.Visible = false
+                        ao.OptionsVisibilityChanged:Fire(false)
+                        M = nil
+                    end
+                end)
+            else
+                at.Visible = false
+                ao.OptionsVisibilityChanged:Fire(false)
+            end
+        end
+        function ao.SetBind(N, O, P, Q)
             if O.Mobile then
                 createMobileButton(ao, Vector2.new(O.X, O.Y))
                 return
@@ -5964,25 +5957,19 @@ function ao.SetBind(N, O, P, Q)
                 end)
             end
             K.Visible = true
-as.Enabled = false
-activeRail.Visible = N.Enabled
+            as.Enabled = false
+            activeRail.Visible = N.Enabled
 
-n:Tween(ar, o.TweenFast, {
-	BackgroundColor3 = N.Enabled
-		and o.Elevated
-		or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
-})
+            n:Tween(ar, o.TweenFast, {
+                BackgroundColor3 = N.Enabled and o.Elevated or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
+            })
 
-ar.TextColor3 = N.Enabled
-	and o.Text
-	or ((aq or optionsOpen) and o.Text or o.MutedText)
+            ar.TextColor3 = N.Enabled and o.Text or ((aq or optionsOpen) and o.Text or o.MutedText)
 
-I.ImageColor3 = N.Enabled
-	and o.Text
-	or m.Light(o.Main, 0.37)
+            I.ImageColor3 = N.Enabled and o.Text or m.Light(o.Main, 0.37)
 
-av.ImageColor3 = m.Dark(o.Text, 0.43)
-aw.TextColor3 = m.Dark(o.Text, 0.43)
+            av.ImageColor3 = m.Dark(o.Text, 0.43)
+            aw.TextColor3 = m.Dark(o.Text, 0.43)
             if not N.Enabled then
                 for P, Q in N.Connections do
                     if type(Q) == "function" then
@@ -5999,67 +5986,62 @@ aw.TextColor3 = m.Dark(o.Text, 0.43)
                 d:UpdateTextGUI()
             end
             local desiredState = N.Enabled
-N._ToggleSerial = (N._ToggleSerial or 0) + 1
-local toggleSerial = N._ToggleSerial
+            N._ToggleSerial = (N._ToggleSerial or 0) + 1
+            local toggleSerial = N._ToggleSerial
 
-local callbackThread = coroutine.create(function()
-	local trace = debug and debug.traceback or function(err)
-		return tostring(err)
-	end
+            local callbackThread = coroutine.create(function()
+                local trace = debug and debug.traceback
+                    or function(err)
+                        return tostring(err)
+                    end
 
-	local callbackOk, callbackError = xpcall(function()
-		an.Function(desiredState)
-	end, trace)
+                local callbackOk, callbackError = xpcall(function()
+                    an.Function(desiredState)
+                end, trace)
 
-	if not callbackOk then
-		a:report({
-			type = "module-toggle-callback",
-			err = callbackError,
-			args = { tostring(an.Name), desiredState },
-		})
+                if not callbackOk then
+                    a:report({
+                        type = "module-toggle-callback",
+                        err = callbackError,
+                        args = { tostring(an.Name), desiredState },
+                    })
 
-		if desiredState then
-			pcall(function()
-				d:CreateNotification(
-					"Module Error",
-					tostring(an.Name) .. " failed to enable. Check the console.",
-					5,
-					"alert"
-				)
-			end)
+                    if desiredState then
+                        pcall(function()
+                            d:CreateNotification(
+                                "Module Error",
+                                tostring(an.Name) .. " failed to enable. Check the console.",
+                                5,
+                                "alert"
+                            )
+                        end)
 
-			-- Do not leave a failed module visually enabled.
-			task.defer(function()
-				if
-					N.Enabled == desiredState
-					and N._ToggleSerial == toggleSerial
-				then
-					N:Toggle(true)
-				end
-			end)
-		end
-	end
-end)
+                        -- Do not leave a failed module visually enabled.
+                        task.defer(function()
+                            if N.Enabled == desiredState and N._ToggleSerial == toggleSerial then
+                                N:Toggle(true)
+                            end
+                        end)
+                    end
+                end
+            end)
 
-local started, startError = coroutine.resume(callbackThread)
-if not started then
-	a:report({
-		type = "module-toggle-start",
-		err = startError,
-		args = { tostring(an.Name), desiredState },
-	})
+            local started, startError = coroutine.resume(callbackThread)
+            if not started then
+                a:report({
+                    type = "module-toggle-start",
+                    err = startError,
+                    args = { tostring(an.Name), desiredState },
+                })
 
-	if desiredState then
-		task.defer(function()
-			if
-				N.Enabled == desiredState
-				and N._ToggleSerial == toggleSerial
-			then
-				N:Toggle(true)
-			end
-		end)
-	end
-end
+                if desiredState then
+                    task.defer(function()
+                        if N.Enabled == desiredState and N._ToggleSerial == toggleSerial then
+                            N:Toggle(true)
+                        end
+                    end)
+                end
+            end
         end
 
         for N, O in H do
@@ -6098,57 +6080,65 @@ end
             ao:ToggleStar()
         end)
         if not d.isMobile then
-	aC.MouseEnter:Connect(function()
-		n:Tween(aC, o.TweenFast, {
-			BackgroundTransparency = 0.35,
-		})
-		I.ImageColor3 = o.Text
-	end)
+            aC.MouseEnter:Connect(function()
+                n:Tween(aC, o.TweenFast, {
+                    BackgroundTransparency = 0.35,
+                })
+                I.ImageColor3 = o.Text
+            end)
 
-	aC.MouseLeave:Connect(function()
-		n:Tween(aC, o.TweenFast, {
-			BackgroundTransparency = 1,
-		})
-		I.ImageColor3 = ao.Enabled and o.Text or m.Light(o.Main, 0.37)
-	end)
-end
+            aC.MouseLeave:Connect(function()
+                n:Tween(aC, o.TweenFast, {
+                    BackgroundTransparency = 1,
+                })
+                I.ImageColor3 = ao.Enabled and o.Text or m.Light(o.Main, 0.37)
+            end)
+        end
         aC.Activated:Connect(function()
-            if optionsOpen then closeOptions() else openOptions() end
+            if optionsOpen then
+                closeOptions()
+            else
+                openOptions()
+            end
         end)
         aC.MouseButton2Click:Connect(function()
-            if optionsOpen then closeOptions() else openOptions() end
+            if optionsOpen then
+                closeOptions()
+            else
+                openOptions()
+            end
         end)
 
         if not d.isMobile then
-	ar.MouseEnter:Connect(function()
-		aq = true
+            ar.MouseEnter:Connect(function()
+                aq = true
 
-		if not ao.Enabled and not optionsOpen then
-			ar.TextColor3 = o.Text
-			n:Tween(ar, o.TweenFast, {
-				BackgroundColor3 = o.SurfaceHover,
-			})
-		end
+                if not ao.Enabled and not optionsOpen then
+                    ar.TextColor3 = o.Text
+                    n:Tween(ar, o.TweenFast, {
+                        BackgroundColor3 = o.SurfaceHover,
+                    })
+                end
 
-		au.Visible = #ao.Bind > 0 or aq or optionsOpen
-		az.Visible = ao.StarActive or aq or optionsOpen
-	end)
+                au.Visible = #ao.Bind > 0 or aq or optionsOpen
+                az.Visible = ao.StarActive or aq or optionsOpen
+            end)
 
-	ar.MouseLeave:Connect(function()
-		aq = false
+            ar.MouseLeave:Connect(function()
+                aq = false
 
-		if not ao.Enabled and not optionsOpen then
-			ar.TextColor3 = o.MutedText
-			n:Tween(ar, o.TweenFast, {
-				BackgroundColor3 = o.Surface,
-			})
-		end
+                if not ao.Enabled and not optionsOpen then
+                    ar.TextColor3 = o.MutedText
+                    n:Tween(ar, o.TweenFast, {
+                        BackgroundColor3 = o.Surface,
+                    })
+                end
 
-		au.Visible = #ao.Bind > 0 or aq or optionsOpen
-		az.Visible = ao.StarActive or aq or optionsOpen
-	end)
-end
-at:GetPropertyChangedSignal("Visible"):Connect(function()
+                au.Visible = #ao.Bind > 0 or aq or optionsOpen
+                az.Visible = ao.StarActive or aq or optionsOpen
+            end)
+        end
+        at:GetPropertyChangedSignal("Visible"):Connect(function()
             local N = at.Visible
             if N then
                 if count(ao.Options) <= 0 then
@@ -6185,7 +6175,11 @@ at:GetPropertyChangedSignal("Visible"):Connect(function()
             ao:Toggle()
         end)
         ar.MouseButton2Click:Connect(function()
-            if optionsOpen then closeOptions() else openOptions() end
+            if optionsOpen then
+                closeOptions()
+            else
+                openOptions()
+            end
         end)
         if d.isMobile then
             local N = false
@@ -13611,49 +13605,45 @@ function d.UpdateGUI(I, J, K, L, M)
     end
 
     for O, P in d.Modules do
-	local rail = P.Object:FindFirstChild("ActiveRail")
+        local rail = P.Object:FindFirstChild("ActiveRail")
 
-	if not rail then
-		rail = Instance.new("Frame")
-		rail.Name = "ActiveRail"
-		rail.Size = UDim2.new(0, 3, 1, 0)
-		rail.Position = UDim2.fromOffset(0, 0)
-		rail.BorderSizePixel = 0
-		rail.ZIndex = P.Object.ZIndex + 1
-		rail.Parent = P.Object
-	end
+        if not rail then
+            rail = Instance.new("Frame")
+            rail.Name = "ActiveRail"
+            rail.Size = UDim2.new(0, 3, 1, 0)
+            rail.Position = UDim2.fromOffset(0, 0)
+            rail.BorderSizePixel = 0
+            rail.ZIndex = P.Object.ZIndex + 1
+            rail.Parent = P.Object
+        end
 
-	local gradient = P.Object:FindFirstChildOfClass("UIGradient")
-	if gradient then
-		gradient.Enabled = false
-	end
+        local gradient = P.Object:FindFirstChildOfClass("UIGradient")
+        if gradient then
+            gradient.Enabled = false
+        end
 
-	if P.Enabled then
-		local accent = N
-			and Color3.fromHSV(
-				d:Color((J - (P.Index * 0.025)) % 1)
-			)
-			or Color3.fromHSV(J, K, L)
+        if P.Enabled then
+            local accent = N and Color3.fromHSV(d:Color((J - (P.Index * 0.025)) % 1)) or Color3.fromHSV(J, K, L)
 
-		rail.BackgroundColor3 = accent
-		rail.Visible = true
+            rail.BackgroundColor3 = accent
+            rail.Visible = true
 
-		P.Object.BackgroundColor3 = o.Elevated
-		P.Object.TextColor3 = o.Text
-		P.Object.Bind.Icon.ImageColor3 = o.Text
-		P.Object.Bind.TextLabel.TextColor3 = o.Text
-		P.Object.Dots.Dots.ImageColor3 = o.Text
-	else
-		rail.Visible = false
-	end
+            P.Object.BackgroundColor3 = o.Elevated
+            P.Object.TextColor3 = o.Text
+            P.Object.Bind.Icon.ImageColor3 = o.Text
+            P.Object.Bind.TextLabel.TextColor3 = o.Text
+            P.Object.Dots.Dots.ImageColor3 = o.Text
+        else
+            rail.Visible = false
+        end
 
-	for Q, R in P.Options do
-		if R.Color then
-			R:Color(J, K, L, N)
-		end
-	end
-end
-for O, P in d.Overlays.Toggles do
+        for Q, R in P.Options do
+            if R.Color then
+                R:Color(J, K, L, N)
+            end
+        end
+    end
+    for O, P in d.Overlays.Toggles do
         if P.Enabled then
             n:Cancel(P.Object.Knob)
             P.Object.Knob.BackgroundColor3 = N and Color3.fromHSV(d:Color((J - (O * 0.075)) % 1))
@@ -13817,5 +13807,583 @@ end)
 if d.Blur then
     d.Blur.Default = false
 end
+
+-- Visual Revamp 5.0
+-- This layer deliberately styles existing controls without replacing their APIs,
+-- callbacks, profile data, or module ownership.
+local function installVisualRevamp()
+    if d._VisualRevampInstalled then
+        return
+    end
+    d._VisualRevampInstalled = true
+    d.VisualRevampVersion = "5.0"
+
+    local styledObjects = setmetatable({}, { __mode = "k" })
+    local styledModules = setmetatable({}, { __mode = "k" })
+    local accentBindings = setmetatable({}, { __mode = "k" })
+
+    local function accentColor()
+        return Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+    end
+
+    local function mixColor(left, right, alpha)
+        alpha = math.clamp(tonumber(alpha) or 0.5, 0, 1)
+        return Color3.new(
+            left.R + (right.R - left.R) * alpha,
+            left.G + (right.G - left.G) * alpha,
+            left.B + (right.B - left.B) * alpha
+        )
+    end
+
+    local function ensureCorner(object, radius, name)
+        if not object or not object.Parent then
+            return nil
+        end
+        local corner = object:FindFirstChild(name or "RevampCorner")
+        if not corner or not corner:IsA("UICorner") then
+            corner = Instance.new("UICorner")
+            corner.Name = name or "RevampCorner"
+            corner.Parent = object
+        end
+        corner.CornerRadius = radius or o.Radius
+        return corner
+    end
+
+    local function ensureStroke(object, name, color, transparency, thickness)
+        if not object or not object.Parent then
+            return nil
+        end
+        local stroke = object:FindFirstChild(name or "RevampStroke")
+        if not stroke or not stroke:IsA("UIStroke") then
+            stroke = Instance.new("UIStroke")
+            stroke.Name = name or "RevampStroke"
+            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            stroke.LineJoinMode = Enum.LineJoinMode.Round
+            stroke.Parent = object
+        end
+        stroke.Color = color or o.Border
+        stroke.Transparency = transparency == nil and 0.45 or transparency
+        stroke.Thickness = thickness or 1
+        return stroke
+    end
+
+    local function ensureScale(object, name)
+        local scale = object:FindFirstChild(name or "RevampScale")
+        if not scale or not scale:IsA("UIScale") then
+            scale = Instance.new("UIScale")
+            scale.Name = name or "RevampScale"
+            scale.Scale = 1
+            scale.Parent = object
+        end
+        return scale
+    end
+
+    local function bindAccent(object, property, blendBase, blendAmount)
+        if not object then
+            return
+        end
+        accentBindings[object] = {
+            Property = property,
+            Base = blendBase,
+            Amount = blendAmount,
+        }
+    end
+
+    local function refreshAccent(hue, saturation, value)
+        local accent = Color3.fromHSV(hue, saturation, value)
+        for object, binding in pairs(accentBindings) do
+            if not object.Parent then
+                accentBindings[object] = nil
+            else
+                local color = binding.Base and mixColor(binding.Base, accent, binding.Amount or 0.5) or accent
+                pcall(function()
+                    object[binding.Property] = color
+                end)
+            end
+        end
+    end
+
+    local function bindCompactButton(button)
+        if not button or not button:IsA("GuiButton") or button:GetAttribute("RevampCompactBound") then
+            return
+        end
+        button:SetAttribute("RevampCompactBound", true)
+        local scale = ensureScale(button, "RevampPressScale")
+
+        d:Clean(button.MouseEnter:Connect(function()
+            if button.Parent and button.Visible then
+                n:Tween(scale, o.TweenFast, { Scale = 1.045 })
+            end
+        end))
+        d:Clean(button.MouseLeave:Connect(function()
+            if button.Parent then
+                n:Tween(scale, o.TweenFast, { Scale = 1 })
+            end
+        end))
+        d:Clean(button.MouseButton1Down:Connect(function()
+            if button.Parent then
+                n:Tween(scale, TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                    Scale = 0.92,
+                })
+            end
+        end))
+        d:Clean(button.MouseButton1Up:Connect(function()
+            if button.Parent then
+                n:Tween(scale, o.TweenSpring, { Scale = 1.045 })
+            end
+        end))
+    end
+
+    local function styleTextBox(textBox)
+        if not textBox or not textBox:IsA("TextBox") or textBox:GetAttribute("RevampTextBox") then
+            return
+        end
+        textBox:SetAttribute("RevampTextBox", true)
+        textBox.TextColor3 = o.Text
+        textBox.PlaceholderColor3 = o.SubtleText
+        if textBox.BackgroundTransparency < 1 then
+            textBox.BackgroundColor3 = o.Input
+            ensureCorner(textBox, o.RadiusSmall)
+            local stroke = ensureStroke(textBox, "RevampInputStroke", o.Border, 0.5, 1)
+            d:Clean(textBox.Focused:Connect(function()
+                n:Tween(textBox, o.TweenFast, { BackgroundColor3 = o.InputHover })
+                n:Tween(stroke, o.TweenFast, {
+                    Color = accentColor(),
+                    Transparency = 0.08,
+                    Thickness = 1.2,
+                })
+            end))
+            d:Clean(textBox.FocusLost:Connect(function()
+                n:Tween(textBox, o.TweenFast, { BackgroundColor3 = o.Input })
+                n:Tween(stroke, o.TweenFast, {
+                    Color = o.Border,
+                    Transparency = 0.5,
+                    Thickness = 1,
+                })
+            end))
+        end
+    end
+
+    local function styleWindow(window)
+        if not window or not window:IsA("GuiObject") or window:GetAttribute("RevampWindow") then
+            return
+        end
+        window:SetAttribute("RevampWindow", true)
+        window.BackgroundColor3 = o.Main
+        window.BorderSizePixel = 0
+        if window:IsA("ImageLabel") or window:IsA("ImageButton") then
+            window.ImageColor3 = o.Surface
+            window.ImageTransparency = math.min(window.ImageTransparency, 0.08)
+        end
+        ensureCorner(window, o.RadiusLarge, "RevampWindowCorner")
+        local stroke = ensureStroke(window, "RevampWindowStroke", o.BorderStrong, 0.34, 1)
+        bindAccent(stroke, "Color", o.BorderStrong, 0.28)
+
+        local gradient = window:FindFirstChild("SurfaceGradient") or window:FindFirstChild("RevampWindowGradient")
+        if not gradient then
+            gradient = Instance.new("UIGradient")
+            gradient.Name = "RevampWindowGradient"
+            gradient.Parent = window
+        end
+        gradient.Rotation = 105
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, o.Elevated),
+            ColorSequenceKeypoint.new(0.42, o.Surface),
+            ColorSequenceKeypoint.new(1, o.Main),
+        })
+        gradient.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.05),
+            NumberSequenceKeypoint.new(1, 0.16),
+        })
+
+        local accentLine = window:FindFirstChild("RevampAccentLine")
+        if not accentLine then
+            accentLine = Instance.new("Frame")
+            accentLine.Name = "RevampAccentLine"
+            accentLine.Size = UDim2.new(1, -18, 0, 2)
+            accentLine.Position = UDim2.fromOffset(9, 0)
+            accentLine.BackgroundTransparency = 0.08
+            accentLine.BorderSizePixel = 0
+            accentLine.ZIndex = window.ZIndex + 8
+            accentLine.Active = false
+            accentLine.Parent = window
+            ensureCorner(accentLine, UDim.new(1, 0), "RevampAccentCorner")
+        end
+        bindAccent(accentLine, "BackgroundColor3")
+
+        local shadow = window:FindFirstChild("Blur")
+        if shadow and shadow:IsA("ImageLabel") then
+            shadow.ImageColor3 = o.Shadow
+            shadow.ImageTransparency = 0.43
+        end
+
+        local title = window:FindFirstChild("Title", true)
+        if title and title:IsA("TextLabel") then
+            title.TextColor3 = o.Text
+            title.FontFace = o.FontSemiBold
+        end
+        local icon = window:FindFirstChild("Icon", true)
+        if icon and icon:IsA("ImageLabel") then
+            icon.ImageColor3 = o.MutedText
+        end
+        local children = window:FindFirstChild("Children")
+        if children and children:IsA("ScrollingFrame") then
+            children.ScrollBarImageColor3 = accentColor()
+            children.ScrollBarImageTransparency = 0.42
+            children.ScrollBarThickness = d.isMobile and 7 or 3
+            bindAccent(children, "ScrollBarImageColor3")
+        end
+
+        local existingScale = window:FindFirstChildOfClass("UIScale")
+        local scale = existingScale or ensureScale(window, "RevampWindowScale")
+        d:Clean(window:GetPropertyChangedSignal("Visible"):Connect(function()
+            if window.Visible then
+                if not existingScale then
+                    scale.Scale = 0.972
+                    n:Tween(scale, o.TweenSpring, { Scale = 1 })
+                end
+                n:Tween(stroke, o.TweenSlow, { Transparency = 0.24 })
+            end
+        end))
+    end
+
+    local function styleModule(module)
+        if type(module) ~= "table" or not module.Object or not module.Object.Parent then
+            return
+        end
+        local row = module.Object
+        if styledModules[module] then
+            return
+        end
+        styledModules[module] = true
+        row:SetAttribute("RevampModule", true)
+        row.BackgroundColor3 = module.Enabled and o.Elevated or o.Card
+        row.TextColor3 = module.Enabled and o.Text or o.MutedText
+        row.FontFace = o.Font
+        row.ClipsDescendants = true
+        ensureCorner(row, o.RadiusSmall, "RevampModuleCorner")
+
+        local rail = row:FindFirstChild("ActiveRail")
+        if rail then
+            rail.Size = UDim2.new(0, 3, 1, -10)
+            rail.Position = UDim2.fromOffset(0, 5)
+            rail.BackgroundColor3 = accentColor()
+            ensureCorner(rail, UDim.new(1, 0), "RevampRailCorner")
+            bindAccent(rail, "BackgroundColor3")
+        end
+
+        local divider = row:FindFirstChild("Divider")
+        if divider and divider:IsA("Frame") then
+            divider.BackgroundColor3 = o.Border
+            divider.BackgroundTransparency = 0.82
+            divider.Visible = true
+        end
+
+        local children = module.Children
+        if children and children:IsA("Frame") then
+            children.BackgroundColor3 = o.Panel
+        end
+
+        for _, buttonName in { "Dots", "Bind", "Star" } do
+            local button = row:FindFirstChild(buttonName)
+            if button and button:IsA("GuiButton") then
+                button.BackgroundColor3 = o.Elevated
+                button.BackgroundTransparency = 1
+                ensureCorner(button, o.RadiusSmall, "RevampActionCorner")
+                bindCompactButton(button)
+            end
+        end
+
+        local function refresh()
+            if not row.Parent then
+                return
+            end
+            local enabled = module.Enabled == true
+            local target = enabled and o.Elevated or o.Card
+            n:Tween(row, o.Tween, { BackgroundColor3 = target })
+            row.TextColor3 = enabled and o.Text or o.MutedText
+            if rail then
+                rail.Visible = enabled
+            end
+        end
+
+        if module.Toggled and module.Toggled.Event then
+            d:Clean(module.Toggled.Event:Connect(function()
+                task.defer(refresh)
+            end))
+        end
+
+        d:Clean(row.MouseEnter:Connect(function()
+            if not module.Enabled then
+                n:Tween(row, o.TweenFast, { BackgroundColor3 = o.CardHover })
+                row.TextColor3 = o.Text
+            end
+        end))
+        d:Clean(row.MouseLeave:Connect(refresh))
+        refresh()
+    end
+
+    local function styleOption(option)
+        if type(option) ~= "table" or not option.Object or not option.Object.Parent then
+            return
+        end
+        local root = option.Object
+        if root:GetAttribute("RevampOption") then
+            return
+        end
+        root:SetAttribute("RevampOption", true)
+        root.BorderSizePixel = 0
+
+        if option.Type == "Toggle" then
+            root.BackgroundColor3 = o.Surface
+            root.TextColor3 = o.MutedText
+            local track = root:FindFirstChild("Knob")
+            if track and track:IsA("Frame") then
+                track.Size = UDim2.fromOffset(26, 14)
+                track.Position = UDim2.new(1, -36, 0, 8)
+                track.BackgroundColor3 = option.Enabled and accentColor() or o.InputHover
+                ensureCorner(track, UDim.new(1, 0), "RevampToggleTrackCorner")
+                ensureStroke(track, "RevampToggleTrackStroke", o.Border, 0.5, 1)
+                local knob = track:FindFirstChild("Knob")
+                if knob and knob:IsA("Frame") then
+                    knob.Size = UDim2.fromOffset(10, 10)
+                    knob.BackgroundColor3 = o.Text
+                    ensureCorner(knob, UDim.new(1, 0), "RevampToggleKnobCorner")
+                    ensureStroke(knob, "RevampToggleKnobStroke", o.Shadow, 0.7, 1)
+                end
+            end
+        elseif option.Type == "Dropdown" then
+            root.BackgroundColor3 = o.Surface
+            local background = root:FindFirstChild("BKG")
+            if background and background:IsA("Frame") then
+                background.BackgroundColor3 = o.Input
+                ensureCorner(background, o.RadiusSmall, "RevampDropdownCorner")
+                ensureStroke(background, "RevampDropdownStroke", o.Border, 0.48, 1)
+            end
+            local title = root:FindFirstChild("Title", true)
+            if title and title:IsA("TextLabel") then
+                title.TextColor3 = o.Text
+                title.FontFace = o.Font
+            end
+        elseif option.Type == "Slider" or option.Type == "TwoSlider" then
+            root.BackgroundColor3 = o.Surface
+            local track = root:FindFirstChild("Slider")
+            if track and track:IsA("Frame") then
+                track.BackgroundColor3 = o.InputHover
+                ensureCorner(track, UDim.new(1, 0), "RevampSliderCorner")
+                local fill = track:FindFirstChild("Fill")
+                if fill and fill:IsA("Frame") then
+                    ensureCorner(fill, UDim.new(1, 0), "RevampSliderFillCorner")
+                    bindAccent(fill, "BackgroundColor3")
+                    local knob = fill:FindFirstChild("Knob", true)
+                    if knob and knob:IsA("Frame") then
+                        ensureStroke(knob, "RevampSliderKnobStroke", o.Text, 0.18, 1)
+                    end
+                end
+            end
+        elseif option.Type == "TextBox" then
+            root.BackgroundColor3 = o.Surface
+            local background = root:FindFirstChild("BKG")
+            if background and background:IsA("Frame") then
+                background.BackgroundColor3 = o.Input
+                ensureCorner(background, o.RadiusSmall, "RevampTextBoxCorner")
+                ensureStroke(background, "RevampTextBoxStroke", o.Border, 0.5, 1)
+            end
+        elseif option.Type == "ColorSlider" then
+            root.BackgroundColor3 = o.Surface
+        else
+            local background = root:FindFirstChild("BKG")
+            if background and background:IsA("Frame") then
+                background.BackgroundColor3 = o.Input
+                ensureCorner(background, o.RadiusSmall, "RevampControlCorner")
+                ensureStroke(background, "RevampControlStroke", o.Border, 0.55, 1)
+            end
+        end
+
+        for _, descendant in root:GetDescendants() do
+            if descendant:IsA("TextBox") then
+                styleTextBox(descendant)
+            elseif descendant:IsA("TextLabel") and descendant.Name ~= "Text" then
+                if descendant.TextColor3 ~= Color3.new() then
+                    descendant.TextColor3 = descendant.Name == "Title" and o.Text or o.MutedText
+                end
+            elseif descendant:IsA("ScrollingFrame") then
+                descendant.ScrollBarImageColor3 = accentColor()
+                descendant.ScrollBarImageTransparency = 0.45
+                bindAccent(descendant, "ScrollBarImageColor3")
+            end
+        end
+    end
+
+    local function styleCategory(category)
+        if type(category) ~= "table" or not category.Object then
+            return
+        end
+        styleWindow(category.Object)
+        if category.Options then
+            for _, option in category.Options do
+                styleOption(option)
+            end
+        end
+        if category.Buttons then
+            for _, button in category.Buttons do
+                if button.Object and button.Object:IsA("GuiButton") then
+                    button.Object.TextColor3 = button.Enabled and accentColor() or o.MutedText
+                end
+            end
+        end
+    end
+
+    local function styleNotification(notification)
+        if not notification or not notification:IsA("GuiObject") or notification:GetAttribute("RevampNotification") then
+            return
+        end
+        notification:SetAttribute("RevampNotification", true)
+        ensureCorner(notification, o.RadiusLarge, "RevampNotificationCorner")
+        local stroke = ensureStroke(notification, "RevampNotificationStroke", o.BorderStrong, 0.28, 1)
+        bindAccent(stroke, "Color", o.BorderStrong, 0.24)
+        if notification:IsA("ImageLabel") or notification:IsA("ImageButton") then
+            notification.ImageColor3 = o.Surface
+            notification.ImageTransparency = 0.04
+        else
+            notification.BackgroundColor3 = o.Surface
+        end
+        local title = notification:FindFirstChild("Title", true)
+        if title and title:IsA("TextLabel") then
+            title.TextColor3 = o.Text
+            title.FontFace = o.FontSemiBold
+        end
+        local body = notification:FindFirstChild("Text", true)
+        if body and body:IsA("TextLabel") then
+            body.TextColor3 = o.MutedText
+            body.FontFace = o.Font
+        end
+        local progress = notification:FindFirstChild("Progress", true)
+        if progress and progress:IsA("Frame") then
+            ensureCorner(progress, UDim.new(1, 0), "RevampProgressCorner")
+        end
+        local scale = ensureScale(notification, "RevampNotificationScale")
+        scale.Scale = 0.96
+        task.defer(function()
+            if notification.Parent then
+                n:Tween(scale, o.TweenSpring, { Scale = 1 })
+            end
+        end)
+    end
+
+    local function styleGeneric(object)
+        if not object or styledObjects[object] then
+            return
+        end
+        styledObjects[object] = true
+
+        if object:IsA("TextBox") then
+            styleTextBox(object)
+        elseif object:IsA("ScrollingFrame") then
+            object.ScrollBarImageColor3 = accentColor()
+            object.ScrollBarImageTransparency = 0.45
+            bindAccent(object, "ScrollBarImageColor3")
+        elseif object:IsA("ImageLabel") and object.Name == "Blur" then
+            object.ImageColor3 = o.Shadow
+            object.ImageTransparency = 0.43
+        elseif object:IsA("TextLabel") and object.Name == "Tooltip" then
+            object.BackgroundColor3 = o.Elevated
+            object.TextColor3 = o.Text
+            object.FontFace = o.Font
+            ensureCorner(object, o.RadiusSmall, "RevampTooltipCorner")
+            ensureStroke(object, "RevampTooltipStroke", o.BorderStrong, 0.24, 1)
+        elseif object:IsA("GuiButton") then
+            local compact = object.AbsoluteSize.X <= 64
+                or object.Name == "Close"
+                or object.Name == "Dots"
+                or object.Name == "Bind"
+                or object.Name == "Star"
+                or object.Name == "Arrow"
+                or object.Name == "Add"
+            if compact then
+                bindCompactButton(object)
+            end
+        end
+
+        if object.Name == "Prompt" and object:IsA("GuiObject") then
+            styleWindow(object)
+        end
+    end
+
+    local function styleAll()
+        for _, category in d.Categories do
+            styleCategory(category)
+        end
+        for _, module in d.Modules do
+            styleModule(module)
+            for _, option in module.Options or {} do
+                styleOption(option)
+            end
+        end
+        for _, overlay in d.Overlays or {} do
+            if type(overlay) == "table" then
+                if overlay.Window then
+                    styleWindow(overlay.Window)
+                end
+                if overlay.Children and overlay.Children:IsA("GuiObject") then
+                    styleWindow(overlay.Children)
+                end
+                for _, option in overlay.Options or {} do
+                    styleOption(option)
+                end
+            end
+        end
+        if d.Legit then
+            if d.Legit.Window then
+                styleWindow(d.Legit.Window)
+            end
+            for _, module in d.Legit.Modules or {} do
+                if module.Object then
+                    module.Object.BackgroundColor3 = o.Card
+                    ensureCorner(module.Object, o.RadiusSmall, "RevampLegitCorner")
+                end
+                for _, option in module.Options or {} do
+                    styleOption(option)
+                end
+            end
+        end
+        for _, window in d.Windows or {} do
+            styleWindow(window)
+        end
+        if d.gui then
+            for _, object in d.gui:GetDescendants() do
+                styleGeneric(object)
+            end
+        end
+        if q then
+            for _, notification in q:GetChildren() do
+                styleNotification(notification)
+            end
+        end
+        refreshAccent(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+    end
+
+    if d.gui then
+        d:Clean(d.gui.DescendantAdded:Connect(function(object)
+            task.defer(styleGeneric, object)
+        end))
+    end
+    if q then
+        d:Clean(q.ChildAdded:Connect(function(notification)
+            task.defer(styleNotification, notification)
+        end))
+    end
+    d:Clean(d.GUIColorChanged.Event:Connect(refreshAccent))
+    d:connectOnLoad(function()
+        task.defer(styleAll)
+    end)
+    d:Clean(d.ProfileChangedEvent.Event:Connect(function()
+        task.defer(styleAll)
+    end))
+
+    styleAll()
+end
+
+installVisualRevamp()
 
 return d

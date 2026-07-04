@@ -6,7 +6,7 @@ Parkour = Bad.Categories.World:CreateModule({
 		if callback then 
 			local oldfloor
 			Parkour:Clean(runService.RenderStepped:Connect(function()
-				if entitylib.isAlive then 
+				if entitylib.isAlive and entitylib.character and entitylib.character.Humanoid then 
 					local material = entitylib.character.Humanoid.FloorMaterial
 					if material == Enum.Material.Air and oldfloor ~= Enum.Material.Air then 
 						entitylib.character.Humanoid.Jump = true

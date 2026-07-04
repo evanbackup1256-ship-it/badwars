@@ -19,12 +19,12 @@ Gravity = Bad.Categories.World:CreateModule({
 				end))
 			else
 				Gravity:Clean(runService.PreSimulation:Connect(function(dt)
-					if entitylib.isAlive and entitylib.character.Humanoid.FloorMaterial == Enum.Material.Air then
+					if entitylib.isAlive and entitylib.character and entitylib.character.Humanoid and entitylib.character.RootPart and entitylib.character.Humanoid.FloorMaterial == Enum.Material.Air then
 						local root = entitylib.character.RootPart
-						if Mode.Value == 'Impulse' then
-							root:ApplyImpulse(Vector3.new(0, dt * (workspace.Gravity - Value.Value), 0) * root.AssemblyMass)
+						if Mode and Mode.Value == 'Impulse' then
+							root:ApplyImpulse(Vector3.new(0, dt * (workspace.Gravity - (Value and Value.Value or 0)), 0) * root.AssemblyMass)
 						else
-							root.AssemblyLinearVelocity += Vector3.new(0, dt * (workspace.Gravity - Value.Value), 0)
+							root.AssemblyLinearVelocity += Vector3.new(0, dt * (workspace.Gravity - (Value and Value.Value or 0)), 0)
 						end
 					end
 				end))

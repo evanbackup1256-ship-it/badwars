@@ -1,9 +1,17 @@
 local NoFall
 local Mode
 local rayParams = RaycastParams.new()
-local groundHit
+local groundHit = {FireServer = function() end}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local lplr = game:GetService('Players').LocalPlayer
+local runService = game:GetService('RunService')
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 task.spawn(function()
-	groundHit = bedwars.Client:Get(remotes.GroundHit).instance
+	pcall(function()
+		if bedwars.Client and remotes and remotes.GroundHit then
+			groundHit = bedwars.Client:Get(remotes.GroundHit).instance
+		end
+	end)
 end)
 
 NoFall = Bad.Categories.Blatant:CreateModule({
@@ -11,16 +19,16 @@ NoFall = Bad.Categories.Blatant:CreateModule({
 	Function = function(callback)
 		if callback then
 			local tracked = 0
-			if Mode.Value == 'Gravity' then
+			if Mode and Mode.Value == 'Gravity' then
 				local extraGravity = 0
 				NoFall:Clean(runService.PreSimulation:Connect(function(dt)
-					if entitylib.isAlive then
+					if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 						local root = entitylib.character.RootPart
 						if root.AssemblyLinearVelocity.Y < -85 then
-							rayParams.FilterDescendantsInstances = {lplr.Character, gameCamera}
+							rayParams.FilterDescendantsInstances = {lplr.Character, game:GetService('Workspace').CurrentCamera}
 							rayParams.CollisionGroup = root.CollisionGroup
 
-							local rootSize = root.Size.Y / 2 + entitylib.character.HipHeight
+							local rootSize = root.Size.Y / 2 + (entitylib.character.HipHeight or 2)
 							local ray = workspace:Blockcast(root.CFrame, Vector3.new(3, 3, 3), Vector3.new(0, (tracked * 0.1) - rootSize, 0), rayParams)
 							if not ray then
 								root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, -86, root.AssemblyLinearVelocity.Z)
@@ -34,19 +42,19 @@ NoFall = Bad.Categories.Blatant:CreateModule({
 				end))
 			else
 				repeat
-					if entitylib.isAlive then
+					if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.Humanoid then
 						local root = entitylib.character.RootPart
 						tracked = entitylib.character.Humanoid.FloorMaterial == Enum.Material.Air and math.min(tracked, root.AssemblyLinearVelocity.Y) or 0
 
 						if tracked < -85 then
-							if Mode.Value == 'Packet' then
-								groundHit:FireServer(nil, Vector3.new(0, tracked, 0), workspace:GetServerTimeNow())
+							if Mode and Mode.Value == 'Packet' then
+								pcall(function() groundHit:FireServer(nil, Vector3.new(0, tracked, 0), workspace:GetServerTimeNow()) end)
 							else
-								rayParams.FilterDescendantsInstances = {lplr.Character, gameCamera}
+								rayParams.FilterDescendantsInstances = {lplr.Character, game:GetService('Workspace').CurrentCamera}
 								rayParams.CollisionGroup = root.CollisionGroup
 
-								local rootSize = root.Size.Y / 2 + entitylib.character.HipHeight
-								if Mode.Value == 'Teleport' then
+								local rootSize = root.Size.Y / 2 + (entitylib.character.HipHeight or 2)
+								if Mode and Mode.Value == 'Teleport' then
 									local ray = workspace:Blockcast(root.CFrame, Vector3.new(3, 3, 3), Vector3.new(0, -1000, 0), rayParams)
 									if ray then
 										root.CFrame -= Vector3.new(0, root.Position.Y - (ray.Position.Y + rootSize), 0)
@@ -63,7 +71,7 @@ NoFall = Bad.Categories.Blatant:CreateModule({
 					end
 
 					task.wait(0.03)
-				until not NoFall.Enabled
+				until not NoFall or not NoFall.Enabled
 			end
 		end
 	end,

@@ -26,31 +26,44 @@ run(function()
 	local Limit
 	local LegitAura
 	local Particles, Boxes = {}, {}
-	local anims, AnimDelay, AnimTween, armC0 = Bad.Libraries.auraanims, tick()
+	local anims, AnimDelay, AnimTween, armC0 = (Bad.Libraries and Bad.Libraries.auraanims) or {}, tick()
 	local AttackRemote = {FireServer = function() end}
+	local store = (shared.Bad and shared.Bad.store) or {}
+	local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+	local lplr = game:GetService('Players').LocalPlayer
+	local inputService = game:GetService('UserInputService')
+	local tweenService = game:GetService('TweenService')
+	local gameCamera = workspace.CurrentCamera
+	local targetinfo = (shared.Bad and shared.Bad.targetinfo) or {Targets = {}}
+	local sortmethods = (shared.Bad and shared.Bad.sortmethods) or {}
+	local oldSwing
 	task.spawn(function()
-		AttackRemote = bedwars.Client:Get(remotes.AttackEntity).instance
+		if bedwars.Client and remotes and remotes.AttackEntity then
+			pcall(function()
+				AttackRemote = bedwars.Client:Get(remotes.AttackEntity).instance
+			end)
+		end
 	end)
 
 	local function getAttackData()
-		if Mouse.Enabled then
+		if Mouse and Mouse.Enabled then
 			if not inputService:IsMouseButtonPressed(0) then return false end
 		end
 
-		if GUI.Enabled then
-			if bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then return false end
+		if GUI and GUI.Enabled then
+			if bedwars.AppController and bedwars.UILayers and bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then return false end
 		end
 
-		local sword = Limit.Enabled and store.hand or store.tools.sword
+		local sword = Limit and Limit.Enabled and store.hand or (store.tools and store.tools.sword)
 		if not sword or not sword.tool then return false end
 
-		local meta = bedwars.ItemMeta[sword.tool.Name]
-		if Limit.Enabled then
-			if store.hand.toolType ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
+		local meta = bedwars.ItemMeta and bedwars.ItemMeta[sword.tool.Name]
+		if Limit and Limit.Enabled then
+			if (store.hand and store.hand.toolType ~= 'sword') or (bedwars.DaoController and bedwars.DaoController.chargingMaid) then return false end
 		end
 
-		if LegitAura.Enabled then
-			if (tick() - bedwars.SwordController.lastSwing) > 0.2 then return false end
+		if LegitAura and LegitAura.Enabled then
+			if bedwars.SwordController and (tick() - (bedwars.SwordController.lastSwing or 0)) > 0.2 then return false end
 		end
 
 		return sword, meta
@@ -62,11 +75,13 @@ run(function()
 			if callback then
 				if inputService.TouchEnabled then
 					pcall(function()
-						lplr.PlayerGui.MobileUI['2'].Visible = Limit.Enabled
+						if lplr.PlayerGui and lplr.PlayerGui:FindFirstChild('MobileUI') then
+							lplr.PlayerGui.MobileUI['2'].Visible = Limit and Limit.Enabled
+						end
 					end)
 				end
 
-				if Animation.Enabled and not (identifyexecutor and table.find({'Argon', 'Delta'}, ({identifyexecutor()})[1])) then
+				if Animation and Animation.Enabled and not (identifyexecutor and table.find({'Argon', 'Delta'}, ({pcall(identifyexecutor)})[2] or '')) then
 					local fake = {
 						Controllers = {
 							ViewmodelController = {
@@ -74,151 +89,176 @@ run(function()
 									return not Attacking
 								end,
 								playAnimation = function(...)
-									if not Attacking then
-										bedwars.ViewmodelController:playAnimation(select(2, ...))
+									if not Attacking and bedwars.ViewmodelController then
+										pcall(function() bedwars.ViewmodelController:playAnimation(select(2, ...)) end)
 									end
 								end
 							}
 						}
 					}
-					debug.setupvalue(oldSwing or bedwars.SwordController.playSwordEffect, 6, fake)
-					debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, fake)
+					if oldSwing or (bedwars.SwordController and bedwars.SwordController.playSwordEffect) then
+						pcall(function() debug.setupvalue(oldSwing or bedwars.SwordController.playSwordEffect, 6, fake) end)
+					end
+					if bedwars.ScytheController and bedwars.ScytheController.playLocalAnimation then
+						pcall(function() debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, fake) end)
+					end
 
 					task.spawn(function()
 						local started = false
 						repeat
 							if Attacking then
-								if not armC0 then
-									armC0 = gameCamera.Viewmodel.RightHand.RightWrist.C0
+								if not armC0 and gameCamera and gameCamera.Viewmodel then
+									pcall(function()
+										armC0 = gameCamera.Viewmodel.RightHand.RightWrist.C0
+									end)
 								end
 								local first = not started
 								started = true
 
-								if AnimationMode.Value == 'Random' then
+								if AnimationMode and AnimationMode.Value == 'Random' then
 									anims.Random = {{CFrame = CFrame.Angles(math.rad(math.random(1, 360)), math.rad(math.random(1, 360)), math.rad(math.random(1, 360))), Time = 0.12}}
 								end
 
-								for _, v in anims[AnimationMode.Value] do
-									AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(first and (AnimationTween.Enabled and 0.001 or 0.1) or v.Time / AnimationSpeed.Value, Enum.EasingStyle.Linear), {
-										C0 = armC0 * v.CFrame
-									})
-									AnimTween:Play()
-									AnimTween.Completed:Wait()
+								for _, v in anims[AnimationMode and AnimationMode.Value or 'Default'] or {} do
+									if gameCamera and gameCamera.Viewmodel then
+										pcall(function()
+											AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(first and (AnimationTween and AnimationTween.Enabled and 0.001 or 0.1) or v.Time / (AnimationSpeed and AnimationSpeed.Value or 1), Enum.EasingStyle.Linear), {
+												C0 = armC0 * v.CFrame
+											})
+											AnimTween:Play()
+											AnimTween.Completed:Wait()
+										end)
+									end
 									first = false
 									if (not Killaura.Enabled) or (not Attacking) then break end
 								end
 							elseif started then
 								started = false
-								AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
-									C0 = armC0
-								})
-								AnimTween:Play()
+								if gameCamera and gameCamera.Viewmodel then
+									pcall(function()
+										AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween and AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+											C0 = armC0
+										})
+										AnimTween:Play()
+									end)
+								end
 							end
 
 							if not started then
-								task.wait(1 / UpdateRate.Value)
+								task.wait(1 / (UpdateRate and UpdateRate.Value or 60))
 							end
-						until (not Killaura.Enabled) or (not Animation.Enabled)
+						until (not Killaura.Enabled) or (not Animation or not Animation.Enabled)
 					end)
 				end
 
 				repeat
 					local attacked, sword, meta = {}, getAttackData()
 					Attacking = false
-					store.KillauraTarget = nil
+					if store then store.KillauraTarget = nil end
 					if sword then
 						local plrs = entitylib.AllPosition({
-							Range = SwingRange.Value,
-							Wallcheck = Targets.Walls.Enabled or nil,
+							Range = SwingRange and SwingRange.Value or 28,
+							Wallcheck = Targets and Targets.Walls and Targets.Walls.Enabled or nil,
 							Part = 'RootPart',
-							Players = Targets.Players.Enabled,
-							NPCs = Targets.NPCs.Enabled,
-							Limit = MaxTargets.Value,
-							Sort = sortmethods[Sort.Value]
+							Players = Targets and Targets.Players and Targets.Players.Enabled,
+							NPCs = Targets and Targets.NPCs and Targets.NPCs.Enabled,
+							Limit = MaxTargets and MaxTargets.Value or 5,
+							Sort = sortmethods[Sort and Sort.Value or 'Distance']
 						})
 
-						if #plrs > 0 then
-							switchItem(sword.tool, 0)
+						if #plrs > 0 and entitylib.character and entitylib.character.RootPart then
+							if switchItem then pcall(function() switchItem(sword.tool, 0) end) end
 							local selfpos = entitylib.character.RootPart.Position
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
+								if not v.RootPart then continue end
 								local delta = (v.RootPart.Position - selfpos)
 								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
-								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
+								if angle > (math.rad(AngleSlider and AngleSlider.Value or 360) / 2) then continue end
 
 								table.insert(attacked, {
 									Entity = v,
-									Check = delta.Magnitude > AttackRange.Value and BoxSwingColor or BoxAttackColor
+									Check = delta.Magnitude > (AttackRange and AttackRange.Value or 28) and (BoxSwingColor or {Hue=0.6,Sat=1,Value=1,Opacity=0.5}) or (BoxAttackColor or {Hue=0.44,Sat=1,Value=1,Opacity=0.5})
 								})
-								targetinfo.Targets[v] = tick() + 1
+								if targetinfo and targetinfo.Targets then targetinfo.Targets[v] = tick() + 1 end
 
 								if not Attacking then
 									Attacking = true
-									store.KillauraTarget = v
-									if not Swing.Enabled and AnimDelay < tick() and not LegitAura.Enabled then
-										AnimDelay = tick() + (meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or 0.11)
-										bedwars.SwordController:playSwordEffect(meta, false)
-										if meta.displayName:find(' Scythe') then
-											bedwars.ScytheController:playLocalAnimation()
-										end
+									if store then store.KillauraTarget = v end
+									if not Swing or not Swing.Enabled then
+										if AnimDelay < tick() and (not LegitAura or not LegitAura.Enabled) then
+											AnimDelay = tick() + (meta and meta.sword and meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or 0.11)
+											if bedwars.SwordController then
+												pcall(function() bedwars.SwordController:playSwordEffect(meta, false) end)
+											end
+											if meta and meta.displayName and meta.displayName:find(' Scythe') and bedwars.ScytheController then
+												pcall(function() bedwars.ScytheController:playLocalAnimation() end)
+											end
 
-										if Bad.ThreadFix then
-											setthreadidentity(8)
+											if Bad.ThreadFix then
+												setthreadidentity(8)
+											end
 										end
 									end
 								end
 
-								if delta.Magnitude > AttackRange.Value then continue end
+								if delta.Magnitude > (AttackRange and AttackRange.Value or 28) then continue end
 
-								local actualRoot = v.Character.PrimaryPart
+								local actualRoot = v.Character and v.Character.PrimaryPart
 								if actualRoot then
 									local dir = CFrame.lookAt(selfpos, actualRoot.Position).LookVector
 									local pos = selfpos + dir * math.max(delta.Magnitude - 14.399, 0)
-									bedwars.SwordController.lastAttack = workspace:GetServerTimeNow()
-									store.attackReach = (delta.Magnitude * 100) // 1 / 100
-									store.attackReachUpdate = tick() + 1
+									if bedwars.SwordController then
+										pcall(function() bedwars.SwordController.lastAttack = workspace:GetServerTimeNow() end)
+									end
+									if store then
+										store.attackReach = (delta.Magnitude * 100) // 1 / 100
+										store.attackReachUpdate = tick() + 1
+									end
 
-									AttackRemote:FireServer({
-										weapon = sword.tool,
-										chargedAttack = {chargeRatio = 0},
-										entityInstance = v.Character,
-										validate = {
-											raycast = {
-												cameraPosition = {value = pos},
-												cursorDirection = {value = dir}
-											},
-											targetPosition = {value = actualRoot.Position},
-											selfPosition = {value = pos}
-										}
-									})
+									pcall(function()
+										AttackRemote:FireServer({
+											weapon = sword.tool,
+											chargedAttack = {chargeRatio = 0},
+											entityInstance = v.Character,
+											validate = {
+												raycast = {
+													cameraPosition = {value = pos},
+													cursorDirection = {value = dir}
+												},
+												targetPosition = {value = actualRoot.Position},
+												selfPosition = {value = pos}
+											}
+										})
+									end)
 								end
 							end
 						end
 					end
 
 					for i, v in Boxes do
-						v.Adornee = attacked[i] and attacked[i].Entity.RootPart or nil
-						if v.Adornee then
+						v.Adornee = attacked[i] and attacked[i].Entity and attacked[i].Entity.RootPart or nil
+						if v.Adornee and attacked[i] and attacked[i].Check then
 							v.Color3 = Color3.fromHSV(attacked[i].Check.Hue, attacked[i].Check.Sat, attacked[i].Check.Value)
 							v.Transparency = 1 - attacked[i].Check.Opacity
 						end
 					end
 
 					for i, v in Particles do
-						v.Position = attacked[i] and attacked[i].Entity.RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
+						v.Position = attacked[i] and attacked[i].Entity and attacked[i].Entity.RootPart and attacked[i].Entity.RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
 						v.Parent = attacked[i] and gameCamera or nil
 					end
 
-					if Face.Enabled and attacked[1] then
+					if Face and Face.Enabled and attacked[1] and attacked[1].Entity and attacked[1].Entity.RootPart and entitylib.character and entitylib.character.RootPart then
 						local vec = attacked[1].Entity.RootPart.Position * Vector3.new(1, 0, 1)
 						entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y + 0.001, vec.Z))
 					end
 
-					task.wait(#attacked > 0 and #attacked * 0.02 or 1 / UpdateRate.Value)
+					task.wait(#attacked > 0 and #attacked * 0.02 or 1 / (UpdateRate and UpdateRate.Value or 60))
 				until not Killaura.Enabled
 			else
-				store.KillauraTarget = nil
+				if store then store.KillauraTarget = nil end
 				for _, v in Boxes do
 					v.Adornee = nil
 				end
@@ -227,17 +267,25 @@ run(function()
 				end
 				if inputService.TouchEnabled then
 					pcall(function()
-						lplr.PlayerGui.MobileUI['2'].Visible = true
+						if lplr.PlayerGui and lplr.PlayerGui:FindFirstChild('MobileUI') then
+							lplr.PlayerGui.MobileUI['2'].Visible = true
+						end
 					end)
 				end
-				debug.setupvalue(oldSwing or bedwars.SwordController.playSwordEffect, 6, bedwars.Knit)
-				debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, bedwars.Knit)
+				if oldSwing or (bedwars.SwordController and bedwars.SwordController.playSwordEffect) then
+					pcall(function() debug.setupvalue(oldSwing or bedwars.SwordController.playSwordEffect, 6, bedwars.Knit or {}) end)
+				end
+				if bedwars.ScytheController and bedwars.ScytheController.playLocalAnimation then
+					pcall(function() debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, bedwars.Knit or {}) end)
+				end
 				Attacking = false
-				if armC0 then
-					AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
-						C0 = armC0
-					})
-					AnimTween:Play()
+				if armC0 and gameCamera and gameCamera.Viewmodel then
+					pcall(function()
+						AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween and AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+							C0 = armC0
+						})
+						AnimTween:Play()
+					end)
 				end
 			end
 		end,

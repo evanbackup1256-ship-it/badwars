@@ -6,3 +6,5 @@ if not Bad then return end
 if Bad.AddLog then
 	Bad:AddLog('Info', '[BedWars Mega] Loaded for place ' .. tostring(game.PlaceId))
 end
+
+return {Game = 'BedWars Mega', PlaceId = game.PlaceId}

@@ -85,3 +85,5 @@ task.spawn(function()
 	pcall(detectPhase)
 	pcall(monitorPhaseChange)
 end)
+
+return bedwars

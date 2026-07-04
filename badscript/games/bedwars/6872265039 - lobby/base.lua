@@ -21,3 +21,5 @@ task.spawn(function()
 		Bad:CreateNotification('BedWars Lobby', 'Waiting for game match...', 4)
 	end
 end)
+
+return lobby

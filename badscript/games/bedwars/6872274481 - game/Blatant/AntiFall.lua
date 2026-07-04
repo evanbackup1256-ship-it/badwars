@@ -6,14 +6,29 @@ run(function()
 	local Color
 	local rayCheck = RaycastParams.new()
 	rayCheck.RespectCanCollide = true
+	local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+	local lplr = game:GetService('Players').LocalPlayer
+	local runService = game:GetService('RunService')
+	local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
+	local getPlacedBlock = (shared.Bad and shared.Bad.getPlacedBlock) or function() return nil end
+	local getNearGround = (shared.Bad and shared.Bad.getNearGround) or function() return nil end
+	local roundPos = (shared.Bad and shared.Bad.roundPos) or function(pos) return pos end
+	local getSpeed = (shared.Bad and shared.Bad.getSpeed) or function() return 0 end
+	local frictionTable = {}
+	local AntiFallPart
+	local store = (shared.Bad and shared.Bad.store) or {}
 
 	local function getLowGround()
 		local mag = math.huge
-		for _, pos in bedwars.BlockController:getStore():getAllBlockPositions() do
-			pos = pos * 3
-			if pos.Y < mag and not getPlacedBlock(pos + Vector3.new(0, 3, 0)) then
-				mag = pos.Y
-			end
+		if bedwars.BlockController then
+			pcall(function()
+				for _, pos in bedwars.BlockController:getStore():getAllBlockPositions() do
+					pos = pos * 3
+					if pos.Y < mag and not getPlacedBlock(pos + Vector3.new(0, 3, 0)) then
+						mag = pos.Y
+					end
+				end
+			end)
 		end
 		return mag
 	end
@@ -22,7 +37,7 @@ run(function()
 		Name = 'AntiFall',
 		Function = function(callback)
 			if callback then
-				repeat task.wait() until store.matchState ~= 0 or (not AntiFall.Enabled)
+				repeat task.wait() until (store.matchState ~= 0) or (not AntiFall.Enabled)
 				if not AntiFall.Enabled then return end
 
 				local pos, debounce = getLowGround(), tick()
@@ -30,24 +45,24 @@ run(function()
 					AntiFallPart = Instance.new('Part')
 					AntiFallPart.Size = Vector3.new(10000, 1, 10000)
 					AntiFallPart.Transparency = 1 - (Color and type(Color.Opacity) == 'number' and math.clamp(Color.Opacity, 0, 1) or 0.5)
-					AntiFallPart.Material = Enum.Material[Material.Value]
+					AntiFallPart.Material = Enum.Material[Material and Material.Value or 'Plastic']
 					AntiFallPart.Color = Color3.fromHSV(Color and type(Color.Hue) == 'number' and Color.Hue or 0.44, Color and type(Color.Sat) == 'number' and Color.Sat or 1, Color and type(Color.Value) == 'number' and Color.Value or 1)
 					AntiFallPart.Position = Vector3.new(0, pos - 2, 0)
-					AntiFallPart.CanCollide = Mode.Value == 'Collide'
+					AntiFallPart.CanCollide = Mode and Mode.Value == 'Collide'
 					AntiFallPart.Anchored = true
 					AntiFallPart.CanQuery = false
 					AntiFallPart.Parent = workspace
 					AntiFall:Clean(AntiFallPart)
 					AntiFall:Clean(AntiFallPart.Touched:Connect(function(touched)
-						if touched.Parent == lplr.Character and entitylib.isAlive and debounce < tick() then
+						if touched and touched.Parent == lplr.Character and entitylib.isAlive and entitylib.character and entitylib.character.RootPart and debounce < tick() then
 							debounce = tick() + 0.1
-							if Mode.Value == 'Normal' then
+							if Mode and Mode.Value == 'Normal' then
 								local top = getNearGround()
 								if top then
 									local lastTeleport = lplr:GetAttribute('LastTeleported')
 									local connection
 									connection = runService.PreSimulation:Connect(function()
-										if (Bad.Modules.Fly and Bad.Modules.Fly.Enabled) or (Bad.Modules.InfiniteFly and Bad.Modules.InfiniteFly.Enabled) or (Bad.Modules.LongJump and Bad.Modules.LongJump.Enabled) then
+										if (Bad.Modules and Bad.Modules.Fly and Bad.Modules.Fly.Enabled) or (Bad.Modules and Bad.Modules.InfiniteFly and Bad.Modules.InfiniteFly.Enabled) or (Bad.Modules and Bad.Modules.LongJump and Bad.Modules.LongJump.Enabled) then
 											connection:Disconnect()
 											AntiFallDirection = nil
 											return
@@ -58,7 +73,7 @@ run(function()
 											local root = entitylib.character.RootPart
 											AntiFallDirection = delta.Unit == delta.Unit and delta.Unit or Vector3.zero
 											root.Velocity *= Vector3.new(1, 0, 1)
-											rayCheck.FilterDescendantsInstances = {gameCamera, lplr.Character}
+											rayCheck.FilterDescendantsInstances = {game:GetService('Workspace').CurrentCamera, lplr.Character}
 											rayCheck.CollisionGroup = root.CollisionGroup
 
 											local ray = workspace:Raycast(root.Position, AntiFallDirection, rayCheck)
@@ -88,7 +103,7 @@ run(function()
 									end)
 									AntiFall:Clean(connection)
 								end
-							elseif Mode.Value == 'Velocity' then
+							elseif Mode and Mode.Value == 'Velocity' then
 								entitylib.character.RootPart.Velocity = Vector3.new(entitylib.character.RootPart.Velocity.X, 100, entitylib.character.RootPart.Velocity.Z)
 							end
 						end

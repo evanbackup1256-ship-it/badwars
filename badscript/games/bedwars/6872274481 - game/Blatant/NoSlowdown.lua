@@ -1,9 +1,12 @@
 local old
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
 
 Bad.Categories.Blatant:CreateModule({
 	Name = 'NoSlowdown',
 	Function = function(callback)
-		local modifier = bedwars.SprintController:getMovementStatusModifier()
+		if not bedwars.SprintController then return end
+		local modifier = pcall(function() return bedwars.SprintController:getMovementStatusModifier() end)
+		if not modifier then return end
 		if callback then
 			old = modifier.addModifier
 			modifier.addModifier = function(self, tab)
@@ -15,11 +18,13 @@ Bad.Categories.Blatant:CreateModule({
 
 			for i in modifier.modifiers do
 				if (i.moveSpeedMultiplier or 1) < 1 then
-					modifier:removeModifier(i)
+					pcall(function() modifier:removeModifier(i) end)
 				end
 			end
 		else
-			modifier.addModifier = old
+			if old then
+				modifier.addModifier = old
+			end
 			old = nil
 		end
 	end,

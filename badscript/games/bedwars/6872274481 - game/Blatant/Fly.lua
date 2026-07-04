@@ -9,6 +9,17 @@ run(function()
 	local rayCheck = RaycastParams.new()
 	rayCheck.RespectCanCollide = true
 	local up, down, old = 0, 0
+	local frictionTable = {}
+	local updateVelocity = function() end
+	local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+	local lplr = game:GetService('Players').LocalPlayer
+	local inputService = game:GetService('UserInputService')
+	local runService = game:GetService('RunService')
+	local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
+	local getItem = (shared.Bad and shared.Bad.getItem) or function() return nil end
+	local getSpeed = (shared.Bad and shared.Bad.getSpeed) or function() return 0 end
+	local InfiniteFly
+	local AntiFallPart
 
 	local function safeGetAttribute(char, attr)
 		if not char then return 0 end
@@ -48,18 +59,19 @@ run(function()
 					end
 				end
 				Fly:Clean(runService.PreSimulation:Connect(function(dt)
-					if entitylib.isAlive and not (InfiniteFly and InfiniteFly.Enabled) and isnetworkowner(entitylib.character.RootPart) then
+					if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.Humanoid and not (InfiniteFly and InfiniteFly.Enabled) and (isnetworkowner and isnetworkowner(entitylib.character.RootPart) or true) then
 						local flyAllowed = (safeGetAttribute(lplr.Character, 'InflatedBalloons') > 0) or (store and store.matchState == 2)
-						local mass = (1.5 + (flyAllowed and 6 or 0) * (tick() % 0.4 < 0.2 and -1 or 1)) + ((up + down) * VerticalValue.Value)
-						local root, moveDirection = entitylib.character.RootPart, entitylib.character.Humanoid.MoveDirection
+						local mass = (1.5 + (flyAllowed and 6 or 0) * (tick() % 0.4 < 0.2 and -1 or 1)) + ((up + down) * (VerticalValue and VerticalValue.Value or 50))
+						local root = entitylib.character.RootPart
+						local moveDirection = entitylib.character.Humanoid.MoveDirection
 						local velo = getSpeed and getSpeed() or 0
-						local destination = (moveDirection * math.max(Value.Value - velo, 0) * dt)
-						local filterInstances = {lplr.Character, gameCamera}
+						local destination = (moveDirection * math.max((Value and Value.Value or 23) - velo, 0) * dt)
+						local filterInstances = {lplr.Character, game:GetService('Workspace').CurrentCamera}
 						if AntiFallPart then table.insert(filterInstances, AntiFallPart) end
 						rayCheck.FilterDescendantsInstances = filterInstances
 						rayCheck.CollisionGroup = root.CollisionGroup
 
-						if WallCheck.Enabled then
+						if WallCheck and WallCheck.Enabled then
 							local ray = workspace:Raycast(root.Position, destination, rayCheck)
 							if ray then
 								destination = ((ray.Position + ray.Normal) - root.Position)
@@ -68,15 +80,15 @@ run(function()
 
 						if not flyAllowed then
 							if tpToggle then
-								local airleft = (tick() - entitylib.character.AirTime)
+								local airleft = (tick() - (entitylib.character.AirTime or 0))
 								if airleft > 2 then
 									if not oldy then
 										local ray = workspace:Raycast(root.Position, Vector3.new(0, -1000, 0), rayCheck)
-										if ray and TP.Enabled then
+										if ray and TP and TP.Enabled then
 											tpToggle = false
 											oldy = root.Position.Y
 											tpTick = tick() + 0.11
-											root.CFrame = CFrame.lookAlong(Vector3.new(root.Position.X, ray.Position.Y + entitylib.character.HipHeight, root.Position.Z), root.CFrame.LookVector)
+											root.CFrame = CFrame.lookAlong(Vector3.new(root.Position.X, ray.Position.Y + (entitylib.character.HipHeight or 2), root.Position.Z), root.CFrame.LookVector)
 										end
 									end
 								end
@@ -130,7 +142,7 @@ run(function()
 				if old and bedwars and bedwars.BalloonController then
 					bedwars.BalloonController.deflateBalloon = old
 				end
-				if PopBalloons.Enabled and entitylib.isAlive and safeGetAttribute(lplr.Character, 'InflatedBalloons') > 0 then
+				if PopBalloons and PopBalloons.Enabled and entitylib.isAlive and safeGetAttribute(lplr.Character, 'InflatedBalloons') > 0 then
 					if bedwars and bedwars.BalloonController then
 						for _ = 1, 3 do
 							pcall(function() bedwars.BalloonController:deflateBalloon() end)

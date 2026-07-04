@@ -2,6 +2,10 @@ local AutoClicker
 local CPS
 local BlockCPS = {}
 local Thread
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local lplr = game:GetService('Players').LocalPlayer
+local inputService = game:GetService('UserInputService')
+local store = (shared.Bad and shared.Bad.store) or {}
 
 local function AutoClick()
 	if Thread then
@@ -10,22 +14,38 @@ local function AutoClick()
 
 	Thread = task.delay(1 / 7, function()
 		repeat
-			if not bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then
-				local blockPlacer = bedwars.BlockPlacementController.blockPlacer
-				if store.hand.toolType == 'block' and blockPlacer then
-					if (workspace:GetServerTimeNow() - bedwars.BlockCpsController.lastPlaceTimestamp) >= ((1 / 12) * 0.5) then
-						local mouseinfo = blockPlacer.clientManager:getBlockSelector():getMouseInfo(0)
-						if mouseinfo and mouseinfo.placementPosition == mouseinfo.placementPosition then
-							task.spawn(blockPlacer.placeBlock, blockPlacer, mouseinfo.placementPosition)
+			local layerOpen = false
+			if bedwars.AppController and bedwars.UILayers then
+				pcall(function() layerOpen = bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) end)
+			end
+			if not layerOpen then
+				if store.hand and store.hand.toolType == 'block' then
+					if bedwars.BlockPlacementController and bedwars.BlockPlacementController.blockPlacer then
+						local blockPlacer = bedwars.BlockPlacementController.blockPlacer
+						local canPlace = true
+						if bedwars.BlockCpsController then
+							pcall(function() canPlace = (workspace:GetServerTimeNow() - (bedwars.BlockCpsController.lastPlaceTimestamp or 0)) >= ((1 / 12) * 0.5) end)
+						end
+						if canPlace and blockPlacer.clientManager then
+							pcall(function()
+								local mouseinfo = blockPlacer.clientManager:getBlockSelector():getMouseInfo(0)
+								if mouseinfo and mouseinfo.placementPosition == mouseinfo.placementPosition then
+									task.spawn(blockPlacer.placeBlock, blockPlacer, mouseinfo.placementPosition)
+								end
+							end)
 						end
 					end
-				elseif store.hand.toolType == 'sword' then
-					bedwars.SwordController:swingSwordAtMouse()
+				elseif store.hand and store.hand.toolType == 'sword' then
+					if bedwars.SwordController then
+						pcall(function() bedwars.SwordController:swingSwordAtMouse() end)
+					end
 				end
 			end
 
-			task.wait(1 / (store.hand.toolType == 'block' and BlockCPS or CPS).GetRandomValue())
-		until not AutoClicker.Enabled
+			local cpsObj = (store.hand and store.hand.toolType == 'block' and BlockCPS) or CPS
+			local cpsVal = cpsObj and cpsObj.GetRandomValue and cpsObj.GetRandomValue() or 7
+			task.wait(1 / cpsVal)
+		until not AutoClicker or not AutoClicker.Enabled
 	end)
 end
 
@@ -48,13 +68,15 @@ AutoClicker = Bad.Categories.Combat:CreateModule({
 
 			if inputService.TouchEnabled then
 				pcall(function()
-					AutoClicker:Clean(lplr.PlayerGui.MobileUI['2'].MouseButton1Down:Connect(AutoClick))
-					AutoClicker:Clean(lplr.PlayerGui.MobileUI['2'].MouseButton1Up:Connect(function()
-						if Thread then
-							task.cancel(Thread)
-							Thread = nil
-						end
-					end))
+					if lplr.PlayerGui and lplr.PlayerGui:FindFirstChild('MobileUI') then
+						AutoClicker:Clean(lplr.PlayerGui.MobileUI['2'].MouseButton1Down:Connect(AutoClick))
+						AutoClicker:Clean(lplr.PlayerGui.MobileUI['2'].MouseButton1Up:Connect(function()
+							if Thread then
+								task.cancel(Thread)
+								Thread = nil
+							end
+						end))
+					end
 				end)
 			end
 		else

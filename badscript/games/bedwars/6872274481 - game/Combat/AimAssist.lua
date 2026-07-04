@@ -7,29 +7,53 @@ local AngleSlider
 local StrafeIncrease
 local KillauraTarget
 local ClickAim
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local lplr = game:GetService('Players').LocalPlayer
+local runService = game:GetService('RunService')
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
+local targetinfo = (shared.Bad and shared.Bad.targetinfo) or {Targets = {}}
+local sortmethods = (shared.Bad and shared.Bad.sortmethods) or {}
+local inputService = game:GetService('UserInputService')
+local store = (shared.Bad and shared.Bad.store) or {}
+local gameCamera = workspace.CurrentCamera
 
 AimAssist = Bad.Categories.Combat:CreateModule({
 	Name = 'AimAssist',
 	Function = function(callback)
 		if callback then
 			AimAssist:Clean(runService.Heartbeat:Connect(function(dt)
-				if entitylib.isAlive and store.hand.toolType == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
-					local ent = not KillauraTarget.Enabled and entitylib.EntityPosition({
-						Range = Distance.Value,
-						Part = 'RootPart',
-						Wallcheck = Targets.Walls.Enabled,
-						Players = Targets.Players.Enabled,
-						NPCs = Targets.NPCs.Enabled,
-						Sort = sortmethods[Sort.Value]
-					}) or store.KillauraTarget
+				if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and store.hand and store.hand.toolType == 'sword' then
+					local swingCheck = true
+					if bedwars.SwordController then
+						pcall(function() swingCheck = (tick() - (bedwars.SwordController.lastSwing or 0)) < 0.4 end)
+					end
+					if ((not ClickAim or not ClickAim.Enabled) or swingCheck) then
+						local ent
+						if not KillauraTarget or not KillauraTarget.Enabled then
+							ent = entitylib.EntityPosition({
+								Range = Distance and Distance.Value or 30,
+								Part = 'RootPart',
+								Wallcheck = Targets and Targets.Walls and Targets.Walls.Enabled,
+								Players = Targets and Targets.Players and Targets.Players.Enabled,
+								NPCs = Targets and Targets.NPCs and Targets.NPCs.Enabled,
+								Sort = sortmethods[Sort and Sort.Value or 'Distance']
+							})
+						else
+							ent = store.KillauraTarget
+						end
 
-					if ent then
-						local delta = (ent.RootPart.Position - entitylib.character.RootPart.Position)
-						local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
-						local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
-						if angle >= (math.rad(AngleSlider.Value) / 2) then return end
-						targetinfo.Targets[ent] = tick() + 1
-						gameCamera.CFrame = gameCamera.CFrame:Lerp(CFrame.lookAt(gameCamera.CFrame.p, ent.RootPart.Position), (AimSpeed.Value + (StrafeIncrease.Enabled and (inputService:IsKeyDown(Enum.KeyCode.A) or inputService:IsKeyDown(Enum.KeyCode.D)) and 10 or 0)) * dt)
+						if ent and ent.RootPart then
+							local delta = (ent.RootPart.Position - entitylib.character.RootPart.Position)
+							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+							local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+							if angle >= (math.rad(AngleSlider and AngleSlider.Value or 70) / 2) then return end
+							if targetinfo and targetinfo.Targets then targetinfo.Targets[ent] = tick() + 1 end
+							local strafeBonus = (StrafeIncrease and StrafeIncrease.Enabled and (inputService:IsKeyDown(Enum.KeyCode.A) or inputService:IsKeyDown(Enum.KeyCode.D)) and 10 or 0)
+							local aimSpeed = (AimSpeed and AimSpeed.Value or 6) + strafeBonus
+							pcall(function()
+								gameCamera.CFrame = gameCamera.CFrame:Lerp(CFrame.lookAt(gameCamera.CFrame.p, ent.RootPart.Position), aimSpeed * dt)
+							end)
+						end
 					end
 				end
 			end))
@@ -62,7 +86,7 @@ Distance = AimAssist:CreateSlider({
 	Min = 1,
 	Max = 30,
 	Default = 30,
-	Suffx = function(val)
+	Suffix = function(val)
 		return val == 1 and 'stud' or 'studs'
 	end
 })

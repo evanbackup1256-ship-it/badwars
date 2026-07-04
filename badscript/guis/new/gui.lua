@@ -14386,4 +14386,473 @@ end
 
 installVisualRevamp()
 
+
+do
+	local premiumStyled = setmetatable({}, { __mode = "k" })
+	local premiumHoverConnections = setmetatable({}, { __mode = "k" })
+	local premiumColorTokens = {}
+	local premiumLoadAnimated = false
+
+	local function premiumDisconnect(key)
+		local entry = premiumHoverConnections[key]
+		if not entry then
+			return
+		end
+		for _, connection in pairs(entry) do
+			pcall(function()
+				connection:Disconnect()
+			end)
+		end
+		premiumHoverConnections[key] = nil
+	end
+
+	local function premiumTween(object, info, props)
+		if not object or not object.Parent then
+			return nil
+		end
+		return n:Tween(object, info, props)
+	end
+
+	local function premiumEnsureCorner(object, radius)
+		local corner = object:FindFirstChildOfClass("UICorner")
+		if not corner then
+			corner = addCorner(object, radius or o.Radius)
+		else
+			corner.CornerRadius = radius or o.Radius
+		end
+		return corner
+	end
+
+	local function premiumEnsureStroke(object, name, color, transparency, thickness)
+		local stroke = object:FindFirstChild(name)
+		if not stroke or not stroke:IsA("UIStroke") then
+			stroke = Instance.new("UIStroke")
+			stroke.Name = name
+			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			stroke.LineJoinMode = Enum.LineJoinMode.Round
+			stroke.Parent = object
+		end
+		stroke.Color = color
+		stroke.Transparency = transparency
+		stroke.Thickness = thickness
+		return stroke
+	end
+
+	local function premiumEnsureScale(object)
+		local scale = object:FindFirstChild("PremiumScale")
+		if not scale or not scale:IsA("UIScale") then
+			scale = Instance.new("UIScale")
+			scale.Name = "PremiumScale"
+			scale.Scale = 1
+			scale.Parent = object
+		end
+		return scale
+	end
+
+	local function premiumEnsureShadow(object)
+		local shadow = object:FindFirstChild("PremiumShadow")
+		if not shadow or not shadow:IsA("Frame") then
+			shadow = Instance.new("Frame")
+			shadow.Name = "PremiumShadow"
+			shadow.ZIndex = math.max((object.ZIndex or 1) - 1, 0)
+			shadow.BorderSizePixel = 0
+			shadow.Size = UDim2.new(1, 14, 1, 14)
+			shadow.Position = UDim2.fromOffset(-7, -7)
+			shadow.BackgroundColor3 = o.Shadow
+			shadow.BackgroundTransparency = 0.62
+			shadow.Parent = object
+			shadow:SendToBack()
+
+			local gradient = Instance.new("UIGradient")
+			gradient.Name = "PremiumShadowGradient"
+			gradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 17, 24)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+			})
+			gradient.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.12),
+				NumberSequenceKeypoint.new(1, 0.75),
+			})
+			gradient.Rotation = 90
+			gradient.Parent = shadow
+		end
+
+		premiumEnsureCorner(shadow, o.RadiusLarge)
+		return shadow
+	end
+
+	local function premiumAttachPressAnimation(object, hoverScale, pressScale)
+		if premiumHoverConnections[object] then
+			return
+		end
+
+		local scale = premiumEnsureScale(object)
+		local connections = {}
+
+		if object:IsA("GuiButton") then
+			table.insert(connections, object.MouseEnter:Connect(function()
+				premiumTween(scale, o.TweenFast, {
+					Scale = hoverScale or 1.012,
+				})
+			end))
+			table.insert(connections, object.MouseLeave:Connect(function()
+				premiumTween(scale, o.TweenFast, {
+					Scale = 1,
+				})
+			end))
+			table.insert(connections, object.MouseButton1Down:Connect(function()
+				premiumTween(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+					Scale = pressScale or 0.988,
+				})
+			end))
+			table.insert(connections, object.MouseButton1Up:Connect(function()
+				premiumTween(scale, o.TweenFast, {
+					Scale = hoverScale or 1.012,
+				})
+			end))
+		end
+
+		if object.Destroying then
+			table.insert(connections, object.Destroying:Connect(function()
+				premiumDisconnect(object)
+			end))
+		end
+
+		premiumHoverConnections[object] = connections
+	end
+
+	local function premiumAccentColor()
+		return Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+	end
+
+	local function premiumStyleActionButton(button)
+		if premiumStyled[button] or not button:IsA("GuiButton") then
+			return
+		end
+		premiumStyled[button] = true
+
+		button.AutoButtonColor = false
+		button.BorderSizePixel = 0
+		button.BackgroundColor3 = o.Elevated
+		button.TextColor3 = o.Text
+		button.ClipsDescendants = true
+
+		premiumEnsureCorner(button, o.Radius)
+		local stroke = premiumEnsureStroke(button, "PremiumActionStroke", o.Border, 0.42, 1)
+		premiumEnsureShadow(button)
+		premiumAttachPressAnimation(button, 1.018, 0.985)
+
+		button.MouseEnter:Connect(function()
+			premiumTween(button, o.TweenFast, {
+				BackgroundColor3 = o.SurfaceHover,
+			})
+			premiumTween(stroke, o.TweenFast, {
+				Color = premiumAccentColor(),
+				Transparency = 0.18,
+			})
+		end)
+
+		button.MouseLeave:Connect(function()
+			premiumTween(button, o.TweenFast, {
+				BackgroundColor3 = o.Elevated,
+			})
+			premiumTween(stroke, o.TweenFast, {
+				Color = o.Border,
+				Transparency = 0.42,
+			})
+		end)
+	end
+
+	local function premiumStyleWindow(frame)
+		if premiumStyled[frame] or not frame:IsA("GuiObject") then
+			return
+		end
+		premiumStyled[frame] = true
+
+		frame.BorderSizePixel = 0
+		frame.BackgroundColor3 = o.Main
+		frame.ClipsDescendants = false
+		premiumEnsureCorner(frame, o.RadiusLarge)
+		local stroke = premiumEnsureStroke(frame, "PremiumWindowStroke", o.BorderStrong, 0.24, 1)
+		local accent = frame:FindFirstChild("PremiumTopAccent")
+		if not accent or not accent:IsA("Frame") then
+			accent = Instance.new("Frame")
+			accent.Name = "PremiumTopAccent"
+			accent.Size = UDim2.new(1, 0, 0, 2)
+			accent.Position = UDim2.new(0, 0, 0, 0)
+			accent.BorderSizePixel = 0
+			accent.BackgroundColor3 = premiumAccentColor()
+			accent.ZIndex = frame.ZIndex + 2
+			accent.Parent = frame
+			premiumEnsureCorner(accent, UDim.new(1, 0))
+		end
+
+		local gradient = frame:FindFirstChild("PremiumWindowGradient")
+		if not gradient or not gradient:IsA("UIGradient") then
+			gradient = Instance.new("UIGradient")
+			gradient.Name = "PremiumWindowGradient"
+			gradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 24, 32)),
+				ColorSequenceKeypoint.new(0.38, o.Main),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 10, 15)),
+			})
+			gradient.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.08),
+				NumberSequenceKeypoint.new(1, 0.16),
+			})
+			gradient.Rotation = 90
+			gradient.Parent = frame
+		end
+
+		premiumEnsureShadow(frame)
+
+		if not premiumColorTokens[frame] then
+			premiumColorTokens[frame] = connectguicolorchange(function()
+				local accentColor = premiumAccentColor()
+				accent.BackgroundColor3 = accentColor
+				stroke.Color = o.BorderStrong
+			end)
+		end
+	end
+
+	local function premiumStyleNotification(card)
+		if premiumStyled[card] or not card:IsA("GuiObject") then
+			return
+		end
+		premiumStyled[card] = true
+
+		card.BorderSizePixel = 0
+		card.BackgroundColor3 = o.Surface
+		card.ClipsDescendants = true
+		premiumEnsureCorner(card, o.RadiusLarge)
+		local stroke = premiumEnsureStroke(card, "PremiumNotificationStroke", o.BorderStrong, 0.18, 1)
+
+		local accent = card:FindFirstChild("PremiumNotificationAccent")
+		if not accent then
+			accent = Instance.new("Frame")
+			accent.Name = "PremiumNotificationAccent"
+			accent.Size = UDim2.new(0, 3, 1, 0)
+			accent.Position = UDim2.fromOffset(0, 0)
+			accent.BorderSizePixel = 0
+			accent.BackgroundColor3 = premiumAccentColor()
+			accent.ZIndex = card.ZIndex + 1
+			accent.Parent = card
+		end
+
+		local blur = card:FindFirstChild("Blur")
+		if blur and blur:IsA("ImageLabel") then
+			blur.ImageTransparency = 0.86
+			blur.ScaleType = Enum.ScaleType.Fit
+		end
+
+		for _, desc in ipairs(card:GetDescendants()) do
+			if desc:IsA("TextLabel") then
+				if desc.TextSize >= 16 then
+					desc.TextColor3 = o.Text
+				else
+					desc.TextColor3 = o.MutedText
+				end
+			elseif desc:IsA("ImageLabel") or desc:IsA("ImageButton") then
+				if desc.Name ~= "Blur" then
+					desc.ImageColor3 = o.Text
+				end
+			end
+		end
+
+		premiumEnsureShadow(card)
+
+		if not premiumColorTokens[card] then
+			premiumColorTokens[card] = connectguicolorchange(function()
+				accent.BackgroundColor3 = premiumAccentColor()
+				stroke.Color = o.BorderStrong
+			end)
+		end
+	end
+
+	local function premiumStyleModuleRow(row)
+		if premiumStyled[row] or not row:IsA("GuiButton") then
+			return
+		end
+		premiumStyled[row] = true
+
+		row.AutoButtonColor = false
+		row.BorderSizePixel = 0
+		row.BackgroundColor3 = o.Surface
+		row.ClipsDescendants = true
+		premiumEnsureCorner(row, o.Radius)
+		local stroke = premiumEnsureStroke(row, "PremiumRowStroke", o.Border, 0.72, 1)
+
+		local rail = row:FindFirstChild("ActiveRail")
+		if not rail or not rail:IsA("Frame") then
+			rail = Instance.new("Frame")
+			rail.Name = "ActiveRail"
+			rail.Size = UDim2.new(0, 2, 1, -8)
+			rail.Position = UDim2.fromOffset(0, 4)
+			rail.BorderSizePixel = 0
+			rail.Visible = false
+			rail.BackgroundColor3 = premiumAccentColor()
+			rail.ZIndex = row.ZIndex + 1
+			rail.Parent = row
+			premiumEnsureCorner(rail, UDim.new(1, 0))
+		end
+
+		local divider = row:FindFirstChild("Divider")
+		if divider and divider:IsA("Frame") then
+			divider.BackgroundTransparency = 0.9
+			divider.BackgroundColor3 = o.Border
+			divider.Visible = true
+		end
+
+		local dots = row:FindFirstChild("Dots", true)
+		local bindHolder = row:FindFirstChild("Bind", true)
+
+		premiumAttachPressAnimation(row, 1.012, 0.988)
+
+		row.MouseEnter:Connect(function()
+			premiumTween(row, o.TweenFast, {
+				BackgroundColor3 = o.SurfaceHover,
+			})
+			premiumTween(stroke, o.TweenFast, {
+				Color = o.BorderStrong,
+				Transparency = 0.48,
+			})
+			if dots and dots:IsA("GuiObject") then
+				local dotIcon = dots:FindFirstChildWhichIsA("ImageLabel", true)
+				if dotIcon then
+					premiumTween(dotIcon, o.TweenFast, {
+						ImageColor3 = o.Text,
+					})
+				end
+			end
+			if bindHolder and bindHolder:IsA("GuiObject") then
+				for _, desc in ipairs(bindHolder:GetDescendants()) do
+					if desc:IsA("TextLabel") then
+						desc.TextColor3 = o.Text
+					elseif desc:IsA("ImageLabel") then
+						desc.ImageColor3 = o.Text
+					end
+				end
+			end
+		end)
+
+		row.MouseLeave:Connect(function()
+			local enabled = rail.Visible
+			premiumTween(row, o.TweenFast, {
+				BackgroundColor3 = enabled and o.Elevated or o.Surface,
+			})
+			premiumTween(stroke, o.TweenFast, {
+				Color = enabled and o.BorderStrong or o.Border,
+				Transparency = enabled and 0.42 or 0.72,
+			})
+		end)
+
+		local function syncEnabledLook()
+			local enabled = row.BackgroundColor3 == o.Elevated or rail.Visible
+			local accentColor = premiumAccentColor()
+			rail.BackgroundColor3 = accentColor
+
+			if enabled then
+				rail.Visible = true
+				row.BackgroundColor3 = o.Elevated
+				row.TextColor3 = o.Text
+				stroke.Color = o.BorderStrong
+				stroke.Transparency = 0.42
+			else
+				row.BackgroundColor3 = o.Surface
+				if row.TextColor3 ~= o.Text then
+					row.TextColor3 = o.MutedText
+				end
+				stroke.Color = o.Border
+				stroke.Transparency = 0.72
+			end
+		end
+
+		task.defer(syncEnabledLook)
+
+		if not premiumColorTokens[row] then
+			premiumColorTokens[row] = connectguicolorchange(function()
+				syncEnabledLook()
+			end)
+		end
+	end
+
+	local function premiumClassify(object)
+		if not object or not object.Parent then
+			return
+		end
+
+		if object:IsA("GuiButton") and object:FindFirstChild("Dots", true) then
+			premiumStyleModuleRow(object)
+			return
+		end
+
+		if object:IsA("GuiButton") and object.Text ~= "" and object.AbsoluteSize.Y <= 42 then
+			premiumStyleActionButton(object)
+			return
+		end
+
+		local lowerName = string.lower(object.Name)
+		if object:IsA("GuiObject") and (
+			lowerName:find("notif")
+			or lowerName:find("toast")
+			or lowerName:find("prompt")
+		) then
+			premiumStyleNotification(object)
+			return
+		end
+
+		if object:IsA("GuiObject")
+			and object.Parent == d.gui
+			and object.AbsoluteSize.X >= 150
+			and object.AbsoluteSize.Y >= 120
+		then
+			premiumStyleWindow(object)
+		end
+	end
+
+	local function premiumScan(root)
+		if not root then
+			return
+		end
+		premiumClassify(root)
+		for _, descendant in ipairs(root:GetDescendants()) do
+			premiumClassify(descendant)
+		end
+	end
+
+	task.defer(function()
+		local started = os.clock()
+		repeat
+			task.wait()
+		until d.gui or os.clock() - started > 10
+
+		if not d.gui then
+			return
+		end
+
+		premiumScan(d.gui)
+
+		if d.gui.DescendantAdded then
+			d:Clean(d.gui.DescendantAdded:Connect(function(object)
+				task.defer(function()
+					premiumClassify(object)
+				end)
+			end))
+		end
+
+		if not premiumLoadAnimated then
+			premiumLoadAnimated = true
+			for _, child in ipairs(d.gui:GetChildren()) do
+				if child:IsA("GuiObject") and child.Visible ~= false then
+					local scale = premiumEnsureScale(child)
+					scale.Scale = 0.975
+					premiumTween(scale, o.TweenSlow, {
+						Scale = 1,
+					})
+				end
+			end
+		end
+	end)
+end
+
 return d

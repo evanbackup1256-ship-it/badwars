@@ -5,6 +5,7 @@ local Speed
 local anim, animobject
 
 local function playAnimation(char)
+	if not char or not char.Humanoid then return end
 	local animcheck = anim
 	if animcheck then
 		anim = nil
@@ -15,11 +16,11 @@ local function playAnimation(char)
 		anim = char.Humanoid.Animator:LoadAnimation(animobject)
 	end)
 
-	if suc then
+	if suc and anim then
 		local currentanim = anim
-		anim.Priority = Enum.AnimationPriority[Priority.Value]
+		anim.Priority = Enum.AnimationPriority[Priority and Priority.Value or 'Action']
 		anim:Play()
-		anim:AdjustSpeed(Speed.Value)
+		anim:AdjustSpeed(Speed and Speed.Value or 1)
 		AnimationPlayer:Clean(anim.Stopped:Connect(function()
 			if currentanim == anim then
 				anim:Play()
@@ -47,7 +48,7 @@ AnimationPlayer = Bad.Categories.Utility:CreateModule({
 			animobject = Instance.new('Animation')
 			animobject.AnimationId = 'rbxassetid://' .. numericId
 
-			if entitylib.isAlive then
+			if entitylib.isAlive and entitylib.character then
 				playAnimation(entitylib.character)
 			end
 			AnimationPlayer:Clean(entitylib.Events.LocalAdded:Connect(playAnimation))

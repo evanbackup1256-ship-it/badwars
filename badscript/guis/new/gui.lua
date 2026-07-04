@@ -1,4 +1,4 @@
--- BadWars Premium UI Revamp | Rayfield / EXE-6 inspired | Build 2026.07.04
+-- BadWars Premium UI Revamp | Rayfield / EXE-6 inspired | Build 2026.07.04.1
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local b = a:setupDecoratedCustomSignal("GUILIBRARY_INTERNAL")
@@ -31,7 +31,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04-EXE6-RAYFIELD",
+    PremiumBuild = "2026.07.04.1-EXE6-RAYFIELD-HOTFIX",
     Windows = {},
     Indicators = {},
 }
@@ -172,6 +172,7 @@ local o = {
     TweenFast = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     Tween = TweenInfo.new(0.19, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     TweenSlow = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSpring = TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
     TweenBack = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 }
 
@@ -1513,10 +1514,14 @@ do
             M = L
             L = nil
         end
-        if type(J) == "table" then
+
+        if type(J) == "table" and K == nil then
             K = J
-            J = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            J = o.Tween
+        elseif typeof(J) ~= "TweenInfo" then
+            J = o.Tween
         end
+
         if typeof(I) ~= "Instance" or type(K) ~= "table" then
             return nil
         end
@@ -1552,6 +1557,13 @@ do
                 args = { I, J, K },
                 notifyBlacklisted = true,
             })
+
+            pcall(function()
+                for property, value in pairs(K) do
+                    I[property] = value
+                end
+            end)
+
             return nil
         end
 
@@ -13505,10 +13517,12 @@ ar.ExpandEvent:Connect(function()
                 Size = UDim2.fromOffset(220, ar.Expanded and 0 or 40),
                 TextTransparency = ar.Expanded and 1 or 0,
             })
-            if ar.Expanded then
+            if ar.Expanded and av then
                 av.Completed:Once(function()
                     au.Visible = false
                 end)
+            elseif ar.Expanded then
+                au.Visible = false
             end
         elseif au:IsA("TextLabel") and not au.Name:lower():find("overlays") then
             n:Tween(au, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
@@ -13555,10 +13569,12 @@ ar.ExpandEvent:Connect(function()
             local ax = n:Tween(au.Object, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
                 Size = UDim2.fromOffset(220, (ar.Expanded and 0 or au.OriginalCategorySize)),
             })
-            if ar.Expanded then
-                ax.Completed:Connect(function()
+            if ar.Expanded and ax then
+                ax.Completed:Once(function()
                     au.Object.Visible = false
                 end)
+            elseif ar.Expanded then
+                au.Object.Visible = false
             end
         end
     end

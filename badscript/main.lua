@@ -1146,9 +1146,27 @@ local guiFn, guiErr = _loadstring(guiCode, "gui")
 if not guiFn then
     error("GUI compile: " .. tostring(guiErr), 0)
 end
-local ok, api = pcall(guiFn)
-if not ok or type(api) ~= "table" or type(api.CreateNotification) ~= "function" then
-    error("GUI returned invalid API", 0)
+local traceback = debug and debug.traceback or function(message)
+    return tostring(message)
+end
+
+local ok, api = xpcall(guiFn, traceback)
+if not ok then
+    error("GUI runtime failure:\n" .. tostring(api), 0)
+end
+
+if type(api) ~= "table" then
+    error("GUI returned invalid API type: " .. typeof(api), 0)
+end
+
+if type(api.CreateNotification) ~= "function" then
+    error(
+        "GUI API is missing CreateNotification; PremiumBuild="
+            .. tostring(api.PremiumBuild)
+            .. ", Version="
+            .. tostring(api.Version),
+        0
+    )
 end
 shared.Bad = api
 local Bad = api

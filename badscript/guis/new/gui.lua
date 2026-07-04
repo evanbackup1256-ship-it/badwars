@@ -1,4 +1,4 @@
--- BadWars Premium UI Revamp | Rayfield / EXE-6 inspired | Build 2026.07.04.4
+-- BadWars Premium UI Revamp | Premium Stability and UX | Build 2026.07.04.5
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local b = a:setupDecoratedCustomSignal("GUILIBRARY_INTERNAL")
@@ -31,7 +31,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.4-PREMIUM-STABILITY",
+    PremiumBuild = "2026.07.04.5-PREMIUM-UX-STABILITY",
     Windows = {},
     Indicators = {},
 }
@@ -812,12 +812,12 @@ local function addShadow(F, G)
 
     H = Instance.new("ImageLabel")
     H.Name = "PremiumShadow"
-    H.Size = UDim2.new(1, G and 38 or 30, 1, G and 38 or 30)
-    H.Position = UDim2.fromOffset(G and -19 or -15, G and -19 or -15)
+    H.Size = UDim2.new(1, G and 28 or 22, 1, G and 28 or 22)
+    H.Position = UDim2.fromOffset(G and -14 or -11, G and -14 or -11)
     H.BackgroundTransparency = 1
     H.Image = u("badscript/assets/new/" .. (G and "blurnotif" or "blur") .. ".png")
     H.ImageColor3 = o.Shadow
-    H.ImageTransparency = G and 0.58 or 0.68
+    H.ImageTransparency = G and 0.7 or 0.76
     H.ScaleType = Enum.ScaleType.Slice
     H.SliceCenter = Rect.new(52, 31, 261, 502)
     H.ZIndex = math.max(F.ZIndex - 1, 0)
@@ -865,9 +865,9 @@ local function addAccentLine(F, G)
             end
         end)
     end
-    H.Size = UDim2.new(1, -20, 0, G or 1)
-    H.Position = UDim2.fromOffset(10, 1)
-    H.BackgroundTransparency = 0.18
+    H.Size = UDim2.new(1, -24, 0, G or 1)
+    H.Position = UDim2.fromOffset(12, 1)
+    H.BackgroundTransparency = 0.34
     return H
 end
 
@@ -991,7 +991,7 @@ local function addTooltip(F, G)
         d._tooltipOwner = ownerToken
         local scale = getGuiScale()
         local viewport = (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize) / scale
-        local maxWidth = math.clamp(viewport.X * 0.32, 180, 360)
+        local maxWidth = math.clamp(viewport.X * 0.34, 200, 420)
         local bounds = E(G, z.TextSize, o.Font, maxWidth - 18) or Vector2.new(maxWidth - 18, z.TextSize + 4)
         z.Size = UDim2.fromOffset(math.min(maxWidth, math.max(96, bounds.X + 22)), math.max(32, bounds.Y + 16))
         z.Text = G
@@ -4733,21 +4733,32 @@ function d.CreateGUI(aa)
         end
     end)
 
-    local ad = Instance.new("ImageLabel")
+    local ad = Instance.new("TextLabel")
     ad.Name = "VapeLogo"
-    ad.Size = UDim2.fromOffset(62, 18)
-    ad.Position = UDim2.fromOffset(11, 10)
+    ad.Size = UDim2.fromOffset(118, 24)
+    ad.Position = UDim2.fromOffset(12, 8)
     ad.BackgroundTransparency = 1
-    ad.Image = u("badscript/assets/new/guivape.png")
-    ad.ImageColor3 = select(3, o.Main:ToHSV()) > 0.5 and o.Text or Color3.new(1, 1, 1)
+    ad.Text = "BadWars"
+    ad.TextColor3 = o.TextStrong
+    ad.TextSize = 18
+    ad.TextXAlignment = Enum.TextXAlignment.Left
+    ad.FontFace = o.FontBold
     ad.Parent = ac
-    local ae = Instance.new("ImageLabel")
+
+    local ae = Instance.new("TextLabel")
     ae.Name = "V4Logo"
     ae.Size = UDim2.fromOffset(28, 16)
-    ae.Position = UDim2.new(1, 1, 0, 1)
-    ae.BackgroundTransparency = 1
-    ae.Image = u("badscript/assets/new/guiv4.png")
+    ae.Position = UDim2.fromOffset(78, 4)
+    ae.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+    ae.BackgroundTransparency = 0.08
+    ae.BorderSizePixel = 0
+    ae.Text = "V1"
+    ae.TextColor3 = o.Main
+    ae.TextSize = 10
+    ae.FontFace = o.FontBold
     ae.Parent = ad
+    addCorner(ae, UDim.new(1, 0))
+    addStroke(ae, o.TextStrong, 0.82, 1, "VersionStroke")
     local af = Instance.new("Frame")
     af.Name = "Children"
     af.Size = UDim2.new(1, 0, 1, -40)
@@ -6139,7 +6150,7 @@ function d.CreateCategory(aa, ab)
         ar.FontFace = o.FontSemiBold
         ar.Parent = aj
         addCorner(ar, o.Radius)
-        local moduleStroke = addStroke(ar, o.Border, 0.76, 1, "ModuleStroke")
+        local moduleStroke = addStroke(ar, o.Border, 0.88, 1, "ModuleStroke")
         local moduleScale = addScale(ar)
 
         local activeRail = Instance.new("Frame")
@@ -6400,7 +6411,7 @@ function d.CreateCategory(aa, ab)
         at.Parent = aj
         at.ClipsDescendants = true
         addCorner(at, o.Radius)
-        addStroke(at, o.Border, 0.8, 1, "OptionsStroke")
+        addStroke(at, o.Border, 0.92, 1, "OptionsStroke")
         ao.Children = at
         local J = Instance.new("UIListLayout")
         J.SortOrder = Enum.SortOrder.LayoutOrder
@@ -6566,11 +6577,11 @@ function d.CreateCategory(aa, ab)
                 BackgroundColor3 = N.Enabled and o.Elevated or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
             })
             n:Tween(moduleStroke, o.TweenFast, {
-                Color = N.Enabled and o.BorderStrong or ((aq or optionsOpen) and o.BorderStrong or o.Border),
-                Transparency = N.Enabled and 0.2 or ((aq or optionsOpen) and 0.48 or 0.76),
+                Color = N.Enabled and o.BorderStrong or o.Border,
+                Transparency = N.Enabled and 0.58 or ((aq or optionsOpen) and 0.7 or 0.88),
             })
             n:Tween(moduleScale, o.TweenFast, {
-                Scale = N.Enabled and 1.006 or 1,
+                Scale = 1,
             })
 
             ar.TextColor3 = N.Enabled and o.TextStrong or ((aq or optionsOpen) and o.Text or o.MutedText)
@@ -6721,8 +6732,6 @@ function d.CreateCategory(aa, ab)
         if not d.isMobile then
             ar.MouseEnter:Connect(function()
                 aq = true
-                local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-
                 if not ao.Enabled and not optionsOpen then
                     ar.TextColor3 = o.Text
                     n:Tween(ar, o.TweenFast, {
@@ -6730,24 +6739,22 @@ function d.CreateCategory(aa, ab)
                     })
                     n:Tween(moduleStroke, o.TweenFast, {
                         Color = o.BorderStrong,
-                        Transparency = 0.46,
+                        Transparency = 0.7,
                     })
                 elseif ao.Enabled then
                     n:Tween(moduleStroke, o.TweenFast, {
-                        Color = accent,
-                        Transparency = 0.1,
+                        Color = o.BorderStrong,
+                        Transparency = 0.52,
                     })
                 end
 
-                n:Tween(moduleScale, o.TweenFast, { Scale = 1.012 })
+                n:Tween(moduleScale, o.TweenFast, { Scale = 1.004 })
                 au.Visible = #ao.Bind > 0 or aq or optionsOpen
                 az.Visible = ao.StarActive or aq or optionsOpen
             end)
 
             ar.MouseLeave:Connect(function()
                 aq = false
-                local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-
                 if not ao.Enabled and not optionsOpen then
                     ar.TextColor3 = o.MutedText
                     n:Tween(ar, o.TweenFast, {
@@ -6755,29 +6762,29 @@ function d.CreateCategory(aa, ab)
                     })
                     n:Tween(moduleStroke, o.TweenFast, {
                         Color = o.Border,
-                        Transparency = 0.76,
+                        Transparency = 0.88,
                     })
                 elseif ao.Enabled then
                     n:Tween(moduleStroke, o.TweenFast, {
                         Color = o.BorderStrong,
-                        Transparency = 0.42,
+                        Transparency = 0.58,
                     })
                 end
 
                 n:Tween(moduleScale, o.TweenFast, {
-                    Scale = ao.Enabled and 1.006 or 1,
+                    Scale = 1,
                 })
                 au.Visible = #ao.Bind > 0 or aq or optionsOpen
                 az.Visible = ao.StarActive or aq or optionsOpen
             end)
 
             ar.MouseButton1Down:Connect(function()
-                n:Tween(moduleScale, o.TweenPress, { Scale = 0.988 })
+                n:Tween(moduleScale, o.TweenPress, { Scale = 0.996 })
             end)
 
             ar.MouseButton1Up:Connect(function()
                 n:Tween(moduleScale, o.TweenFast, {
-                    Scale = ao.Enabled and 1.006 or 1.012,
+                    Scale = aq and 1.004 or 1,
                 })
             end)
         end
@@ -11839,11 +11846,15 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
     ah = tostring(ah or "BadWars")
     ai = tostring(ai or "")
     aj = math.clamp(tonumber(aj) or 5, 1.5, 30)
-    local style = tostring(ak or "info")
+    local style = string.lower(tostring(ak or "info"))
 
     task.defer(function()
         if ag.ThreadFix then
             setthreadidentity(8)
+        end
+
+        if not q or not q.Parent then
+            return
         end
 
         local function notificationChildren()
@@ -11860,11 +11871,11 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         end
 
         local function updateNotificationPositions(animated)
-            local offset = d.isMobile and 20 or 18
+            local offset = d.isMobile and 18 or 16
             for _, notification in ipairs(notificationChildren()) do
                 local height = notification:GetAttribute("NotifHeight") or notification.AbsoluteSize.Y
-                local target = UDim2.new(1, -14, 1, -(offset + height))
-                if animated and n.Tween then
+                local target = UDim2.new(1, -16, 1, -(offset + height))
+                if animated then
                     n:Tween(notification, o.TweenSlow, { Position = target }, n.tweenstwo)
                 else
                     notification.Position = target
@@ -11886,68 +11897,85 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             children = notificationChildren()
         end
 
-        local viewportWidth = (B and B.AbsoluteSize.X or workspace.CurrentCamera.ViewportSize.X)
-            / math.max(A.Scale, 0.01)
-        local maxWidth = math.min(d.isMobile and 360 or 420, math.max(260, viewportWidth - 28))
+        local guiScale = math.max(A and A.Scale or 1, 0.01)
+        local viewportWidth = ((B and B.AbsoluteSize.X) or workspace.CurrentCamera.ViewportSize.X) / guiScale
+        local maxWidth = math.min(d.isMobile and 372 or 430, math.max(280, viewportWidth - 32))
         local titleSize = d.isMobile and 15 or 14
         local bodySize = d.isMobile and 14 or 13
-        local titleBounds = E(removeTags(ah), titleSize, o.FontSemiBold, maxWidth - 84) or Vector2.zero
-        local bodyBounds = E(removeTags(ai), bodySize, o.Font, maxWidth - 84) or Vector2.zero
-        local width = math.clamp(math.max(titleBounds.X, bodyBounds.X) + 96, d.isMobile and 300 or 292, maxWidth)
-        local wrappedBody = E(removeTags(ai), bodySize, o.Font, width - 84) or Vector2.zero
-        local height = math.clamp(math.max(d.isMobile and 86 or 80, wrappedBody.Y + 58), 80, d.isMobile and 156 or 146)
+        local titleBounds = E(removeTags(ah), titleSize, o.FontSemiBold, maxWidth - 106) or Vector2.zero
+        local bodyBounds = E(removeTags(ai), bodySize, o.Font, maxWidth - 90) or Vector2.zero
+        local width = math.clamp(math.max(titleBounds.X + 132, bodyBounds.X + 106), d.isMobile and 310 or 304, maxWidth)
+        local wrappedBody = E(removeTags(ai), bodySize, o.Font, width - 90) or Vector2.zero
+        local height = math.clamp(math.max(d.isMobile and 92 or 86, wrappedBody.Y + 62), 86, d.isMobile and 164 or 154)
 
         local styleColor = style == "alert" and o.Danger
             or style == "warning" and o.Warning
             or style == "success" and o.Success
             or Color3.fromHSV(ag.GUIColor.Hue, ag.GUIColor.Sat, ag.GUIColor.Value)
 
-        local card = Instance.new("Frame")
+        local styleName = style == "alert" and "ALERT"
+            or style == "warning" and "WARNING"
+            or style == "success" and "SUCCESS"
+            or "INFO"
+
+        local card = Instance.new("CanvasGroup")
         card.Name = "Notification"
         card.Size = UDim2.fromOffset(width, height)
         card.AnchorPoint = Vector2.new(1, 0)
-        card.Position = UDim2.new(1, width + 28, 1, -(height + 18))
+        card.Position = UDim2.new(1, width + 30, 1, -(height + 18))
         card.LayoutOrder = math.floor(os.clock() * 100000)
         card:SetAttribute("NotifHeight", height)
         card:SetAttribute("NotifTitle", ah)
         card:SetAttribute("NotifText", ai)
-        card.ZIndex = 50
-        card.BackgroundColor3 = o.Surface
+        card.ZIndex = 100
+        card.BackgroundColor3 = o.MainSoft
+        card.BackgroundTransparency = 0.02
         card.BorderSizePixel = 0
+        card.GroupTransparency = 1
         card.ClipsDescendants = false
         card.Parent = q
         addCorner(card, o.RadiusLarge)
         addSurfaceGradient(card)
         addShadow(card, true)
-        local cardStroke = addStroke(card, o.BorderStrong, 0.26, 1, "NotificationStroke")
+        local cardStroke = addStroke(card, o.BorderStrong, 0.56, 1, "NotificationStroke")
         local cardScale = addScale(card)
-        cardScale.Scale = 0.94
+        cardScale.Scale = 0.965
+
+        local topHighlight = Instance.new("Frame")
+        topHighlight.Name = "TopHighlight"
+        topHighlight.Size = UDim2.new(1, -24, 0, 1)
+        topHighlight.Position = UDim2.fromOffset(12, 1)
+        topHighlight.BackgroundColor3 = o.TextStrong
+        topHighlight.BackgroundTransparency = 0.88
+        topHighlight.BorderSizePixel = 0
+        topHighlight.ZIndex = 102
+        topHighlight.Parent = card
 
         local accent = Instance.new("Frame")
         accent.Name = "Accent"
-        accent.Size = UDim2.new(0, 4, 1, -16)
-        accent.Position = UDim2.fromOffset(0, 8)
+        accent.Size = UDim2.new(0, 3, 1, -18)
+        accent.Position = UDim2.fromOffset(0, 9)
         accent.BackgroundColor3 = styleColor
         accent.BorderSizePixel = 0
-        accent.ZIndex = 52
+        accent.ZIndex = 102
         accent.Parent = card
         addCorner(accent, UDim.new(1, 0))
 
         local iconContainer = Instance.new("Frame")
         iconContainer.Name = "IconContainer"
-        iconContainer.Size = UDim2.fromOffset(38, 38)
-        iconContainer.Position = UDim2.fromOffset(18, 15)
+        iconContainer.Size = UDim2.fromOffset(36, 36)
+        iconContainer.Position = UDim2.fromOffset(17, 16)
         iconContainer.BackgroundColor3 = styleColor
-        iconContainer.BackgroundTransparency = 0.84
+        iconContainer.BackgroundTransparency = 0.87
         iconContainer.BorderSizePixel = 0
-        iconContainer.ZIndex = 52
+        iconContainer.ZIndex = 102
         iconContainer.Parent = card
         addCorner(iconContainer, o.Radius)
-        addStroke(iconContainer, styleColor, 0.48, 1, "IconStroke")
+        addStroke(iconContainer, styleColor, 0.62, 1, "IconStroke")
 
         local icon = Instance.new("ImageLabel")
         icon.Name = "Icon"
-        icon.Size = UDim2.fromOffset(18, 18)
+        icon.Size = UDim2.fromOffset(17, 17)
         icon.AnchorPoint = Vector2.new(0.5, 0.5)
         icon.Position = UDim2.fromScale(0.5, 0.5)
         icon.BackgroundTransparency = 1
@@ -11956,13 +11984,28 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             icon.Image = u("badscript/assets/new/info.png")
         end
         icon.ImageColor3 = styleColor
-        icon.ZIndex = 53
+        icon.ZIndex = 103
         icon.Parent = iconContainer
+
+        local statusBadge = Instance.new("TextLabel")
+        statusBadge.Name = "Status"
+        statusBadge.Size = UDim2.fromOffset(styleName == "WARNING" and 66 or 54, 18)
+        statusBadge.Position = UDim2.new(1, -(styleName == "WARNING" and 104 or 92), 0, 13)
+        statusBadge.BackgroundColor3 = styleColor
+        statusBadge.BackgroundTransparency = 0.86
+        statusBadge.BorderSizePixel = 0
+        statusBadge.Text = styleName
+        statusBadge.TextColor3 = styleColor
+        statusBadge.TextSize = 9
+        statusBadge.FontFace = o.FontBold
+        statusBadge.ZIndex = 103
+        statusBadge.Parent = card
+        addCorner(statusBadge, UDim.new(1, 0))
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
-        title.Size = UDim2.new(1, -94, 0, math.max(20, titleBounds.Y))
-        title.Position = UDim2.fromOffset(68, 13)
+        title.Size = UDim2.new(1, -160, 0, math.max(20, titleBounds.Y))
+        title.Position = UDim2.fromOffset(66, 13)
         title.BackgroundTransparency = 1
         title.Text = ah
         title.TextXAlignment = Enum.TextXAlignment.Left
@@ -11973,14 +12016,14 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         title.TextSize = titleSize
         title.RichText = true
         title.FontFace = o.FontSemiBold
-        title.ZIndex = 52
+        title.ZIndex = 102
         title.Parent = card
 
-        local bodyTop = math.max(40, 17 + math.max(20, titleBounds.Y))
+        local bodyTop = math.max(41, 17 + math.max(20, titleBounds.Y))
         local body = Instance.new("TextLabel")
         body.Name = "Text"
-        body.Size = UDim2.new(1, -94, 0, math.max(20, height - bodyTop - 16))
-        body.Position = UDim2.fromOffset(68, bodyTop)
+        body.Size = UDim2.new(1, -88, 0, math.max(20, height - bodyTop - 17))
+        body.Position = UDim2.fromOffset(66, bodyTop)
         body.BackgroundTransparency = 1
         body.Text = ai
         body.TextXAlignment = Enum.TextXAlignment.Left
@@ -11991,32 +12034,33 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         body.TextSize = bodySize
         body.RichText = true
         body.FontFace = o.Font
-        body.ZIndex = 52
+        body.ZIndex = 102
         body.Parent = card
 
         local closeButton = Instance.new("TextButton")
         closeButton.Name = "Dismiss"
-        closeButton.Size = UDim2.fromOffset(24, 24)
-        closeButton.Position = UDim2.new(1, -31, 0, 9)
+        closeButton.Size = UDim2.fromOffset(25, 25)
+        closeButton.Position = UDim2.new(1, -32, 0, 9)
         closeButton.BackgroundColor3 = o.Elevated
         closeButton.BackgroundTransparency = 1
         closeButton.BorderSizePixel = 0
         closeButton.AutoButtonColor = false
-        closeButton.Text = "X"
+        closeButton.Text = "×"
         closeButton.TextColor3 = o.FaintText
         closeButton.TextSize = 20
         closeButton.FontFace = o.FontSemiBold
-        closeButton.ZIndex = 54
+        closeButton.ZIndex = 104
         closeButton.Parent = card
         addCorner(closeButton, o.RadiusSmall)
 
         local progressTrack = Instance.new("Frame")
         progressTrack.Name = "ProgressTrack"
-        progressTrack.Size = UDim2.new(1, -28, 0, 3)
-        progressTrack.Position = UDim2.new(0, 14, 1, -9)
+        progressTrack.Size = UDim2.new(1, -28, 0, 2)
+        progressTrack.Position = UDim2.new(0, 14, 1, -8)
         progressTrack.BackgroundColor3 = o.Elevated
+        progressTrack.BackgroundTransparency = 0.1
         progressTrack.BorderSizePixel = 0
-        progressTrack.ZIndex = 52
+        progressTrack.ZIndex = 102
         progressTrack.Parent = card
         addCorner(progressTrack, UDim.new(1, 0))
 
@@ -12025,25 +12069,28 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         progress.Size = UDim2.fromScale(1, 1)
         progress.BackgroundColor3 = styleColor
         progress.BorderSizePixel = 0
-        progress.ZIndex = 53
+        progress.ZIndex = 103
         progress.Parent = progressTrack
         addCorner(progress, UDim.new(1, 0))
 
         local dismissed = false
         local paused = false
+
         local function dismissNotification()
             if dismissed then
                 return
             end
             dismissed = true
 
-            n:Tween(card, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-                Position = UDim2.new(1, width + 28, 1, card.Position.Y.Offset),
+            n:Tween(card, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+                Position = UDim2.new(1, width + 30, 1, card.Position.Y.Offset),
+                GroupTransparency = 1,
             }, n.tweenstwo)
-            n:Tween(cardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                Scale = 0.94,
+            n:Tween(cardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+                Scale = 0.965,
             })
-            task.delay(0.2, function()
+
+            task.delay(0.21, function()
                 if card.Parent then
                     card:Destroy()
                 end
@@ -12053,7 +12100,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         closeButton.MouseEnter:Connect(function()
             n:Tween(closeButton, o.TweenFast, {
-                BackgroundTransparency = 0.2,
+                BackgroundTransparency = 0.18,
                 TextColor3 = o.TextStrong,
             })
         end)
@@ -12067,10 +12114,10 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         card.MouseEnter:Connect(function()
             paused = true
-            n:Tween(cardScale, o.TweenFast, { Scale = 1.012 })
+            n:Tween(cardScale, o.TweenFast, { Scale = 1.008 })
             n:Tween(cardStroke, o.TweenFast, {
-                Color = styleColor,
-                Transparency = 0.12,
+                Color = o.BorderStrong,
+                Transparency = 0.34,
             })
         end)
         card.MouseLeave:Connect(function()
@@ -12078,7 +12125,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             n:Tween(cardScale, o.TweenFast, { Scale = 1 })
             n:Tween(cardStroke, o.TweenFast, {
                 Color = o.BorderStrong,
-                Transparency = 0.26,
+                Transparency = 0.56,
             })
         end)
 
@@ -12088,14 +12135,15 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             tap.Size = UDim2.fromScale(1, 1)
             tap.BackgroundTransparency = 1
             tap.Text = ""
-            tap.ZIndex = 51
+            tap.ZIndex = 101
             tap.Parent = card
             setupMobileSwipeDismiss(tap, dismissNotification)
         end
 
         updateNotificationPositions(false)
         n:Tween(card, o.TweenBack, {
-            Position = UDim2.new(1, -14, 1, card.Position.Y.Offset),
+            Position = UDim2.new(1, -16, 1, card.Position.Y.Offset),
+            GroupTransparency = 0,
         }, n.tweenstwo)
         n:Tween(cardScale, o.TweenBack, { Scale = 1 })
 
@@ -13142,25 +13190,41 @@ s.Parent = w
 z = Instance.new("TextLabel")
 z.Name = "Tooltip"
 z.Position = UDim2.fromScale(-1, -1)
-z.ZIndex = 80
+z.ZIndex = 240
 z.BackgroundColor3 = o.Elevated
 z.Visible = false
 z.Text = ""
 z.TextColor3 = o.TextStrong
 z.TextStrokeColor3 = o.Main
-z.TextStrokeTransparency = 0.72
-z.TextSize = d.isMobile and 14 or 14
+z.TextStrokeTransparency = 0.82
+z.TextSize = d.isMobile and 14 or 13
 z.TextWrapped = true
+z.RichText = false
 z.TextXAlignment = Enum.TextXAlignment.Left
 z.TextYAlignment = Enum.TextYAlignment.Center
 z.FontFace = o.FontSemiBold
 z.BackgroundTransparency = 0.02
 z.Parent = w
 addCorner(z, o.Radius)
-local tooltipStroke = addStroke(z, o.BorderStrong, 0.1, 1, "TooltipStroke")
+local tooltipStroke = addStroke(z, o.BorderStrong, 0.36, 1, "TooltipStroke")
 y = addShadow(z, true)
+local tooltipAccent = Instance.new("Frame")
+tooltipAccent.Name = "Accent"
+tooltipAccent.Size = UDim2.new(0, 2, 1, -12)
+tooltipAccent.Position = UDim2.fromOffset(5, 6)
+tooltipAccent.BorderSizePixel = 0
+tooltipAccent.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+tooltipAccent.ZIndex = z.ZIndex + 1
+tooltipAccent.Parent = z
+addCorner(tooltipAccent, UDim.new(1, 0))
+connectguicolorchange(function(hue, saturation, value)
+    if tooltipAccent.Parent then
+        tooltipAccent.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
+    end
+end)
+
 local tooltipPadding = Instance.new("UIPadding")
-tooltipPadding.PaddingLeft = UDim.new(0, 11)
+tooltipPadding.PaddingLeft = UDim.new(0, 14)
 tooltipPadding.PaddingRight = UDim.new(0, 11)
 tooltipPadding.PaddingTop = UDim.new(0, 7)
 tooltipPadding.PaddingBottom = UDim.new(0, 7)
@@ -14619,14 +14683,31 @@ function d.UpdateGUI(I, J, K, L, M)
         end
     end
 
-    if not v.Visible and not d.Legit.Window.Visible then
+    local legitWindow = d.Legit and d.Legit.Window
+    if not v.Visible and not (legitWindow and legitWindow.Visible) then
         return
     end
     local N = d.GUIColor.Rainbow and d.RainbowMode.Value ~= "Retro"
 
     for O, P in d.Categories do
         if O == "Main" then
-            P.Object.VapeLogo.V4Logo.ImageColor3 = Color3.fromHSV(J, K, L)
+            local mainObject = P.Object
+            local brand = mainObject and mainObject:FindFirstChild("VapeLogo")
+            local version = brand and brand:FindFirstChild("V4Logo")
+            local accent = Color3.fromHSV(J, K, L)
+
+            if brand and brand:IsA("TextLabel") then
+                brand.TextColor3 = o.TextStrong
+            end
+            if version then
+                if version:IsA("TextLabel") then
+                    version.BackgroundColor3 = accent
+                    version.TextColor3 = o.Main
+                elseif version:IsA("ImageLabel") then
+                    version.ImageColor3 = accent
+                end
+            end
+
             for Q, R in P.Buttons do
                 if R.Enabled then
                     R.Object.TextColor3 = N and Color3.fromHSV(d:Color((J - (R.Index * 0.025)) % 1))
@@ -14661,55 +14742,75 @@ function d.UpdateGUI(I, J, K, L, M)
     end
 
     for O, P in d.Modules do
-        local rail = P.Object:FindFirstChild("ActiveRail")
-        local moduleStroke = P.Object:FindFirstChild("ModuleStroke")
+        local object = P and P.Object
+        if typeof(object) == "Instance" and object.Parent then
+            local rail = object:FindFirstChild("ActiveRail")
+            local moduleStroke = object:FindFirstChild("ModuleStroke")
 
-        if not rail then
-            rail = Instance.new("Frame")
-            rail.Name = "ActiveRail"
-            rail.Size = UDim2.new(0, 3, 1, -12)
-            rail.Position = UDim2.fromOffset(0, 6)
-            rail.BorderSizePixel = 0
-            rail.ZIndex = P.Object.ZIndex + 1
-            rail.Parent = P.Object
-            addCorner(rail, UDim.new(1, 0))
-        end
-
-        local gradient = P.Object:FindFirstChildOfClass("UIGradient")
-        if gradient then
-            gradient.Enabled = false
-        end
-
-        local accent = N and Color3.fromHSV(d:Color((J - (P.Index * 0.025)) % 1)) or Color3.fromHSV(J, K, L)
-
-        if P.Enabled then
-            rail.BackgroundColor3 = accent
-            rail.Visible = true
-
-            P.Object.BackgroundColor3 = o.Elevated
-            P.Object.TextColor3 = o.TextStrong
-            P.Object.Bind.Icon.ImageColor3 = o.Text
-            P.Object.Bind.TextLabel.TextColor3 = o.Text
-            P.Object.Dots.Dots.ImageColor3 = o.Text
-
-            if moduleStroke then
-                moduleStroke.Color = o.BorderStrong
-                moduleStroke.Transparency = 0.42
+            if not rail then
+                rail = Instance.new("Frame")
+                rail.Name = "ActiveRail"
+                rail.Size = UDim2.new(0, 2, 1, -14)
+                rail.Position = UDim2.fromOffset(0, 7)
+                rail.BorderSizePixel = 0
+                rail.ZIndex = object.ZIndex + 1
+                rail.Parent = object
+                addCorner(rail, UDim.new(1, 0))
             end
-        else
-            rail.Visible = false
-            P.Object.BackgroundColor3 = o.Surface
-            P.Object.TextColor3 = o.MutedText
 
-            if moduleStroke then
-                moduleStroke.Color = o.Border
-                moduleStroke.Transparency = 0.76
+            local gradient = object:FindFirstChildOfClass("UIGradient")
+            if gradient then
+                gradient.Enabled = false
+            end
+
+            local accent = N and Color3.fromHSV(d:Color((J - (P.Index * 0.025)) % 1)) or Color3.fromHSV(J, K, L)
+
+            if P.Enabled then
+                rail.BackgroundColor3 = accent
+                rail.Visible = true
+
+                object.BackgroundColor3 = o.Elevated
+                object.TextColor3 = o.TextStrong
+
+                local bind = object:FindFirstChild("Bind")
+                if bind then
+                    local bindIcon = bind:FindFirstChild("Icon")
+                    local bindText = bind:FindFirstChildOfClass("TextLabel")
+                    if bindIcon and bindIcon:IsA("ImageLabel") then
+                        bindIcon.ImageColor3 = o.Text
+                    end
+                    if bindText then
+                        bindText.TextColor3 = o.Text
+                    end
+                end
+
+                local dots = object:FindFirstChild("Dots")
+                local dotsIcon = dots and dots:FindFirstChild("Dots")
+                if dotsIcon and dotsIcon:IsA("ImageLabel") then
+                    dotsIcon.ImageColor3 = o.Text
+                end
+
+                if moduleStroke and moduleStroke:IsA("UIStroke") then
+                    moduleStroke.Color = o.BorderStrong
+                    moduleStroke.Transparency = 0.58
+                end
+            else
+                rail.Visible = false
+                object.BackgroundColor3 = o.Surface
+                object.TextColor3 = o.MutedText
+
+                if moduleStroke and moduleStroke:IsA("UIStroke") then
+                    moduleStroke.Color = o.Border
+                    moduleStroke.Transparency = 0.88
+                end
             end
         end
 
-        for Q, R in P.Options do
-            if R.Color then
-                R:Color(J, K, L, N)
+        if P and type(P.Options) == "table" then
+            for Q, R in P.Options do
+                if R and R.Color then
+                    pcall(R.Color, R, J, K, L, N)
+                end
             end
         end
     end
@@ -14723,7 +14824,7 @@ function d.UpdateGUI(I, J, K, L, M)
         d.Legit.Icon.ImageColor3 = Color3.fromHSV(J, K, L)
     end
 
-    if d.Legit.Window.Visible then
+    if d.Legit and d.Legit.Window and d.Legit.Window.Visible and type(d.Legit.Modules) == "table" then
         for O, P in d.Legit.Modules do
             if P.Enabled then
                 local accent = Color3.fromHSV(J, K, L)

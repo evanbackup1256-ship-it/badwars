@@ -1,4 +1,4 @@
--- BadWars Main v3.2 - Resilient Module Pipeline
+-- BadWars Main v3.2.1 - Premium Stability Pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -1036,53 +1036,86 @@ end
 
 -- Finish loading
 local function finish()
+    local api = shared.Bad
+    if type(api) ~= "table" then
+        recordErr("finish", "Bad API disappeared before profile loading")
+        setStatus("ERROR: GUI API unavailable during finalization", true)
+        return
+    end
+
     setStatus("loading profile")
-    shared.Bad:Load()
-    shared.Bad.Init = nil
+
+    local loaded, loadError = pcall(function()
+        api:Load()
+    end)
+    if not loaded then
+        recordErr("profile-load", loadError)
+        setStatus("ERROR profile: " .. tostring(loadError), true)
+    end
+
+    api.Init = nil
+
     if not shared.BadReload then
         pcall(function()
-            local cg = shared.Bad.gui and shared.Bad.gui.ScaledGui and shared.Bad.gui.ScaledGui.ClickGui
+            local cg = api.gui and api.gui.ScaledGui and api.gui.ScaledGui.ClickGui
             if cg then
                 cg.Visible = true
                 setStatus("ready - menu open")
             end
         end)
     end
+
     task.spawn(function()
-        repeat
-            shared.Bad:Save()
+        while shared.Bad == api and api.Loaded do
+            local saved, saveError = pcall(function()
+                api:Save()
+            end)
+
+            if not saved then
+                recordErr("profile-autosave", saveError)
+                break
+            end
+
             task.wait(10)
-        until not shared.Bad.Loaded
+        end
     end)
+
     local teleported
-    shared.Bad:Clean(
-        shared.Bad.gui
-                and shared.Bad.gui:FindFirstChild("LocalPlayer")
-                and shared.Bad.gui:FindFirstChild("LocalPlayer").OnTeleport:Connect(function()
-                    if not teleported and not shared.BadIndependent then
-                        teleported = true
-                        local loaderUrls = rawUrls("badscript/loader.lua")
-                        local script = "shared.BadReload=true\nif shared.BadDeveloper then\nloadstring(readfile('badscript/loader.lua'),'loader')()\nelse\nloadstring(game:HttpGet('"
-                            .. loaderUrls[1]
-                            .. "',true),'loader')()\nend"
-                        if shared.BadDeveloper then
-                            script = "shared.BadDeveloper=true\n" .. script
-                        end
-                        shared.Bad:Save()
-                        queue_on_teleport(script)
-                    end
-                end)
-            or function() end
-    )
+    local localPlayer = api.gui and api.gui:FindFirstChild("LocalPlayer")
+    local teleportConnection = localPlayer
+        and localPlayer.OnTeleport:Connect(function()
+            if teleported or shared.BadIndependent or shared.Bad ~= api then
+                return
+            end
+
+            teleported = true
+            local loaderUrls = rawUrls("badscript/loader.lua")
+            local script = "shared.BadReload=true\nif shared.BadDeveloper then\nloadstring(readfile('badscript/loader.lua'),'loader')()\nelse\nloadstring(game:HttpGet('"
+                .. loaderUrls[1]
+                .. "',true),'loader')()\nend"
+
+            if shared.BadDeveloper then
+                script = "shared.BadDeveloper=true\n" .. script
+            end
+
+            pcall(function()
+                api:Save()
+            end)
+            queue_on_teleport(script)
+        end)
+
+    api:Clean(teleportConnection or function() end)
+
     if
         not shared.BadReload
-        and shared.Bad.Categories
-        and shared.Bad.Categories.Main
-        and shared.Bad.Categories.Main.Options
-        and shared.Bad.Categories.Main.Options["GUI bind indicator"]
-        and shared.Bad.Categories.Main.Options["GUI bind indicator"].Enabled
+        and api.Categories
+        and api.Categories.Main
+        and api.Categories.Main.Options
+        and api.Categories.Main.Options["GUI bind indicator"]
+        and api.Categories.Main.Options["GUI bind indicator"].Enabled
+        and type(api.CreateNotification) == "function"
     then
-        shared.Bad:CreateNotification("BadWars", "by usingINales | Press keybind to open GUI", 6)
+        api:CreateNotification("BadWars V1", "Press your GUI keybind to open the menu.", 6, "info")
     end
 end
 

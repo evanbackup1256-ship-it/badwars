@@ -4,12 +4,12 @@ local Sort
 AutoRejoin = Bad.Categories.Utility:CreateModule({
 	Name = 'AutoRejoin',
 	Function = function(callback)
-		if callback then
+		if callback and guiService then
 			local check
 			AutoRejoin:Clean(guiService.ErrorMessageChanged:Connect(function(str)
-				if (not check or guiService:GetErrorCode() ~= Enum.ConnectionError.DisconnectLuaKick) and guiService:GetErrorCode() ~= Enum.ConnectionError.DisconnectConnectionLost and not str:lower():find('ban') then
+				if (not check or guiService:GetErrorCode() ~= Enum.ConnectionError.DisconnectLuaKick) and guiService:GetErrorCode() ~= Enum.ConnectionError.DisconnectConnectionLost and str and not str:lower():find('ban') then
 					check = true
-					serverHop(nil, Sort.Value)
+					serverHop(nil, Sort and Sort.Value or 'Descending')
 				end
 			end))
 		end

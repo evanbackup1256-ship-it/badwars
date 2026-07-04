@@ -27,28 +27,30 @@ AimAssist = Bad.Categories.Combat:CreateModule({
 
 		if callback then
 			local ent
-			local rightClicked = not RightClick.Enabled or inputService:IsMouseButtonPressed(1)
+			local rightClicked = not RightClick or not RightClick.Enabled or (inputService and inputService:IsMouseButtonPressed(1))
 			AimAssist:Clean(runService.RenderStepped:Connect(function(dt)
-				if CircleObject then
+				if CircleObject and inputService then
 					CircleObject.Position = inputService:GetMouseLocation()
 				end
 
-				if rightClicked and not Bad.gui.ScaledGui.ClickGui.Visible then
+				if rightClicked and Bad and Bad.gui and Bad.gui.ScaledGui and Bad.gui.ScaledGui.ClickGui and not Bad.gui.ScaledGui.ClickGui.Visible then
 					ent = entitylib.EntityMouse({
-						Range = FOV.Value,
-						Part = Part.Value,
-						Players = Targets.Players.Enabled,
-						NPCs = Targets.NPCs.Enabled,
-						Wallcheck = Targets.Walls.Enabled,
-						Origin = gameCamera.CFrame.Position
+						Range = FOV and FOV.Value or 150,
+						Part = Part and Part.Value or 'Head',
+						Players = Targets and Targets.Players and Targets.Players.Enabled,
+						NPCs = Targets and Targets.NPCs and Targets.NPCs.Enabled,
+						Wallcheck = Targets and Targets.Walls and Targets.Walls.Enabled,
+						Origin = gameCamera and gameCamera.CFrame.Position or Vector3.zero
 					})
 
-					if ent then
+					if ent and gameCamera then
 						local facing = gameCamera.CFrame.LookVector
-						local new = (ent[Part.Value].Position - gameCamera.CFrame.Position).Unit
+						local targetPart = ent[Part and Part.Value or 'Head']
+						if not targetPart then return end
+						local new = (targetPart.Position - gameCamera.CFrame.Position).Unit
 						new = new == new and new or Vector3.zero
 
-						if ShowTarget.Enabled then
+						if ShowTarget and ShowTarget.Enabled and targetinfo and targetinfo.Targets then
 							targetinfo.Targets[ent] = tick() + 1
 						end
 
@@ -57,14 +59,14 @@ AimAssist = Bad.Categories.Combat:CreateModule({
 							local diffPitch = math.asin(facing.Y) - math.asin(new.Y)
 							local angle = Vector2.new(diffYaw, diffPitch) // (moveConst * UserSettings():GetService('UserGameSettings').MouseSensitivity)
 
-							angle *= math.min(Speed.Value * dt, 1)
+							angle *= math.min(Speed and Speed.Value or 5 * dt, 1)
 							mousemoverel(angle.X, angle.Y)
 						end
 					end
 				end
 			end))
 
-			if RightClick.Enabled then
+			if RightClick and RightClick.Enabled and inputService then
 				AimAssist:Clean(inputService.InputBegan:Connect(function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton2 then
 						ent = nil

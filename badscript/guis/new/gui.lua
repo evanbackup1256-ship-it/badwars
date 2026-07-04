@@ -1,4 +1,4 @@
--- BadWars Premium UI Revamp | Rayfield / EXE-6 inspired | Build 2026.07.04.1
+-- BadWars Premium UI Revamp | Rayfield / EXE-6 inspired | Build 2026.07.04.2
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local b = a:setupDecoratedCustomSignal("GUILIBRARY_INTERNAL")
@@ -31,7 +31,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.1-EXE6-RAYFIELD-HOTFIX",
+    PremiumBuild = "2026.07.04.2-EXE6-RAYFIELD-FONT-HOTFIX",
     Windows = {},
     Indicators = {},
 }
@@ -739,7 +739,14 @@ local E = function(E, F, G, H)
     if typeof(G) == "Font" then
         p.Font = G
     elseif typeof(G) == "EnumItem" and G.EnumType == Enum.Font then
-        p.Font = Font.fromEnum(G)
+        if G == Enum.Font.Unknown then
+            p.Font = o.Font
+        else
+            local converted, font = pcall(Font.fromEnum, G)
+            p.Font = converted and typeof(font) == "Font" and font or o.Font
+        end
+    else
+        p.Font = o.Font
     end
 
     local I, J = pcall(function()
@@ -2698,7 +2705,7 @@ H = {
 
         local choices = {}
         for _, fontItem in Enum.Font:GetEnumItems() do
-            if not blocked[fontItem.Name] then
+            if fontItem ~= Enum.Font.Unknown and not blocked[fontItem.Name] then
                 choices[#choices + 1] = fontItem.Name
             end
         end
@@ -2715,7 +2722,7 @@ H = {
 
         local function setEnumFont(name, notify)
             local enumFont = Enum.Font[name]
-            if not enumFont then
+            if not enumFont or enumFont == Enum.Font.Unknown then
                 return false
             end
             local success, font = pcall(Font.fromEnum, enumFont)

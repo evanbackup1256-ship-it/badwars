@@ -1,4 +1,4 @@
--- BadWars Studio UI | Build 2026.07.04.13
+-- BadWars Studio UI | Build 2026.07.04.13.1
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -38,7 +38,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.13-BADWARS-STUDIO",
+    PremiumBuild = "2026.07.04.13.1-BADWARS-STUDIO-HOTFIX",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -2560,9 +2560,16 @@ H = {
 
         local popup
         local popupScale
+        local popupStroke
+        local popupShadow
         local outsideConnection
         local scrollConnection
         local popupGeneration = 0
+        local dropdownTransition = TweenInfo.new(
+            0.16,
+            Enum.EasingStyle.Quart,
+            Enum.EasingDirection.InOut
+        )
 
         local function updateTitle()
             title.Text =
@@ -2585,55 +2592,43 @@ H = {
                 and point.Y <= position.Y + size.Y
         end
 
-        local function closeDropdown()
+        local function closeDropdown(instant)
             popupGeneration += 1
+            if outsideConnection then outsideConnection:Disconnect(); outsideConnection = nil end
+            if scrollConnection then scrollConnection:Disconnect(); scrollConnection = nil end
+            if d._OpenDropdown == closeDropdown then d._OpenDropdown = nil end
 
-            if outsideConnection then
-                outsideConnection:Disconnect()
-                outsideConnection = nil
+            if instant then
+                arrow.Rotation = 90
+                arrow.ImageColor3 = o.MutedText
+                background.BackgroundColor3 = settings.Darker and o.MainSoft or o.Surface
+                stroke.Color = o.Border
+                stroke.Transparency = 0.76
+            else
+                n:Tween(arrow, dropdownTransition, { Rotation = 90, ImageColor3 = o.MutedText })
+                n:Tween(background, dropdownTransition, { BackgroundColor3 = settings.Darker and o.MainSoft or o.Surface })
+                n:Tween(stroke, dropdownTransition, { Color = o.Border, Transparency = 0.76 })
             end
 
-            if scrollConnection then
-                scrollConnection:Disconnect()
-                scrollConnection = nil
-            end
+            local closingPopup, closingScale = popup, popupScale
+            local closingStroke, closingShadow = popupStroke, popupShadow
+            popup, popupScale, popupStroke, popupShadow = nil, nil, nil, nil
+            if not closingPopup or not closingPopup.Parent then return end
 
-            if d._OpenDropdown == closeDropdown then
-                d._OpenDropdown = nil
+            local function destroyPopup()
+                if closingPopup and closingPopup.Parent then closingPopup:Destroy() end
             end
+            if instant or not d.Loaded then destroyPopup(); return end
 
-            n:Tween(arrow, o.Tween, {
-                Rotation = 90,
-                ImageColor3 = o.MutedText,
+            closingPopup.Active = false
+            local fadeTween = n:Tween(closingPopup, dropdownTransition, {
+                GroupTransparency = 1,
+                BackgroundTransparency = 1,
             })
-            n:Tween(background, o.TweenFast, {
-                BackgroundColor3 =
-                    settings.Darker and o.MainSoft or o.Surface,
-            })
-            n:Tween(stroke, o.TweenFast, {
-                Color = o.Border,
-                Transparency = 0.76,
-            })
-
-            local closingPopup = popup
-            local closingScale = popupScale
-            popup = nil
-            popupScale = nil
-
-            if closingPopup and closingPopup.Parent then
-                n:Tween(closingScale, o.TweenFast, {
-                    Scale = 0.99,
-                })
-                n:Tween(closingPopup, o.TweenFast, {
-                    GroupTransparency = 1,
-                })
-
-                task.delay(0.18, function()
-                    if closingPopup.Parent then
-                        closingPopup:Destroy()
-                    end
-                end)
-            end
+            if closingScale then n:Tween(closingScale, dropdownTransition, { Scale = 0.985 }) end
+            if closingStroke then n:Tween(closingStroke, dropdownTransition, { Transparency = 1 }) end
+            if closingShadow then n:Tween(closingShadow, dropdownTransition, { ImageTransparency = 1 }) end
+            if fadeTween then fadeTween.Completed:Once(destroyPopup) else task.delay(0.17, destroyPopup) end
         end
 
         function api.Save(self, target)
@@ -2716,23 +2711,13 @@ H = {
             local openGeneration = popupGeneration
             d._OpenDropdown = closeDropdown
 
-            n:Tween(arrow, o.Tween, {
+            n:Tween(arrow, dropdownTransition, {
                 Rotation = 270,
-                ImageColor3 = Color3.fromHSV(
-                    d.GUIColor.Hue,
-                    d.GUIColor.Sat,
-                    d.GUIColor.Value
-                ),
+                ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
             })
-            n:Tween(background, o.TweenFast, {
-                BackgroundColor3 = o.SurfaceHover,
-            })
-            n:Tween(stroke, o.TweenFast, {
-                Color = Color3.fromHSV(
-                    d.GUIColor.Hue,
-                    d.GUIColor.Sat,
-                    d.GUIColor.Value
-                ),
+            n:Tween(background, dropdownTransition, { BackgroundColor3 = o.SurfaceHover })
+            n:Tween(stroke, dropdownTransition, {
+                Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
                 Transparency = 0.52,
             })
 
@@ -2747,7 +2732,7 @@ H = {
                 searchHeight + rowHeight + 8
             )
             popup.BackgroundColor3 = o.Elevated
-            popup.BackgroundTransparency = 0.01
+            popup.BackgroundTransparency = 1
             popup.GroupTransparency = 1
             popup.BorderSizePixel = 0
             popup.ClipsDescendants = true
@@ -2755,17 +2740,11 @@ H = {
             popup.Parent = w
             addCorner(popup, o.Radius)
             addSurfaceGradient(popup)
-            addShadow(popup, true)
-            addStroke(
-                popup,
-                o.BorderStrong,
-                0.54,
-                1,
-                "DropdownPopupStroke"
-            )
-
+            popupShadow = addShadow(popup, true)
+            popupShadow.ImageTransparency = 1
+            popupStroke = addStroke(popup, o.BorderStrong, 1, 1, "DropdownPopupStroke")
             popupScale = addScale(popup)
-            popupScale.Scale = 0.99
+            popupScale.Scale = 0.985
 
             local search = Instance.new("TextBox")
             search.Name = "SearchBar"
@@ -3029,12 +3008,10 @@ H = {
 
             filter("")
 
-            n:Tween(popup, o.TweenSlow, {
-                GroupTransparency = 0,
-            })
-            n:Tween(popupScale, o.TweenSlow, {
-                Scale = 1,
-            })
+            n:Tween(popup, dropdownTransition, { GroupTransparency = 0, BackgroundTransparency = 0.01 })
+            n:Tween(popupScale, dropdownTransition, { Scale = 1 })
+            n:Tween(popupStroke, dropdownTransition, { Transparency = 0.54 })
+            n:Tween(popupShadow, dropdownTransition, { ImageTransparency = 0.78 })
 
             local scrollingParent = parent
             while
@@ -6629,6 +6606,21 @@ function d.CreateGUI(aa)
         return at
     end
 
+    local function setSettingsVisible(visible)
+        if d._OpenDropdown then pcall(d._OpenDropdown, true); d._OpenDropdown = nil end
+        ak.Visible = visible
+        playerCard.Visible = not visible
+        onlineDot.Visible = not visible
+        af.Visible = not visible
+    end
+
+    ak:GetPropertyChangedSignal("Visible"):Connect(function()
+        local mainVisible = not ak.Visible
+        playerCard.Visible = mainVisible
+        onlineDot.Visible = mainVisible
+        af.Visible = mainVisible
+    end)
+
     an.MouseEnter:Connect(function()
         an.ImageColor3 = o.Text
     end)
@@ -6636,10 +6628,10 @@ function d.CreateGUI(aa)
         an.ImageColor3 = m.Light(o.Main, 0.37)
     end)
     an.Activated:Connect(function()
-        ak.Visible = false
+        setSettingsVisible(false)
     end)
     am.Activated:Connect(function()
-        ak.Visible = false
+        setSettingsVisible(false)
     end)
     aj.MouseEnter:Connect(function()
         local accent =
@@ -6733,7 +6725,7 @@ function d.CreateGUI(aa)
     end)
     ah.Activated:Connect(function()
         d.MainGuiSettingsOpenedEvent:Fire()
-        ak.Visible = true
+        setSettingsVisible(true)
     end)
     local function refreshMainWindowSize()
         if aa.ThreadFix then
@@ -7949,40 +7941,22 @@ function d.CreateCategory(aa, ab)
             ac.Expanded
             and aj.CanvasSize.Y.Offset > math.max(0, targetHeight - 44)
 
-        if ac.Expanded then
-            aj.Visible = true
-        end
-
         if instant or not d.Loaded or d._SuppressEntryAnimation then
+            ad.ClipsDescendants = false
             ad.Size = UDim2.fromOffset(232, targetHeight)
             ai.Rotation = ac.Expanded and 0 or 180
-            if not ac.Expanded then
-                aj.Visible = false
-            end
+            aj.Visible = ac.Expanded
         else
-            n:Tween(ai, o.Tween, {
-                Rotation = ac.Expanded and 0 or 180,
-            })
-            local sizeTween = n:Tween(ad, o.TweenSlow, {
-                Size = UDim2.fromOffset(232, targetHeight),
-            })
-
-            if not ac.Expanded then
-                local function hideChildren()
-                    if
-                        animationId == categoryAnimationId
-                        and not ac.Expanded
-                    then
-                        aj.Visible = false
-                    end
-                end
-
-                if sizeTween then
-                    sizeTween.Completed:Once(hideChildren)
-                else
-                    task.delay(0.35, hideChildren)
-                end
+            ad.ClipsDescendants = true
+            if ac.Expanded then aj.Visible = false end
+            n:Tween(ai, o.TweenSlow, { Rotation = ac.Expanded and 0 or 180 })
+            local sizeTween = n:Tween(ad, o.TweenSlow, { Size = UDim2.fromOffset(232, targetHeight) })
+            local function finishCategoryTransition()
+                if animationId ~= categoryAnimationId then return end
+                aj.Visible = ac.Expanded
+                ad.ClipsDescendants = false
             end
+            if sizeTween then sizeTween.Completed:Once(finishCategoryTransition) else task.delay(0.35, finishCategoryTransition) end
         end
 
         local maxCanvasY = math.max(
@@ -15167,71 +15141,36 @@ end
 
 function d.FinalizeInitialLayout(self, resizeOnly)
     self._SuppressEntryAnimation = true
+    if self._OpenDropdown then pcall(self._OpenDropdown, true); self._OpenDropdown = nil end
+    pcall(function() self:RepairModuleCategories() end)
+    pcall(function() self:SortAllModules() end)
 
-    if self._OpenDropdown then
-        pcall(self._OpenDropdown)
+    local pendingVisibility = {}
+    for _, category in self.Categories do
+        if type(category) == "table" and category.OriginalCategory and category.Object and category.Object.Parent then
+            local shouldShow = not category.Button or category.Button.Enabled ~= false
+            pendingVisibility[#pendingVisibility + 1] = { Category = category, Visible = shouldShow }
+            if not resizeOnly then category.Object.Visible = false end
+            if shouldShow and category.Expand then category:Expand(true, true) end
+            if category.Scroll then category.Scroll.CanvasPosition = resizeOnly and category.Scroll.CanvasPosition or Vector2.zero end
+            if category.RefreshLayout then category.RefreshLayout(true) end
+        end
     end
 
-    pcall(function()
-        self:RepairModuleCategories()
-    end)
-
-    pcall(function()
-        self:SortAllModules()
-    end)
-
-    for _, category in self.Categories do
-        if
-            type(category) == "table"
-            and category.OriginalCategory
-            and category.Object
-            and category.Object.Parent
-        then
-            local shouldShow =
-                not category.Button
-                or category.Button.Enabled ~= false
-
-            category.Object.Visible = shouldShow
-
-            if shouldShow and category.Expand then
-                category:Expand(true, true)
-            end
-
-            if category.Scroll then
-                category.Scroll.CanvasPosition =
-                    resizeOnly
-                        and category.Scroll.CanvasPosition
-                        or Vector2.zero
-            end
-
-            if category.RefreshLayout then
-                category.RefreshLayout(true)
-            end
-        end
+    if self.SortGuiCallback then self.SortGuiCallback(false) end
+    if not resizeOnly then task.wait() end
+    for _, entry in ipairs(pendingVisibility) do
+        if entry.Category.Object and entry.Category.Object.Parent then entry.Category.Object.Visible = entry.Visible end
     end
 
     local mainCategory = self.Categories.Main
-    if mainCategory and mainCategory.Object then
-        mainCategory.Object.Visible = true
-    end
-
-    if self.SortGuiCallback then
-        self.SortGuiCallback(false)
-    end
-
+    if mainCategory and mainCategory.Object then mainCategory.Object.Visible = true end
     for _, window in self.Windows do
-        if
-            typeof(window) == "Instance"
-            and window:IsA("GuiObject")
-            and window.Parent
-        then
+        if typeof(window) == "Instance" and window:IsA("GuiObject") and window.Parent then
             local scale = window:FindFirstChildOfClass("UIScale")
-            if scale then
-                scale.Scale = 1
-            end
+            if scale then scale.Scale = 1 end
         end
     end
-
     self._InitialLayoutReady = true
     self._SuppressEntryAnimation = false
 end

@@ -1,4 +1,4 @@
--- BadWars Premium UI Revamp | Rayfield / EXE-6 inspired | Build 2026.07.04.2
+-- BadWars Premium UI Revamp | Rayfield / EXE-6 inspired | Build 2026.07.04.4
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local b = a:setupDecoratedCustomSignal("GUILIBRARY_INTERNAL")
@@ -30,8 +30,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "4.18", PremiumBuild = "2026.07.04.3-FONT-FIX",
-    PremiumBuild = "2026.07.04.2-EXE6-RAYFIELD-FONT-HOTFIX",
+    Version = "4.18",
+    PremiumBuild = "2026.07.04.4-PREMIUM-STABILITY",
     Windows = {},
     Indicators = {},
 }
@@ -788,7 +788,7 @@ local function addStroke(F, G, H, I, J)
     K.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     K.LineJoinMode = Enum.LineJoinMode.Round
     K.Color = G or o.Border
-    K.Transparency = H == nil and 0.58 or H
+    K.Transparency = H == nil and 0.7 or H
     K.Thickness = I or 1
     return K
 end
@@ -817,7 +817,7 @@ local function addShadow(F, G)
     H.BackgroundTransparency = 1
     H.Image = u("badscript/assets/new/" .. (G and "blurnotif" or "blur") .. ".png")
     H.ImageColor3 = o.Shadow
-    H.ImageTransparency = G and 0.22 or 0.38
+    H.ImageTransparency = G and 0.58 or 0.68
     H.ScaleType = Enum.ScaleType.Slice
     H.SliceCenter = Rect.new(52, 31, 261, 502)
     H.ZIndex = math.max(F.ZIndex - 1, 0)
@@ -855,8 +855,6 @@ local function addAccentLine(F, G)
     if not H or not H:IsA("Frame") then
         H = Instance.new("Frame")
         H.Name = "AccentLine"
-        H.Size = UDim2.new(1, 0, 0, G or 2)
-        H.Position = UDim2.fromOffset(0, 0)
         H.BorderSizePixel = 0
         H.ZIndex = F.ZIndex + 2
         H.Parent = F
@@ -867,6 +865,9 @@ local function addAccentLine(F, G)
             end
         end)
     end
+    H.Size = UDim2.new(1, -20, 0, G or 1)
+    H.Position = UDim2.fromOffset(10, 1)
+    H.BackgroundTransparency = 0.18
     return H
 end
 
@@ -994,7 +995,11 @@ local function addTooltip(F, G)
         local bounds = E(G, z.TextSize, o.Font, maxWidth - 18) or Vector2.new(maxWidth - 18, z.TextSize + 4)
         z.Size = UDim2.fromOffset(math.min(maxWidth, math.max(96, bounds.X + 22)), math.max(32, bounds.Y + 16))
         z.Text = G
+        z.TextColor3 = o.TextStrong
+        z.TextStrokeColor3 = o.Main
+        z.TextStrokeTransparency = 0.72
         z.TextTransparency = 1
+        z.BackgroundTransparency = 0.02
         z.Visible = true
         local tooltipScale = addScale(z)
         tooltipScale.Scale = 0.95
@@ -1036,6 +1041,47 @@ local function addTooltip(F, G)
     end)
 end
 d.addTooltip = addTooltip
+
+local function applyToggleAccent(toggleApi, hue, saturation, value, rainbow, index)
+    if type(toggleApi) ~= "table" then
+        return false
+    end
+
+    if type(toggleApi.Color) == "function" then
+        local success = pcall(toggleApi.Color, toggleApi, hue, saturation, value, rainbow)
+        if success then
+            return true
+        end
+    end
+
+    local object = toggleApi.Object
+    if typeof(object) ~= "Instance" then
+        return false
+    end
+
+    local accent = rainbow and Color3.fromHSV(d:Color((hue - ((index or 0) * 0.075)) % 1))
+        or Color3.fromHSV(hue, saturation, value)
+    local track = object:FindFirstChild("Track", true)
+    local knob = object:FindFirstChild("Knob", true)
+    local frame = object:FindFirstChild("Frame", true)
+
+    if toggleApi.Enabled then
+        if track and track:IsA("GuiObject") then
+            n:Cancel(track)
+            track.BackgroundColor3 = accent
+        end
+        if knob and knob:IsA("GuiObject") then
+            n:Cancel(knob)
+            knob.BackgroundColor3 = o.TextStrong
+        end
+        if frame and frame:IsA("GuiObject") then
+            n:Cancel(frame)
+            frame.BackgroundColor3 = accent
+        end
+    end
+
+    return track ~= nil or knob ~= nil or frame ~= nil
+end
 
 local function checkKeybinds(F, G, H)
     if type(G) == "table" then
@@ -3172,23 +3218,20 @@ H = {
         end
 
         function ad.Color(N, O, P, Q, R)
-            af.BackgroundColor3 = R and Color3.fromHSV(d:Color((O - (N.Index * 0.075)) % 1)) or Color3.fromHSV(O, P, Q)
-            if N.Players.Enabled then
-                n:Cancel(N.Players.Object.Frame)
-                N.Players.Object.Frame.BackgroundColor3 = Color3.fromHSV(O, P, Q)
+            local accent = R and Color3.fromHSV(d:Color((O - (N.Index * 0.075)) % 1)) or Color3.fromHSV(O, P, Q)
+            af.BackgroundColor3 = accent
+
+            if N.Players.Enabled and N.Players.Frame then
+                n:Cancel(N.Players.Frame)
+                N.Players.Frame.BackgroundColor3 = accent
             end
-            if N.NPCs.Enabled then
-                n:Cancel(N.NPCs.Object.Frame)
-                N.NPCs.Object.Frame.BackgroundColor3 = Color3.fromHSV(O, P, Q)
+            if N.NPCs.Enabled and N.NPCs.Frame then
+                n:Cancel(N.NPCs.Frame)
+                N.NPCs.Frame.BackgroundColor3 = accent
             end
-            if N.Invisible.Enabled then
-                n:Cancel(N.Invisible.Object.Knob)
-                N.Invisible.Object.Knob.BackgroundColor3 = Color3.fromHSV(O, P, Q)
-            end
-            if N.Walls.Enabled then
-                n:Cancel(N.Walls.Object.Knob)
-                N.Walls.Object.Knob.BackgroundColor3 = Color3.fromHSV(O, P, Q)
-            end
+
+            applyToggleAccent(N.Invisible, O, P, Q, R, N.Index)
+            applyToggleAccent(N.Walls, O, P, Q, R, N.Index)
         end
 
         ad.Players = H.TargetsButton({
@@ -3368,6 +3411,8 @@ H = {
         end)
 
         ad.Object = ae
+        ad.Frame = af
+        ad.Icon = ag
 
         return ad
     end,
@@ -6112,7 +6157,7 @@ function d.CreateCategory(aa, ab)
             local accent = Color3.fromHSV(hue, saturation, value)
             activeRail.BackgroundColor3 = accent
             if ao.Enabled then
-                moduleStroke.Color = accent
+                moduleStroke.Color = o.BorderStrong
             end
         end)
         if an.Premium then
@@ -6521,7 +6566,7 @@ function d.CreateCategory(aa, ab)
                 BackgroundColor3 = N.Enabled and o.Elevated or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
             })
             n:Tween(moduleStroke, o.TweenFast, {
-                Color = N.Enabled and accent or ((aq or optionsOpen) and o.BorderStrong or o.Border),
+                Color = N.Enabled and o.BorderStrong or ((aq or optionsOpen) and o.BorderStrong or o.Border),
                 Transparency = N.Enabled and 0.2 or ((aq or optionsOpen) and 0.48 or 0.76),
             })
             n:Tween(moduleScale, o.TweenFast, {
@@ -6714,8 +6759,8 @@ function d.CreateCategory(aa, ab)
                     })
                 elseif ao.Enabled then
                     n:Tween(moduleStroke, o.TweenFast, {
-                        Color = accent,
-                        Transparency = 0.2,
+                        Color = o.BorderStrong,
+                        Transparency = 0.42,
                     })
                 end
 
@@ -6761,14 +6806,18 @@ function d.CreateCategory(aa, ab)
                 N.ZIndex = ar.ZIndex + 1
                 N.Parent = ar
                 addCorner(N, UDim.new(0, 4))
-                n:Tween(N, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+                local rippleTween = n:Tween(N, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
                     BackgroundTransparency = 1,
-                }).Completed
-                    :Once(function()
+                })
+                if rippleTween then
+                    rippleTween.Completed:Once(function()
                         pcall(function()
                             N:Destroy()
                         end)
                     end)
+                else
+                    N:Destroy()
+                end
             end
             ao:Toggle()
         end)
@@ -13041,13 +13090,18 @@ d.TutorialAPI = {
         ai.isActive = false
         ai.label.TextScaled = true
         ai.label.AutomaticSize = Enum.AutomaticSize.None
-        n:Tween(ai.label, TweenInfo.new(0.5), {
+        local tutorialTween = n:Tween(ai.label, TweenInfo.new(0.5), {
             Position = UDim2.fromScale(0.5, 0.97),
-        }).Completed
-            :Connect(function()
+        })
+        if tutorialTween then
+            tutorialTween.Completed:Once(function()
                 ai:setText(ai.defaultText)
                 ai.label.Parent = v
             end)
+        else
+            ai:setText(ai.defaultText)
+            ai.label.Parent = v
+        end
         if aj then
             d:CreateNotification("Tutorial Complete!", "Thank you for using BadWars <3", 10)
         end
@@ -13092,16 +13146,18 @@ z.ZIndex = 80
 z.BackgroundColor3 = o.Elevated
 z.Visible = false
 z.Text = ""
-z.TextColor3 = o.Text
+z.TextColor3 = o.TextStrong
+z.TextStrokeColor3 = o.Main
+z.TextStrokeTransparency = 0.72
 z.TextSize = d.isMobile and 14 or 14
 z.TextWrapped = true
 z.TextXAlignment = Enum.TextXAlignment.Left
 z.TextYAlignment = Enum.TextYAlignment.Center
-z.FontFace = o.Font
+z.FontFace = o.FontSemiBold
+z.BackgroundTransparency = 0.02
 z.Parent = w
 addCorner(z, o.Radius)
-addSurfaceGradient(z)
-local tooltipStroke = addStroke(z, o.BorderStrong, 0.24, 1, "TooltipStroke")
+local tooltipStroke = addStroke(z, o.BorderStrong, 0.1, 1, "TooltipStroke")
 y = addShadow(z, true)
 local tooltipPadding = Instance.new("UIPadding")
 tooltipPadding.PaddingLeft = UDim.new(0, 11)
@@ -14637,8 +14693,8 @@ function d.UpdateGUI(I, J, K, L, M)
             P.Object.Dots.Dots.ImageColor3 = o.Text
 
             if moduleStroke then
-                moduleStroke.Color = accent
-                moduleStroke.Transparency = 0.2
+                moduleStroke.Color = o.BorderStrong
+                moduleStroke.Transparency = 0.42
             end
         else
             rail.Visible = false
@@ -14659,9 +14715,7 @@ function d.UpdateGUI(I, J, K, L, M)
     end
     for O, P in d.Overlays.Toggles do
         if P.Enabled then
-            n:Cancel(P.Object.Knob)
-            P.Object.Knob.BackgroundColor3 = N and Color3.fromHSV(d:Color((J - (O * 0.075)) % 1))
-                or Color3.fromHSV(J, K, L)
+            applyToggleAccent(P, J, K, L, N, O)
         end
     end
 
@@ -14672,8 +14726,16 @@ function d.UpdateGUI(I, J, K, L, M)
     if d.Legit.Window.Visible then
         for O, P in d.Legit.Modules do
             if P.Enabled then
-                n:Cancel(P.Object.Knob)
-                P.Object.Knob.BackgroundColor3 = Color3.fromHSV(J, K, L)
+                local accent = Color3.fromHSV(J, K, L)
+                local cardAccent = P.Object and P.Object:FindFirstChild("ActiveRail", true)
+                if cardAccent and cardAccent:IsA("GuiObject") then
+                    cardAccent.BackgroundColor3 = accent
+                end
+
+                local track = P.Object and P.Object:FindFirstChild("Track", true)
+                if track and track:IsA("GuiObject") then
+                    track.BackgroundColor3 = accent
+                end
             end
 
             for Q, R in P.Options do

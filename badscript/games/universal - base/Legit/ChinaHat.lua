@@ -7,14 +7,14 @@ ChinaHat = Bad.Legit:CreateModule({
 	Name = 'China Hat',
 	Function = function(callback)
 		if callback then
-			if Bad.ThreadFix then
+			if Bad and Bad.ThreadFix then
 				setthreadidentity(8)
 			end
 
 			hat = Instance.new('MeshPart')
 			hat.Size = Vector3.new(3, 0.7, 3)
 			hat.Name = 'ChinaHat'
-			hat.Material = Enum.Material[Material.Value]
+			hat.Material = Enum.Material[Material and Material.Value or 'Plastic']
 			hat.Color = Color3.fromHSV(Color and type(Color.Hue) == 'number' and Color.Hue or 0.44, Color and type(Color.Sat) == 'number' and Color.Sat or 1, Color and type(Color.Value) == 'number' and Color.Value or 1)
 			hat.CanCollide = false
 			hat.CanQuery = false
@@ -22,10 +22,10 @@ ChinaHat = Bad.Legit:CreateModule({
 			hat.MeshId = 'http://www.roblox.com/asset/?id=1778999'
 			hat.Transparency = 1 - (Color and type(Color.Opacity) == 'number' and math.clamp(Color.Opacity, 0, 1) or 0.7)
 			hat.Parent = gameCamera
-			hat.CFrame = entitylib.isAlive and entitylib.character.Head.CFrame + Vector3.new(0, 1, 0) or CFrame.identity
+			hat.CFrame = entitylib.isAlive and entitylib.character and entitylib.character.Head and entitylib.character.Head.CFrame + Vector3.new(0, 1, 0) or CFrame.identity
 			local weld = Instance.new('WeldConstraint')
 			weld.Part0 = hat
-			weld.Part1 = entitylib.isAlive and entitylib.character.Head or nil
+			weld.Part1 = entitylib.isAlive and entitylib.character and entitylib.character.Head or nil
 			weld.Parent = hat
 
 			ChinaHat:Clean(hat)
@@ -34,18 +34,22 @@ ChinaHat = Bad.Legit:CreateModule({
 					weld:Destroy()
 				end
 				hat.Parent = gameCamera
-				hat.CFrame = char.Head.CFrame + Vector3.new(0, 1, 0)
-				hat.Velocity = Vector3.zero
-				weld = Instance.new('WeldConstraint')
-				weld.Part0 = hat
-				weld.Part1 = char.Head
-				weld.Parent = hat
+				if char and char.Head then
+					hat.CFrame = char.Head.CFrame + Vector3.new(0, 1, 0)
+					hat.Velocity = Vector3.zero
+					weld = Instance.new('WeldConstraint')
+					weld.Part0 = hat
+					weld.Part1 = char.Head
+					weld.Parent = hat
+				end
 			end))
 
 			repeat
-				hat.LocalTransparencyModifier = ((gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude <= 0.6 and 1 or 0)
+				if gameCamera then
+					hat.LocalTransparencyModifier = ((gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude <= 0.6 and 1 or 0)
+				end
 				task.wait()
-			until not ChinaHat.Enabled
+			until not ChinaHat or not ChinaHat.Enabled
 		else
 			hat = nil
 		end

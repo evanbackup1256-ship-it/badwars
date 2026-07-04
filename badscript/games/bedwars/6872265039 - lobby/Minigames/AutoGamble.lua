@@ -21,7 +21,7 @@ AutoGamble = Bad.Categories.Minigames:CreateModule({
 			AutoGamble:Clean(rewardCrate:Get('CrateOpened'):Connect(function(data)
 				local reward = data and data.reward or {}
 				if data and data.openingPlayer == lplr then
-					local tab = bedwars.CrateItemMeta[reward.itemType] or {displayName = reward.itemType or 'unknown'}
+					local tab = (bedwars.CrateItemMeta and bedwars.CrateItemMeta[reward.itemType]) or {displayName = reward.itemType or 'unknown'}
 					notif('AutoGamble', 'Won '..tab.displayName, 5)
 				end
 			end))

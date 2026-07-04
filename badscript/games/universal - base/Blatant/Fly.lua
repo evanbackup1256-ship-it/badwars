@@ -24,9 +24,11 @@ run(function()
 	local Functions
 	Functions = {
 		Velocity = function()
+			if not entitylib.character or not entitylib.character.RootPart then return end
 			entitylib.character.RootPart.Velocity = (entitylib.character.RootPart.Velocity * Vector3.new(1, 0, 1)) + Vector3.new(0, 2.25 + ((up + down) * VerticalValue.Value), 0)
 		end,
 		Impulse = function(options, moveDirection)
+			if not entitylib.character or not entitylib.character.RootPart then return end
 			local root = entitylib.character.RootPart
 			local diff = (Vector3.new(0, 2.25 + ((up + down) * VerticalValue.Value), 0) - root.AssemblyLinearVelocity) * Vector3.new(0, 1, 0)
 			if diff.Magnitude > 2 then
@@ -34,30 +36,34 @@ run(function()
 			end
 		end,
 		CFrame = function(dt)
+			if not entitylib.character or not entitylib.character.RootPart then return end
 			local root = entitylib.character.RootPart
 			if not YLevel then
 				YLevel = root.Position.Y
 			end
 			YLevel = YLevel + ((up + down) * VerticalValue.Value * dt)
-			if WallCheck.Enabled then
+			if WallCheck and WallCheck.Enabled then
 				rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
 				rayCheck.CollisionGroup = root.CollisionGroup
 				local ray = workspace:Raycast(root.Position, Vector3.new(0, YLevel - root.Position.Y, 0), rayCheck)
 				if ray then
-					YLevel = ray.Position.Y + entitylib.character.HipHeight
+					YLevel = ray.Position.Y + (entitylib.character.HipHeight or 2)
 				end
 			end
 			root.Velocity *= Vector3.new(1, 0, 1)
 			root.CFrame += Vector3.new(0, YLevel - root.Position.Y, 0)
 		end,
 		Bounce = function()
+			if not entitylib.character or not entitylib.character.RootPart then return end
 			Functions.Velocity()
 			entitylib.character.RootPart.Velocity += Vector3.new(0, ((tick() % BounceDelay.Value) / BounceDelay.Value > 0.5 and 1 or -1) * BounceLength.Value, 0)
 		end,
 		Floor = function()
-			Platform.CFrame = down ~= 0 and CFrame.identity or entitylib.character.RootPart.CFrame + Vector3.new(0, -(entitylib.character.HipHeight + 0.5), 0)
+			if not entitylib.character or not entitylib.character.RootPart or not Platform then return end
+			Platform.CFrame = down ~= 0 and CFrame.identity or entitylib.character.RootPart.CFrame + Vector3.new(0, -((entitylib.character.HipHeight or 2) + 0.5), 0)
 		end,
 		TP = function(dt)
+			if not entitylib.character or not entitylib.character.RootPart then return end
 			Functions.CFrame(dt)
 			if tick() % (FloatTPAir.Value + FloatTPGround.Value) > FloatTPAir.Value then
 				OldYLevel = OldYLevel or YLevel
@@ -65,7 +71,7 @@ run(function()
 				rayCheck.CollisionGroup = entitylib.character.RootPart.CollisionGroup
 				local ray = workspace:Raycast(entitylib.character.RootPart.Position, Vector3.new(0, -1000, 0), rayCheck)
 				if ray then
-					YLevel = ray.Position.Y + entitylib.character.HipHeight
+					YLevel = ray.Position.Y + (entitylib.character.HipHeight or 2)
 				end
 			else
 				if OldYLevel then
@@ -75,6 +81,7 @@ run(function()
 			end
 		end,
 		Jump = function(dt)
+			if not entitylib.character or not entitylib.character.RootPart or not entitylib.character.Humanoid then return end
 			local root = entitylib.character.RootPart
 			if not YLevel then
 				YLevel = root.Position.Y
@@ -97,60 +104,71 @@ run(function()
 			updateVelocity()
 			if callback then
 				Fly:Clean(runService.PreSimulation:Connect(function(dt)
-					if entitylib.isAlive then
-						if PlatformStanding.Enabled then
+					if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.Humanoid then
+						if PlatformStanding and PlatformStanding.Enabled then
 							entitylib.character.Humanoid.PlatformStand = true
 							entitylib.character.RootPart.RotVelocity = Vector3.zero
-							entitylib.character.RootPart.CFrame = CFrame.lookAlong(entitylib.character.RootPart.CFrame.Position, gameCamera.CFrame.LookVector)
+							if gameCamera then
+								entitylib.character.RootPart.CFrame = CFrame.lookAlong(entitylib.character.RootPart.CFrame.Position, gameCamera.CFrame.LookVector)
+							end
 						end
 
-						if State.Value ~= 'None' then
+						if State and State.Value ~= 'None' then
 							entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType[State.Value])
 						end
 
-						SpeedMethods[Mode.Value](Options, TargetStrafeVector or MoveMethod.Value == 'Direct' and calculateMoveVector(Vector3.new(a + d, 0, w + s)) or entitylib.character.Humanoid.MoveDirection, dt)
-						Functions[FloatMode.Value](dt)
+						local moveDir = TargetStrafeVector or (MoveMethod and MoveMethod.Value == 'Direct' and calculateMoveVector(Vector3.new(a + d, 0, w + s))) or entitylib.character.Humanoid.MoveDirection
+						if SpeedMethods and Mode and SpeedMethods[Mode.Value] then
+							SpeedMethods[Mode.Value](Options, moveDir, dt)
+						end
+						if Functions and FloatMode and Functions[FloatMode.Value] then
+							Functions[FloatMode.Value](dt)
+						end
 					else
 						YLevel = nil
 						OldYLevel = nil
 					end
 				end))
 
-				w, s, a, d = inputService:IsKeyDown(Enum.KeyCode.W) and -1 or 0, inputService:IsKeyDown(Enum.KeyCode.S) and 1 or 0, inputService:IsKeyDown(Enum.KeyCode.A) and -1 or 0, inputService:IsKeyDown(Enum.KeyCode.D) and 1 or 0
-				up, down = 0, 0
-				for _, v in {'InputBegan', 'InputEnded'} do
-					Fly:Clean(inputService[v]:Connect(function(input)
-						if not inputService:GetFocusedTextBox() then
-							local divided = Keys.Value:split('/')
-							if input.KeyCode == Enum.KeyCode.W then
-								w = v == 'InputBegan' and -1 or 0
-							elseif input.KeyCode == Enum.KeyCode.S then
-								s = v == 'InputBegan' and 1 or 0
-							elseif input.KeyCode == Enum.KeyCode.A then
-								a = v == 'InputBegan' and -1 or 0
-							elseif input.KeyCode == Enum.KeyCode.D then
-								d = v == 'InputBegan' and 1 or 0
-							elseif input.KeyCode == Enum.KeyCode[divided[1]] then
-								up = v == 'InputBegan' and 1 or 0
-							elseif input.KeyCode == Enum.KeyCode[divided[2]] then
-								down = v == 'InputBegan' and -1 or 0
+				if inputService then
+					w, s, a, d = inputService:IsKeyDown(Enum.KeyCode.W) and -1 or 0, inputService:IsKeyDown(Enum.KeyCode.S) and 1 or 0, inputService:IsKeyDown(Enum.KeyCode.A) and -1 or 0, inputService:IsKeyDown(Enum.KeyCode.D) and 1 or 0
+					up, down = 0, 0
+					for _, v in {'InputBegan', 'InputEnded'} do
+						Fly:Clean(inputService[v]:Connect(function(input)
+							if not inputService:GetFocusedTextBox() then
+								local divided = Keys and Keys.Value and Keys.Value:split('/') or {'Space', 'LeftControl'}
+								if input.KeyCode == Enum.KeyCode.W then
+									w = v == 'InputBegan' and -1 or 0
+								elseif input.KeyCode == Enum.KeyCode.S then
+									s = v == 'InputBegan' and 1 or 0
+								elseif input.KeyCode == Enum.KeyCode.A then
+									a = v == 'InputBegan' and -1 or 0
+								elseif input.KeyCode == Enum.KeyCode.D then
+									d = v == 'InputBegan' and 1 or 0
+								elseif divided[1] and input.KeyCode == Enum.KeyCode[divided[1]] then
+									up = v == 'InputBegan' and 1 or 0
+								elseif divided[2] and input.KeyCode == Enum.KeyCode[divided[2]] then
+									down = v == 'InputBegan' and -1 or 0
+								end
 							end
-						end
-					end))
-				end
-
-				if inputService and inputService.TouchEnabled then
-					pcall(function()
-						local jumpButton = lplr.PlayerGui.TouchGui.TouchControlFrame.JumpButton
-						Fly:Clean(jumpButton:GetPropertyChangedSignal('ImageRectOffset'):Connect(function()
-							up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
 						end))
-					end)
+					end
+
+					if inputService.TouchEnabled then
+						pcall(function()
+							local jumpButton = lplr.PlayerGui and lplr.PlayerGui:FindFirstChild('TouchGui') and lplr.PlayerGui.TouchGui:FindFirstChild('TouchControlFrame') and lplr.PlayerGui.TouchGui.TouchControlFrame:FindFirstChild('JumpButton')
+							if jumpButton then
+								Fly:Clean(jumpButton:GetPropertyChangedSignal('ImageRectOffset'):Connect(function()
+									up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
+								end))
+							end
+						end)
+					end
 				end
 			else
 				YLevel, OldYLevel = nil, nil
-				if entitylib.isAlive then
-					if PlatformStanding.Enabled then
+				if entitylib.isAlive and entitylib.character and entitylib.character.Humanoid then
+					if PlatformStanding and PlatformStanding.Enabled then
 						entitylib.character.Humanoid.PlatformStand = false
 					end
 

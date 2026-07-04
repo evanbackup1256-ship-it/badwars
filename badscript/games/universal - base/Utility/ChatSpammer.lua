@@ -9,8 +9,8 @@ ChatSpammer = Bad.Categories.Utility:CreateModule({
 	Name = 'ChatSpammer',
 	Function = function(callback)
 		if callback then
-			if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-				if Hide.Enabled and coreGui:FindFirstChild('ExperienceChat') then
+			if textChatService and textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+				if Hide and Hide.Enabled and coreGui and coreGui:FindFirstChild('ExperienceChat') then
 					local scroll = coreGui.ExperienceChat:FindFirstChild('RCTScrollContentView', true)
 					if scroll and scroll.ChildAdded then
 						ChatSpammer:Clean(scroll.ChildAdded:Connect(function(msg)
@@ -22,8 +22,8 @@ ChatSpammer = Bad.Categories.Utility:CreateModule({
 						notif('ChatSpammer', 'chat flood message container unavailable; continuing without hide filter', 5, 'warning')
 					end
 				end
-			elseif replicatedStorage:FindFirstChild('DefaultChatSystemChatEvents') then
-				if Hide.Enabled then
+			elseif replicatedStorage and replicatedStorage:FindFirstChild('DefaultChatSystemChatEvents') then
+				if Hide and Hide.Enabled then
 					local conns = getconnections and getconnections(replicatedStorage.DefaultChatSystemChatEvents.OnNewSystemMessage.OnClientEvent)
 					if hookfunction and conns and conns[1] and conns[1].Function then
 						oldchat = hookfunction(conns[1].Function, function(data, ...)
@@ -42,24 +42,24 @@ ChatSpammer = Bad.Categories.Utility:CreateModule({
 			
 			local ind = 1
 			repeat
-				local message = (#Lines.ListEnabled > 0 and Lines.ListEnabled[math.random(1, #Lines.ListEnabled)] or 'BadWars on top')
-				if Mode.Value == 'Order' and #Lines.ListEnabled > 0 then
+				local message = (Lines and Lines.ListEnabled and #Lines.ListEnabled > 0 and Lines.ListEnabled[math.random(1, #Lines.ListEnabled)]) or 'BadWars on top'
+				if Mode and Mode.Value == 'Order' and Lines and Lines.ListEnabled and #Lines.ListEnabled > 0 then
 					message = Lines.ListEnabled[ind] or Lines.ListEnabled[1]
 					ind = (ind % #Lines.ListEnabled) + 1
 				end
 
 				local ok, err = false, 'chat helper unavailable'
-				if Bad.SendChatMessage then ok, err = Bad.SendChatMessage(message) end
+				if Bad and Bad.SendChatMessage then ok, err = Bad.SendChatMessage(message) end
 				if not ok then
 					notif('ChatSpammer', 'chat unavailable: '..tostring(err), 5, 'warning')
 					ChatSpammer:Toggle()
 					return
 				end
 
-				task.wait(math.max(tonumber(Delay.Value) or 1, 0.1))
-			until not ChatSpammer.Enabled
+				task.wait(math.max(tonumber(Delay and Delay.Value) or 1, 0.1))
+			until not ChatSpammer or not ChatSpammer.Enabled
 		else
-			if oldchat then
+			if oldchat and replicatedStorage then
 				local conns = getconnections and getconnections(replicatedStorage.DefaultChatSystemChatEvents.OnNewSystemMessage.OnClientEvent)
 				if hookfunction and conns and conns[1] and conns[1].Function then
 					hookfunction(conns[1].Function, oldchat)

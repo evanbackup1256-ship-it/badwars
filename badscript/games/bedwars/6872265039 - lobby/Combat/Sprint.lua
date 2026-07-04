@@ -16,12 +16,16 @@ Sprint = Bad.Categories.Combat:CreateModule({
 				pcall(function() bedwars.SprintController:startSprinting() end)
 				return call
 			end
-			Sprint:Clean(entitylib.Events.LocalAdded:Connect(function() bedwars.SprintController:stopSprinting() end))
-			bedwars.SprintController:stopSprinting()
+			if entitylib.Events and entitylib.Events.LocalAdded then
+				Sprint:Clean(entitylib.Events.LocalAdded:Connect(function()
+					pcall(function() bedwars.SprintController:stopSprinting() end)
+				end))
+			end
+			pcall(function() bedwars.SprintController:stopSprinting() end)
 		else
 			if inputService and inputService.TouchEnabled then pcall(function() lplr.PlayerGui.MobileUI['2'].Visible = true end) end
 			if old then bedwars.SprintController.stopSprinting = old end
-			bedwars.SprintController:stopSprinting()
+			pcall(function() bedwars.SprintController:stopSprinting() end)
 		end
 	end,
 	Tooltip = 'Sets your sprinting to true.'

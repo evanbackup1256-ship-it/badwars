@@ -8,7 +8,9 @@ AutoGamble = Bad.Categories.Minigames:CreateModule({
 			pcall(function()
 				rewardCrate = bedwars.Client and bedwars.Client:GetNamespace('RewardCrate')
 			end)
-			if not rewardCrate or not bedwars.CrateAltarController or not bedwars.Store then
+			local crateOpened = rewardCrate and rewardCrate:Get('CrateOpened')
+			local openRewardCrate = rewardCrate and rewardCrate:Get('OpenRewardCrate')
+			if not rewardCrate or not crateOpened or not openRewardCrate or not bedwars.CrateAltarController or type(bedwars.CrateAltarController.pickCrate) ~= 'function' or not bedwars.Store or type(bedwars.Store.getState) ~= 'function' then
 				notif('AutoGamble', 'Crate services are not loaded yet.', 5, 'warning')
 				if type(AutoGamble.Toggle) == 'function' then
 					AutoGamble:Toggle(false)
@@ -18,7 +20,7 @@ AutoGamble = Bad.Categories.Minigames:CreateModule({
 				return
 			end
 
-			AutoGamble:Clean(rewardCrate:Get('CrateOpened'):Connect(function(data)
+			AutoGamble:Clean(crateOpened:Connect(function(data)
 				local reward = data and data.reward or {}
 				if data and data.openingPlayer == lplr then
 					local tab = (bedwars.CrateItemMeta and bedwars.CrateItemMeta[reward.itemType]) or {displayName = reward.itemType or 'unknown'}
@@ -34,13 +36,17 @@ AutoGamble = Bad.Categories.Minigames:CreateModule({
 					for _, v in inventory do
 						local consumable = v and v.consumable
 						if type(consumable) == 'string' and consumable:find('crate') then
-							bedwars.CrateAltarController:pickCrate(consumable, 1)
+							pcall(function()
+								bedwars.CrateAltarController:pickCrate(consumable, 1)
+							end)
 							task.wait(1.2)
 							activeCrates = bedwars.CrateAltarController.activeCrates or {}
 							if activeCrates[1] and activeCrates[1][2] and activeCrates[1][2].attributes then
-								rewardCrate:Get('OpenRewardCrate'):SendToServer({
-									crateId = activeCrates[1][2].attributes.crateId
-								})
+								pcall(function()
+									openRewardCrate:SendToServer({
+										crateId = activeCrates[1][2].attributes.crateId
+									})
+								end)
 							end
 							break
 						end

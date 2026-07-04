@@ -160,7 +160,7 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-v2-bundle-return-category-repair-2026-07-04-04'
+local cacheVersion = 'badwars-v2-bedwars-lobby-services-2026-07-04-05'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	setStatus('clearing old cache')

@@ -5221,6 +5221,7 @@ al.HorizontalAlignment=Enum.HorizontalAlignment.Center
 al.Parent=aj
 
 function ac.CreateModule(am,an)
+an.Function=an.Function or function()end
 an.Function=a:wrap(an.Function,{
 type="module",
 name=an.Name,
@@ -6399,24 +6400,6 @@ warn("[ModuleCategory] updateCount failed:",err)
 end
 end
 
-local function refreshExpandedSize()
-success,err=pcall(function()
-if not ao.Expanded then
-return
-end
-local aB=ay.AbsoluteContentSize.Y/A.Scale
-ax.Visible=true
-ax.Size=UDim2.new(1,0,0,aB)
-ap.Size=UDim2.fromOffset(220,45+aB)
-if ao.UpExpand then
-ap.Position=UDim2.fromOffset(0,-aB)
-end
-end)
-if not success then
-warn("[ModuleCategory] refresh size failed:",err)
-end
-end
-
 function ao.Toggle(az,aA)
 success,err=pcall(function()
 if aA~=nil then
@@ -6530,7 +6513,6 @@ if aA.Children then
 aA.Children.Parent=ax
 end
 aA.ModuleCategory=ao
-task.defer(refreshExpandedSize)
 end)
 if not success then
 warn("[ModuleCategory] AddModule failed:",err)

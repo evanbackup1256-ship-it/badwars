@@ -3731,7 +3731,7 @@ H = {
         af.BorderSizePixel = 0
         af.AutoButtonColor = false
         af.Visible = aa.Visible == nil or aa.Visible
-        af.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š" .. aa.Name
+        af.Text = "          " .. aa.Name
         af.TextXAlignment = Enum.TextXAlignment.Left
         af.TextColor3 = m.Dark(o.Text, 0.16)
         af.TextSize = 14
@@ -4089,7 +4089,7 @@ H = {
             ad.Name = "DividerLabel"
             ad.Size = UDim2.fromOffset(218, 27)
             ad.BackgroundTransparency = 1
-            ad.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š" .. ab:upper()
+            ad.Text = "          " .. ab:upper()
             ad.TextXAlignment = Enum.TextXAlignment.Left
             ad.TextColor3 = m.Dark(o.Text, 0.43)
             ad.TextSize = 9
@@ -4305,7 +4305,7 @@ function d.CreateGUI(aa)
         at.BackgroundColor3 = o.Main
         at.BorderSizePixel = 0
         at.AutoButtonColor = false
-        at.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€ŠRebind GUI"
+        at.Text = "          Rebind GUI"
         at.TextXAlignment = Enum.TextXAlignment.Left
         at.TextColor3 = m.Dark(o.Text, 0.16)
         at.TextSize = 14
@@ -4396,8 +4396,8 @@ function d.CreateGUI(aa)
         au.AutoButtonColor = false
         au.Text = (
             as.Icon
-                and "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š"
-            or "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š"
+                and "                                 "
+            or "             "
         ) .. as.Name
         au.TextXAlignment = Enum.TextXAlignment.Left
         au.TextColor3 = m.Dark(o.Text, 0.16)
@@ -4587,7 +4587,7 @@ function d.CreateGUI(aa)
             P.Size = UDim2.new(1, 0, 0, 40)
             P.BackgroundTransparency = 1
             P.AutoButtonColor = false
-            P.Text = string.rep("â€Š", 33 * A.Scale) .. M.Name
+            P.Text = string.rep(" ", 33 * A.Scale) .. M.Name
             P.TextXAlignment = Enum.TextXAlignment.Left
             P.TextColor3 = m.Dark(o.Text, 0.16)
             P.TextSize = 14
@@ -4629,7 +4629,7 @@ function d.CreateGUI(aa)
             end
 
             A:GetPropertyChangedSignal("Scale"):Connect(function()
-                P.Text = string.rep("â€Š", 33 * A.Scale) .. M.Name
+                P.Text = string.rep(" ", 33 * A.Scale) .. M.Name
             end)
             P.MouseEnter:Connect(function()
                 O = true
@@ -4723,7 +4723,7 @@ function d.CreateGUI(aa)
         au.BackgroundColor3 = o.Main
         au.BorderSizePixel = 0
         au.AutoButtonColor = false
-        au.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š" .. as.Name
+        au.Text = "          " .. as.Name
         au.TextXAlignment = Enum.TextXAlignment.Left
         au.TextColor3 = m.Dark(o.Text, 0.16)
         au.TextSize = 14
@@ -4821,7 +4821,7 @@ function d.CreateGUI(aa)
             ac.Size = UDim2.fromOffset(220, 45 + ag.AbsoluteContentSize.Y / A.Scale)
             for L, M in ab.Buttons do
                 if M.Icon then
-                    M.Object.Text = string.rep("â€Š", 33 * A.Scale) .. M.Name
+                    M.Object.Text = string.rep(" ", 33 * A.Scale) .. M.Name
                 end
             end
         end)
@@ -5396,7 +5396,7 @@ function d.CreateGUI(aa)
         ac.Size = UDim2.fromOffset(220, 42 + ag.AbsoluteContentSize.Y / A.Scale)
         for ar, as in ab.Buttons do
             if as.Icon then
-                as.Object.Text = string.rep("â€Š", 36 * A.Scale) .. as.Name
+                as.Object.Text = string.rep(" ", 36 * A.Scale) .. as.Name
             end
         end
     end)
@@ -5526,7 +5526,7 @@ function d.CreateCategory(aa, ab)
         ar.BackgroundColor3 = o.Surface
         ar.BorderSizePixel = 0
         ar.AutoButtonColor = false
-        ar.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š" .. ap
+        ar.Text = "            " .. ap
         ar.TextXAlignment = Enum.TextXAlignment.Left
         ar.TextColor3 = m.Dark(o.Text, 0.16)
         ar.TextSize = d.isMobile and 15 or 14

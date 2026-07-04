@@ -9,26 +9,32 @@ Blink = Bad.Categories.Utility:CreateModule({
 	Function = function(callback)
 		if callback then
 			local teleported
-			Blink:Clean(lplr.OnTeleport:Connect(function()
-				setfflag('PhysicsSenderMaxBandwidthBps', '38760')
-				setfflag('DataSenderRate', '60')
-				teleported = true
-			end))
+			if lplr then
+				Blink:Clean(lplr.OnTeleport:Connect(function()
+					if setfflag then
+						setfflag('PhysicsSenderMaxBandwidthBps', '38760')
+						setfflag('DataSenderRate', '60')
+					end
+					teleported = true
+				end))
+			end
 
 			repeat
-				local physicsrate, senderrate = '0', Type.Value == 'All' and '-1' or '60'
-				if AutoSend.Enabled and tick() % (AutoSendLength.Value + 0.1) > AutoSendLength.Value then
+				local physicsrate, senderrate = '0', Type and Type.Value == 'All' and '-1' or '60'
+				if AutoSend and AutoSend.Enabled and tick() % ((AutoSendLength and AutoSendLength.Value or 0.5) + 0.1) > (AutoSendLength and AutoSendLength.Value or 0.5) then
 					physicsrate, senderrate = '38760', '60'
 				end
 
 				if physicsrate ~= oldphys or senderrate ~= oldsend then
-					setfflag('PhysicsSenderMaxBandwidthBps', physicsrate)
-					setfflag('DataSenderRate', senderrate)
+					if setfflag then
+						setfflag('PhysicsSenderMaxBandwidthBps', physicsrate)
+						setfflag('DataSenderRate', senderrate)
+					end
 					oldphys, oldsend = physicsrate, senderrate
 				end
 
 				task.wait(0.03)
-			until (not Blink.Enabled and not teleported)
+			until (not Blink or not Blink.Enabled) and not teleported
 		else
 			if setfflag then
 				setfflag('PhysicsSenderMaxBandwidthBps', '38760')

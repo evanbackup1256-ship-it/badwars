@@ -2183,8 +2183,8 @@ H = {
         local previousParentScrolling
 
         local function updateTitle()
-            title.Text = tostring(settings.Name) .. "  â€¢  " .. tostring(api.Value)
-        end
+	title.Text = tostring(settings.Name) .. " - " .. tostring(api.Value)
+end
         updateTitle()
 
         local function setParentScrolling(enabled)
@@ -5968,7 +5968,68 @@ I.ImageColor3 = N.Enabled and o.Text or m.Light(o.Main, 0.37)
             if not O then
                 d:UpdateTextGUI()
             end
-            task.spawn(an.Function, N.Enabled)
+            local desiredState = N.Enabled
+N._ToggleSerial = (N._ToggleSerial or 0) + 1
+local toggleSerial = N._ToggleSerial
+
+local callbackThread = coroutine.create(function()
+	local trace = debug and debug.traceback or function(err)
+		return tostring(err)
+	end
+
+	local callbackOk, callbackError = xpcall(function()
+		an.Function(desiredState)
+	end, trace)
+
+	if not callbackOk then
+		a:report({
+			type = "module-toggle-callback",
+			err = callbackError,
+			args = { tostring(an.Name), desiredState },
+		})
+
+		if desiredState then
+			pcall(function()
+				d:CreateNotification(
+					"Module Error",
+					tostring(an.Name) .. " failed to enable. Check the console.",
+					5,
+					"alert"
+				)
+			end)
+
+			-- Do not leave a failed module visually enabled.
+			task.defer(function()
+				if
+					N.Enabled == desiredState
+					and N._ToggleSerial == toggleSerial
+				then
+					N:Toggle(true)
+				end
+			end)
+		end
+	end
+end)
+
+local started, startError = coroutine.resume(callbackThread)
+if not started then
+	a:report({
+		type = "module-toggle-start",
+		err = startError,
+		args = { tostring(an.Name), desiredState },
+	})
+
+	if desiredState then
+		task.defer(function()
+			if
+				N.Enabled == desiredState
+				and N._ToggleSerial == toggleSerial
+			then
+				N:Toggle(true)
+			end
+		end)
+	end
+end
         end
 
         for N, O in H do

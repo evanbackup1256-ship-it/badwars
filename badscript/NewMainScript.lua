@@ -166,7 +166,6 @@ if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersi
 	setStatus('clearing old cache')
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end
 	if isfile('badscript/loader.lua') then delfile('badscript/loader.lua') end
-	if isfile('badscript/security.lua') then delfile('badscript/security.lua') end
 	if isfile('badscript/games/universal - base/bundle.lua') then delfile('badscript/games/universal - base/bundle.lua') end
 	if isfile('badscript/games/universal - base/base.lua') then delfile('badscript/games/universal - base/base.lua') end
 	if isfile('badscript/games/universal - base/files.txt') then delfile('badscript/games/universal - base/files.txt') end

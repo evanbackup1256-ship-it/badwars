@@ -1,7 +1,6 @@
 -- BadWars Main v3.1 - URL-consistent Pipeline
 repeat task.wait() until game:IsLoaded()
 if shared.Bad then pcall(function() shared.Bad:Uninject() end) end
-shared.BadSecurityStarted=nil
 
 local os_clock=os.clock
 local pipelineStart=os_clock()
@@ -560,22 +559,7 @@ ensureRuntimeCategories(api)
 logMod('GUI',gui,os_clock()-guiStart,true)
 setStatus('GUI loaded')
 
--- Stage 5: Security
-setStatus('pipeline: security')
-local secStart=os_clock()
-local secCode=downloadFile('badscript/security.lua')
-if type(secCode)=='string' and secCode~='' then
-	local secFn,secErr=_loadstring(secCode,'security')
-	if secFn then
-		local ok2,security=pcall(secFn)
-		if ok2 and type(security)=='table' and type(security.Start)=='function' then
-			local verified,status=security:Start(Bad)
-			if verified then logMod('Security','security.lua',os_clock()-secStart,true,tostring(status)) end
-		end
-	end
-end
-
--- Stage 6: Universal Modules
+-- Stage 5: Universal Modules
 if not shared.BadIndependent then
 	setStatus('loading universal modules')
 	local uniStart=os_clock()

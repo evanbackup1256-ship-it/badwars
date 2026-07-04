@@ -28,7 +28,6 @@ $script:Failed = $false
 $loader = Read-ProjectFile "badscript\loader.lua"
 $newMain = Read-ProjectFile "badscript\NewMainScript.lua"
 $main = Read-ProjectFile "badscript\main.lua"
-$security = Read-ProjectFile "badscript\security.lua"
 $newGui = Read-ProjectFile "badscript\guis\new\gui.lua"
 $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
@@ -178,34 +177,22 @@ if ($loader -match "shared\.BadWarsStatusApi" -and $loader -match "Roblox update
     Fail "Loader Roblox update warning integration is missing"
 }
 
-if ($main -match "security:Start\(Bad\)" -and $main.IndexOf("security:Start(Bad)") -lt $main.IndexOf("loading universal modules")) {
-    Pass "Security gate runs before feature modules"
+if (
+    -not (Test-Path -LiteralPath (Join-Path $Root "badscript\security.lua")) -and
+    $main -notmatch "security:Start\(Bad\)" -and
+    $main -notmatch "badscript/security.lua" -and
+    $newGui -notmatch "IsModuleAllowed" -and
+    $newGui -notmatch "Blocked unauthorized module"
+) {
+    Pass "Runtime security gate is removed"
 } else {
-    Fail "Security gate is missing or runs after feature modules"
+    Fail "Runtime security gate references remain"
 }
 
 if ($main -match "universal modules ready" -and $main -match "universal active; no game-specific module found") {
     Pass "Universal-only fallback status is explicit"
 } else {
     Fail "Universal-only fallback status is unclear"
-}
-
-if ($security -match "Mode = mode" -and $security -match "ApiUrl" -and $security -match "LicenseKey") {
-    Pass "Security gate has configurable API licensing"
-} else {
-    Fail "Security gate licensing configuration is incomplete"
-}
-
-if ($security -match "nonce" -and $security -match "timestamp" -and $security -match "VerifySignature") {
-    Pass "Security API response validation includes nonce, timestamp, and signature hook"
-} else {
-    Fail "Security API response validation is incomplete"
-}
-
-if ($newGui -match "function d:IsModuleAllowed" -and $newGui -match "Blocked unauthorized module") {
-    Pass "GUI module creation honors security permissions"
-} else {
-    Fail "GUI module permission enforcement is missing"
 }
 
 if ($newGui -match "d\.Logs") {

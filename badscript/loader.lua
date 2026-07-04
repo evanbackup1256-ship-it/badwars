@@ -157,7 +157,7 @@ local cacheVersion = 'badwars-v2-game-router-v2-2026-07-02-03'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheFile) and readfile(cacheFile) or '') ~= cacheVersion then
 	setStatus('cache cleared (version mismatch)')
-	for _,f in {'badscript/main.lua','badscript/NewMainScript.lua','badscript/security.lua'} do if isfile(f) then delfile(f) end end
+	for _,f in {'badscript/main.lua','badscript/NewMainScript.lua'} do if isfile(f) then delfile(f) end end
 	wipeAny('badscript/assets');wipeGen('badscript/games');wipeGen('badscript/guis');wipeGen('badscript/libraries')
 	writefile(cacheFile,cacheVersion)
 end

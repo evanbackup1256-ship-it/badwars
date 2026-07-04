@@ -34,21 +34,6 @@ Windows={},
 Indicators={},
 }
 d.DefaultColor=Color3.fromHSV(d.GUIColor.Hue,d.GUIColor.Sat,d.GUIColor.Value)
-function d:IsModuleAllowed(moduleName, category)
-local security=shared.BadSecurity
-if security and type(security.IsModuleAllowed)=="function"then
-if security.Verified~=true then
-return true
-end
-local permissions=security.Permissions
-if type(permissions)~="table"or next(permissions)==nil then
-return true
-end
-local allowed,reason=security:IsModuleAllowed(moduleName,category)
-return allowed~=false,reason
-end
-return true
-end
 for e,f in
 {
 "PreloadEvent",
@@ -5236,16 +5221,6 @@ al.HorizontalAlignment=Enum.HorizontalAlignment.Center
 al.Parent=aj
 
 function ac.CreateModule(am,an)
-local allowed,reason=d:IsModuleAllowed(an.Name,ab.Name)
-if not allowed then
-if d.CreateNotification then
-d:CreateNotification("BadWars Security","Blocked unauthorized module: "..tostring(an.Name),5,"warning")
-end
-if d.AddLog then
-d:AddLog("Warning","Blocked unauthorized module: "..tostring(an.Name),{category=ab.Name,reason=reason})
-end
-return nil
-end
 an.Function=a:wrap(an.Function,{
 type="module",
 name=an.Name,

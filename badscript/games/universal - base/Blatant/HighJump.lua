@@ -4,27 +4,28 @@ local Value
 local AutoDisable
 
 local function jump()
-	local state = entitylib.isAlive and entitylib.character.Humanoid:GetState() or nil
+	if not entitylib.isAlive or not entitylib.character or not entitylib.character.Humanoid or not entitylib.character.RootPart then return end
+	local state = entitylib.character.Humanoid:GetState()
 
 	if state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.Landed then
 		local root = entitylib.character.RootPart
 
-		if Mode.Value == 'Velocity' then
+		if Mode and Mode.Value == 'Velocity' then
 			entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-			root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, Value.Value, root.AssemblyLinearVelocity.Z)
-		elseif Mode.Value == 'Impulse' then
+			root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, Value and Value.Value or 50, root.AssemblyLinearVelocity.Z)
+		elseif Mode and Mode.Value == 'Impulse' then
 			entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 			task.delay(0, function()
-				root:ApplyImpulse(Vector3.new(0, Value.Value - root.AssemblyLinearVelocity.Y, 0) * root.AssemblyMass)
+				root:ApplyImpulse(Vector3.new(0, (Value and Value.Value or 50) - root.AssemblyLinearVelocity.Y, 0) * root.AssemblyMass)
 			end)
 		else
-			local yLevel = math.max(Value.Value - entitylib.character.Humanoid.JumpHeight, 0)
+			local yLevel = math.max((Value and Value.Value or 50) - entitylib.character.Humanoid.JumpHeight, 0)
 
 			repeat
 				root.CFrame += Vector3.new(0, yLevel * 0.016, 0)
 				yLevel = yLevel - (workspace.Gravity * 0.016)
 
-				if Mode.Value == 'CFrame' then
+				if Mode and Mode.Value == 'CFrame' then
 					task.wait()
 				end
 			until yLevel <= 0
@@ -36,12 +37,12 @@ HighJump = Bad.Categories.Blatant:CreateModule({
 	Name = 'HighJump',
 	Function = function(callback)
 		if callback then
-			if AutoDisable.Enabled then
+			if AutoDisable and AutoDisable.Enabled then
 				jump()
 				HighJump:Toggle()
 			else
 				HighJump:Clean(runService.RenderStepped:Connect(function()
-					if not inputService:GetFocusedTextBox() and inputService:IsKeyDown(Enum.KeyCode.Space) then
+					if inputService and not inputService:GetFocusedTextBox() and inputService:IsKeyDown(Enum.KeyCode.Space) then
 						jump()
 					end
 				end))

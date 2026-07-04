@@ -7,11 +7,11 @@ Swim = Bad.Categories.Blatant:CreateModule({
 	Function = function(callback)
 		if callback then
 			Swim:Clean(runService.PreSimulation:Connect(function(dt)
-				if entitylib.isAlive then
+				if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.Humanoid then
 					local root = entitylib.character.RootPart
 					local moving = entitylib.character.Humanoid.MoveDirection ~= Vector3.zero
 					local rootvelo = root.Velocity
-					local space = inputService:IsKeyDown(Enum.KeyCode.Space)
+					local space = inputService and inputService:IsKeyDown(Enum.KeyCode.Space)
 
 					if terrain then
 						local factor = (moving or space) and Vector3.new(6, 6, 6) or Vector3.new(2, 1, 2)

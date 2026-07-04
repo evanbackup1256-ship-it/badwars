@@ -2,9 +2,10 @@ local BedESP
 local Reference = {}
 local Folder = Instance.new('Folder')
 Folder.Parent = Bad.gui
+local collectionService = game:GetService('CollectionService')
 
 local function Added(bed)
-	if not BedESP.Enabled then return end
+	if not BedESP.Enabled or not bed then return end
 	local BedFolder = Instance.new('Folder')
 	BedFolder.Parent = Folder
 	Reference[bed] = BedFolder

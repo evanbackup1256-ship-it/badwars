@@ -1,4 +1,5 @@
 local Health
+local lplr = game:GetService('Players').LocalPlayer
 
 Health = Bad.Categories.Render:CreateModule({
 	Name = 'Health',

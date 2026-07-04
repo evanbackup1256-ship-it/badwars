@@ -34,6 +34,21 @@ Windows={},
 Indicators={},
 }
 d.DefaultColor=Color3.fromHSV(d.GUIColor.Hue,d.GUIColor.Sat,d.GUIColor.Value)
+function d:IsModuleAllowed(moduleName, category)
+local security=shared.BadSecurity
+if security and type(security.IsModuleAllowed)=="function"then
+if security.Verified~=true then
+return true
+end
+local permissions=security.Permissions
+if type(permissions)~="table"or next(permissions)==nil then
+return true
+end
+local allowed,reason=security:IsModuleAllowed(moduleName,category)
+return allowed~=false,reason
+end
+return true
+end
 for e,f in
 {
 "PreloadEvent",
@@ -1638,7 +1653,7 @@ end
 L._InternalCallback=wrap(ag)
 end
 
-function L.SetValue(af,ag,ah,ai,aj)
+function L.SetValue(af,ag,ah,ai,aj,ak)
 af.Hue=ag or af.Hue
 af.Sat=ah or af.Sat
 af.Value=ai or af.Value
@@ -1682,7 +1697,9 @@ Size=UDim2.fromScale(math.clamp(af.Opacity,0.04,0.96),1),
 })
 end
 
+if not ak then
 I.Function(af.Hue,af.Sat,af.Value,af.Opacity)
+end
 end
 
 function L.ToColor(af)
@@ -3908,9 +3925,9 @@ repeat
 local aa=tick()*(0.2*d.RainbowSpeed.Value)%1
 for ab,ac in d.RainbowTable do
 if ac.Type=="GUISlider"then
-ac:SetValue(d:Color(aa))
+ac:SetValue(d:Color(aa),nil,nil,nil,true)
 else
-ac:SetValue(aa)
+ac:SetValue(aa,nil,nil,nil,nil,true)
 end
 end
 task.wait(1/d.RainbowUpdateSpeed.Value)
@@ -4871,7 +4888,10 @@ Z:SetValue(nil,nil,nil,_.Notch)
 end
 end
 
-function at.SetValue(Z,_,aA,aB,aC)
+function at.SetValue(Z,_,aA,aB,aC,aD)
+if type(aC) ~= 'number' then
+aC = nil
+end
 if aC then
 if Z.Rainbow then
 Z:Toggle()
@@ -4937,7 +4957,9 @@ Size=UDim2.fromScale(math.clamp(Z.Value,0.04,0.96),1),
 })
 end
 end
+if not aD then
 as.Function(Z.Hue,Z.Sat,Z.Value)
+end
 end
 
 function at.ToColor(aA)
@@ -5214,6 +5236,16 @@ al.HorizontalAlignment=Enum.HorizontalAlignment.Center
 al.Parent=aj
 
 function ac.CreateModule(am,an)
+local allowed,reason=d:IsModuleAllowed(an.Name,ab.Name)
+if not allowed then
+if d.CreateNotification then
+d:CreateNotification("BadWars Security","Blocked unauthorized module: "..tostring(an.Name),5,"warning")
+end
+if d.AddLog then
+d:AddLog("Warning","Blocked unauthorized module: "..tostring(an.Name),{category=ab.Name,reason=reason})
+end
+return nil
+end
 an.Function=a:wrap(an.Function,{
 type="module",
 name=an.Name,
@@ -14013,12 +14045,7 @@ function optionapi:CreateToggle(config)
 	return {Enabled=false, Name=config.Name or 'Toggle', Toggle=function() end}
 end
 
--- Main API for module permissions and logging
-local mainapi = {}
-function mainapi:IsModuleAllowed(moduleName)
-	return true
-end
-mainapi.Logs = setmetatable({}, {
+d.Logs = d.Logs or setmetatable({}, {
 	__index = function(self, key)
 		if key == 'Store' or key == 'store' then
 			return {}

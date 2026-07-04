@@ -85,25 +85,25 @@ if ($newGui -match "registerSimpleComponent\('Font'") {
     Fail "CreateFont compatibility API is missing"
 }
 
-if ($newGui -match "function api:Color\(hue, sat, val\)[\s\S]{0,80}self:SetValue\(hue, sat, val, true\)") {
+if ($newGui -match "function at\.SetValue\(Z,_,aA,aB,aC,aD\)[\s\S]{0,1600}if not aD then[\s\S]{0,80}as\.Function") {
     Pass "Fallback color slider refresh is silent"
 } else {
     Fail "Fallback color slider refresh may recurse through callbacks"
 }
 
-if ($newGui -match "type\(n\) ~= 'number'[\s\S]{0,80}n = nil") {
+if ($newGui -match "type\(aC\) ~= 'number'[\s\S]{0,80}aC = nil") {
     Pass "Native GUI color slider ignores boolean rainbow refresh flags"
 } else {
     Fail "Native GUI color slider may treat refresh flags as color notches"
 }
 
-if ($newGui -match "opacity = tonumber\(opacity\) or 1") {
+if ($newGui -match "local opacity = tonumber\([^)]+\) or 1") {
     Pass "Target Info border color callback guards missing opacity"
 } else {
     Fail "Target Info border color callback can still receive nil opacity"
 }
 
-if ($newGui -match "Name = 'Blur background'[\s\S]{0,240}Default = false") {
+if ($newGui -match "Name\s*=\s*`"Blur background`"[\s\S]{0,260}Default\s*=\s*false" -or $newGui -match "Name\s*=\s*'Blur background'[\s\S]{0,260}Default\s*=\s*false") {
     Pass "Blur background defaults off"
 } else {
     Fail "Blur background default is not clearly false"
@@ -145,7 +145,8 @@ if ($main -match "selecting current GUI profile" -and $main -match "writefile\('
     Fail "Current GUI profile is not forced to the new UI"
 }
 
-$unescapedPathDownloads = Select-String -Path "$Root\badscript\*" -Pattern "raw\.githubusercontent\.com/evanbackup1256-ship-it/badwars/main/' \.\. path, true" -SimpleMatch
+$unescapedPathDownloads = Get-ChildItem -Path "$Root\badscript" -Recurse -File -Include "*.lua" |
+    Select-String -Pattern "raw\.githubusercontent\.com/evanbackup1256-ship-it/badwars/main/' \.\. path, true" -SimpleMatch
 if ($unescapedPathDownloads) {
     Fail "Found raw GitHub path downloads without space escaping"
     $unescapedPathDownloads | ForEach-Object { Write-Host "       $($_.Path):$($_.LineNumber) $($_.Line.Trim())" -ForegroundColor DarkYellow }
@@ -201,13 +202,13 @@ if ($security -match "nonce" -and $security -match "timestamp" -and $security -m
     Fail "Security API response validation is incomplete"
 }
 
-if ($newGui -match "function mainapi:IsModuleAllowed" -and $newGui -match "Blocked unauthorized module") {
+if ($newGui -match "function d:IsModuleAllowed" -and $newGui -match "Blocked unauthorized module") {
     Pass "GUI module creation honors security permissions"
 } else {
     Fail "GUI module permission enforcement is missing"
 }
 
-if ($newGui -match "mainapi\.Logs") {
+if ($newGui -match "d\.Logs") {
     Pass "Custom console log storage is initialized"
 } else {
     Fail "Custom console log storage is missing"

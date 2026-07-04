@@ -6,9 +6,16 @@ Ping = Bad.Legit:CreateModule({
 	Function = function(callback)
 		if callback then
 			repeat
-				label.Text = math.floor(tonumber(game:GetService('Stats'):FindFirstChild('PerformanceStats').Ping:GetValue()))..' ms'
+				if label then
+					local stats = game:GetService('Stats')
+					local perfStats = stats and stats:FindFirstChild('PerformanceStats')
+					local ping = perfStats and perfStats:FindFirstChild('Ping')
+					if ping then
+						label.Text = math.floor(tonumber(ping:GetValue()))..' ms'
+					end
+				end
 				task.wait(1)
-			until not Ping.Enabled
+			until not Ping or not Ping.Enabled
 		end
 	end,
 	Size = UDim2.fromOffset(100, 41),

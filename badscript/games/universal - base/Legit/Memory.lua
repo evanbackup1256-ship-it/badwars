@@ -6,9 +6,16 @@ Memory = Bad.Legit:CreateModule({
 	Function = function(callback)
 		if callback then
 			repeat
-				label.Text = math.floor(tonumber(game:GetService('Stats'):FindFirstChild('PerformanceStats').Memory:GetValue()))..' MB'
+				if label then
+					local stats = game:GetService('Stats')
+					local perfStats = stats and stats:FindFirstChild('PerformanceStats')
+					local mem = perfStats and perfStats:FindFirstChild('Memory')
+					if mem then
+						label.Text = math.floor(tonumber(mem:GetValue()))..' MB'
+					end
+				end
 				task.wait(1)
-			until not Memory.Enabled
+			until not Memory or not Memory.Enabled
 		end
 	end,
 	Size = UDim2.fromOffset(100, 41),

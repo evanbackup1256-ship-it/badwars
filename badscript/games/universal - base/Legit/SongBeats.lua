@@ -8,7 +8,7 @@ local beattick = tick()
 local oldfov, songobj, songbpm, songtween
 
 local function choosesong()
-	local list = List.ListEnabled
+	local list = List and List.ListEnabled or {}
 	if #alreadypicked >= #list then
 		table.clear(alreadypicked)
 	end
@@ -24,9 +24,9 @@ local function choosesong()
 		repeat
 			task.wait()
 			chosensong = list[math.random(1, #list)]
-		until not table.find(alreadypicked, chosensong) or not SongBeats.Enabled
+		until not table.find(alreadypicked, chosensong) or not SongBeats or not SongBeats.Enabled
 	end
-	if not SongBeats.Enabled then return end
+	if not SongBeats or not SongBeats.Enabled then return end
 
 	local split = chosensong:split('/')
 	if not isfile(split[1]) then
@@ -35,15 +35,19 @@ local function choosesong()
 		return
 	end
 
-	songobj.SoundId = assetfunction(split[1])
+	if songobj then
+		songobj.SoundId = assetfunction and assetfunction(split[1]) or split[1]
+	end
 	repeat
 		task.wait()
-	until songobj.IsLoaded or not SongBeats.Enabled
+	until (songobj and songobj.IsLoaded) or not SongBeats or not SongBeats.Enabled
 
-	if SongBeats.Enabled then
+	if SongBeats and SongBeats.Enabled then
 		beattick = tick() + (tonumber(split[3]) or 0)
 		songbpm = 60 / (tonumber(split[2]) or 50)
-		songobj:Play()
+		if songobj then
+			songobj:Play()
+		end
 	end
 end
 
@@ -52,26 +56,28 @@ SongBeats = Bad.Legit:CreateModule({
 	Function = function(callback)
 		if callback then
 			songobj = Instance.new('Sound')
-			songobj.Volume = Volume.Value / 100
+			songobj.Volume = (Volume and Volume.Value or 100) / 100
 			songobj.Parent = workspace
-			oldfov = gameCamera.FieldOfView
+			oldfov = gameCamera and gameCamera.FieldOfView
 
 			repeat
-				if not songobj.Playing then
+				if songobj and not songobj.Playing then
 					choosesong()
 				end
 
-				if beattick < tick() and SongBeats.Enabled and FOV.Enabled then
+				if beattick < tick() and SongBeats and SongBeats.Enabled and FOV and FOV.Enabled and gameCamera then
 					beattick = tick() + songbpm
-					gameCamera.FieldOfView = oldfov - FOVValue.Value
-					songtween = tweenService:Create(gameCamera, TweenInfo.new(math.min(songbpm, 0.2), Enum.EasingStyle.Linear), {
-						FieldOfView = oldfov
-					})
-					songtween:Play()
+					gameCamera.FieldOfView = oldfov - (FOVValue and FOVValue.Value or 5)
+					if tweenService then
+						songtween = tweenService:Create(gameCamera, TweenInfo.new(math.min(songbpm, 0.2), Enum.EasingStyle.Linear), {
+							FieldOfView = oldfov
+						})
+						songtween:Play()
+					end
 				end
 
 				task.wait()
-			until not SongBeats.Enabled
+			until not SongBeats or not SongBeats.Enabled
 		else
 			if songobj then
 				songobj:Destroy()
@@ -81,7 +87,7 @@ SongBeats = Bad.Legit:CreateModule({
 				songtween:Cancel()
 			end
 
-			if oldfov then
+			if oldfov and gameCamera then
 				gameCamera.FieldOfView = oldfov
 			end
 

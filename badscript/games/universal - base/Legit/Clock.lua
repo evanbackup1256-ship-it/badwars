@@ -7,9 +7,16 @@ Clock = Bad.Legit:CreateModule({
 	Function = function(callback)
 		if callback then
 			repeat
-				label.Text = DateTime.now():FormatLocalTime('LT', TwentyFourHour.Enabled and 'zh-cn' or 'en-us')
+				if label then
+					local ok, result = pcall(function()
+						return DateTime.now():FormatLocalTime('LT', TwentyFourHour and TwentyFourHour.Enabled and 'zh-cn' or 'en-us')
+					end)
+					if ok then
+						label.Text = result
+					end
+				end
 				task.wait(1)
-			until not Clock.Enabled
+			until not Clock or not Clock.Enabled
 		end
 	end,
 	Size = UDim2.fromOffset(100, 41),

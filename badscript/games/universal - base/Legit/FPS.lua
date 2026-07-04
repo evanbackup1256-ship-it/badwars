@@ -22,7 +22,9 @@ FPS = Bad.Legit:CreateModule({
 				frames[1] = updateClock
 				if updateTick < tick() then
 					updateTick = tick() + 1
-					label.Text = math.floor(os.clock() - startClock >= 1 and #frames or #frames / (os.clock() - startClock))..' FPS'
+					if label then
+						label.Text = math.floor(os.clock() - startClock >= 1 and #frames or #frames / (os.clock() - startClock))..' FPS'
+					end
 				end
 			end))
 		end

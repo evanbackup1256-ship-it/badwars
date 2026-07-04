@@ -11,14 +11,14 @@ Breadcrumbs = Bad.Legit:CreateModule({
 	Function = function(callback)
 		if callback then
 			point = Instance.new('Attachment')
-			point.Position = Vector3.new(0, Thickness.Value - 2.7, 0)
+			point.Position = Vector3.new(0, (Thickness and Thickness.Value or 0.1) - 2.7, 0)
 			point2 = Instance.new('Attachment')
-			point2.Position = Vector3.new(0, -Thickness.Value - 2.7, 0)
+			point2.Position = Vector3.new(0, -(Thickness and Thickness.Value or 0.1) - 2.7, 0)
 			trail = Instance.new('Trail')
-			trail.Texture = Texture.Value == '' and 'http://www.roblox.com/asset/?id=14166981368' or Texture.Value
+			trail.Texture = Texture and Texture.Value == '' and 'http://www.roblox.com/asset/?id=14166981368' or (Texture and Texture.Value or 'http://www.roblox.com/asset/?id=14166981368')
 			trail.TextureMode = Enum.TextureMode.Static
-			trail.Color = ColorSequence.new(Color3.fromHSV(FadeIn.Hue, FadeIn.Sat, FadeIn.Value), Color3.fromHSV(FadeOut.Hue, FadeOut.Sat, FadeOut.Value))
-			trail.Lifetime = Lifetime.Value
+			trail.Color = ColorSequence.new(Color3.fromHSV(FadeIn and FadeIn.Hue or 0.44, FadeIn and FadeIn.Sat or 1, FadeIn and FadeIn.Value or 1), Color3.fromHSV(FadeOut and FadeOut.Hue or 0.44, FadeOut and FadeOut.Sat or 1, FadeOut and FadeOut.Value or 1))
+			trail.Lifetime = Lifetime and Lifetime.Value or 3
 			trail.Attachment0 = point
 			trail.Attachment1 = point2
 			trail.FaceCamera = true
@@ -27,12 +27,14 @@ Breadcrumbs = Bad.Legit:CreateModule({
 			Breadcrumbs:Clean(point)
 			Breadcrumbs:Clean(point2)
 			Breadcrumbs:Clean(entitylib.Events.LocalAdded:Connect(function(ent)
-				point.Parent = ent.HumanoidRootPart
-				point2.Parent = ent.HumanoidRootPart
-				trail.Parent = gameCamera
+				if ent and ent.HumanoidRootPart then
+					point.Parent = ent.HumanoidRootPart
+					point2.Parent = ent.HumanoidRootPart
+					trail.Parent = gameCamera
+				end
 			end))
 
-			if entitylib.isAlive then
+			if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 				point.Parent = entitylib.character.RootPart
 				point2.Parent = entitylib.character.RootPart
 				trail.Parent = gameCamera

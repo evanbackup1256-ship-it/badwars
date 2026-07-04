@@ -3,7 +3,7 @@ local List
 local modified = {}
 
 local function modifyPart(v)
-	if v:IsA('BasePart') and not table.find(List.ListEnabled, v.Name) then
+	if v:IsA('BasePart') and List and List.ListEnabled and not table.find(List.ListEnabled, v.Name) then
 		modified[v] = true
 		v.LocalTransparencyModifier = 0.5
 	end

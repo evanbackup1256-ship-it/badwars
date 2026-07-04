@@ -6,13 +6,17 @@ FOV = Bad.Legit:CreateModule({
 	Name = 'FOV',
 	Function = function(callback)
 		if callback then
-			oldfov = gameCamera.FieldOfView
+			oldfov = gameCamera and gameCamera.FieldOfView
 			repeat
-				gameCamera.FieldOfView = Value.Value
+				if gameCamera then
+					gameCamera.FieldOfView = Value and Value.Value or 70
+				end
 				task.wait()
-			until not FOV.Enabled
+			until not FOV or not FOV.Enabled
 		else
-			gameCamera.FieldOfView = oldfov
+			if gameCamera and oldfov then
+				gameCamera.FieldOfView = oldfov
+			end
 		end
 	end,
 	Tooltip = 'Adjusts camera vision'

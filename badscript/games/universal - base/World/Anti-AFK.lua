@@ -4,9 +4,11 @@ Bad.Categories.World:CreateModule({
 	Name = 'Anti-AFK',
 	Function = function(callback)
 		if callback then
-			for _, v in getconnections(lplr.Idled) do
-				table.insert(connections, v)
-				v:Disable()
+			if lplr and getconnections then
+				for _, v in getconnections(lplr.Idled) do
+					table.insert(connections, v)
+					v:Disable()
+				end
 			end
 		else
 			for _, v in connections do

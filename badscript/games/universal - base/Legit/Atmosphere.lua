@@ -49,7 +49,7 @@ local apidump = {
 local function removeObject(v)
 	if not table.find(newobjects, v) then
 		local toggle = Toggles[v.ClassName]
-		if toggle and toggle.Toggle.Enabled then
+		if toggle and toggle.Toggle and toggle.Toggle.Enabled then
 			if v.Parent then
 				table.insert(oldobjects, v)
 				v.Parent = game
@@ -62,22 +62,24 @@ Atmosphere = Bad.Legit:CreateModule({
 	Name = 'Atmosphere',
 	Function = function(callback)
 		if callback then
-			for _, v in lightingService:GetChildren() do
-				removeObject(v)
+			if lightingService then
+				for _, v in lightingService:GetChildren() do
+					removeObject(v)
+				end
+
+				Atmosphere:Clean(lightingService.ChildAdded:Connect(function(v)
+					task.defer(removeObject, v)
+				end))
 			end
 
-			Atmosphere:Clean(lightingService.ChildAdded:Connect(function(v)
-				task.defer(removeObject, v)
-			end))
-
 			for i, v in Toggles do
-				if v.Toggle.Enabled then
+				if v.Toggle and v.Toggle.Enabled then
 					local obj = Instance.new(i)
 					for i2, v2 in v.Objects do
 						if v2.Type == 'ColorSlider' then
 							obj[i2] = Color3.fromHSV(v2.Hue, v2.Sat, v2.Value)
 						else
-							obj[i2] = apidump[i][i2] ~= 'Number' and v2.Value or tonumber(v2.Value) or 0
+							obj[i2] = apidump[i] and apidump[i][i2] ~= 'Number' and v2.Value or tonumber(v2.Value) or 0
 						end
 					end
 					obj.Parent = lightingService
@@ -89,8 +91,10 @@ Atmosphere = Bad.Legit:CreateModule({
 				v:Destroy()
 			end
 
-			for _, v in oldobjects do
-				v.Parent = lightingService
+			if lightingService then
+				for _, v in oldobjects do
+					v.Parent = lightingService
+				end
 			end
 
 			table.clear(newobjects)

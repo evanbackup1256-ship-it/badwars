@@ -703,26 +703,50 @@ local D = isfile
     end
 
 local E = function(E, F, G, H)
-    p.Text = tostring(E or "")
-    p.Size = F
-    p.Width = H or math.huge
-    if typeof(G) == "Font" then
-        p.Font = G
-    end
-    local I, J = pcall(function()
-        return i:GetTextBoundsAsync(p)
-    end)
-    if not I then
-        a:report({
-            type = "getfontsize-function",
-            err = J,
-            args = { E, F, G, H },
-            notifyBlacklisted = true,
-        })
-    end
-    return I and J
-end
+	p.Text = tostring(E or "")
 
+	local fontSize = F
+	if typeof(fontSize) == "Vector2" then
+		fontSize = fontSize.Y
+	end
+	fontSize = tonumber(fontSize) or 14
+	if fontSize ~= fontSize or fontSize == math.huge or fontSize == -math.huge then
+		fontSize = 14
+	end
+	p.Size = math.max(fontSize, 1)
+
+	local maxWidth = H
+	if typeof(maxWidth) == "Vector2" then
+		maxWidth = maxWidth.X
+	end
+	maxWidth = tonumber(maxWidth) or math.huge
+	if maxWidth ~= maxWidth or maxWidth <= 0 then
+		maxWidth = math.huge
+	end
+	p.Width = maxWidth
+
+	if typeof(G) == "Font" then
+		p.Font = G
+	elseif typeof(G) == "EnumItem" and G.EnumType == Enum.Font then
+		p.Font = Font.fromEnum(G)
+	end
+
+	local I, J = pcall(function()
+		return i:GetTextBoundsAsync(p)
+	end)
+
+	if not I then
+		a:report({
+			type = "getfontsize-function",
+			err = J,
+			args = { E, F, G, H },
+			notifyBlacklisted = true,
+		})
+		return Vector2.zero
+	end
+
+	return J
+end
 local function addBlur(F, G)
     local H = Instance.new("ImageLabel")
     H.Name = "Blur"
@@ -2159,7 +2183,7 @@ H = {
         local previousParentScrolling
 
         local function updateTitle()
-            title.Text = tostring(settings.Name) .. "  •  " .. tostring(api.Value)
+            title.Text = tostring(settings.Name) .. "  â€¢  " .. tostring(api.Value)
         end
         updateTitle()
 
@@ -3707,7 +3731,7 @@ H = {
         af.BorderSizePixel = 0
         af.AutoButtonColor = false
         af.Visible = aa.Visible == nil or aa.Visible
-        af.Text = "          " .. aa.Name
+        af.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š" .. aa.Name
         af.TextXAlignment = Enum.TextXAlignment.Left
         af.TextColor3 = m.Dark(o.Text, 0.16)
         af.TextSize = 14
@@ -4065,7 +4089,7 @@ H = {
             ad.Name = "DividerLabel"
             ad.Size = UDim2.fromOffset(218, 27)
             ad.BackgroundTransparency = 1
-            ad.Text = "          " .. ab:upper()
+            ad.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š" .. ab:upper()
             ad.TextXAlignment = Enum.TextXAlignment.Left
             ad.TextColor3 = m.Dark(o.Text, 0.43)
             ad.TextSize = 9
@@ -4281,7 +4305,7 @@ function d.CreateGUI(aa)
         at.BackgroundColor3 = o.Main
         at.BorderSizePixel = 0
         at.AutoButtonColor = false
-        at.Text = "          Rebind GUI"
+        at.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€ŠRebind GUI"
         at.TextXAlignment = Enum.TextXAlignment.Left
         at.TextColor3 = m.Dark(o.Text, 0.16)
         at.TextSize = 14
@@ -4372,8 +4396,8 @@ function d.CreateGUI(aa)
         au.AutoButtonColor = false
         au.Text = (
             as.Icon
-                and "                                 "
-            or "             "
+                and "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š"
+            or "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š"
         ) .. as.Name
         au.TextXAlignment = Enum.TextXAlignment.Left
         au.TextColor3 = m.Dark(o.Text, 0.16)
@@ -4563,7 +4587,7 @@ function d.CreateGUI(aa)
             P.Size = UDim2.new(1, 0, 0, 40)
             P.BackgroundTransparency = 1
             P.AutoButtonColor = false
-            P.Text = string.rep(" ", 33 * A.Scale) .. M.Name
+            P.Text = string.rep("â€Š", 33 * A.Scale) .. M.Name
             P.TextXAlignment = Enum.TextXAlignment.Left
             P.TextColor3 = m.Dark(o.Text, 0.16)
             P.TextSize = 14
@@ -4605,7 +4629,7 @@ function d.CreateGUI(aa)
             end
 
             A:GetPropertyChangedSignal("Scale"):Connect(function()
-                P.Text = string.rep(" ", 33 * A.Scale) .. M.Name
+                P.Text = string.rep("â€Š", 33 * A.Scale) .. M.Name
             end)
             P.MouseEnter:Connect(function()
                 O = true
@@ -4699,7 +4723,7 @@ function d.CreateGUI(aa)
         au.BackgroundColor3 = o.Main
         au.BorderSizePixel = 0
         au.AutoButtonColor = false
-        au.Text = "          " .. as.Name
+        au.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š" .. as.Name
         au.TextXAlignment = Enum.TextXAlignment.Left
         au.TextColor3 = m.Dark(o.Text, 0.16)
         au.TextSize = 14
@@ -4797,7 +4821,7 @@ function d.CreateGUI(aa)
             ac.Size = UDim2.fromOffset(220, 45 + ag.AbsoluteContentSize.Y / A.Scale)
             for L, M in ab.Buttons do
                 if M.Icon then
-                    M.Object.Text = string.rep(" ", 33 * A.Scale) .. M.Name
+                    M.Object.Text = string.rep("â€Š", 33 * A.Scale) .. M.Name
                 end
             end
         end)
@@ -5372,7 +5396,7 @@ function d.CreateGUI(aa)
         ac.Size = UDim2.fromOffset(220, 42 + ag.AbsoluteContentSize.Y / A.Scale)
         for ar, as in ab.Buttons do
             if as.Icon then
-                as.Object.Text = string.rep(" ", 36 * A.Scale) .. as.Name
+                as.Object.Text = string.rep("â€Š", 36 * A.Scale) .. as.Name
             end
         end
     end)
@@ -5502,7 +5526,7 @@ function d.CreateCategory(aa, ab)
         ar.BackgroundColor3 = o.Surface
         ar.BorderSizePixel = 0
         ar.AutoButtonColor = false
-        ar.Text = "            " .. ap
+        ar.Text = "â€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Šâ€Š" .. ap
         ar.TextXAlignment = Enum.TextXAlignment.Left
         ar.TextColor3 = m.Dark(o.Text, 0.16)
         ar.TextSize = d.isMobile and 15 or 14
@@ -5991,7 +6015,7 @@ function d.CreateCategory(aa, ab)
                 if count(ao.Options) <= 0 then
                     d:CreateNotification(
                         "BadWars",
-                        `<font color="#ff8080"><b>⚠ No options found</b></font> for <font color="#7db8ff"><b>{tostring(
+                        `<font color="#ff8080"><b>âš  No options found</b></font> for <font color="#7db8ff"><b>{tostring(
                             an.Name
                         )}</b></font> :c`,
                         3
@@ -6882,7 +6906,7 @@ local aa = shared.LANGUAGE_FLAGS_CACHE
                     10,
                     function(ac, ad)
                         if not (ac and ad ~= nil and type(ad) == "table") then
-                            return { en = "🇺🇸" }
+                            return { en = "ðŸ‡ºðŸ‡¸" }
                         else
                             return ad
                         end
@@ -8412,7 +8436,7 @@ function d.CreateProfilesGUI(ag, ah)
         aL.Position = UDim2.fromOffset(3, -1)
         aL.Size = UDim2.fromOffset(12, 20)
         aL.Font = Enum.Font.GothamBold
-        aL.Text = "★"
+        aL.Text = "â˜…"
         aL.TextColor3 = Color3.fromRGB(255, 100, 100)
         aL.TextSize = 12
 
@@ -12105,7 +12129,7 @@ F(function()
             local as = ([[<font color="#6ab7ff"><b>%s</b></font>]]):format(aq)
             local at = ([[<font color="#ffffff"><b>%s</b></font>]]):format(ar)
 
-            local au = ([[<b><font color="#7df9ff">🌐 Language switched to:</font></b> %s %s]]):format(as, at)
+            local au = ([[<b><font color="#7df9ff">ðŸŒ Language switched to:</font></b> %s %s]]):format(as, at)
 
             d:CreateNotification("Language Updated", au, 3, "info")
         end

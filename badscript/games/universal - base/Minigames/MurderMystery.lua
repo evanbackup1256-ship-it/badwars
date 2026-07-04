@@ -47,9 +47,14 @@ MurderMystery = Bad.Categories.Minigames:CreateModule({
 
 			entitylib.getEntityColor = function(ent)
 				ent = ent.Player
-				if not (ent and Bad.Categories.Main.Options['Use team color'].Enabled) then return end
+				local mainOpts = Bad and Bad.Categories and Bad.Categories.Main and Bad.Categories.Main.Options
+				if not (ent and mainOpts and mainOpts['Use team color'] and mainOpts['Use team color'].Enabled) then return end
 				if isFriend(ent, true) then
-					return Color3.fromHSV(Bad.Categories.Friends.Options['Friends color'].Hue, Bad.Categories.Friends.Options['Friends color'].Sat, Bad.Categories.Friends.Options['Friends color'].Value)
+					local friendOpts = Bad and Bad.Categories and Bad.Categories.Friends and Bad.Categories.Friends.Options
+					if friendOpts and friendOpts['Friends color'] then
+						return Color3.fromHSV(friendOpts['Friends color'].Hue, friendOpts['Friends color'].Sat, friendOpts['Friends color'].Value)
+					end
+					return nil
 				end
 				return murderer == ent and Color3.new(1, 0.3, 0.3) or sheriff == ent and Color3.new(0, 0.5, 1) or nil
 			end

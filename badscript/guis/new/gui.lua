@@ -4212,24 +4212,24 @@ at:Toggle()
 end
 
 if not d.isMobile then
-au.MouseEnter:Connect(function()
-if not at.Enabled then
-au.TextColor3=o.Text
-if buttonicon then
-buttonicon.ImageColor3=o.Text
-end
-au.BackgroundColor3=m.Light(o.Main,0.02)
-end
-end)
-au.MouseLeave:Connect(function()
-if not at.Enabled then
-au.TextColor3=m.Dark(o.Text,0.16)
-if buttonicon then
-buttonicon.ImageColor3=m.Dark(o.Text,0.16)
-end
-au.BackgroundColor3=o.Main
-end
-end)
+  au.MouseEnter:Connect(function()
+    if not at.Enabled then
+      au.TextColor3=o.Text
+      if av then
+        av.ImageColor3=o.Text
+      end
+      au.BackgroundColor3=m.Light(o.Main,0.02)
+    end
+  end)
+  au.MouseLeave:Connect(function()
+    if not at.Enabled then
+      au.TextColor3=m.Dark(o.Text,0.16)
+      if av then
+        av.ImageColor3=m.Dark(o.Text,0.16)
+      end
+      au.BackgroundColor3=o.Main
+    end
+  end)
 end
 au.Activated:Connect(function()
 at:Toggle()
@@ -5100,10 +5100,11 @@ am.Activated:Connect(function()
 ak.Visible=false
 end)
 aj.Activated:Connect(function()
-task.spawn(function()
-z.Text="Copied!"
-setclipboard"BadWars support"
-end)
+  task.spawn(function()
+    if shared.developer and shared.developer.notify then
+      shared.developer:notify({title = "BadWars Support", text = "Support copied to clipboard!", duration = 1})
+    end
+  end)
 end)
 ah.MouseEnter:Connect(function()
 ai.ImageColor3=o.Text

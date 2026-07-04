@@ -119,28 +119,30 @@ if type(_loadstring)~='function' then local m='loadstring unavailable';setStatus
 
 -- Roblox update watch integration
 local function watchRobloxUpdates()
-	task.spawn(function()
-		local badStatus=shared.BadStatus
-		if type(badStatus)~='function' then return end
-		while true do
-			task.wait(300)
-			local ok,res=pcall(function()
-				local api='https://api.github.com/repos/evanbackup1256-ship-it/badwars/raw/main/badscript/profiles/roblox-version.txt'
-				local httpService=cloneref(game:GetService('HttpService'))
-				local body=httpService:GetAsync(api,true)
-				return body
-			end)
-			if ok and type(res)=='string' and #res>0 then
-				local currentVersion=(game:GetService('HttpService')):JSONDecode(res or '{}')
-				if type(currentVersion)=='table' then
-					shared.BadWarsStatusApi=currentVersion
-					if type(badStatus)=='function' then
-						badStatus('Roblox update watch: '..tostring(currentVersion.status or 'ok'))
-					end
-				end
-			end
-		end
-	end)
+  task.spawn(function()
+    local badStatus=shared.BadStatus
+    if type(badStatus)~='function' then return end
+    while true do
+      task.wait(300)
+      local ok,res=pcall(function()
+        local api='https://api.github.com/repos/evanbackup1256-ship-it/badwars/raw/main/badscript/profiles/roblox-version.txt'
+        local httpService=cloneref(game:GetService('HttpService'))
+        local body=httpService:GetAsync(api,true)
+        return body
+      end)
+      if ok and type(res)=='string' and #res>0 then
+        local success,currentVersion=pcall(function()
+          return cloneref(game:GetService('HttpService')):JSONDecode(res or '{}')
+        end)
+        if success and type(currentVersion)=='table' then
+          shared.BadWarsStatusApi=currentVersion
+          if type(badStatus)=='function' then
+            badStatus('Roblox update watch: '..tostring(currentVersion.status or 'ok'))
+          end
+        end
+      end
+    end
+  end)
 end
 watchRobloxUpdates()
 shared.BadWarsStatusApi={status='ok'}

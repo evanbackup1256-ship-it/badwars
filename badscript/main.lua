@@ -519,9 +519,9 @@ end
 
 -- Finish loading
 local function finish()
-	shared.Bad.Init=nil
-	setStatus('loading profile')
-	shared.Bad:Load()
+  setStatus('loading profile')
+  shared.Bad:Load()
+  shared.Bad.Init=nil
 	if not shared.BadReload then
 		pcall(function()
 			local cg=shared.Bad.gui and shared.Bad.gui.ScaledGui and shared.Bad.gui.ScaledGui.ClickGui
@@ -606,14 +606,14 @@ if not shared.BadIndependent then
 	repairModuleCategories('universal')
 	setStatus('universal modules ready')
 
-	-- Stage 7: Game Module
-	local gPath=gamePath(game.PlaceId)
-	if isfile(gPath) or gameModulePaths[tonumber(game.PlaceId)] then
-		runGameMod(gPath,isfile(gPath) and 'cached' or 'mapped')
-		repairModuleCategories('game')
-		setStatus('game module ready')	else
-		setStatus('universal active; no game-specific module found')
-	end
+-- Stage 7: Game Module
+  local gPath=gamePath(game.PlaceId)
+  if isfile(gPath) and gameModulePaths[tonumber(game.PlaceId)] then
+    runGameMod(gPath,'cached')
+    repairModuleCategories('game')
+    setStatus('game module ready')	else
+    setStatus('universal active; no game-specific module found')
+  end
 
 	-- Stage 8: Finish
 	setStatus('pipeline: finalizing')

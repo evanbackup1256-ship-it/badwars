@@ -325,7 +325,7 @@ function mainapi:CreateCategory(categorysettings)
 		modulebutton.TextXAlignment = Enum.TextXAlignment.Left
 		modulebutton.TextYAlignment = Enum.TextYAlignment.Center
 		modulebutton.TextColor3 = uipallet.Text
-		modulebutton.TextSize = 36
+		modulebutton.TextSize = 18
 		modulebutton.FontFace = uipallet.Font
 		modulebutton.Parent = moduleholder
 		local stroke = Instance.new('UIStroke')
@@ -422,14 +422,14 @@ function mainapi:CreateCategory(categorysettings)
 			end
 		end
 
-		function moduleapi:SetBind(val, mouse)
-			if type(val) == 'table' then
-				createMobileButton(object, Vector2.new(v.Bind.X, v.Bind.Y))
-				return
-			end
+function moduleapi:SetBind(val, mouse)
+    if type(val) == 'table' then
+      createMobileButton(modulebutton, Vector2.new(val.Bind.X, val.Bind.Y))
+      return
+    end
 
-			self.Bind = val
-		end
+    self.Bind = val
+  end
 
 		function moduleapi:Toggle(multiple)
 			if mainapi.ThreadFix then setthreadidentity(8) end
@@ -471,7 +471,7 @@ function mainapi:CreateCategory(categorysettings)
 			table.insert(sorted, i)
 		end
 
-		table.sort(sorted, function(a, b) return a > b end)
+		table.sort(sorted, function(a, b) return a < b end)
 
 		for i, v in sorted do
 			mainapi.Modules[v].Index = i

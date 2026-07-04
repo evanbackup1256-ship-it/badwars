@@ -48,6 +48,8 @@
   --border: 220 22% 18%;
   --input: 220 22% 18%;
   --ring: 192 94% 56%;
+  --glow: 192 94% 65%;
+  --success: 158 86% 45%;
 }
 
 * {
@@ -217,14 +219,30 @@ section[id] {
 }
 
 .premium-card:hover {
-  transform: translateY(-6px) rotateX(.7deg);
-  border-color: hsl(var(--primary) / .48);
-  box-shadow: 0 34px 110px rgb(0 0 0 / .38), 0 0 80px hsl(var(--primary) / .15);
+  transform: translateY(-8px) rotateX(.7deg) scale(1.02);
+  border-color: hsl(var(--primary) / .6);
+  box-shadow: 
+    0 40px 120px rgb(0 0 0 / .45), 
+    0 0 100px hsl(var(--primary) / .25),
+    inset 0 1px 0 hsl(var(--primary) / .3);
 }
 
 .premium-card > * {
   position: relative;
   z-index: 1;
+}
+
+.premium-card.glow-primary:hover {
+  box-shadow: 
+    0 40px 120px rgb(0 0 0 / .45), 
+    0 0 120px hsl(var(--glow) / .4),
+    inset 0 1px 0 hsl(var(--glow) / .3);
+}
+
+.premium-card.glow-success:hover {
+  box-shadow: 
+    0 40px 120px rgb(0 0 0 / .45), 
+    0 0 120px hsl(var(--success) / .4);
 }
 
 .premium-card .rounded-2xl,
@@ -376,17 +394,24 @@ section[id] {
 
 @keyframes circuit-pulse {
   0%, 100% { filter: drop-shadow(0 0 0 hsl(var(--primary) / 0)); }
-  50% { filter: drop-shadow(0 0 18px hsl(var(--primary) / .34)); }
+  50% { filter: drop-shadow(0 0 22px hsl(var(--primary) / .4)); }
+}
+
+@keyframes shimmer-fast {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
 .premium-card button,
 .premium-card a {
   transform: translateZ(24px);
+  transition: all 0.2s ease;
 }
 
 .premium-card button:hover,
 .premium-card a:hover {
-  animation: circuit-pulse 1.2s ease-in-out infinite;
+  animation: circuit-pulse 1.2s ease-in-out infinite, shimmer-fast 2s linear infinite;
+  background-size: 200% auto;
 }
 
 @media (max-width: 1024px) {

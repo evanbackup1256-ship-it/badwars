@@ -104,24 +104,24 @@ end
 entitylib.IgnoreObject = RaycastParams.new()
 entitylib.IgnoreObject.RespectCanCollide = true
 entitylib.Wallcheck = function(origin, position, ignoreobject)
-	if typeof(ignoreobject) ~= 'Instance' then
-		local ignorelist = {gameCamera, lplr.Character}
-		for _, v in entitylib.List do
-			if v.Targetable then
-				table.insert(ignorelist, v.Character)
-			end
-		end
+  if typeof(ignoreobject) ~= 'Instance' then
+    local ignorelist = {gameCamera, lplr.Character}
+    for _, v in entitylib.List do
+      if v.Targetable then
+        table.insert(ignorelist, v.Character)
+      end
+    end
 
-		if typeof(ignoreobject) == 'table' then
-			for _, v in ignoreobject do
-				table.insert(ignorelist, v)
-			end
-		end
+    if typeof(ignoreobject) == 'table' then
+      for _, v in ignoreobject do
+        table.insert(ignorelist, v)
+      end
+    end
 
-		ignoreobject = entitylib.IgnoreObject
-		ignoreobject.FilterDescendantsInstances = ignorelist
-	end
-	return workspace.Raycast(workspace, origin, (position - origin), ignoreobject)
+    ignoreobject = entitylib.IgnoreObject
+    ignoreobject.FilterDescendantsInstances = ignorelist
+  end
+  return workspace:Raycast(origin, (position - origin), ignoreobject)
 end
 
 entitylib.EntityMouse = function(entitysettings)

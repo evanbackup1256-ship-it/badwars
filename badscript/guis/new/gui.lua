@@ -1711,12 +1711,15 @@ end
 
 clampGuiObjectToViewport = function(guiObject, desiredAbsolute)
     local viewport = (B and B.AbsoluteSize) or workspace.CurrentCamera.ViewportSize
-    local size = guiObject.AbsoluteSize
+    local scale = getGuiScale()
+    -- Use scaled size for accurate clamping to prevent overlapping and off-screen issues on different scales
+    local size = guiObject.AbsoluteSize / scale
     local titleAccess = math.min(40, size.Y)
-    local minX = d.isMobile and 0 or math.min(0, -size.X + 48)
-    local maxX = d.isMobile and math.max(0, viewport.X - size.X) or math.max(minX, viewport.X - 48)
-    local minY = 0
-    local maxY = math.max(0, viewport.Y - titleAccess)
+    local padding = d.isMobile and 8 or 12  -- Better mobile padding to avoid edge overlap and improve touch
+    local minX = d.isMobile and padding or math.min(0, -size.X + 48)
+    local maxX = d.isMobile and math.max(padding, viewport.X / scale - size.X - padding) or math.max(minX, viewport.X / scale - 48)
+    local minY = padding
+    local maxY = math.max(padding, (viewport.Y / scale) - titleAccess - padding)
     return Vector2.new(math.clamp(desiredAbsolute.X, minX, maxX), math.clamp(desiredAbsolute.Y, minY, maxY))
 end
 
@@ -1729,9 +1732,10 @@ setGuiAbsolutePosition = function(guiObject, absolutePosition)
     local parentAbsolute = parent:IsA("GuiObject") and parent.AbsolutePosition or Vector2.zero
     local size = guiObject.AbsoluteSize / scale
     local anchor = guiObject.AnchorPoint
+    -- Improved to reduce floating point issues and overlapping on high scale or mobile
     guiObject.Position = UDim2.fromOffset(
-        (absolutePosition.X - parentAbsolute.X) / scale + (size.X * anchor.X),
-        (absolutePosition.Y - parentAbsolute.Y) / scale + (size.Y * anchor.Y)
+        math.floor((absolutePosition.X - parentAbsolute.X) / scale + (size.X * anchor.X) + 0.5),
+        math.floor((absolutePosition.Y - parentAbsolute.Y) / scale + (size.Y * anchor.Y) + 0.5)
     )
 end
 
@@ -15046,23 +15050,25 @@ ak.Parent = z
 addCorner(ak, o.Radius)
 A = Instance.new("UIScale")
 local function responsiveScale()
-    local viewport = B.AbsoluteSize
+    local viewport = B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize
     local width = viewport.X > 0 and viewport.X or 1920
     local height = viewport.Y > 0 and viewport.Y or 1080
 
+    -- Improved scaling for better mobile friendliness and to reduce overlapping on various screen sizes
     if d.isMobile then
-        return math.clamp(
-            math.min(width / 820, height / 620),
-            0.58,
-            0.9
-        )
+        local isLandscape = width > height
+        local baseScale
+        if isLandscape then
+            baseScale = math.min(width / 900, height / 550)
+        else
+            baseScale = math.min(width / 750, height / 650)
+        end
+        return math.clamp(baseScale, 0.55, 0.95)
     end
 
-    return math.clamp(
-        math.min(width / 1920, height / 1080),
-        0.62,
-        1.05
-    )
+    -- Desktop: tighter control to prevent excessive zoom out or in, better for high-res and prevent layout overlap
+    local base = math.min(width / 1920, height / 1080)
+    return math.clamp(base, 0.65, 1.08)
 end
 A.Scale = responsiveScale()
 A.Parent = w
@@ -15724,10 +15730,22 @@ d.SortGuiCallback = function(av)
         return (aw[ay.Object.Name] or 99) < (aw[az.Object.Name] or 99)
     end)
 
+    -- Comprehensive layout fix: Dynamic columns and spacing based on current scale and viewport to prevent overlapping on different screens/mobile
+    local scale = getGuiScale()
+    local viewportWidth = (B and B.AbsoluteSize.X or 1920) / scale
+    local columns = d.isMobile and 4 or math.max(4, math.floor(viewportWidth / 260))
+    local xSpacing = d.isMobile and 220 or 244
+    local yOffsetSecondRow = d.isMobile and 420 or 360
+    local startX = d.isMobile and 4 or 6
+
     local ay = 0
     for az, aA in ax do
         if aA.Object.Visible then
-            aA.Object.Position = UDim2.fromOffset(6 + (ay % 8 * 244), 60 + (ay > 7 and 360 or 0))
+            local col = ay % columns
+            local row = math.floor(ay / columns)
+            local x = startX + (col * xSpacing)
+            local y = 60 + (row * yOffsetSecondRow)
+            aA.Object.Position = UDim2.fromOffset(x, y)
             ay += 1
         end
     end

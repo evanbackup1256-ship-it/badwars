@@ -22,15 +22,18 @@ end
 
 local Functions = {
 	Part = function()
-		local chars = {gameCamera, lplr.Character}
+		if not entitylib.character or not entitylib.character.RootPart then return function() end end
+		local chars = {gameCamera, lplr and lplr.Character}
 		for _, v in entitylib.List do
-			table.insert(chars, v.Character)
+			if v and v.Character then
+				table.insert(chars, v.Character)
+			end
 		end
 		overlapCheck.FilterDescendantsInstances = chars
 
-		local parts = workspace:GetPartBoundsInBox(entitylib.character.RootPart.CFrame + Vector3.new(0, 1, 0), entitylib.character.RootPart.Size + Vector3.new(7, entitylib.character.HipHeight, 7), overlapCheck)
+		local parts = workspace:GetPartBoundsInBox(entitylib.character.RootPart.CFrame + Vector3.new(0, 1, 0), entitylib.character.RootPart.Size + Vector3.new(7, entitylib.character.HipHeight or 2, 7), overlapCheck)
 		for _, part in parts do
-		if part.CanCollide and (not (Spider and Spider.Enabled) or SpiderShift) then
+			if part.CanCollide and (not (Spider and Spider.Enabled) or SpiderShift) then
 				modified[part] = true
 				part.CanCollide = false
 			end
@@ -50,9 +53,12 @@ local Functions = {
 		end
 	end,
 	CFrame = function()
-		local chars = {gameCamera, lplr.Character}
+		if not entitylib.character or not entitylib.character.RootPart or not entitylib.character.Head or not entitylib.character.Humanoid then return end
+		local chars = {gameCamera, lplr and lplr.Character}
 		for _, v in entitylib.List do
-			table.insert(chars, v.Character)
+			if v and v.Character then
+				table.insert(chars, v.Character)
+			end
 		end
 		rayCheck.FilterDescendantsInstances = chars
 		overlapCheck.FilterDescendantsInstances = chars
@@ -60,12 +66,12 @@ local Functions = {
 		local ray = workspace:Raycast(entitylib.character.Head.CFrame.Position, entitylib.character.Humanoid.MoveDirection * 1.1, rayCheck)
 		if ray and (not (Spider and Spider.Enabled) or SpiderShift) then
 			local phaseDirection = grabClosestNormal(ray)
-			if ray.Instance.Size[phaseDirection] <= StudLimit.Value then
+			if ray.Instance.Size[phaseDirection] <= (StudLimit and StudLimit.Value or 5) then
 				local root = entitylib.character.RootPart
 				local dest = root.CFrame + (ray.Normal * (-(ray.Instance.Size[phaseDirection]) - (root.Size.X / 1.5)))
 
 				if #workspace:GetPartBoundsInBox(dest, Vector3.one, overlapCheck) <= 0 then
-					if Mode.Value == 'Motor' then
+					if Mode and Mode.Value == 'Motor' then
 						motorMove(root, dest)
 					else
 						root.CFrame = dest
@@ -76,7 +82,9 @@ local Functions = {
 	end,
 	FFlag = function()
 		if teleported then return end
-		setfflag('AssemblyExtentsExpansionStudHundredth', '-10000')
+		if setfflag then
+			setfflag('AssemblyExtentsExpansionStudHundredth', '-10000')
+		end
 		fflag = true
 	end
 }

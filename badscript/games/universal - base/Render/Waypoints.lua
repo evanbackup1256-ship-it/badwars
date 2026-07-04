@@ -11,9 +11,9 @@ Waypoints = Bad.Categories.Render:CreateModule({
 	Name = 'Waypoints',
 	Function = function(callback)
 		if callback then
-			for _, v in List.ListEnabled do
+			for _, v in List and List.ListEnabled or {} do
 				local split = v:split('/')
-				local tagSize = getfontsize(removeTags(split[2]), 14 * Scale.Value, FontOption.Value, Vector2.new(100000, 100000))
+				local tagSize = getfontsize and getfontsize(removeTags(split[2]), 14 * (Scale and Scale.Value or 1), FontOption and FontOption.Value or Enum.Font.Arial, Vector2.new(100000, 100000)) or Vector2.new(100, 20)
 				local billboard = Instance.new('BillboardGui')
 				billboard.Size = UDim2.fromOffset(tagSize.X + 8, tagSize.Y + 7)
 				billboard.StudsOffsetWorldSpace = Vector3.new(unpack(split[1]:split(',')))
@@ -24,9 +24,9 @@ Waypoints = Bad.Categories.Render:CreateModule({
 				tag.BorderSizePixel = 0
 				tag.Visible = true
 				tag.RichText = true
-				tag.FontFace = FontOption.Value
-				tag.TextSize = 14 * Scale.Value
-				tag.BackgroundTransparency = Background.Value
+				tag.FontFace = FontOption and FontOption.Value or Enum.Font.Arial
+				tag.TextSize = 14 * (Scale and Scale.Value or 1)
+				tag.BackgroundTransparency = Background and Background.Value or 0.5
 				tag.Size = billboard.Size
 				tag.Text = split[2]
 				tag.TextColor3 = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
@@ -61,9 +61,11 @@ List = Waypoints:CreateTextList({
 Waypoints:CreateButton({
 	Name = 'Add current position',
 	Function = function()
-		if entitylib.isAlive then
+		if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 			local pos = entitylib.character.RootPart.Position // 1
-			List:ChangeValue(pos.X..','..pos.Y..','..pos.Z..'/Waypoint '..(#List.List + 1))
+			if List then
+				List:ChangeValue(pos.X..','..pos.Y..','..pos.Z..'/Waypoint '..(#List.List + 1))
+			end
 		end
 	end
 })

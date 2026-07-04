@@ -20,7 +20,7 @@ Fullbright = Bad.Categories.Render:CreateModule({
 	Name = 'Fullbright',
 	Function = function(callback)
 		if callback then
-			if Mode.Value == 'Lighting' then
+			if Mode and Mode.Value == 'Lighting' then
 				for _, v in {'Ambient', 'OutdoorAmbient', 'Brightness'} do
 					oldsettings[v] = lightingService[v]
 				end
@@ -33,9 +33,9 @@ Fullbright = Bad.Categories.Render:CreateModule({
 				Fullbright:Clean(inst)
 
 				repeat
-					inst.Parent = entitylib.isAlive and entitylib.character.RootPart or nil
+					inst.Parent = entitylib.isAlive and entitylib.character and entitylib.character.RootPart or nil
 					task.wait(0.1)
-				until not Fullbright.Enabled
+				until not Fullbright or not Fullbright.Enabled
 			end
 		else
 			flag = false

@@ -7,21 +7,22 @@ local Rots = {}
 local models = {}
 
 local function addMesh(ent)
-	if Bad.ThreadFix then 
+	if Bad and Bad.ThreadFix then 
 		setthreadidentity(8)
 	end
+	if not ent or not ent.RootPart then return end
 	local root = ent.RootPart
 	local part = Instance.new('Part')
 	part.Size = Vector3.new(3, 3, 3)
-	part.CFrame = root.CFrame * CFrame.Angles(math.rad(Rots[1].Value), math.rad(Rots[2].Value), math.rad(Rots[3].Value))
+	part.CFrame = root.CFrame * CFrame.Angles(math.rad(Rots[1] and Rots[1].Value or 0), math.rad(Rots[2] and Rots[2].Value or 0), math.rad(Rots[3] and Rots[3].Value or 0))
 	part.CanCollide = false
 	part.CanQuery = false
 	part.Massless = true
 	part.Parent = workspace
 	local meshd = Instance.new('SpecialMesh')
-	meshd.MeshId = Mesh.Value
-	meshd.TextureId = Texture.Value
-	meshd.Scale = Vector3.one * Scale.Value
+	meshd.MeshId = Mesh and Mesh.Value or ''
+	meshd.TextureId = Texture and Texture.Value or ''
+	meshd.Scale = Vector3.one * (Scale and Scale.Value or 1)
 	meshd.Parent = part
 	local weld = Instance.new('WeldConstraint')
 	weld.Part0 = part
@@ -31,7 +32,7 @@ local function addMesh(ent)
 end
 
 local function removeMesh(ent)
-	if models[ent.RootPart] then 
+	if ent and ent.RootPart and models[ent.RootPart] then 
 		models[ent.RootPart]:Destroy()
 		models[ent.RootPart] = nil
 	end

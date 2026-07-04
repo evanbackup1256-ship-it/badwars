@@ -10,7 +10,7 @@ local function Added(ent)
 	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
 	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
 	if (not ent.Targetable) and (not ent.Friend) then return end
-	if Bad.ThreadFix then
+	if Bad and Bad.ThreadFix then
 		setthreadidentity(8)
 	end
 
@@ -20,7 +20,7 @@ local function Added(ent)
 	dot.BackgroundColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(PlayerColor.Hue, PlayerColor.Sat, PlayerColor.Value)
 	dot.Parent = bkg
 	local corner = Instance.new('UICorner')
-	corner.CornerRadius = UDim.new(DotStyle.Value == 'Circles' and 1 or 0, 0)
+	corner.CornerRadius = UDim.new(DotStyle and DotStyle.Value == 'Circles' and 1 or 0, 0)
 	corner.Parent = dot
 	local stroke = Instance.new('UIStroke')
 	stroke.Color = Color3.new()
@@ -68,9 +68,9 @@ Radar = Bad:CreateOverlay({
 			end))
 			Radar:Clean(runService.RenderStepped:Connect(function()
 				for ent, dot in Reference do
-					if entitylib.isAlive then
+					if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and ent and ent.RootPart and gameCamera then
 						local dt = CFrame.lookAlong(entitylib.character.RootPart.Position, gameCamera.CFrame.LookVector * Vector3.new(1, 0, 1)):PointToObjectSpace(ent.RootPart.Position)
-						dot.Position = UDim2.fromOffset(Clamp.Enabled and math.clamp(108 + dt.X, 2, 214) or 108 + dt.X, Clamp.Enabled and math.clamp(108 + dt.Z, 8, 214) or 108 + dt.Z)
+						dot.Position = UDim2.fromOffset(Clamp and Clamp.Enabled and math.clamp(108 + dt.X, 2, 214) or 108 + dt.X, Clamp and Clamp.Enabled and math.clamp(108 + dt.Z, 8, 214) or 108 + dt.Z)
 					end
 				end
 			end))

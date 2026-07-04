@@ -7,7 +7,7 @@ local Folder = Instance.new('Folder')
 Folder.Parent = Bad.gui
 
 local function Add(v)
-	if not table.find(List.ListEnabled, v.Name) then return end
+	if not List or not List.ListEnabled or not table.find(List.ListEnabled, v.Name) then return end
 	if v:IsA('BasePart') or v:IsA('Model') then
 		local size = v:IsA('Model') and v:GetExtentsSize() or v.Size
 		local box = Instance.new('BoxHandleAdornment')
@@ -15,7 +15,7 @@ local function Add(v)
 		box.Adornee = v
 		box.Size = size.Magnitude > 0.4 and size or Vector3.one
 		box.ZIndex = 0
-		box.Transparency = FillTransparency.Value
+		box.Transparency = FillTransparency and FillTransparency.Value or 0.5
 		box.Color3 = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
 		box.Parent = Folder
 		Reference[v] = box

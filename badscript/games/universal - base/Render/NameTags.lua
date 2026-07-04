@@ -22,32 +22,33 @@ local Added = {
 		if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
 		if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
 		if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
-		if Bad.ThreadFix then
+		if Bad and Bad.ThreadFix then
 			setthreadidentity(8)
 		end
 
-		Strings[ent] = ent.Player and whitelist:tag(ent.Player, true, true)..(DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or ent.Character.Name
+		local nameText = ent.Player and (whitelist and whitelist:tag(ent.Player, true, true))..(DisplayName and DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or (ent.Character and ent.Character.Name or 'Unknown')
+		Strings[ent] = nameText
 
-		if Health.Enabled then
+		if Health and Health.Enabled then
 			local maxH = ent.MaxHealth or 0
 			local healthColor = Color3.fromHSV(math.clamp(maxH > 0 and (ent.Health / maxH) or 0, 0, 1) / 2.5, 0.89, 0.75)
 			Strings[ent] = Strings[ent]..' <font color="rgb('..tostring(math.floor(healthColor.R * 255))..','..tostring(math.floor(healthColor.G * 255))..','..tostring(math.floor(healthColor.B * 255))..')">'..math.round(ent.Health)..'</font>'
 		end
 
-		if Distance.Enabled then
+		if Distance and Distance.Enabled then
 			Strings[ent] = '<font color="rgb(85, 255, 85)">[</font><font color="rgb(255, 255, 255)">%s</font><font color="rgb(85, 255, 85)">]</font> '..Strings[ent]
 		end
 
 		local nametag = Instance.new('TextLabel')
-		nametag.TextSize = 14 * Scale.Value
-		nametag.FontFace = FontOption.Value
-		local size = getfontsize(removeTags(Strings[ent]), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000))
-		nametag.Name = ent.Player and ent.Player.Name or ent.Character.Name
+		nametag.TextSize = 14 * (Scale and Scale.Value or 1)
+		nametag.FontFace = FontOption and FontOption.Value or Enum.Font.Arial
+		local size = getfontsize and getfontsize(removeTags(Strings[ent]), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000)) or Vector2.new(100, 20)
+		nametag.Name = ent.Player and ent.Player.Name or (ent.Character and ent.Character.Name or 'Unknown')
 		nametag.Size = UDim2.fromOffset(size.X + 8, size.Y + 7)
 		nametag.AnchorPoint = Vector2.new(0.5, 1)
 		nametag.BackgroundColor3 = Color3.new()
-		nametag.BackgroundTransparency = Background.Value
-		nametag.TextStrokeTransparency = Stroke.Value
+		nametag.BackgroundTransparency = Background and Background.Value or 0.5
+		nametag.TextStrokeTransparency = Stroke and Stroke.Value or 0.8
 		nametag.BorderSizePixel = 0
 		nametag.Visible = false
 		nametag.Text = Strings[ent]
@@ -64,20 +65,20 @@ local Added = {
 		local nametag = {}
 		nametag.BG = Drawing.new('Square')
 		nametag.BG.Filled = true
-		nametag.BG.Transparency = 1 - Background.Value
+		nametag.BG.Transparency = 1 - (Background and Background.Value or 0.5)
 		nametag.BG.Color = Color3.new()
 		nametag.BG.ZIndex = 1
 		nametag.Text = Drawing.new('Text')
-		nametag.Text.Size = 15 * Scale.Value
+		nametag.Text.Size = 15 * (Scale and Scale.Value or 1)
 		nametag.Text.Font = 0
 		nametag.Text.ZIndex = 2
-		Strings[ent] = ent.Player and whitelist:tag(ent.Player, true)..(DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or ent.Character.Name
+		Strings[ent] = ent.Player and (whitelist and whitelist:tag(ent.Player, true))..(DisplayName and DisplayName.Enabled and ent.Player.DisplayName or ent.Player.Name) or (ent.Character and ent.Character.Name or 'Unknown')
 
-		if Health.Enabled then
+		if Health and Health.Enabled then
 			Strings[ent] = Strings[ent]..' '..math.round(ent.Health)
 		end
 
-		if Distance.Enabled then
+		if Distance and Distance.Enabled then
 			Strings[ent] = '[%s] '..Strings[ent]
 		end
 

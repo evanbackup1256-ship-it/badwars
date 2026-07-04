@@ -15,13 +15,13 @@ local function Added(ent)
 	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
 	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
 	if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
-	if Bad.ThreadFix then
+	if Bad and Bad.ThreadFix then
 		setthreadidentity(8)
 	end
 
 	local EntityTracer = Drawing.new('Line')
 	EntityTracer.Thickness = 1
-	EntityTracer.Transparency = 1 - Transparency.Value
+	EntityTracer.Transparency = 1 - (Transparency and Transparency.Value or 0.5)
 	EntityTracer.Color = entitylib.getEntityColor(ent) or Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
 	Reference[ent] = EntityTracer
 end
@@ -29,7 +29,7 @@ end
 local function Removed(ent)
 	local v = Reference[ent]
 	if v then
-		if Bad.ThreadFix then
+		if Bad and Bad.ThreadFix then
 			setthreadidentity(8)
 		end
 		Reference[ent] = nil
@@ -41,7 +41,7 @@ local function Removed(ent)
 end
 
 local function ColorFunc(hue, sat, val)
-	if DistanceColor.Enabled then return end
+	if DistanceColor and DistanceColor.Enabled then return end
 	local tracerColor = Color3.fromHSV(hue, sat, val)
 	for ent, EntityTracer in Reference do
 		EntityTracer.Color = entitylib.getEntityColor(ent) or tracerColor
@@ -49,21 +49,25 @@ local function ColorFunc(hue, sat, val)
 end
 
 local function Loop()
-	local screenSize = Bad.gui.AbsoluteSize
-	local startVector = StartPosition.Value == 'Mouse' and inputService:GetMouseLocation() or Vector2.new(screenSize.X / 2, (StartPosition.Value == 'Middle' and screenSize.Y / 2 or screenSize.Y))
+	local screenSize = Bad and Bad.gui and Bad.gui.AbsoluteSize
+	if not screenSize then return end
+	local startVector = StartPosition and StartPosition.Value == 'Mouse' and inputService and inputService:GetMouseLocation() or Vector2.new(screenSize.X / 2, (StartPosition and StartPosition.Value == 'Middle' and screenSize.Y / 2 or screenSize.Y))
 
 	for ent, EntityTracer in Reference do
-		local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude
-		if Distance.Enabled and distance then
-			if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
+		local distance = entitylib.isAlive and entitylib.character and entitylib.character.RootPart and ent and ent.RootPart and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude
+		if Distance and Distance.Enabled and distance then
+			if distance < (DistanceLimit and DistanceLimit.ValueMin or 0) or distance > (DistanceLimit and DistanceLimit.ValueMax or 64) then
 				EntityTracer.Visible = false
 				continue
 			end
 		end
 
-		local pos = ent[EndPosition.Value == 'Torso' and 'RootPart' or 'Head'].Position
-		local rootPos, rootVis = gameCamera:WorldToViewportPoint(pos)
-		if not rootVis and Behind.Enabled then
+		local endPosName = EndPosition and EndPosition.Value == 'Torso' and 'RootPart' or 'Head'
+		local part = ent and ent[endPosName]
+		if not part then continue end
+		local pos = part.Position
+		local rootPos, rootVis = gameCamera and gameCamera:WorldToViewportPoint(pos)
+		if not rootVis and Behind and Behind.Enabled then
 			local tempPos = gameCamera.CFrame:PointToObjectSpace(pos)
 			tempPos = CFrame.Angles(0, 0, (math.atan2(tempPos.Y, tempPos.X) + math.pi)):VectorToWorldSpace((CFrame.Angles(0, math.rad(89.9), 0):VectorToWorldSpace(Vector3.new(0, 0, -1))))
 			rootPos = gameCamera:WorldToViewportPoint(gameCamera.CFrame:pointToWorldSpace(tempPos))
@@ -74,7 +78,7 @@ local function Loop()
 		EntityTracer.Visible = rootVis
 		EntityTracer.From = startVector
 		EntityTracer.To = endVector
-		if DistanceColor.Enabled and distance then
+		if DistanceColor and DistanceColor.Enabled and distance then
 			EntityTracer.Color = Color3.fromHSV(math.min((distance / 128) / 2.8, 0.4), 0.89, 0.75)
 		end
 	end

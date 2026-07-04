@@ -7,21 +7,21 @@ AutoClicker = Bad.Categories.Combat:CreateModule({
 	Function = function(callback)
 		if callback then
 			repeat
-				if Mode.Value == 'Tool' then
+				if Mode and Mode.Value == 'Tool' then
 					local tool = getTool()
-					if tool and inputService:IsMouseButtonPressed(0) then
+					if tool and inputService and inputService:IsMouseButtonPressed(0) then
 						tool:Activate()
 					end
 				else
 					if mouse1click and (isrbxactive or iswindowactive)() then
-						if not Bad.gui.ScaledGui.ClickGui.Visible then
-							(Mode.Value == 'Click' and mouse1click or mouse2click)()
+						if not (Bad and Bad.gui and Bad.gui.ScaledGui and Bad.gui.ScaledGui.ClickGui and Bad.gui.ScaledGui.ClickGui.Visible) then
+							(Mode and Mode.Value == 'Click' and mouse1click or mouse2click)()
 						end
 					end
 				end
 
-				task.wait(1 / CPS.GetRandomValue())
-			until not AutoClicker.Enabled
+				task.wait(1 / (CPS and CPS.GetRandomValue and CPS.GetRandomValue() or 10))
+			until not AutoClicker or not AutoClicker.Enabled
 		end
 	end,
 	Tooltip = 'Automatically clicks for you'

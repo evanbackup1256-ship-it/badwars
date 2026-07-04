@@ -12,7 +12,7 @@ local function Added(ent)
 	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
 	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
 	if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) and (not ent.Friend) then return end
-	if Bad.ThreadFix then
+	if Bad and Bad.ThreadFix then
 		setthreadidentity(8)
 	end
 
@@ -23,7 +23,7 @@ local function Added(ent)
 	arrow.BackgroundTransparency = 1
 	arrow.BorderSizePixel = 0
 	arrow.Visible = false
-	arrow.Image = getcustomasset('badscript/assets/new/arrowmodule.png')
+	arrow.Image = getcustomasset and getcustomasset('badscript/assets/new/arrowmodule.png') or 'rbxassetid://14368316544'
 	arrow.ImageColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
 	arrow.Parent = Folder
 	Reference[ent] = arrow
@@ -32,7 +32,7 @@ end
 local function Removed(ent)
 	local v = Reference[ent]
 	if v then
-		if Bad.ThreadFix then
+		if Bad and Bad.ThreadFix then
 			setthreadidentity(8)
 		end
 
@@ -50,14 +50,15 @@ end
 
 local function Loop()
 	for ent, arrow in Reference do
-		if Distance.Enabled then
-			local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
-			if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
+		if Distance and Distance.Enabled then
+			local distance = entitylib.isAlive and entitylib.character and entitylib.character.RootPart and ent and ent.RootPart and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
+			if distance < (DistanceLimit and DistanceLimit.ValueMin or 0) or distance > (DistanceLimit and DistanceLimit.ValueMax or 256) then
 				arrow.Visible = false
 				continue
 			end
 		end
 
+		if not ent or not ent.RootPart or not gameCamera then continue end
 		local _, rootVis = gameCamera:WorldToScreenPoint(ent.RootPart.Position)
 		arrow.Visible = not rootVis
 		if rootVis then continue end

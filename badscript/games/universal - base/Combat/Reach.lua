@@ -14,22 +14,24 @@ Reach = Bad.Categories.Combat:CreateModule({
 			repeat
 				local tool = getTool()
 				tool = tool and tool:FindFirstChildWhichIsA('TouchTransmitter', true)
-				if tool then
-					if Mode.Value == 'TouchInterest' then
+				if tool and tool.Parent then
+					if Mode and Mode.Value == 'TouchInterest' then
 						local entites = {}
 						for _, v in entitylib.List do
 							if v.Targetable then
 								if Targets and Targets.Players and not Targets.Players.Enabled and v.Player then continue end
 								if Targets and Targets.NPCs and not Targets.NPCs.Enabled and v.NPC then continue end
-								table.insert(entites, v.Character)
+								if v.Character then
+									table.insert(entites, v.Character)
+								end
 							end
 						end
 
 						Overlay.FilterDescendantsInstances = entites
-						local parts = workspace:GetPartBoundsInBox(tool.Parent.CFrame * CFrame.new(0, 0, Value.Value / 2), tool.Parent.Size + Vector3.new(0, 0, Value.Value), Overlay)
+						local parts = workspace:GetPartBoundsInBox(tool.Parent.CFrame * CFrame.new(0, 0, (Value and Value.Value or 1) / 2), tool.Parent.Size + Vector3.new(0, 0, Value and Value.Value or 1), Overlay)
 
 						for _, v in parts do
-							if Random.new().NextNumber(Random.new(), 0, 100) > Chance.Value then
+							if Random.new().NextNumber(Random.new(), 0, 100) > (Chance and Chance.Value or 100) then
 								task.wait(0.2)
 								break
 							end
@@ -42,13 +44,13 @@ Reach = Bad.Categories.Combat:CreateModule({
 							modified[tool.Parent] = tool.Parent.Size
 						end
 
-						tool.Parent.Size = modified[tool.Parent] + Vector3.new(0, 0, Value.Value)
+						tool.Parent.Size = modified[tool.Parent] + Vector3.new(0, 0, Value and Value.Value or 1)
 						tool.Parent.Massless = true
 					end
 				end
 
 				task.wait()
-			until not Reach.Enabled
+			until not Reach or not Reach.Enabled
 		else
 			for i, v in modified do
 				i.Size = v

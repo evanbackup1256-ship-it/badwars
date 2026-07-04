@@ -35,17 +35,17 @@ SessionInfo = Bad:CreateOverlay({
 			end
 
 			repeat
-				if Bad.Libraries.sessioninfo then
+				if Bad and Bad.Libraries and Bad.Libraries.sessioninfo then
 					local stuff = {''}
-					if Title.Enabled then
-						stuff[1] = TitleOffset.Enabled and '<b>Session Info</b>\n<font size="4"> </font>' or '<b>Session Info</b>'
+					if Title and Title.Enabled then
+						stuff[1] = TitleOffset and TitleOffset.Enabled and '<b>Session Info</b>\n<font size="4"> </font>' or '<b>Session Info</b>'
 					end
 
 					for i, v in Bad.Libraries.sessioninfo.Objects do
-						stuff[v.Index] = not table.find(Hide.ListEnabled, i) and i..': '..v.Function(v.Value) or false
+						stuff[v.Index] = not (Hide and Hide.ListEnabled and table.find(Hide.ListEnabled, i)) and i..': '..v.Function(v.Value) or false
 					end
 
-					if #Hide.ListEnabled > 0 then
+					if Hide and #Hide.ListEnabled > 0 then
 						local key, val
 						repeat
 							local oldkey = key
@@ -57,22 +57,26 @@ SessionInfo = Bad:CreateOverlay({
 						until not key
 					end
 
-					if Custom.Enabled then
-						table.insert(stuff, CustomBox.Value)
+					if Custom and Custom.Enabled then
+						table.insert(stuff, CustomBox and CustomBox.Value or '')
 					end
 
-					if not Title.Enabled then
+					if not Title or not Title.Enabled then
 						table.remove(stuff, 1)
 					end
-					infolabel.Text = table.concat(stuff, '\n')
-					infolabel.FontFace = FontOption.Value
-					infolabel.TextSize = TextSize.Value
-					local size = getfontsize(removeTags(infolabel.Text), infolabel.TextSize, infolabel.FontFace)
-					infoholder.Size = UDim2.fromOffset(size.X + 16, size.Y + (Title.Enabled and TitleOffset.Enabled and 4 or 16))
+					if infolabel then
+						infolabel.Text = table.concat(stuff, '\n')
+						infolabel.FontFace = FontOption and FontOption.Value or Enum.Font.Arial
+						infolabel.TextSize = TextSize and TextSize.Value or 16
+						local size = getfontsize and getfontsize(removeTags(infolabel.Text), infolabel.TextSize, infolabel.FontFace) or Vector2.new(100, 20)
+						if infoholder then
+							infoholder.Size = UDim2.fromOffset(size.X + 16, size.Y + (Title and Title.Enabled and TitleOffset and TitleOffset.Enabled and 4 or 16))
+						end
+					end
 				end
 
 				task.wait(1)
-			until not SessionInfo.Button or not SessionInfo.Button.Enabled
+			until not SessionInfo or not SessionInfo.Button or not SessionInfo.Button.Enabled
 		end
 	end
 })

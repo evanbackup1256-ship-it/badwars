@@ -15,37 +15,39 @@ local function Added(ent)
 	if Targets and Targets.Players and not Targets.Players.Enabled and ent.Player then return end
 	if Targets and Targets.NPCs and not Targets.NPCs.Enabled and ent.NPC then return end
 	if Teammates and Teammates.Enabled and (not ent.Targetable) and (not ent.Friend) then return end
-	if Bad.ThreadFix then
+	if Bad and Bad.ThreadFix then
 		setthreadidentity(8)
 	end
 
-	if Mode.Value == 'Highlight' then
+	if Mode and Mode.Value == 'Highlight' then
 		local cham = Instance.new('Highlight')
 		cham.Adornee = ent.Character
-		cham.DepthMode = Enum.HighlightDepthMode[Walls.Enabled and 'AlwaysOnTop' or 'Occluded']
+		cham.DepthMode = Enum.HighlightDepthMode[Walls and Walls.Enabled and 'AlwaysOnTop' or 'Occluded']
 		cham.FillColor = entitylib.getEntityColor(ent) or Color3.fromHSV(FillColor.Hue, FillColor.Sat, FillColor.Value)
 		cham.OutlineColor = Color3.fromHSV(OutlineColor.Hue, OutlineColor.Sat, OutlineColor.Value)
-		cham.FillTransparency = FillTransparency.Value
-		cham.OutlineTransparency = OutlineTransparency.Value
+		cham.FillTransparency = FillTransparency and FillTransparency.Value or 0.5
+		cham.OutlineTransparency = OutlineTransparency and OutlineTransparency.Value or 0.5
 		cham.Parent = Folder
 		Reference[ent] = cham
 	else
 		local chams = {}
-		for _, v in ent.Character:GetChildren() do
-			if v:IsA('BasePart') and (ent.NPC or v.Name:find('Arm') or v.Name:find('Leg') or v.Name:find('Hand') or v.Name:find('Feet') or v.Name:find('Torso') or v.Name == 'Head') then
-				local box = Instance.new(v.Name == 'Head' and 'SphereHandleAdornment' or 'BoxHandleAdornment')
-				if v.Name == 'Head' then
-					box.Radius = 0.75
-				else
-					box.Size = v.Size
+		if ent.Character then
+			for _, v in ent.Character:GetChildren() do
+				if v:IsA('BasePart') and (ent.NPC or v.Name:find('Arm') or v.Name:find('Leg') or v.Name:find('Hand') or v.Name:find('Feet') or v.Name:find('Torso') or v.Name == 'Head') then
+					local box = Instance.new(v.Name == 'Head' and 'SphereHandleAdornment' or 'BoxHandleAdornment')
+					if v.Name == 'Head' then
+						box.Radius = 0.75
+					else
+						box.Size = v.Size
+					end
+					box.AlwaysOnTop = Walls and Walls.Enabled
+					box.Adornee = v
+					box.ZIndex = 0
+					box.Transparency = FillTransparency and FillTransparency.Value or 0.5
+					box.Color3 = entitylib.getEntityColor(ent) or Color3.fromHSV(FillColor.Hue, FillColor.Sat, FillColor.Value)
+					box.Parent = Folder
+					table.insert(chams, box)
 				end
-				box.AlwaysOnTop = Walls.Enabled
-				box.Adornee = v
-				box.ZIndex = 0
-				box.Transparency = FillTransparency.Value
-				box.Color3 = entitylib.getEntityColor(ent) or Color3.fromHSV(FillColor.Hue, FillColor.Sat, FillColor.Value)
-				box.Parent = Folder
-				table.insert(chams, box)
 			end
 		end
 		Reference[ent] = chams

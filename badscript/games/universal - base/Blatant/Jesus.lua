@@ -7,7 +7,9 @@ Jesus = Bad.Categories.Blatant:CreateModule({
 	Function = function(callback)
 		if callback then
 			local terrain = workspace:FindFirstChildWhichIsA('Terrain')
-			params.FilterDescendantsInstances = {terrain}
+			if terrain then
+				params.FilterDescendantsInstances = {terrain}
+			end
 			local Platform = Instance.new('Part')
 			Platform.CanQuery = false
 			Platform.Anchored = true
@@ -17,9 +19,9 @@ Jesus = Bad.Categories.Blatant:CreateModule({
 
 			Jesus:Clean(Platform)
 			Jesus:Clean(runService.PreSimulation:Connect(function()
-				if entitylib.isAlive then
+				if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 					local root = entitylib.character.RootPart
-					local ray = workspace:Raycast(root.Position, Vector3.new(0, -((root.Size.Y / 2) + entitylib.character.HipHeight + math.abs(root.AssemblyLinearVelocity.Y * 0.032)), 0), params)
+					local ray = workspace:Raycast(root.Position, Vector3.new(0, -((root.Size.Y / 2) + (entitylib.character.HipHeight or 2) + math.abs(root.AssemblyLinearVelocity.Y * 0.032)), 0), params)
 
 					if ray and ray.Material == Enum.Material.Water then
 						Platform.CFrame = CFrame.new(ray.Position)

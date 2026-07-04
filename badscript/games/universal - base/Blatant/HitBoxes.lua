@@ -13,16 +13,18 @@ HitBoxes = Bad.Categories.Blatant:CreateModule({
 					if v.Targetable then
 						if Targets and Targets.Players and not Targets.Players.Enabled and v.Player then continue end
 						if Targets and Targets.NPCs and not Targets.NPCs.Enabled and v.NPC then continue end
-						local part = v[TargetPart.Value]
-						if not modified[part] then
-							modified[part] = part.Size
+						local part = v[TargetPart and TargetPart.Value or 'RootPart']
+						if part then
+							if not modified[part] then
+								modified[part] = part.Size
+							end
+							part.Size = modified[part] + Vector3.new(Expand and Expand.Value or 1, Expand and Expand.Value or 1, Expand and Expand.Value or 1)
 						end
-						part.Size = modified[part] + Vector3.new(Expand.Value, Expand.Value, Expand.Value)
 					end
 				end
 
 				task.wait()
-			until not HitBoxes.Enabled
+			until not HitBoxes or not HitBoxes.Enabled
 		else
 			for i, v in modified do
 				i.Size = v

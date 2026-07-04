@@ -14,20 +14,22 @@ Spider = Bad.Categories.Blatant:CreateModule({
 			end
 
 			Spider:Clean(runService.PreSimulation:Connect(function(dt)
-				if entitylib.isAlive then
+				if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.Humanoid then
 					local root = entitylib.character.RootPart
-					local chars = {gameCamera, lplr.Character, Truss}
+					local chars = {gameCamera, lplr and lplr.Character, Truss}
 					for _, v in entitylib.List do
-						table.insert(chars, v.Character)
+						if v and v.Character then
+							table.insert(chars, v.Character)
+						end
 					end
 
-					SpiderShift = inputService:IsKeyDown(Enum.KeyCode.LeftShift)
+					SpiderShift = inputService and inputService:IsKeyDown(Enum.KeyCode.LeftShift)
 					rayCheck.FilterDescendantsInstances = chars
 					rayCheck.CollisionGroup = root.CollisionGroup
 
-					if Mode.Value ~= 'Part' then
+					if Mode and Mode.Value ~= 'Part' then
 						local vec = entitylib.character.Humanoid.MoveDirection * 2.5
-						local ray = workspace:Raycast(root.Position - Vector3.new(0, entitylib.character.HipHeight - 0.5, 0), vec, rayCheck)
+						local ray = workspace:Raycast(root.Position - Vector3.new(0, (entitylib.character.HipHeight or 2) - 0.5, 0), vec, rayCheck)
 						if Active and not ray then
 							root.Velocity = Vector3.new(root.Velocity.X, 0, root.Velocity.Z)
 						end
@@ -35,22 +37,22 @@ Spider = Bad.Categories.Blatant:CreateModule({
 						Active = ray
 						if Active and ray.Normal.Y == 0 then
 							if not (Phase and Phase.Enabled) or not SpiderShift then
-								if State.Enabled then
+								if State and State.Enabled then
 									entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Climbing)
 								end
 
 								root.Velocity *= Vector3.new(1, 0, 1)
 								if Mode.Value == 'CFrame' then
-									root.CFrame += Vector3.new(0, Value.Value * dt, 0)
+									root.CFrame += Vector3.new(0, (Value and Value.Value or 30) * dt, 0)
 								elseif Mode.Value == 'Impulse' then
-									root:ApplyImpulse(Vector3.new(0, Value.Value, 0) * root.AssemblyMass)
+									root:ApplyImpulse(Vector3.new(0, Value and Value.Value or 30, 0) * root.AssemblyMass)
 								else
-									root.Velocity += Vector3.new(0, Value.Value, 0)
+									root.Velocity += Vector3.new(0, Value and Value.Value or 30, 0)
 								end
 							end
 						end
 					else
-						local ray = workspace:Raycast(root.Position - Vector3.new(0, entitylib.character.HipHeight - 0.5, 0), entitylib.character.RootPart.CFrame.LookVector * 2, rayCheck)
+						local ray = workspace:Raycast(root.Position - Vector3.new(0, (entitylib.character.HipHeight or 2) - 0.5, 0), entitylib.character.RootPart.CFrame.LookVector * 2, rayCheck)
 						if ray and (not (Phase and Phase.Enabled) or not SpiderShift) then
 							Truss.Position = ray.Position - ray.Normal * 0.9 or Vector3.zero
 						else

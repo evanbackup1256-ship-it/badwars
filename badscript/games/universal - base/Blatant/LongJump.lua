@@ -8,9 +8,9 @@ LongJump = Bad.Categories.Blatant:CreateModule({
 		if callback then
 			local exempt = tick() + 0.1
 			LongJump:Clean(runService.PreSimulation:Connect(function(dt)
-				if entitylib.isAlive then
+				if entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.Humanoid then
 					if entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air then
-						if exempt < tick() and AutoDisable.Enabled then
+						if exempt < tick() and AutoDisable and AutoDisable.Enabled then
 							if LongJump.Enabled then
 								LongJump:Toggle()
 							end
@@ -20,10 +20,10 @@ LongJump = Bad.Categories.Blatant:CreateModule({
 					end
 
 					local root = entitylib.character.RootPart
-					local dir = entitylib.character.Humanoid.MoveDirection * Value.Value
-					if Mode.Value == 'Velocity' then
+					local dir = entitylib.character.Humanoid.MoveDirection * (Value and Value.Value or 50)
+					if Mode and Mode.Value == 'Velocity' then
 						root.AssemblyLinearVelocity = dir + Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
-					elseif Mode.Value == 'Impulse' then
+					elseif Mode and Mode.Value == 'Impulse' then
 						local diff = (dir - root.AssemblyLinearVelocity) * Vector3.new(1, 0, 1)
 						if diff.Magnitude > (dir == Vector3.zero and 10 or 2) then
 							root:ApplyImpulse(diff * root.AssemblyMass)
@@ -36,7 +36,7 @@ LongJump = Bad.Categories.Blatant:CreateModule({
 		end
 	end,
 	ExtraText = function()
-		return Mode.Value
+		return Mode and Mode.Value or 'Velocity'
 	end,
 	Tooltip = 'Lets you jump farther'
 })

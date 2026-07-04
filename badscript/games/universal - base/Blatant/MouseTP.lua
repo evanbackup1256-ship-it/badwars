@@ -7,7 +7,9 @@ local rayCheck = RaycastParams.new()
 rayCheck.RespectCanCollide = true
 
 local function getWaypointInMouse()
-	local obj, dist, location = nil, math.huge, inputService:GetMouseLocation()
+	if not WaypointFolder or not gameCamera then return nil end
+	local obj, dist, location = nil, math.huge, inputService and inputService:GetMouseLocation()
+	if not location then return nil end
 
 	for _, v in WaypointFolder:GetChildren() do
 		local position, vis = gameCamera:WorldToViewportPoint(v.StudsOffsetWorldSpace)
@@ -27,12 +29,14 @@ MouseTP = Bad.Categories.Blatant:CreateModule({
 	Function = function(callback)
 		if callback then
 			local position
-			if Mode.Value == 'Mouse' then
-				local ray = cloneref(lplr:GetMouse()).UnitRay
-				rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
-				ray = workspace:Raycast(ray.Origin, ray.Direction * 10000, rayCheck)
-				position = ray and ray.Position + Vector3.new(0, entitylib.character.HipHeight or 2, 0)
-			elseif Mode.Value == 'Waypoint' then
+			if Mode and Mode.Value == 'Mouse' then
+				if lplr then
+					local ray = cloneref(lplr:GetMouse()).UnitRay
+					rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
+					ray = workspace:Raycast(ray.Origin, ray.Direction * 10000, rayCheck)
+					position = ray and ray.Position + Vector3.new(0, entitylib.character and entitylib.character.HipHeight or 2, 0)
+				end
+			elseif Mode and Mode.Value == 'Waypoint' then
 				local waypoint = getWaypointInMouse()
 				position = waypoint and waypoint.StudsOffsetWorldSpace
 			else
@@ -41,7 +45,7 @@ MouseTP = Bad.Categories.Blatant:CreateModule({
 					Part = 'RootPart',
 					Players = true
 				})
-				position = ent and ent.RootPart.Position
+				position = ent and ent.RootPart and ent.RootPart.Position
 			end
 
 			if not position then
@@ -50,9 +54,9 @@ MouseTP = Bad.Categories.Blatant:CreateModule({
 				return
 			end
 
-			if MovementMode.Value ~= 'Lerp' then
+			if MovementMode and MovementMode.Value ~= 'Lerp' then
 				MouseTP:Toggle()
-				if entitylib.isAlive then
+				if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 					if MovementMode.Value == 'Motor' then
 						motorMove(entitylib.character.RootPart, CFrame.lookAlong(position, entitylib.character.RootPart.CFrame.LookVector))
 					else
@@ -61,14 +65,14 @@ MouseTP = Bad.Categories.Blatant:CreateModule({
 				end
 			else
 				MouseTP:Clean(runService.Heartbeat:Connect(function()
-					if entitylib.isAlive then
+					if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 						entitylib.character.RootPart.Velocity = Vector3.zero
 					end
 				end))
 
 				repeat
-					if entitylib.isAlive then
-						local direction = CFrame.lookAt(entitylib.character.RootPart.Position, position).LookVector * math.min((entitylib.character.RootPart.Position - position).Magnitude, Length.Value)
+					if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
+						local direction = CFrame.lookAt(entitylib.character.RootPart.Position, position).LookVector * math.min((entitylib.character.RootPart.Position - position).Magnitude, Length and Length.Value or 50)
 						entitylib.character.RootPart.CFrame += direction
 						if (entitylib.character.RootPart.Position - position).Magnitude < 3 and MouseTP.Enabled then
 							MouseTP:Toggle()
@@ -78,8 +82,8 @@ MouseTP = Bad.Categories.Blatant:CreateModule({
 						notif('MouseTP', 'Character missing', 5, 'warning')
 					end
 
-					task.wait(Delay.Value)
-				until not MouseTP.Enabled
+					task.wait(Delay and Delay.Value or 0.1)
+				until not MouseTP or not MouseTP.Enabled
 			end
 		end
 	end,

@@ -1,4 +1,4 @@
--- BadWars Main v3.2.1 - Premium Stability Pipeline
+-- BadWars Main v3.5 - Premium Overlay Discord UX
 repeat
     task.wait()
 until game:IsLoaded()
@@ -11,6 +11,13 @@ end
 local os_clock = os.clock
 local pipelineStart = os_clock()
 local collectgarbage = collectgarbage
+local __mainwarn = warn
+local MAIN_VERBOSE_LOGS = false
+local function mwarn(...)
+    if MAIN_VERBOSE_LOGS then
+        __mainwarn(...)
+    end
+end
 
 -- Error tracker
 -- Start each injection with a clean diagnostic set so errors from an older
@@ -122,7 +129,7 @@ local function ensureRuntimeCategories(api)
         if type(owner[key]) ~= "table" or not owner[key].Event or type(owner[key].Fire) ~= "function" then
             owner[key] = Instance.new("BindableEvent")
             if shared.BadwarsLoadingDebug then
-                warn(
+                mwarn(
                     "BadWars: [PREFLIGHT] registered missing "
                         .. tostring(owner.Name or "service")
                         .. "."
@@ -197,15 +204,7 @@ local function logMod(stage, name, elapsed, success, detail)
         return
     end
     __logHistory[key] = 1
-    local tag = success and "[OK]" or "[FAIL]"
-    local msg = tag .. " [" .. stage .. "] " .. safeStr(name)
-    if elapsed then
-        msg = msg .. " (" .. string.format("%.3f", elapsed) .. "s)"
-    end
-    if detail then
-        msg = msg .. " - " .. safeStr(detail)
-    end
-    warn("BadWars: " .. msg)
+    -- Logging intentionally muted for the premium UX build.
 end
 
 -- Download
@@ -409,7 +408,7 @@ local function installBadWarsLoaderShim()
             end
         end,
         report = function(_, report)
-            warn(
+            mwarn(
                 "BadWars: [UI] "
                     .. safeStr(report and (report.name or report.type) or "Error")
                     .. " "
@@ -556,7 +555,7 @@ local function repairKnownSourceDefects(path, source)
     end
 
     if fixes > 0 then
-        warn("BadWars: [SOURCE REPAIR] " .. tostring(path) .. " repaired " .. tostring(fixes) .. " known defect(s)")
+        mwarn("BadWars: [SOURCE REPAIR] " .. tostring(path) .. " repaired " .. tostring(fixes) .. " known defect(s)")
     end
     return repaired, fixes
 end
@@ -716,7 +715,7 @@ buildBundle = function(name, basePath, manifestPath)
                     if not syntaxProbe then
                         skipped += 1
                         local detail = "syntax error: " .. tostring(syntaxErr)
-                        warn("BadWars: [MODULE SKIP] " .. tostring(mp) .. " - " .. detail)
+                        mwarn("BadWars: [MODULE SKIP] " .. tostring(mp) .. " - " .. detail)
                         recordErr(mp, detail)
                     else
                         local isOverlay = code:match("Bad%s*:%s*CreateOverlay%s*%(") ~= nil
@@ -773,7 +772,7 @@ buildBundle = function(name, basePath, manifestPath)
                 else
                     skipped += 1
                     local detail = "download returned no source"
-                    warn("BadWars: [MODULE SKIP] " .. tostring(mp) .. " - " .. detail)
+                    mwarn("BadWars: [MODULE SKIP] " .. tostring(mp) .. " - " .. detail)
                     recordErr(mp, detail)
                 end
             end
@@ -839,7 +838,7 @@ local function runGameMod(path, label)
         local bundled, bundleErr = buildBundle("game", path, manifest)
         code = type(bundled) == "string" and bundled or nil
         if not code and bundleErr then
-            warn("BadWars: game bundle unavailable for " .. tostring(path) .. ": " .. tostring(bundleErr))
+            mwarn("BadWars: game bundle unavailable for " .. tostring(path) .. ": " .. tostring(bundleErr))
         end
     end
     code = code or downloadFile(path)
@@ -924,7 +923,7 @@ local function repairModuleCategories(stage)
             B:RepairModuleCategories()
         end)
         if not ok then
-            warn("BadWars: [CATEGORY REPAIR] " .. tostring(stage) .. " failed: " .. tostring(err))
+            mwarn("BadWars: [CATEGORY REPAIR] " .. tostring(stage) .. " failed: " .. tostring(err))
         end
     end
     local counts = {}
@@ -940,7 +939,7 @@ local function repairModuleCategories(stage)
             end
         end
         for name, count in pairs(counts) do
-            warn(
+            mwarn(
                 "BadWars: [CATEGORY] "
                     .. tostring(name)
                     .. " modules registered="
@@ -1060,7 +1059,7 @@ local function finish()
             local cg = api.gui and api.gui.ScaledGui and api.gui.ScaledGui.ClickGui
             if cg then
                 cg.Visible = true
-                setStatus("ready - menu open")
+                setStatus("ready")
             end
         end)
     end
@@ -1145,7 +1144,7 @@ for _, d in ipairs(deps) do
     end
 end
 if #missing > 0 then
-    warn("BadWars: Missing services: " .. table.concat(missing, ", "))
+    mwarn("BadWars: Missing services: " .. table.concat(missing, ", "))
 end
 
 -- Stage 2: Notify
@@ -1168,7 +1167,7 @@ if not isfolder("badscript/assets/" .. gui) then
 end
 
 -- Stage 4: Load GUI
-setStatus("loading GUI")
+setStatus("loading premium interface")
 installBadWarsLoaderShim()
 local guiStart = os_clock()
 local guiCode = downloadFile("badscript/guis/" .. gui .. "/gui.lua")
@@ -1205,11 +1204,11 @@ shared.Bad = api
 local Bad = api
 ensureRuntimeCategories(api)
 logMod("GUI", gui, os_clock() - guiStart, true)
-setStatus("GUI loaded")
+setStatus("interface ready")
 
 -- Stage 5: Universal Modules
 if not shared.BadIndependent then
-    setStatus("loading universal modules")
+    setStatus("loading core modules")
     local uniStart = os_clock()
     local universalReady = false
     local universalDetail = "not attempted"
@@ -1272,7 +1271,7 @@ if not shared.BadIndependent then
         setStatus("ERROR universal: " .. tostring(failure), true)
         recordErr("universal", failure)
         logMod("Universal", universalSource, os_clock() - uniStart, false, failure)
-        warn("BadWars: Universal module registration failed: " .. tostring(failure))
+        mwarn("BadWars: Universal module registration failed: " .. tostring(failure))
     end
 
     -- Stage 7: Game Module
@@ -1293,22 +1292,22 @@ if not shared.BadIndependent then
     end
 
     -- Stage 8: Finish
-    setStatus("pipeline: finalizing")
+    setStatus("finalizing launch")
     finish()
     repairModuleCategories("profile")
 
     -- Stage 9: Health Check
     local issues, warns = healthCheck()
     if #issues > 0 then
-        warn("BadWars: [HEALTH] Issues:")
+        mwarn("BadWars: [HEALTH] Issues:")
         for _, i in ipairs(issues) do
-            warn("  x " .. i)
+            mwarn("  x " .. i)
         end
     end
     if #warns > 0 then
-        warn("BadWars: [HEALTH] Warnings:")
+        mwarn("BadWars: [HEALTH] Warnings:")
         for _, w in ipairs(warns) do
-            warn("  ! " .. w)
+            mwarn("  ! " .. w)
         end
     end
 
@@ -1318,9 +1317,9 @@ if not shared.BadIndependent then
     if type(report) == "table" then
         local fc = type(report.failed) == "table" and #report.failed or 0
         if fc > 0 then
-            warn("BadWars: Failed modules:")
+            mwarn("BadWars: Failed modules:")
             for _, e in ipairs(report.failed) do
-                warn("  x " .. tostring(e.name) .. " [" .. tostring(e.error) .. "]")
+                mwarn("  x " .. tostring(e.name) .. " [" .. tostring(e.error) .. "]")
             end
         end
         uniFail = fc
@@ -1333,12 +1332,12 @@ if not shared.BadIndependent then
     else
         if rtCount > 0 then
             for _, e in ipairs(__rtErrs) do
-                warn("BadWars: [RUNTIME] " .. tostring(e.module) .. ": " .. tostring(e.error))
+                mwarn("BadWars: [RUNTIME] " .. tostring(e.module) .. ": " .. tostring(e.error))
             end
         end
         setStatus("loaded with " .. totalErr .. " issue(s) - " .. string.format("%.2f", el) .. "s", true)
     end
-    warn(
+    mwarn(
         "BadWars: Pipeline "
             .. (totalErr == 0 and "OK" or "ISSUES")
             .. " in "

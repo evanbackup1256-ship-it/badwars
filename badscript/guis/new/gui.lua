@@ -1,6 +1,13 @@
--- BadWars Premium UI Revamp | Premium Stability and UX | Build 2026.07.04.5
+-- BadWars Premium UI Revamp | Overlay + Discord UX | Build 2026.07.04.7
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
+local __guiwarn = warn
+local GUI_VERBOSE_LOGS = false
+local function bwarn(...)
+    if GUI_VERBOSE_LOGS then
+        __guiwarn(...)
+    end
+end
 local b = a:setupDecoratedCustomSignal("GUILIBRARY_INTERNAL")
 local c = function(c)
     return b(`TOGGLE_CUSTOM_SIGNAL_{tostring(c)}`)
@@ -31,7 +38,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.5-PREMIUM-UX-STABILITY",
+    PremiumBuild = "2026.07.04.7-PREMIUM-OVERLAY-DISCORD",
     Windows = {},
     Indicators = {},
 }
@@ -308,7 +315,7 @@ local function encode(p)
         return l:JSONEncode(p)
     end)
     if not q then
-        warn(`[encode]: {tostring(r)}`)
+        bwarn(`[encode]: {tostring(r)}`)
     end
     return q and r
 end
@@ -1189,7 +1196,7 @@ local F = function(F, G, H)
         J = "TIMEOUT_EXCEEDED"
     end
     if not I and shared.VoidDev then
-        warn(debug.traceback(J))
+        bwarn(debug.traceback(J))
     end
     if H ~= nil then
         return H(I, J)
@@ -1210,7 +1217,7 @@ if not G then
             pcall(function()
                 d:CreateNotification("BadWars | Icons", "Failure loading custom icons :c", 5, "alert")
             end)
-            warn(`[Icons Failure]: {tostring(I)}`)
+            bwarn(`[Icons Failure]: {tostring(I)}`)
         end
         G = H and I or nil
         shared.CACHED_ICON_LIBRARY = G
@@ -1229,7 +1236,7 @@ local function getCustomIcon(H)
     if not I then
         if not missingIconWarnings[H] then
             missingIconWarnings[H] = true
-            warn(`[getCustomIcon Failure]: {tostring(H)} -> {tostring(J)}`)
+            bwarn(`[getCustomIcon Failure]: {tostring(H)} -> {tostring(J)}`)
         end
         return false
     end
@@ -1272,7 +1279,7 @@ u = function(H, I)
         end
         if not success and not missingIconWarnings[H] then
             missingIconWarnings[H] = true
-            warn(`[Asset Failure]: {H} -> {tostring(result)}`)
+            bwarn(`[Asset Failure]: {H} -> {tostring(result)}`)
         end
     end
 
@@ -2095,7 +2102,7 @@ H = {
                 return
             end
             if L._InternalCallback and shared.VoidDev then
-                warn(debug.traceback(`Overriding InternalCallback!!!`))
+                bwarn(debug.traceback(`Overriding InternalCallback!!!`))
             end
             L._InternalCallback = wrap(ag)
         end
@@ -3441,7 +3448,7 @@ H = {
         af.BackgroundTransparency = 1
         af.Text = tostring(aa.Name)
         af.TextXAlignment = Enum.TextXAlignment.Left
-        af.TextColor3 = o.MutedText
+        af.TextColor3 = o.FaintText
         af.TextSize = d.isMobile and 13 or 12
         af.FontFace = o.FontSemiBold
         af.Parent = ae
@@ -3454,7 +3461,7 @@ H = {
         ag.BorderSizePixel = 0
         ag.Parent = ae
         addCorner(ag, o.Radius)
-        local ah = addStroke(ag, o.Border, 0.62, 1, "TextBoxStroke")
+        local ah = addStroke(ag, o.Border, 0.76, 1, "TextBoxStroke")
 
         local ai = Instance.new("TextBox")
         ai.Name = "Input"
@@ -3513,19 +3520,51 @@ H = {
             ai:CaptureFocus()
         end)
 
+        ae.MouseEnter:Connect(function()
+            if ai:IsFocused() then
+                return
+            end
+            n:Tween(ag, o.TweenFast, {
+                BackgroundColor3 = aa.Darker and m.Light(o.MainSoft, 0.04) or o.SurfaceHover,
+            })
+            n:Tween(ah, o.TweenFast, {
+                Color = o.BorderStrong,
+                Transparency = 0.66,
+            })
+            n:Tween(af, o.TweenFast, {
+                TextColor3 = o.FaintText,
+            })
+        end)
+
+        ae.MouseLeave:Connect(function()
+            if ai:IsFocused() then
+                return
+            end
+            n:Tween(ag, o.TweenFast, {
+                BackgroundColor3 = aa.Darker and o.MainSoft or o.Surface,
+            })
+            n:Tween(ah, o.TweenFast, {
+                Color = o.Border,
+                Transparency = 0.76,
+            })
+            n:Tween(af, o.TweenFast, {
+                TextColor3 = o.FaintText,
+            })
+        end)
+
         ai.Focused:Connect(function()
             n:Tween(ag, o.TweenFast, {
-                BackgroundColor3 = o.SurfaceHover,
+                BackgroundColor3 = aa.Darker and m.Light(o.MainSoft, 0.05) or o.SurfaceHover,
             })
             n:Tween(ah, o.TweenFast, {
                 Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-                Transparency = 0.18,
+                Transparency = 0.34,
             })
             n:Tween(aj, o.Tween, {
                 Size = UDim2.new(1, 0, 0, 2),
             })
             n:Tween(af, o.TweenFast, {
-                TextColor3 = o.Text,
+                TextColor3 = o.TextStrong,
             })
         end)
 
@@ -3536,7 +3575,7 @@ H = {
             })
             n:Tween(ah, o.TweenFast, {
                 Color = o.Border,
-                Transparency = 0.62,
+                Transparency = 0.76,
             })
             n:Tween(aj, o.TweenFast, {
                 Size = UDim2.new(0, 0, 0, 2),
@@ -4793,13 +4832,22 @@ function d.CreateGUI(aa)
     ai.Image = u("badscript/assets/new/guisettings.png")
     ai.ImageColor3 = m.Light(o.Main, 0.37)
     ai.Parent = ah
-    local aj = Instance.new("ImageButton")
-    aj.Size = UDim2.fromOffset(16, 16)
-    aj.Position = UDim2.new(1, -56, 0, 11)
-    aj.BackgroundTransparency = 1
-    aj.Image = u("badscript/assets/new/discord.png")
+    local aj = Instance.new("TextButton")
+    aj.Name = "DiscordInvite"
+    aj.Size = UDim2.fromOffset(82, 24)
+    aj.Position = UDim2.new(1, -132, 0, 8)
+    aj.BackgroundColor3 = o.Surface
+    aj.BackgroundTransparency = 0.08
+    aj.BorderSizePixel = 0
+    aj.AutoButtonColor = false
+    aj.Text = "Discord"
+    aj.TextColor3 = o.MutedText
+    aj.TextSize = 11
+    aj.FontFace = o.FontSemiBold
     aj.Parent = ac
-    addTooltip(aj, "Join discord")
+    addCorner(aj, UDim.new(1, 0))
+    local discordStroke = addStroke(aj, o.Border, 0.72, 1, "DiscordStroke")
+    addTooltip(aj, "Copy Discord invite")
     local ak = Instance.new("TextButton")
     ak.Size = UDim2.fromScale(1, 1)
     ak.BackgroundColor3 = o.MainSoft
@@ -4814,9 +4862,9 @@ function d.CreateGUI(aa)
     al.BackgroundTransparency = 1
     al.Text = "Settings"
     al.TextXAlignment = Enum.TextXAlignment.Left
-    al.TextColor3 = o.Text
+    al.TextColor3 = o.TextStrong
     al.TextSize = 13
-    al.FontFace = o.Font
+    al.FontFace = o.FontSemiBold
     al.Parent = ak
     local am = addCloseButton(ak)
     local an = Instance.new("ImageButton")
@@ -5972,16 +6020,47 @@ function d.CreateGUI(aa)
     am.Activated:Connect(function()
         ak.Visible = false
     end)
+    aj.MouseEnter:Connect(function()
+        n:Tween(aj, o.TweenFast, {
+            BackgroundColor3 = o.SurfaceHover,
+            TextColor3 = o.TextStrong,
+        })
+        n:Tween(discordStroke, o.TweenFast, {
+            Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
+            Transparency = 0.34,
+        })
+    end)
+    aj.MouseLeave:Connect(function()
+        n:Tween(aj, o.TweenFast, {
+            BackgroundColor3 = o.Surface,
+            TextColor3 = o.MutedText,
+        })
+        n:Tween(discordStroke, o.TweenFast, {
+            Color = o.Border,
+            Transparency = 0.72,
+        })
+    end)
     aj.Activated:Connect(function()
-        task.spawn(function()
-            if shared.developer and shared.developer.notify then
-                shared.developer:notify({
-                    title = "BadWars Support",
-                    text = "Support copied to clipboard!",
-                    duration = 1,
-                })
+        local invite = "https://discord.gg/K2TQx4vyR7"
+        local copied = false
+        pcall(function()
+            if type(setclipboard) == "function" then
+                setclipboard(invite)
+                copied = true
+            elseif type(toclipboard) == "function" then
+                toclipboard(invite)
+                copied = true
             end
         end)
+
+        if d.CreateNotification then
+            d:CreateNotification(
+                "BadWars V1",
+                copied and "Discord invite copied to clipboard." or invite,
+                5,
+                copied and "success" or "info"
+            )
+        end
     end)
     ah.MouseEnter:Connect(function()
         ai.ImageColor3 = o.TextStrong
@@ -6040,7 +6119,7 @@ function d.CreateCategory(aa, ab)
     ad.Parent = v
     addShadow(ad)
     addCorner(ad, o.RadiusLarge)
-    local categoryStroke = addStroke(ad, o.BorderStrong, 0.34, 1, "CategoryStroke")
+    local categoryStroke = addStroke(ad, o.BorderStrong, 0.42, 1, "CategoryStroke")
     addSurfaceGradient(ad)
     local categoryAccent = addAccentLine(ad, 2)
     local categoryScale = addScale(ad)
@@ -6051,7 +6130,7 @@ function d.CreateCategory(aa, ab)
     ae.Position = UDim2.fromOffset(14, (ae.Size.X.Offset > 20 and 16 or 15))
     ae.BackgroundTransparency = 1
     ae.Image = ab.Icon
-    ae.ImageColor3 = o.Text
+    ae.ImageColor3 = o.MutedText
     ae.Parent = ad
     local af = Instance.new("TextLabel")
     af.Name = "Title"
@@ -6060,7 +6139,7 @@ function d.CreateCategory(aa, ab)
     af.BackgroundTransparency = 1
     af.Text = ab.Name
     af.TextXAlignment = Enum.TextXAlignment.Left
-    af.TextColor3 = o.Text
+    af.TextColor3 = o.MutedText
     af.TextSize = 13
     af.FontFace = o.FontSemiBold
     af.Parent = ad
@@ -6111,6 +6190,16 @@ function d.CreateCategory(aa, ab)
     al.HorizontalAlignment = Enum.HorizontalAlignment.Center
     al.Padding = UDim.new(0, 2)
     al.Parent = aj
+
+    local function updateCategoryVisual(hovered)
+        local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+        local active = ac.Expanded or hovered
+        ae.ImageColor3 = active and accent or o.MutedText
+        af.TextColor3 = active and accent or o.MutedText
+        categoryAccent.BackgroundTransparency = active and 0 or 0.18
+        ad.BackgroundColor3 = active and o.Elevated or o.MainSoft
+        categoryStroke.Transparency = active and (hovered and 0.16 or 0.34) or 0.42
+    end
 
     function ac.CreateModule(am, an)
         an.Function = an.Function or function() end
@@ -7070,10 +7159,13 @@ function d.CreateCategory(aa, ab)
             })
         end
         ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
+        updateCategoryVisual(false)
     end
 
     if not ac.Expanded and ab.Visible then
         ac:Expand()
+    else
+        updateCategoryVisual(false)
     end
 
     ag.Activated:Connect(function()
@@ -7086,28 +7178,18 @@ function d.CreateCategory(aa, ab)
         ac:Expand()
     end)
     ag.MouseEnter:Connect(function()
-        ai.ImageColor3 = o.Text
-        n:Tween(categoryStroke, o.TweenFast, {
-            Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-            Transparency = 0.16,
-        })
-        n:Tween(categoryScale, o.TweenFast, { Scale = 1.008 })
-        n:Tween(af, o.TweenFast, { TextColor3 = o.TextStrong })
+        updateCategoryVisual(true)
+        n:Tween(categoryScale, o.TweenFast, { Scale = 1.01 })
     end)
     ag.MouseLeave:Connect(function()
-        ai.ImageColor3 = o.FaintText
-        n:Tween(categoryStroke, o.TweenFast, {
-            Color = o.BorderStrong,
-            Transparency = 0.34,
-        })
+        updateCategoryVisual(false)
         n:Tween(categoryScale, o.TweenFast, { Scale = 1 })
-        n:Tween(af, o.TweenFast, { TextColor3 = o.Text })
     end)
     ag.MouseButton1Down:Connect(function()
         n:Tween(categoryScale, o.TweenPress, { Scale = 0.992 })
     end)
     ag.MouseButton1Up:Connect(function()
-        n:Tween(categoryScale, o.TweenFast, { Scale = 1.008 })
+        n:Tween(categoryScale, o.TweenFast, { Scale = 1.01 })
     end)
 
     ad:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -7178,7 +7260,7 @@ function d.CreateCategory(aa, ab)
                 ap.Parent = aj
             end)
             if not success then
-                warn("[ModuleCategory] Frame creation failed:", err)
+                bwarn("[ModuleCategory] Frame creation failed:", err)
                 return
             end
 
@@ -7186,7 +7268,7 @@ function d.CreateCategory(aa, ab)
                 addTooltip(ap, an.Name .. " " .. (an.Name ~= "Special" and "Special Category" or "Category"))
             end)
             if not success then
-                warn("[ModuleCategory] Tooltip failed:", err)
+                bwarn("[ModuleCategory] Tooltip failed:", err)
             end
 
             if an.StrokeColor then
@@ -7204,7 +7286,7 @@ function d.CreateCategory(aa, ab)
                     end
                 end)
                 if not success then
-                    warn("[ModuleCategory] Stroke creation failed:", err)
+                    bwarn("[ModuleCategory] Stroke creation failed:", err)
                 end
             end
 
@@ -7212,10 +7294,10 @@ function d.CreateCategory(aa, ab)
                 addCorner(ap, o.Radius)
             end)
             if not success then
-                warn("[ModuleCategory] Corner failed:", err)
+                bwarn("[ModuleCategory] Corner failed:", err)
             end
 
-            local moduleCategoryStroke = addStroke(ap, o.Border, 0.7, 1, "ModuleCategoryStroke")
+            local moduleCategoryStroke = addStroke(ap, o.Border, 0.84, 1, "ModuleCategoryStroke")
             local moduleCategoryScale = addScale(ap)
 
             local aq
@@ -7238,7 +7320,7 @@ function d.CreateCategory(aa, ab)
                 aq.Parent = ap
             end)
             if not success then
-                warn("[ModuleCategory] Header button creation failed:", err)
+                bwarn("[ModuleCategory] Header button creation failed:", err)
                 return
             end
 
@@ -7265,7 +7347,7 @@ function d.CreateCategory(aa, ab)
                 as.Parent = ar
             end)
             if not success then
-                warn("[ModuleCategory] Accent bar creation failed:", err)
+                bwarn("[ModuleCategory] Accent bar creation failed:", err)
             end
 
             local as
@@ -7280,7 +7362,7 @@ function d.CreateCategory(aa, ab)
                 as.Parent = aq
             end)
             if not success then
-                warn("[ModuleCategory] Icon creation failed:", err)
+                bwarn("[ModuleCategory] Icon creation failed:", err)
             end
 
             local at
@@ -7298,7 +7380,7 @@ function d.CreateCategory(aa, ab)
                 at.Parent = aq
             end)
             if not success then
-                warn("[ModuleCategory] Title creation failed:", err)
+                bwarn("[ModuleCategory] Title creation failed:", err)
             end
 
             local au
@@ -7316,7 +7398,7 @@ function d.CreateCategory(aa, ab)
                 au.Parent = aq
             end)
             if not success then
-                warn("[ModuleCategory] Count label creation failed:", err)
+                bwarn("[ModuleCategory] Count label creation failed:", err)
             end
 
             local av, aw
@@ -7342,34 +7424,40 @@ function d.CreateCategory(aa, ab)
                 aw.Parent = av
             end)
             if not success then
-                warn("[ModuleCategory] Arrow button creation failed:", err)
+                bwarn("[ModuleCategory] Arrow button creation failed:", err)
             end
 
             aq.MouseEnter:Connect(function()
-                n:Tween(ap, o.TweenFast, { BackgroundColor3 = o.SurfaceHover })
+                if not ao.Expanded then
+                    n:Tween(ap, o.TweenFast, { BackgroundColor3 = o.SurfaceHover })
+                end
                 n:Tween(moduleCategoryStroke, o.TweenFast, {
                     Color = o.BorderStrong,
-                    Transparency = 0.38,
-                })
-                n:Tween(moduleCategoryScale, o.TweenFast, { Scale = 1.008 })
-                at.TextColor3 = o.TextStrong
-                aw.ImageColor3 = o.TextStrong
-            end)
-            aq.MouseLeave:Connect(function()
-                n:Tween(ap, o.TweenFast, { BackgroundColor3 = o.Surface })
-                n:Tween(moduleCategoryStroke, o.TweenFast, {
-                    Color = o.Border,
-                    Transparency = 0.7,
+                    Transparency = 0.62,
                 })
                 n:Tween(moduleCategoryScale, o.TweenFast, { Scale = 1 })
-                at.TextColor3 = o.Text
-                aw.ImageColor3 = o.MutedText
+                at.TextColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+                aw.ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            end)
+            aq.MouseLeave:Connect(function()
+                if not ao.Expanded then
+                    n:Tween(ap, o.TweenFast, { BackgroundColor3 = o.Surface })
+                end
+                n:Tween(moduleCategoryStroke, o.TweenFast, {
+                    Color = o.Border,
+                    Transparency = 0.84,
+                })
+                n:Tween(moduleCategoryScale, o.TweenFast, { Scale = 1 })
+                at.TextColor3 = ao.Expanded and o.TextStrong or o.MutedText
+                aw.ImageColor3 = ao.Expanded
+                    and Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+                    or o.MutedText
             end)
             aq.MouseButton1Down:Connect(function()
                 n:Tween(moduleCategoryScale, o.TweenPress, { Scale = 0.99 })
             end)
             aq.MouseButton1Up:Connect(function()
-                n:Tween(moduleCategoryScale, o.TweenFast, { Scale = 1.008 })
+                n:Tween(moduleCategoryScale, o.TweenFast, { Scale = 1 })
             end)
 
             success, err = pcall(function()
@@ -7387,7 +7475,7 @@ function d.CreateCategory(aa, ab)
                 ax.Parent = ap
             end)
             if not success then
-                warn("[ModuleCategory] Gradient creation failed:", err)
+                bwarn("[ModuleCategory] Gradient creation failed:", err)
             end
 
             local ax, ay
@@ -7419,7 +7507,7 @@ function d.CreateCategory(aa, ab)
                 ay.Parent = ax
             end)
             if not success then
-                warn("[ModuleCategory] Modules container creation failed:", err)
+                bwarn("[ModuleCategory] Modules container creation failed:", err)
                 return
             end
 
@@ -7436,7 +7524,7 @@ function d.CreateCategory(aa, ab)
                     au.Text = tostring(az)
                 end)
                 if not success then
-                    warn("[ModuleCategory] updateCount failed:", err)
+                    bwarn("[ModuleCategory] updateCount failed:", err)
                 end
             end
 
@@ -7463,7 +7551,7 @@ function d.CreateCategory(aa, ab)
                     end
                 end)
                 if not success then
-                    warn("[ModuleCategory] refresh failed:", err)
+                    bwarn("[ModuleCategory] refresh failed:", err)
                 end
             end
 
@@ -7538,7 +7626,7 @@ function d.CreateCategory(aa, ab)
                     end
                 end)
                 if not success then
-                    warn("[ModuleCategory] Toggle failed:", err)
+                    bwarn("[ModuleCategory] Toggle failed:", err)
                 end
             end
 
@@ -7556,7 +7644,7 @@ function d.CreateCategory(aa, ab)
                     end
                 end)
                 if not success then
-                    warn("[ModuleCategory] Load failed:", err)
+                    bwarn("[ModuleCategory] Load failed:", err)
                 end
             end
 
@@ -7583,7 +7671,7 @@ function d.CreateCategory(aa, ab)
                     task.defer(refreshModuleCategory)
                 end)
                 if not success then
-                    warn("[ModuleCategory] AddModule failed:", err)
+                    bwarn("[ModuleCategory] AddModule failed:", err)
                 end
 
                 return aA
@@ -7621,7 +7709,7 @@ function d.CreateCategory(aa, ab)
                     ap.Visible = aA
                 end)
                 if not success then
-                    warn("[ModuleCategory] SetVisible failed:", err)
+                    bwarn("[ModuleCategory] SetVisible failed:", err)
                 end
             end
 
@@ -7634,7 +7722,7 @@ function d.CreateCategory(aa, ab)
                     az:AddModule(aB)
                 end)
                 if not success then
-                    warn("[ModuleCategory] CreateModule failed:", err)
+                    bwarn("[ModuleCategory] CreateModule failed:", err)
                 end
                 return aB
             end
@@ -7650,22 +7738,22 @@ function d.CreateCategory(aa, ab)
 
                 aq.MouseEnter:Connect(function()
                     if not ao.Expanded then
-                        n:Tween(ap, TweenInfo.new(0.15), {
-                            BackgroundColor3 = m.Light(an.BackgroundColor or o.Main, 0.05),
+                        n:Tween(ap, o.TweenFast, {
+                            BackgroundColor3 = o.SurfaceHover,
                         })
-                        n:Tween(aw, TweenInfo.new(0.15), {
-                            ImageColor3 = an.AccentColor or an.StrokeColor or Color3.fromRGB(100, 150, 255),
+                        n:Tween(aw, o.TweenFast, {
+                            ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
                         })
                     end
                 end)
 
                 aq.MouseLeave:Connect(function()
                     if not ao.Expanded then
-                        n:Tween(ap, TweenInfo.new(0.15), {
-                            BackgroundColor3 = an.BackgroundColor or m.Dark(o.Main, 0.08),
+                        n:Tween(ap, o.TweenFast, {
+                            BackgroundColor3 = o.Surface,
                         })
-                        n:Tween(aw, TweenInfo.new(0.15), {
-                            ImageColor3 = o.Text,
+                        n:Tween(aw, o.TweenFast, {
+                            ImageColor3 = o.MutedText,
                         })
                     end
                 end)
@@ -7675,7 +7763,7 @@ function d.CreateCategory(aa, ab)
                 end)
             end)
             if not success then
-                warn("[ModuleCategory] Event connections failed:", err)
+                bwarn("[ModuleCategory] Event connections failed:", err)
             end
 
             ao.Object = ap
@@ -7685,7 +7773,7 @@ function d.CreateCategory(aa, ab)
         end)
 
         if not ao then
-            warn("[ModuleCategory] CreateModuleCategory failed:", ap)
+            bwarn("[ModuleCategory] CreateModuleCategory failed:", ap)
             return nil
         end
         return ao and ap
@@ -8017,16 +8105,35 @@ function d.CreateOverlay(af, ag)
     ah.Name = ag.Name .. "Overlay"
     ah.Size = UDim2.fromOffset(ag.CategorySize or 220, 41)
     ah.Position = UDim2.fromOffset(240, 46)
-    ah.BackgroundColor3 = o.Main
+    ah.BackgroundColor3 = o.MainSoft
     ah.AutoButtonColor = false
     ah.Visible = false
     ah.Text = ""
+    ah.ClipsDescendants = false
     ah.Parent = w
 
     ai.WindowXOffset = (ag.CategorySize or 220)
 
     local aj = addBlur(ah)
-    addCorner(ah)
+    addCorner(ah, o.RadiusLarge)
+    addSurfaceGradient(ah)
+    addShadow(ah)
+    local overlayStroke = addStroke(ah, o.BorderStrong, 0.58, 1, "OverlayStroke")
+    local overlayAccent = Instance.new("Frame")
+    overlayAccent.Name = "OverlayAccent"
+    overlayAccent.Size = UDim2.new(1, -18, 0, 1)
+    overlayAccent.Position = UDim2.fromOffset(9, 1)
+    overlayAccent.BorderSizePixel = 0
+    overlayAccent.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+    overlayAccent.BackgroundTransparency = 0.28
+    overlayAccent.ZIndex = ah.ZIndex + 1
+    overlayAccent.Parent = ah
+    addCorner(overlayAccent, UDim.new(1, 0))
+    connectguicolorchange(function(hue, saturation, value)
+        if overlayAccent.Parent then
+            overlayAccent.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
+        end
+    end)
     makeDraggable(ah)
 
     local ak = Instance.new("ImageLabel")
@@ -8077,6 +8184,21 @@ function d.CreateOverlay(af, ag)
     ao.Image = u("badscript/assets/new/dots.png")
     ao.ImageColor3 = m.Light(o.Main, 0.37)
     ao.Parent = an
+
+    ah.MouseEnter:Connect(function()
+        n:Tween(ah, o.TweenFast, { BackgroundColor3 = o.Elevated })
+        n:Tween(overlayStroke, o.TweenFast, {
+            Color = o.BorderStrong,
+            Transparency = 0.38,
+        })
+    end)
+    ah.MouseLeave:Connect(function()
+        n:Tween(ah, o.TweenFast, { BackgroundColor3 = o.MainSoft })
+        n:Tween(overlayStroke, o.TweenFast, {
+            Color = o.BorderStrong,
+            Transparency = 0.58,
+        })
+    end)
 
     local ap = Instance.new("Frame")
     ap.Name = "CustomChildren"
@@ -9947,7 +10069,7 @@ function d.CreateProfilesGUI(ag, ah)
                         `Invalid URL for {tostring(aW)}. Please report this to a developer in BadWars support`,
                         10
                     )
-                    warn("Invalid URL:", bb.link)
+                    bwarn("Invalid URL:", bb.link)
                     return
                 end
                 local bf, bg = pcall(function()
@@ -9959,7 +10081,7 @@ function d.CreateProfilesGUI(ag, ah)
                         `Couldn't resolve the url for {tostring(aW)}. Please report this to a developer in BadWars support`,
                         10
                     )
-                    warn(`Invalid URL resolve: {tostring(bg)}`)
+                    bwarn(`Invalid URL resolve: {tostring(bg)}`)
                     return
                 end
                 local bh = d.http_function(bg)
@@ -10462,7 +10584,7 @@ function d.CreateCategoryList(ag, ah)
         local aC = ag.Profile
         if not aC then
             if shared.VoidDev then
-                warn("profilesButtonRefresh: local profile not found!")
+                bwarn("profilesButtonRefresh: local profile not found!")
             end
             return
         end
@@ -11317,7 +11439,7 @@ function d.CreateLegit(ag)
 
     local ai = ag.Categories.Legit
     if not ai then
-        warn("Legit category must be created before CreateLegit()")
+        bwarn("Legit category must be created before CreateLegit()")
         return
     end
 
@@ -12839,7 +12961,7 @@ end
 
 function d.LoadPosition(ah, ai, aj)
     if not aj then
-        warn(`LoadPositions: {tostring(ai)} has INVALID DATA!`)
+        bwarn(`LoadPositions: {tostring(ai)} has INVALID DATA!`)
         return
     end
     local ak = { X = { Scale = 0, Offset = 0 }, Y = { Scale = 0, Offset = 0 } }

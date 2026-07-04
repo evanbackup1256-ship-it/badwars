@@ -50,7 +50,7 @@ local function isNotFoundBody(body)
 	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
 end
 
--- Status GUI (Premium)
+-- Status GUI (Premium v7)
 local statusGui
 local statusCard
 local statusLabel
@@ -60,6 +60,8 @@ local percentLabel
 local progressFill
 local progressGlow
 local spinner
+local chipFrames = {}
+local shimmer
 local statusProgress = 0
 local statusError = false
 local loaderTweenService = cloneref(game:GetService('TweenService'))
@@ -99,32 +101,27 @@ end
 local function resolveStatusProgress(message)
     local lower = string.lower(tostring(message or ''))
     local stages = {
-        {'cache setup', 0.08},
-        {'cache cleared', 0.12},
-        {'self-test', 0.16},
-        {'validating orchestrator', 0.22},
-        {'url validation passed', 0.30},
-        {'compiled ok', 0.38},
-        {'executing main', 0.44},
-        {'dependencies', 0.49},
-        {'selecting current gui', 0.54},
-        {'loading gui', 0.59},
-        {'gui loaded', 0.66},
-        {'loading universal', 0.72},
-        {'universal modules ready', 0.80},
-        {'game module', 0.86},
-        {'loading profile', 0.92},
-        {'finalizing', 0.96},
-        {'validation passed', 0.98},
-        {'ready', 1},
-        {'loader complete', 1},
+        {'cache', 0.08}, {'self-test', 0.16}, {'validating orchestrator', 0.22}, {'downloading', 0.3}, {'loading premium interface', 0.48}, {'interface ready', 0.58}, {'loading core modules', 0.72}, {'game module', 0.84}, {'loading profile', 0.92}, {'finalizing', 0.97}, {'ready', 1},
     }
     for _, stage in ipairs(stages) do
-        if string.find(lower, stage[1], 1, true) then
-            return stage[2]
+        if string.find(lower, stage[1], 1, true) then return stage[2] end
+    end
+    return math.min(math.max(statusProgress + 0.012, 0.02), 0.98)
+end
+
+local function updateChips()
+    local labels = {'BOOT', 'MODULES', 'PROFILE'}
+    local thresholds = {0.24, 0.78, 0.94}
+    for index, frame in ipairs(chipFrames) do
+        local active = statusProgress >= thresholds[index] and not statusError
+        frame.BackgroundTransparency = active and 0.12 or 0.84
+        frame.BackgroundColor3 = active and Color3.fromRGB(16, 213, 165) or Color3.fromRGB(30, 39, 53)
+        local text = frame:FindFirstChild('Label')
+        if text then
+            text.Text = labels[index]
+            text.TextColor3 = active and Color3.fromRGB(7, 14, 20) or Color3.fromRGB(122, 140, 164)
         end
     end
-    return math.min(math.max(statusProgress + 0.012, 0.02), 0.97)
 end
 
 local function createPremiumLoader()
@@ -134,15 +131,9 @@ local function createPremiumLoader()
     end)
 
     local parent
-    pcall(function()
-        if type(gethui) == 'function' then parent = gethui() end
-    end)
-    if not parent then
-        pcall(function() parent = cloneref(game:GetService('CoreGui')) end)
-    end
-    if not parent then
-        pcall(function() parent = cloneref(game:GetService('Players')).LocalPlayer.PlayerGui end)
-    end
+    pcall(function() if type(gethui) == 'function' then parent = gethui() end end)
+    if not parent then pcall(function() parent = cloneref(game:GetService('CoreGui')) end) end
+    if not parent then pcall(function() parent = cloneref(game:GetService('Players')).LocalPlayer.PlayerGui end) end
     if not parent then return end
 
     local old = parent:FindFirstChild('BadWarsLoaderStatus')
@@ -157,185 +148,211 @@ local function createPremiumLoader()
     statusGui.Parent = parent
 
     local backdrop = Instance.new('Frame')
-    backdrop.Name = 'Backdrop'
     backdrop.Size = UDim2.fromScale(1, 1)
-    backdrop.BackgroundColor3 = Color3.fromRGB(3, 6, 10)
+    backdrop.BackgroundColor3 = Color3.fromRGB(2, 6, 10)
     backdrop.BackgroundTransparency = 1
     backdrop.BorderSizePixel = 0
-    backdrop.ZIndex = 1
     backdrop.Parent = statusGui
-    loaderTween(backdrop, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        BackgroundTransparency = 0.32,
-    })
+    loaderTween(backdrop, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.28})
 
     statusCard = Instance.new('Frame')
     statusCard.Name = 'PremiumLoader'
     statusCard.AnchorPoint = Vector2.new(0.5, 0.5)
     statusCard.Position = UDim2.fromScale(0.5, 0.5)
-    statusCard.Size = UDim2.fromOffset(460, 246)
-    statusCard.BackgroundColor3 = Color3.fromRGB(11, 15, 22)
+    statusCard.Size = UDim2.fromOffset(520, 286)
+    statusCard.BackgroundColor3 = Color3.fromRGB(9, 14, 21)
     statusCard.BorderSizePixel = 0
-    statusCard.ClipsDescendants = false
-    statusCard.ZIndex = 10
+    statusCard.ClipsDescendants = true
     statusCard.Parent = statusGui
-    loaderCorner(statusCard, 16)
-    local cardStroke = loaderStroke(statusCard, Color3.fromRGB(57, 75, 96), 0.18, 1)
+    loaderCorner(statusCard, 18)
+    loaderStroke(statusCard, Color3.fromRGB(54, 72, 94), 0.2, 1)
 
     local cardScale = Instance.new('UIScale')
-    cardScale.Scale = 0.92
+    cardScale.Scale = 0.94
     cardScale.Parent = statusCard
-    loaderTween(cardScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+    loaderTween(cardScale, TweenInfo.new(0.36, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
 
     local gradient = Instance.new('UIGradient')
     gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 30, 42)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 17, 25)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(7, 10, 15)),
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 28, 40)),
+        ColorSequenceKeypoint.new(0.54, Color3.fromRGB(10, 15, 23)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 10, 16)),
     })
     gradient.Rotation = 90
     gradient.Parent = statusCard
 
     local accent = Instance.new('Frame')
-    accent.Name = 'Accent'
-    accent.Size = UDim2.new(1, -32, 0, 2)
-    accent.Position = UDim2.fromOffset(16, 1)
+    accent.Size = UDim2.new(1, -28, 0, 2)
+    accent.Position = UDim2.fromOffset(14, 1)
     accent.BackgroundColor3 = Color3.fromRGB(16, 213, 165)
     accent.BorderSizePixel = 0
-    accent.ZIndex = 12
     accent.Parent = statusCard
     loaderCorner(accent, 99)
     local accentGradient = Instance.new('UIGradient')
     accentGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 125, 255)),
-        ColorSequenceKeypoint.new(0.52, Color3.fromRGB(16, 213, 165)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(121, 75, 255)),
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(65, 128, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(16, 213, 165)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(115, 78, 255)),
     })
     accentGradient.Parent = accent
 
     local logo = Instance.new('TextLabel')
-    logo.Name = 'Logo'
-    logo.Size = UDim2.fromOffset(240, 34)
-    logo.Position = UDim2.fromOffset(28, 24)
+    logo.Size = UDim2.fromOffset(250, 34)
+    logo.Position = UDim2.fromOffset(28, 26)
     logo.BackgroundTransparency = 1
     logo.Font = Enum.Font.GothamBold
-    logo.Text = 'BADWARS'
+    logo.Text = 'BADWARS V1'
     logo.TextSize = 26
     logo.TextColor3 = Color3.fromRGB(245, 249, 255)
     logo.TextXAlignment = Enum.TextXAlignment.Left
-    logo.ZIndex = 13
     logo.Parent = statusCard
 
     local edition = Instance.new('TextLabel')
-    edition.Size = UDim2.fromOffset(260, 20)
-    edition.Position = UDim2.fromOffset(29, 56)
+    edition.Size = UDim2.fromOffset(280, 20)
+    edition.Position = UDim2.fromOffset(29, 57)
     edition.BackgroundTransparency = 1
     edition.Font = Enum.Font.GothamMedium
-    edition.Text = 'PREMIUM MODULE SYSTEM'
+    edition.Text = 'PREMIUM LAUNCH SYSTEM'
     edition.TextSize = 11
-    edition.TextColor3 = Color3.fromRGB(104, 124, 150)
+    edition.TextColor3 = Color3.fromRGB(102, 122, 147)
     edition.TextXAlignment = Enum.TextXAlignment.Left
-    edition.ZIndex = 13
     edition.Parent = statusCard
 
     spinner = Instance.new('TextLabel')
     spinner.AnchorPoint = Vector2.new(0.5, 0.5)
-    spinner.Position = UDim2.new(1, -42, 0, 47)
-    spinner.Size = UDim2.fromOffset(28, 28)
+    spinner.Position = UDim2.new(1, -44, 0, 47)
+    spinner.Size = UDim2.fromOffset(30, 30)
     spinner.BackgroundColor3 = Color3.fromRGB(20, 28, 39)
-    spinner.BackgroundTransparency = 0.08
+    spinner.BackgroundTransparency = 0.06
     spinner.Font = Enum.Font.GothamBold
     spinner.Text = '>'
     spinner.TextSize = 18
     spinner.TextColor3 = Color3.fromRGB(16, 213, 165)
-    spinner.ZIndex = 13
     spinner.Parent = statusCard
-    loaderCorner(spinner, 9)
-    loaderStroke(spinner, Color3.fromRGB(57, 75, 96), 0.42, 1)
+    loaderCorner(spinner, 10)
+    loaderStroke(spinner, Color3.fromRGB(56, 73, 95), 0.42, 1)
+
+    local chipHolder = Instance.new('Frame')
+    chipHolder.Size = UDim2.new(1, -56, 0, 26)
+    chipHolder.Position = UDim2.fromOffset(28, 86)
+    chipHolder.BackgroundTransparency = 1
+    chipHolder.Parent = statusCard
+    local chipLayout = Instance.new('UIListLayout')
+    chipLayout.FillDirection = Enum.FillDirection.Horizontal
+    chipLayout.Padding = UDim.new(0, 8)
+    chipLayout.Parent = chipHolder
+
+    for _, label in ipairs({'BOOT', 'MODULES', 'PROFILE'}) do
+        local chip = Instance.new('Frame')
+        chip.Size = UDim2.fromOffset(78, 24)
+        chip.BackgroundColor3 = Color3.fromRGB(30, 39, 53)
+        chip.BackgroundTransparency = 0.84
+        chip.BorderSizePixel = 0
+        chip.Parent = chipHolder
+        loaderCorner(chip, 999)
+        loaderStroke(chip, Color3.fromRGB(55, 72, 92), 0.72, 1)
+        local txt = Instance.new('TextLabel')
+        txt.Name = 'Label'
+        txt.Size = UDim2.fromScale(1, 1)
+        txt.BackgroundTransparency = 1
+        txt.Font = Enum.Font.GothamSemibold
+        txt.Text = label
+        txt.TextSize = 10
+        txt.TextColor3 = Color3.fromRGB(122, 140, 164)
+        txt.Parent = chip
+        table.insert(chipFrames, chip)
+    end
 
     stageLabel = Instance.new('TextLabel')
-    stageLabel.Name = 'Stage'
     stageLabel.Size = UDim2.new(1, -56, 0, 24)
-    stageLabel.Position = UDim2.fromOffset(28, 92)
+    stageLabel.Position = UDim2.fromOffset(28, 124)
     stageLabel.BackgroundTransparency = 1
     stageLabel.Font = Enum.Font.GothamSemibold
     stageLabel.Text = 'INITIALIZING'
     stageLabel.TextSize = 13
     stageLabel.TextColor3 = Color3.fromRGB(235, 241, 250)
     stageLabel.TextXAlignment = Enum.TextXAlignment.Left
-    stageLabel.ZIndex = 13
     stageLabel.Parent = statusCard
 
     statusLabel = Instance.new('TextLabel')
-    statusLabel.Name = 'Status'
-    statusLabel.Size = UDim2.new(1, -56, 0, 44)
-    statusLabel.Position = UDim2.fromOffset(28, 116)
+    statusLabel.Size = UDim2.new(1, -56, 0, 48)
+    statusLabel.Position = UDim2.fromOffset(28, 149)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Font = Enum.Font.Gotham
-    statusLabel.Text = 'Preparing the loader...'
+    statusLabel.Text = 'Preparing your premium BadWars session...'
     statusLabel.TextSize = 14
     statusLabel.TextWrapped = true
     statusLabel.TextColor3 = Color3.fromRGB(170, 184, 202)
     statusLabel.TextXAlignment = Enum.TextXAlignment.Left
     statusLabel.TextYAlignment = Enum.TextYAlignment.Top
-    statusLabel.ZIndex = 13
     statusLabel.Parent = statusCard
 
     local progressTrack = Instance.new('Frame')
-    progressTrack.Name = 'ProgressTrack'
-    progressTrack.Size = UDim2.new(1, -96, 0, 8)
-    progressTrack.Position = UDim2.fromOffset(28, 180)
-    progressTrack.BackgroundColor3 = Color3.fromRGB(29, 39, 53)
+    progressTrack.Size = UDim2.new(1, -96, 0, 10)
+    progressTrack.Position = UDim2.fromOffset(28, 220)
+    progressTrack.BackgroundColor3 = Color3.fromRGB(26, 36, 49)
     progressTrack.BorderSizePixel = 0
-    progressTrack.ZIndex = 13
     progressTrack.Parent = statusCard
-    loaderCorner(progressTrack, 99)
-    loaderStroke(progressTrack, Color3.fromRGB(57, 75, 96), 0.65, 1)
+    loaderCorner(progressTrack, 999)
+    loaderStroke(progressTrack, Color3.fromRGB(56, 73, 95), 0.68, 1)
 
     progressFill = Instance.new('Frame')
-    progressFill.Name = 'Progress'
     progressFill.Size = UDim2.fromScale(0.02, 1)
     progressFill.BackgroundColor3 = Color3.fromRGB(16, 213, 165)
     progressFill.BorderSizePixel = 0
-    progressFill.ZIndex = 14
     progressFill.Parent = progressTrack
-    loaderCorner(progressFill, 99)
+    loaderCorner(progressFill, 999)
     local fillGradient = Instance.new('UIGradient')
     fillGradient.Color = accentGradient.Color
     fillGradient.Parent = progressFill
+
+    shimmer = Instance.new('Frame')
+    shimmer.Size = UDim2.fromOffset(60, 20)
+    shimmer.Position = UDim2.fromOffset(-80, -5)
+    shimmer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    shimmer.BackgroundTransparency = 0.78
+    shimmer.BorderSizePixel = 0
+    shimmer.Parent = progressFill
+    local shimmerGradient = Instance.new('UIGradient')
+    shimmerGradient.Rotation = 24
+    shimmerGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.5, 0.4),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    shimmerGradient.Parent = shimmer
+    loaderCorner(shimmer, 999)
 
     progressGlow = Instance.new('Frame')
     progressGlow.AnchorPoint = Vector2.new(1, 0.5)
     progressGlow.Position = UDim2.fromScale(1, 0.5)
     progressGlow.Size = UDim2.fromOffset(16, 16)
     progressGlow.BackgroundColor3 = Color3.fromRGB(16, 213, 165)
-    progressGlow.BackgroundTransparency = 0.52
+    progressGlow.BackgroundTransparency = 0.54
     progressGlow.BorderSizePixel = 0
-    progressGlow.ZIndex = 15
     progressGlow.Parent = progressFill
     loaderCorner(progressGlow, 99)
 
     percentLabel = Instance.new('TextLabel')
     percentLabel.Size = UDim2.fromOffset(58, 24)
-    percentLabel.Position = UDim2.new(1, -74, 0, 171)
+    percentLabel.Position = UDim2.new(1, -74, 0, 211)
     percentLabel.BackgroundTransparency = 1
     percentLabel.Font = Enum.Font.GothamSemibold
     percentLabel.Text = '2%'
     percentLabel.TextSize = 12
     percentLabel.TextColor3 = Color3.fromRGB(200, 211, 225)
     percentLabel.TextXAlignment = Enum.TextXAlignment.Right
-    percentLabel.ZIndex = 13
     percentLabel.Parent = statusCard
 
     detailLabel = Instance.new('TextLabel')
     detailLabel.Size = UDim2.new(1, -56, 0, 24)
-    detailLabel.Position = UDim2.fromOffset(28, 205)
+    detailLabel.Position = UDim2.fromOffset(28, 244)
     detailLabel.BackgroundTransparency = 1
     detailLabel.Font = Enum.Font.Code
-    detailLabel.Text = 'secure initialization / waiting for pipeline'
+    detailLabel.Text = 'secure launch / polished UI / minimal logging'
     detailLabel.TextSize = 11
     detailLabel.TextColor3 = Color3.fromRGB(87, 105, 129)
     detailLabel.TextXAlignment = Enum.TextXAlignment.Left
-    detailLabel.ZIndex = 13
     detailLabel.Parent = statusCard
 
     task.spawn(function()
@@ -345,14 +362,22 @@ local function createPremiumLoader()
         end
     end)
 
+    task.spawn(function()
+        while shimmer and shimmer.Parent do
+            shimmer.Position = UDim2.fromOffset(-80, -5)
+            loaderTween(shimmer, TweenInfo.new(0.72, Enum.EasingStyle.Linear), {Position = UDim2.new(1, 20, 0, -5)})
+            task.wait(0.86)
+        end
+    end)
+
     shared.BadStatusGui = statusGui
+    updateChips()
 end
 
 createPremiumLoader()
 
 shared.BadStatus = function(msg, isErr)
     local message = tostring(msg or 'Working...')
-    warn('BadWars: '..message)
     statusError = isErr == true
     statusProgress = math.max(statusProgress, resolveStatusProgress(message))
 
@@ -361,7 +386,7 @@ shared.BadStatus = function(msg, isErr)
 
     local accentColor = statusError and Color3.fromRGB(255, 91, 104) or Color3.fromRGB(16, 213, 165)
     local upper = string.upper(message)
-    if #upper > 34 then upper = string.sub(upper, 1, 34)..'...' end
+    if #upper > 34 then upper = string.sub(upper, 1, 34) .. '...' end
 
     if stageLabel then
         stageLabel.Text = statusError and 'PIPELINE ERROR' or upper
@@ -372,7 +397,7 @@ shared.BadStatus = function(msg, isErr)
         statusLabel.TextColor3 = statusError and Color3.fromRGB(255, 145, 153) or Color3.fromRGB(170, 184, 202)
     end
     if detailLabel then
-        detailLabel.Text = statusError and 'review the reported stage before retrying' or 'downloading / validating / registering components'
+        detailLabel.Text = statusError and 'review the failing stage, then retry' or 'secure launch / premium UI / minimal logging'
     end
     if progressFill then
         progressFill.BackgroundColor3 = accentColor
@@ -382,7 +407,21 @@ shared.BadStatus = function(msg, isErr)
     end
     if progressGlow then progressGlow.BackgroundColor3 = accentColor end
     if spinner then spinner.TextColor3 = accentColor end
-    if percentLabel then percentLabel.Text = tostring(math.floor(statusProgress * 100 + 0.5))..'%' end
+    if percentLabel then percentLabel.Text = tostring(math.floor(statusProgress * 100 + 0.5)) .. '%' end
+    updateChips()
+
+    if statusProgress >= 1 and not statusError and statusGui and statusGui.Parent then
+        task.delay(0.35, function()
+            if statusCard and statusCard.Parent then
+                loaderTween(statusCard, TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {BackgroundTransparency = 1})
+            end
+            task.delay(0.3, function()
+                pcall(function()
+                    if statusGui then statusGui:Destroy() end
+                end)
+            end)
+        end)
+    end
 end
 
 local setStatus=shared.BadStatus

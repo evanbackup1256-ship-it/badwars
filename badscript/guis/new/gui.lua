@@ -5522,40 +5522,36 @@ function d.CreateCategory(aa, ab)
         local ar = Instance.new("TextButton")
         ar.Name = an.Name
 
-        ar.Size = UDim2.new(1, -8, 0, d.isMobile and 52 or 40)
+        ar.Size = UDim2.new(1, 0, 0, d.isMobile and 52 or 40)
 ar.BackgroundColor3 = o.Surface
 ar.BorderSizePixel = 0
 ar.AutoButtonColor = false
-ar.Text = "   " .. ap
+ar.ClipsDescendants = true
+ar.Text = "  " .. ap
 ar.TextXAlignment = Enum.TextXAlignment.Left
 ar.TextColor3 = o.MutedText
 ar.TextSize = d.isMobile and 15 or 14
 ar.FontFace = o.Font
 ar.Parent = aj
-addCorner(ar, o.RadiusSmall)
-
-local moduleStroke = addStroke(ar, o.Border, 0.72, 1)
-moduleStroke.Name = "ModuleStroke"
 
 local activeRail = Instance.new("Frame")
 activeRail.Name = "ActiveRail"
-activeRail.Size = UDim2.new(0, 3, 1, -12)
-activeRail.Position = UDim2.fromOffset(0, 6)
-activeRail.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+activeRail.Size = UDim2.new(0, 2, 1, 0)
+activeRail.Position = UDim2.fromOffset(0, 0)
+activeRail.BackgroundColor3 = Color3.fromHSV(
+	d.GUIColor.Hue,
+	d.GUIColor.Sat,
+	d.GUIColor.Value
+)
 activeRail.BorderSizePixel = 0
 activeRail.Visible = false
 activeRail.ZIndex = ar.ZIndex + 1
 activeRail.Parent = ar
-addCorner(activeRail, UDim.new(1, 0))
 
 connectguicolorchange(function(hue, saturation, value)
-	local accent = Color3.fromHSV(hue, saturation, value)
-	activeRail.BackgroundColor3 = accent
-	if ao.Enabled then
-		moduleStroke.Color = accent
-	end
+	activeRail.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
 end)
-        if an.Premium then
+if an.Premium then
             local as = Instance.new("TextLabel")
             as.Parent = ar
             as.SizeConstraint = Enum.SizeConstraint.RelativeXX
@@ -5665,24 +5661,16 @@ end)
         local aA = Instance.new("UIStroke")
 aA.Name = "FavoriteStroke"
 aA.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-aA.LineJoinMode = Enum.LineJoinMode.Round
-aA.Transparency = 0.12
-aA.Thickness = 1.5
-aA.Color = Color3.fromRGB(255, 214, 92)
+aA.Transparency = 1
+aA.Thickness = 0
 aA.Enabled = false
 aA.Parent = ar
 local aB = aA
-        connectvisibilitychange(function(aC)
-            aB.Enabled = ao.StarActive
-            if not aB.Enabled then
-                return
-            end
-            n:Tween(aB, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-                Thickness = aC and 2 or 0,
-            })
-        end)
 
-        ao.InternalAddOnChange = Instance.new("BindableEvent")
+connectvisibilitychange(function()
+	aB.Enabled = false
+end)
+ao.InternalAddOnChange = Instance.new("BindableEvent")
         ao.InternalAddOnChange.Event:Connect(function()
             az.Position = au.Visible and UDim2.new(1, -70, 0, 9) or UDim2.new(1, -36, 0, 9)
         end)
@@ -5754,7 +5742,7 @@ local aB = aA
                 ao.StarActive = not ao.StarActive
             end
             az.BackgroundColor3 = ao.StarActive and Color3.fromRGB(255, 255, 127) or Color3.fromRGB(255, 255, 255)
-            aB.Enabled = ao.StarActive
+            aB.Enabled = false
             az.Visible = ao.StarActive or aq or at.Visible
             if not I then
                 if d.FavoriteNotifications ~= nil and d.FavoriteNotifications.Enabled then
@@ -5796,15 +5784,13 @@ local I = Instance.new("ImageLabel")
         I.ImageColor3 = m.Light(o.Main, 0.37)
         I.Parent = aC
         at.Name = an.Name .. "Children"
-at.Size = UDim2.new(1, -8, 0, 0)
-at.BackgroundColor3 = o.Surface
+at.Size = UDim2.new(1, 0, 0, 0)
+at.BackgroundColor3 = o.Main
 at.BorderSizePixel = 0
 at.Visible = false
 at.Parent = aj
 at.ClipsDescendants = true
-addCorner(at, o.RadiusSmall)
-addStroke(at, o.Border, 0.78, 1)
-        ao.Children = at
+ao.Children = at
         local J = Instance.new("UIListLayout")
         J.SortOrder = Enum.SortOrder.LayoutOrder
         J.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -5814,7 +5800,7 @@ addStroke(at, o.Border, 0.78, 1)
         K.Size = UDim2.new(1, 0, 0, 1)
         K.Position = UDim2.new(0, 0, 1, -1)
         K.BackgroundColor3 = o.BorderStrong
-        K.BackgroundTransparency = 0.58
+        K.BackgroundTransparency = 0.86
         K.BorderSizePixel = 0
         K.Visible = false
         K.Parent = ar
@@ -5822,54 +5808,98 @@ addStroke(at, o.Border, 0.78, 1)
         addMaid(ao)
 
         local L
-        local M
+local M
+local optionsOpen = false
+local optionsAnimationId = 0
 
-        ao.OptionsVisibilityChanged =
-            a.createCustomSignal(`OPTIONS_VISIBILITY_CHANGE_{tostring(an.Name)}_{tostring(ab.Name)}`)
+ao.OptionsVisibilityChanged =
+	a.createCustomSignal(
+		`OPTIONS_VISIBILITY_CHANGE_{tostring(an.Name)}_{tostring(ab.Name)}`
+	)
 
-        local function openOptions()
-            if L then
-                L:Cancel()
-            end
-            if M then
-                M:Cancel()
-            end
+local function openOptions()
+	optionsAnimationId += 1
+	local animationId = optionsAnimationId
+	optionsOpen = true
 
-            at.Visible = true
-            ao.OptionsVisibilityChanged:Fire(true)
+	if L then
+		L:Cancel()
+		L = nil
+	end
+	if M then
+		M:Cancel()
+		M = nil
+	end
 
-            local N = J.AbsoluteContentSize.Y / A.Scale
+	at.Visible = true
+	ao.OptionsVisibilityChanged:Fire(true)
 
-            L = n:Tween(
-                at,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                { Size = UDim2.new(1, 0, 0, N) }
-            )
-        end
+	local targetHeight = math.max(J.AbsoluteContentSize.Y / A.Scale, 0)
+	L = n:Tween(
+		at,
+		TweenInfo.new(
+			0.16,
+			Enum.EasingStyle.Quart,
+			Enum.EasingDirection.Out
+		),
+		{
+			Size = UDim2.new(1, 0, 0, targetHeight),
+		}
+	)
 
-        local function closeOptions()
-            if L then
-                L:Cancel()
-            end
-            if M then
-                M:Cancel()
-            end
+	if L then
+		L.Completed:Once(function()
+			if animationId == optionsAnimationId then
+				L = nil
+			end
+		end)
+	end
+end
 
-            M = n:Tween(
-                at,
-                TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-                { Size = UDim2.new(1, 0, 0, 0) }
-            )
+local function closeOptions()
+	optionsAnimationId += 1
+	local animationId = optionsAnimationId
+	optionsOpen = false
 
-            M.Completed:Once(function()
-                at.Visible = false
-            end)
-            task.delay(0.1, function()
-                ao.OptionsVisibilityChanged:Fire(false)
-            end)
-        end
+	if L then
+		L:Cancel()
+		L = nil
+	end
+	if M then
+		M:Cancel()
+		M = nil
+	end
 
-        function ao.SetBind(N, O, P, Q)
+	M = n:Tween(
+		at,
+		TweenInfo.new(
+			0.13,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.In
+		),
+		{
+			Size = UDim2.new(1, 0, 0, 0),
+		}
+	)
+
+	if M then
+		M.Completed:Once(function(playbackState)
+			if
+				playbackState == Enum.PlaybackState.Completed
+				and animationId == optionsAnimationId
+				and not optionsOpen
+			then
+				at.Visible = false
+				ao.OptionsVisibilityChanged:Fire(false)
+				M = nil
+			end
+		end)
+	else
+		at.Visible = false
+		ao.OptionsVisibilityChanged:Fire(false)
+	end
+end
+function ao.SetBind(N, O, P, Q)
             if O.Mobile then
                 createMobileButton(ao, Vector2.new(O.X, O.Y))
                 return
@@ -5933,26 +5963,26 @@ addStroke(at, o.Border, 0.78, 1)
                     end)
                 end)
             end
-            K.Visible = false
+            K.Visible = true
 as.Enabled = false
-
-local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
 activeRail.Visible = N.Enabled
 
 n:Tween(ar, o.TweenFast, {
-	BackgroundColor3 = N.Enabled and o.Elevated or ((aq or at.Visible) and o.SurfaceHover or o.Surface),
+	BackgroundColor3 = N.Enabled
+		and o.Elevated
+		or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
 })
 
-n:Tween(moduleStroke, o.TweenFast, {
-	Color = N.Enabled and accent or ((aq or at.Visible) and o.BorderStrong or o.Border),
-	Transparency = N.Enabled and 0.12 or ((aq or at.Visible) and 0.42 or 0.72),
-	Thickness = N.Enabled and 1.35 or 1,
-})
+ar.TextColor3 = N.Enabled
+	and o.Text
+	or ((aq or optionsOpen) and o.Text or o.MutedText)
 
-ar.TextColor3 = N.Enabled and o.Text or ((aq or at.Visible) and o.Text or o.MutedText)
-I.ImageColor3 = N.Enabled and o.Text or m.Light(o.Main, 0.37)
-            av.ImageColor3 = m.Dark(o.Text, 0.43)
-            aw.TextColor3 = m.Dark(o.Text, 0.43)
+I.ImageColor3 = N.Enabled
+	and o.Text
+	or m.Light(o.Main, 0.37)
+
+av.ImageColor3 = m.Dark(o.Text, 0.43)
+aw.TextColor3 = m.Dark(o.Text, 0.43)
             if not N.Enabled then
                 for P, Q in N.Connections do
                     if type(Q) == "function" then
@@ -6083,58 +6113,42 @@ end
 	end)
 end
         aC.Activated:Connect(function()
-            if at.Visible then
-                closeOptions()
-            else
-                openOptions()
-            end
+            if optionsOpen then closeOptions() else openOptions() end
         end)
         aC.MouseButton2Click:Connect(function()
-            if at.Visible then
-                closeOptions()
-            else
-                openOptions()
-            end
+            if optionsOpen then closeOptions() else openOptions() end
         end)
 
         if not d.isMobile then
 	ar.MouseEnter:Connect(function()
 		aq = true
 
-		if not ao.Enabled and not at.Visible then
+		if not ao.Enabled and not optionsOpen then
 			ar.TextColor3 = o.Text
 			n:Tween(ar, o.TweenFast, {
 				BackgroundColor3 = o.SurfaceHover,
 			})
-			n:Tween(moduleStroke, o.TweenFast, {
-				Color = o.BorderStrong,
-				Transparency = 0.38,
-			})
 		end
 
-		au.Visible = #ao.Bind > 0 or aq or at.Visible
-		az.Visible = ao.StarActive or aq or at.Visible
+		au.Visible = #ao.Bind > 0 or aq or optionsOpen
+		az.Visible = ao.StarActive or aq or optionsOpen
 	end)
 
 	ar.MouseLeave:Connect(function()
 		aq = false
 
-		if not ao.Enabled and not at.Visible then
+		if not ao.Enabled and not optionsOpen then
 			ar.TextColor3 = o.MutedText
 			n:Tween(ar, o.TweenFast, {
 				BackgroundColor3 = o.Surface,
 			})
-			n:Tween(moduleStroke, o.TweenFast, {
-				Color = o.Border,
-				Transparency = 0.72,
-			})
 		end
 
-		au.Visible = #ao.Bind > 0 or aq or at.Visible
-		az.Visible = ao.StarActive or aq or at.Visible
+		au.Visible = #ao.Bind > 0 or aq or optionsOpen
+		az.Visible = ao.StarActive or aq or optionsOpen
 	end)
 end
-        at:GetPropertyChangedSignal("Visible"):Connect(function()
+at:GetPropertyChangedSignal("Visible"):Connect(function()
             local N = at.Visible
             if N then
                 if count(ao.Options) <= 0 then
@@ -6171,11 +6185,7 @@ end
             ao:Toggle()
         end)
         ar.MouseButton2Click:Connect(function()
-            if at.Visible then
-                closeOptions()
-            else
-                openOptions()
-            end
+            if optionsOpen then closeOptions() else openOptions() end
         end)
         if d.isMobile then
             local N = false

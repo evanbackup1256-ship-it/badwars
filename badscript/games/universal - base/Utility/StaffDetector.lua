@@ -28,37 +28,41 @@ local function getLowestStaffRole(roles)
 end
 
 local function playerAdded(plr)
-	if not Bad.Loaded then
-		repeat task.wait() until Bad.Loaded
+	if not Bad or not Bad.Loaded then
+		repeat task.wait() until Bad and Bad.Loaded end
 	end
 
-	local user = table.find(Users.ListEnabled, tostring(plr.UserId))
-	if user or getRole(plr, tonumber(Group.Value) or 0) >= (tonumber(Role.Value) or 1) then
+	local user = Users and Users.ListEnabled and table.find(Users.ListEnabled, tostring(plr.UserId))
+	if user or getRole(plr, tonumber(Group and Group.Value) or 0) >= (tonumber(Role and Role.Value) or 1) then
 		notif('StaffDetector', 'Staff Detected ('..(user and 'blacklisted_user' or 'staff_role')..'): '..plr.Name, 60, 'alert')
-		whitelist.customtags[plr.Name] = {{text = 'GAME STAFF', color = Color3.new(1, 0, 0)}}
+		if whitelist then
+			whitelist.customtags[plr.Name] = {{text = 'GAME STAFF', color = Color3.new(1, 0, 0)}}
+		end
 
-		if Mode.Value == 'Uninject' then
+		if Mode and Mode.Value == 'Uninject' then
 			task.spawn(function()
-				Bad:Uninject()
+				if Bad then Bad:Uninject() end
 			end)
 			game:GetService('StarterGui'):SetCore('SendNotification', {
 				Title = 'StaffDetector',
 				Text = 'Staff Detected\n'..plr.Name,
 				Duration = 60,
 			})
-		elseif Mode.Value == 'ServerHop' then
+		elseif Mode and Mode.Value == 'ServerHop' then
 			serverHop()
-		elseif Mode.Value == 'Profile' then
-			Bad.Save = function() end
-			if Bad.Profile ~= Profile.Value then
+		elseif Mode and Mode.Value == 'Profile' then
+			if Bad then Bad.Save = function() end end
+			if Bad and Bad.Profile ~= (Profile and Profile.Value) then
 				Bad.Profile = Profile.Value
 				Bad:Load(true, Profile.Value)
 			end
-		elseif Mode.Value == 'AutoConfig' then
-			Bad.Save = function() end
-			for _, v in Bad.Modules do
-				if v.Enabled then
-					v:Toggle()
+		elseif Mode and Mode.Value == 'AutoConfig' then
+			if Bad then Bad.Save = function() end end
+			if Bad and Bad.Modules then
+				for _, v in Bad.Modules do
+					if v and v.Enabled then
+						v:Toggle()
+					end
 				end
 			end
 		end

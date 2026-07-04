@@ -1,0 +1,755 @@
+﻿{
+    "Build":  "V11",
+    "GeneratedAt":  "2026-07-04T18:30:58.9222969-04:00",
+    "TotalManifestFiles":  71,
+    "TotalModules":  70,
+    "RegisteredModules":  70,
+    "PatchedFiles":  11,
+    "SyntaxValidator":  "not installed",
+    "Categories":  [
+                       {
+                           "Category":  "Blatant",
+                           "Count":  12
+                       },
+                       {
+                           "Category":  "Combat",
+                           "Count":  7
+                       },
+                       {
+                           "Category":  "Inventory",
+                           "Count":  7
+                       },
+                       {
+                           "Category":  "Legit",
+                           "Count":  16
+                       },
+                       {
+                           "Category":  "Minigames",
+                           "Count":  2
+                       },
+                       {
+                           "Category":  "Render",
+                           "Count":  5
+                       },
+                       {
+                           "Category":  "Utility",
+                           "Count":  15
+                       },
+                       {
+                           "Category":  "World",
+                           "Count":  6
+                       }
+                   ],
+    "Files":  [
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/base.lua",
+                      "Category":  "Base",
+                      "Name":  "Blur",
+                      "Bytes":  26501,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency, store dependency",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/AntiFall.lua",
+                      "Category":  "Blatant",
+                      "Name":  "AntiFall",
+                      "Bytes":  6181,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/FastBreak.lua",
+                      "Category":  "Blatant",
+                      "Name":  "FastBreak",
+                      "Bytes":  928,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/Fly.lua",
+                      "Category":  "Blatant",
+                      "Name":  "Fly",
+                      "Bytes":  6904,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/HitBoxes.lua",
+                      "Category":  "Blatant",
+                      "Name":  "HitBoxes",
+                      "Bytes":  2918,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/KeepSprint.lua",
+                      "Category":  "Blatant",
+                      "Name":  "KeepSprint",
+                      "Bytes":  605,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/Killaura.lua",
+                      "Category":  "Blatant",
+                      "Name":  "Killaura",
+                      "Bytes":  18048,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/LongJump.lua",
+                      "Category":  "Blatant",
+                      "Name":  "LongJump",
+                      "Bytes":  13268,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/NoFall.lua",
+                      "Category":  "Blatant",
+                      "Name":  "NoFall",
+                      "Bytes":  3513,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/NoSlowdown.lua",
+                      "Category":  "Blatant",
+                      "Name":  "NoSlowdown",
+                      "Bytes":  917,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/ProjectileAimbot.lua",
+                      "Category":  "Blatant",
+                      "Name":  "ProjectileAimbot",
+                      "Bytes":  5139,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/ProjectileAura.lua",
+                      "Category":  "Blatant",
+                      "Name":  "ProjectileAura",
+                      "Bytes":  5951,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Blatant/Speed.lua",
+                      "Category":  "Blatant",
+                      "Name":  "Speed",
+                      "Bytes":  3501,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Combat/AimAssist.lua",
+                      "Category":  "Combat",
+                      "Name":  "AimAssist",
+                      "Bytes":  3736,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Combat/AutoClicker.lua",
+                      "Category":  "Combat",
+                      "Name":  "AutoClicker",
+                      "Bytes":  3513,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Combat/NoClickDelay.lua",
+                      "Category":  "Combat",
+                      "Name":  "NoClickDelay",
+                      "Bytes":  560,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Combat/Reach.lua",
+                      "Category":  "Combat",
+                      "Name":  "Reach",
+                      "Bytes":  772,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Combat/Sprint.lua",
+                      "Category":  "Combat",
+                      "Name":  "Sprint",
+                      "Bytes":  1639,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Combat/TriggerBot.lua",
+                      "Category":  "Combat",
+                      "Name":  "TriggerBot",
+                      "Bytes":  2814,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Combat/Velocity.lua",
+                      "Category":  "Combat",
+                      "Name":  "Velocity",
+                      "Bytes":  1847,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Inventory/ArmorSwitch.lua",
+                      "Category":  "Inventory",
+                      "Name":  "ArmorSwitch",
+                      "Bytes":  1684,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Inventory/AutoBank.lua",
+                      "Category":  "Inventory",
+                      "Name":  "Amount",
+                      "Bytes":  3563,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Inventory/AutoBuy.lua",
+                      "Category":  "Inventory",
+                      "Name":  "AutoBuy",
+                      "Bytes":  9795,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Inventory/AutoConsume.lua",
+                      "Category":  "Inventory",
+                      "Name":  "AutoConsume",
+                      "Bytes":  2349,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Inventory/AutoHotbar.lua",
+                      "Category":  "Inventory",
+                      "Name":  "AutoHotbar",
+                      "Bytes":  3909,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Inventory/FastConsume.lua",
+                      "Category":  "Inventory",
+                      "Name":  "FastConsume",
+                      "Bytes":  2442,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Inventory/FastDrop.lua",
+                      "Category":  "Inventory",
+                      "Name":  "FastDrop",
+                      "Bytes":  581,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/BedBreakEffect.lua",
+                      "Category":  "Legit",
+                      "Name":  "Bed Break Effect",
+                      "Bytes":  2068,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/CleanKit.lua",
+                      "Category":  "Legit",
+                      "Name":  "Clean Kit",
+                      "Bytes":  383,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/Crosshair.lua",
+                      "Category":  "Legit",
+                      "Name":  "Crosshair",
+                      "Bytes":  2588,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "connection cleanup review",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/DamageIndicator.lua",
+                      "Category":  "Legit",
+                      "Name":  "Damage Indicator",
+                      "Bytes":  2563,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/FOV.lua",
+                      "Category":  "Legit",
+                      "Name":  "FOV",
+                      "Bytes":  695,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/FPSBoost.lua",
+                      "Category":  "Legit",
+                      "Name":  "FPS Boost",
+                      "Bytes":  1793,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/HitColor.lua",
+                      "Category":  "Legit",
+                      "Name":  "Hit Color",
+                      "Bytes":  960,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/HitFix.lua",
+                      "Category":  "Legit",
+                      "Name":  "HitFix",
+                      "Bytes":  376,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/Interface.lua",
+                      "Category":  "Legit",
+                      "Name":  "Interface",
+                      "Bytes":  3077,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/KillEffect.lua",
+                      "Category":  "Legit",
+                      "Name":  "Kill Effect",
+                      "Bytes":  4876,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/ReachDisplay.lua",
+                      "Category":  "Legit",
+                      "Name":  "Reach Display",
+                      "Bytes":  1168,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/SongBeats.lua",
+                      "Category":  "Legit",
+                      "Name":  "Song Beats",
+                      "Bytes":  2879,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/SoundChanger.lua",
+                      "Category":  "Legit",
+                      "Name":  "SoundChanger",
+                      "Bytes":  962,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/UICleanup.lua",
+                      "Category":  "Legit",
+                      "Name":  "UI Cleanup",
+                      "Bytes":  4258,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/Viewmodel.lua",
+                      "Category":  "Legit",
+                      "Name":  "Viewmodel",
+                      "Bytes":  3584,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Legit/WinEffect.lua",
+                      "Category":  "Legit",
+                      "Name":  "WinEffect",
+                      "Bytes":  820,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Minigames/BedPlates.lua",
+                      "Category":  "Minigames",
+                      "Name":  "BadWarsBedPlates",
+                      "Bytes":  4565,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Minigames/Breaker.lua",
+                      "Category":  "Minigames",
+                      "Name":  "Breaker",
+                      "Bytes":  8518,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Render/BedESP.lua",
+                      "Category":  "Render",
+                      "Name":  "BedESP",
+                      "Bytes":  1721,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Render/Health.lua",
+                      "Category":  "Render",
+                      "Name":  "Health",
+                      "Bytes":  1468,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "non-ASCII source",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Render/KitESP.lua",
+                      "Category":  "Render",
+                      "Name":  "KitESP",
+                      "Bytes":  3755,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Render/NameTags.lua",
+                      "Category":  "Render",
+                      "Name":  "NameTags",
+                      "Bytes":  14535,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Render/StorageESP.lua",
+                      "Category":  "Render",
+                      "Name":  "chest",
+                      "Bytes":  4217,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/AutoBalloon.lua",
+                      "Category":  "Utility",
+                      "Name":  "AutoBalloon",
+                      "Bytes":  994,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/AutoKit.lua",
+                      "Category":  "Utility",
+                      "Name":  "AutoKit",
+                      "Bytes":  1916,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/AutoPearl.lua",
+                      "Category":  "Utility",
+                      "Name":  "AutoPearl",
+                      "Bytes":  1975,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/AutoPlay.lua",
+                      "Category":  "Utility",
+                      "Name":  "AutoPlay",
+                      "Bytes":  1325,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/AutoShoot.lua",
+                      "Category":  "Utility",
+                      "Name":  "AutoShoot",
+                      "Bytes":  2248,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/AutoToxic.lua",
+                      "Category":  "Utility",
+                      "Name":  "AutoToxic",
+                      "Bytes":  3273,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/AutoVoidDrop.lua",
+                      "Category":  "Utility",
+                      "Name":  "AutoVoidDrop",
+                      "Bytes":  1509,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/MissileTP.lua",
+                      "Category":  "Utility",
+                      "Name":  "MissileTP",
+                      "Bytes":  1307,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/PickupRange.lua",
+                      "Category":  "Utility",
+                      "Name":  "PickupRange",
+                      "Bytes":  1873,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/RavenTP.lua",
+                      "Category":  "Utility",
+                      "Name":  "RavenTP",
+                      "Bytes":  1138,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/Scaffold.lua",
+                      "Category":  "Utility",
+                      "Name":  "Scaffold",
+                      "Bytes":  11175,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/ShopTierBypass.lua",
+                      "Category":  "Utility",
+                      "Name":  "ShopTierBypass",
+                      "Bytes":  2407,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/StaffDetector.lua",
+                      "Category":  "Utility",
+                      "Name":  "StaffDetector",
+                      "Bytes":  6140,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "",
+                      "Patched":  true
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/TrapDisabler.lua",
+                      "Category":  "Utility",
+                      "Name":  "TrapDisabler",
+                      "Bytes":  127,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/World/Anti-AFK.lua",
+                      "Category":  "World",
+                      "Name":  "Anti-AFK",
+                      "Bytes":  559,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "debug mutation, controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/World/AutoSuffocate.lua",
+                      "Category":  "World",
+                      "Name":  "AutoSuffocate",
+                      "Bytes":  1716,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/World/AutoTool.lua",
+                      "Category":  "World",
+                      "Name":  "AutoTool",
+                      "Bytes":  1460,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/World/BedProtector.lua",
+                      "Category":  "World",
+                      "Name":  "BedProtector",
+                      "Bytes":  1892,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/World/ChestSteal.lua",
+                      "Category":  "World",
+                      "Name":  "ChestSteal",
+                      "Bytes":  2118,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency, store dependency, long-running loop",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/World/Schematica.lua",
+                      "Category":  "World",
+                      "Name":  "Schematica",
+                      "Bytes":  6319,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "controller dependency",
+                      "Patched":  false
+                  },
+                  {
+                      "Path":  "badscript/games/bedwars/6872274481 - game/Utility/ModuleDiagnostics.lua",
+                      "Category":  "Utility",
+                      "Name":  "ModuleDiagnostics",
+                      "Bytes":  2319,
+                      "Registered":  true,
+                      "Syntax":  "not-tested",
+                      "Risks":  "",
+                      "Patched":  true
+                  }
+              ]
+}

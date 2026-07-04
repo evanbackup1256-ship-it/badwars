@@ -1,174 +1,247 @@
 local StaffDetector
 local Mode
-local Clans
-local Party
 local Profile
 local Users
-local blacklistedclans = {'gg', 'gg2', 'DV', 'DV2'}
-local blacklisteduserids = {1502104539, 3826146717, 4531785383, 1049767300, 4926350670, 653085195, 184655415, 2752307430, 5087196317, 5744061325, 1536265275}
-local joined = {}
+local Group
+local Role
 
-local function getRole(plr, id)
-	local suc, res = pcall(function()
-		return plr:GetRankInGroup(id)
-	end)
-	if not suc then
-		notif('StaffDetector', res, 30, 'alert')
-	end
-	return suc and res or 0
+local compatibility = Bad.BedWarsCompatibility
+
+local function getRole(player, groupId)
+    groupId = tonumber(groupId)
+    if not groupId or groupId <= 0 then
+        return 0
+    end
+
+    for _ = 1, 3 do
+        local success, result = pcall(
+            player.GetRankInGroup,
+            player,
+            groupId
+        )
+        if success then
+            return tonumber(result) or 0
+        end
+        task.wait(0.15)
+    end
+    return 0
 end
 
-local function staffFunction(plr, checktype)
-	if not Bad.Loaded then
-		repeat task.wait() until Bad.Loaded
-	end
-
-	notif('StaffDetector', 'Staff Detected ('..checktype..'): '..plr.Name..' ('..plr.UserId..')', 60, 'alert')
-	whitelist.customtags[plr.Name] = {{text = 'GAME STAFF', color = Color3.new(1, 0, 0)}}
-
-	if Party.Enabled and not checktype:find('clan') then
-		bedwars.PartyController:leaveParty()
-	end
-
-	if Mode.Value == 'Uninject' then
-		task.spawn(function()
-			Bad:Uninject()
-		end)
-		game:GetService('StarterGui'):SetCore('SendNotification', {
-			Title = 'StaffDetector',
-			Text = 'Staff Detected ('..checktype..')\n'..plr.Name..' ('..plr.UserId..')',
-			Duration = 60,
-		})
-	elseif Mode.Value == 'Requeue' then
-		bedwars.QueueController:joinQueue(store.queueType)
-	elseif Mode.Value == 'Profile' then
-		Bad.Save = function() end
-		if Bad.Profile ~= Profile.Value then
-			Bad:Load(true, Profile.Value)
-		end
-	elseif Mode.Value == 'AutoConfig' then
-		local safe = {'AutoClicker', 'Reach', 'Sprint', 'HitFix', 'StaffDetector'}
-		Bad.Save = function() end
-		for i, v in Bad.Modules do
-			if not (table.find(safe, i) or v.Category == 'Render') then
-				if v.Enabled then
-					v:Toggle()
-				end
-				v:SetBind('')
-			end
-		end
-	end
+local function lowestStaffRole(roles)
+    local lowest = math.huge
+    for _, role in ipairs(roles or {}) do
+        local name = string.lower(tostring(role.Name or ""))
+        local rank = tonumber(role.Rank)
+        if
+            rank
+            and (
+                string.find(name, "admin", 1, true)
+                or string.find(name, "mod", 1, true)
+                or string.find(name, "dev", 1, true)
+                or string.find(name, "staff", 1, true)
+            )
+            and rank < lowest
+        then
+            lowest = rank
+        end
+    end
+    return lowest ~= math.huge and lowest or 255
 end
 
-local function checkFriends(list)
-	for _, v in list do
-		if joined[v] then
-			return joined[v]
-		end
-	end
-	return nil
+local function isListed(player)
+    local list = Users and Users.ListEnabled
+    return type(list) == "table"
+        and table.find(list, tostring(player.UserId)) ~= nil
 end
 
-local function checkJoin(plr, connection)
-	if not plr:GetAttribute('Team') and plr:GetAttribute('Spectator') and not bedwars.Store:getState().Game.customMatch then
-		connection:Disconnect()
-		local tab, pages = {}, playersService:GetFriendsAsync(plr.UserId)
-		for _ = 1, 4 do
-			for _, v in pages:GetCurrentPage() do
-				table.insert(tab, v.Id)
-			end
-			if pages.IsFinished then break end
-			pages:AdvanceToNextPageAsync()
-		end
-
-		local friend = checkFriends(tab)
-		if not friend then
-			staffFunction(plr, 'impossible_join')
-			return true
-		else
-			notif('StaffDetector', string.format('Spectator %s joined from %s', plr.Name, friend), 20, 'warning')
-		end
-	end
+local function notifyStaff(player, reason)
+    Bad:CreateNotification(
+        "Staff Detector",
+        string.format(
+            "%s detected (%s).",
+            player.Name,
+            reason
+        ),
+        12,
+        "warning"
+    )
 end
 
-local function playerAdded(plr)
-	joined[plr.UserId] = plr.Name
-	if plr == lplr then return end
+local function playerAdded(player)
+    if not Bad.Loaded then
+        return
+    end
 
-	if table.find(blacklisteduserids, plr.UserId) or table.find(Users.ListEnabled, tostring(plr.UserId)) then
-		staffFunction(plr, 'blacklisted_user')
-	elseif getRole(plr, 5774246) >= 100 then
-		staffFunction(plr, 'staff_role')
-	else
-		local connection
-		connection = plr:GetAttributeChangedSignal('Spectator'):Connect(function()
-			checkJoin(plr, connection)
-		end)
-		StaffDetector:Clean(connection)
-		if checkJoin(plr, connection) then
-			return
-		end
+    local listed = isListed(player)
+    local requiredRole = tonumber(Role and Role.Value) or 1
+    local groupId = tonumber(Group and Group.Value) or 0
+    local ranked = groupId > 0
+        and getRole(player, groupId) >= requiredRole
 
-		if not plr:GetAttribute('ClanTag') then
-			plr:GetAttributeChangedSignal('ClanTag'):Wait()
-		end
+    if not listed and not ranked then
+        return
+    end
 
-		if table.find(blacklistedclans, plr:GetAttribute('ClanTag')) and Bad.Loaded and Clans.Enabled then
-			connection:Disconnect()
-			staffFunction(plr, 'blacklisted_clan_'..plr:GetAttribute('ClanTag'):lower())
-		end
-	end
+    local reason = listed and "listed user" or "staff role"
+    notifyStaff(player, reason)
+
+    if whitelist and whitelist.customtags then
+        whitelist.customtags[player.Name] = {
+            {
+                text = "GAME STAFF",
+                color = Color3.fromRGB(255, 78, 91),
+            },
+        }
+    end
+
+    local selectedMode = Mode and Mode.Value or "Notify"
+    if selectedMode == "Uninject" then
+        pcall(function()
+            game:GetService("StarterGui"):SetCore(
+                "SendNotification",
+                {
+                    Title = "Staff Detector",
+                    Text = "Staff detected\n" .. player.Name,
+                    Duration = 15,
+                }
+            )
+        end)
+        task.defer(function()
+            if Bad and type(Bad.Uninject) == "function" then
+                Bad:Uninject()
+            end
+        end)
+    elseif selectedMode == "ServerHop" then
+        if type(serverHop) == "function" then
+            task.spawn(serverHop)
+        end
+    elseif selectedMode == "Profile" then
+        if
+            Bad
+            and Profile
+            and type(Bad.Load) == "function"
+            and Bad.Profile ~= Profile.Value
+        then
+            Bad.Profile = Profile.Value
+            Bad:Load(true, Profile.Value)
+        end
+    elseif selectedMode == "AutoConfig" then
+        for _, module in pairs(Bad.Modules or {}) do
+            if
+                module ~= StaffDetector
+                and module.Enabled
+                and type(module.Toggle) == "function"
+            then
+                pcall(module.Toggle, module)
+            end
+        end
+    end
+end
+
+local function automaticSetup()
+    local groupValue = tonumber(Group.Value)
+    local roleValue = tonumber(Role.Value)
+    if groupValue and groupValue > 0 and roleValue then
+        return true
+    end
+
+    local success, placeInfo = pcall(
+        marketplaceService.GetProductInfo,
+        marketplaceService,
+        game.PlaceId
+    )
+    if not success or type(placeInfo) ~= "table" then
+        return false
+    end
+
+    local creator = placeInfo.Creator or {}
+    local groupId = creator.CreatorType == "Group"
+        and tonumber(creator.CreatorTargetId)
+        or nil
+
+    if not groupId then
+        return false
+    end
+
+    local infoSuccess, groupInfo = pcall(
+        groupService.GetGroupInfoAsync,
+        groupService,
+        groupId
+    )
+    if not infoSuccess or type(groupInfo) ~= "table" then
+        return false
+    end
+
+    Group:SetValue(groupId)
+    Role:SetValue(lowestStaffRole(groupInfo.Roles))
+    return true
 end
 
 StaffDetector = Bad.Categories.Utility:CreateModule({
-	Name = 'StaffDetector',
-	Function = function(callback)
-		if callback then
-			StaffDetector:Clean(playersService.PlayerAdded:Connect(playerAdded))
-			for _, v in playersService:GetPlayers() do
-				task.spawn(playerAdded, v)
-			end
-		else
-			table.clear(joined)
-		end
-	end,
-	Tooltip = 'Detects people with a staff rank ingame'
+    Name = "StaffDetector",
+    Function = function(callback)
+        if not callback then
+            return
+        end
+
+        if not automaticSetup() then
+            Bad:CreateNotification(
+                "Staff Detector",
+                "Automatic setup could not find a group.",
+                6,
+                "warning"
+            )
+            if StaffDetector.Enabled then
+                StaffDetector:Toggle()
+            end
+            return
+        end
+
+        StaffDetector:Clean(
+            playersService.PlayerAdded:Connect(playerAdded)
+        )
+
+        for _, player in ipairs(playersService:GetPlayers()) do
+            task.spawn(playerAdded, player)
+        end
+    end,
+    Tooltip = "Detects listed users and group staff.",
 })
+
 Mode = StaffDetector:CreateDropdown({
-	Name = 'Mode',
-	List = {'Uninject', 'Profile', 'Requeue', 'AutoConfig', 'Notify'},
-	Function = function(val)
-		if Profile.Object then
-			Profile.Object.Visible = val == 'Profile'
-		end
-	end
+    Name = "Mode",
+    List = {
+        "Notify",
+        "Uninject",
+        "ServerHop",
+        "Profile",
+        "AutoConfig",
+    },
+    Function = function(value)
+        if Profile.Object then
+            Profile.Object.Visible = value == "Profile"
+        end
+    end,
 })
-Clans = StaffDetector:CreateToggle({
-	Name = 'Blacklist clans',
-	Default = true
-})
-Party = StaffDetector:CreateToggle({
-	Name = 'Leave party'
-})
+
 Profile = StaffDetector:CreateTextBox({
-	Name = 'Profile',
-	Default = 'default',
-	Darker = true,
-	Visible = false
+    Name = "Profile",
+    Default = "default",
+    Darker = true,
+    Visible = false,
 })
+
 Users = StaffDetector:CreateTextList({
-	Name = 'Users',
-	Placeholder = 'player (userid)'
+    Name = "Users",
+    Placeholder = "player userid",
 })
 
-task.spawn(function()
-	repeat task.wait(1) until Bad.Loaded or Bad.Loaded == nil
-	if Bad.Loaded and not StaffDetector.Enabled then
-		StaffDetector:Toggle()
-	end
-end)
+Group = StaffDetector:CreateTextBox({
+    Name = "Group",
+    Placeholder = "Group ID",
+})
 
-
-
-
-
+Role = StaffDetector:CreateTextBox({
+    Name = "Role",
+    Placeholder = "Minimum rank",
+})

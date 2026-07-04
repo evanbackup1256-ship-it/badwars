@@ -1,4 +1,4 @@
--- BadWars Main v4.0 - Nexus V9 Pipeline
+-- BadWars Main v4.1 - BedWars V11 module health pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -243,7 +243,11 @@ cloneref = cloneref or function(o)
     return o
 end
 setthreadidentity = setthreadidentity or function() end
-queue_on_teleport = queue_on_teleport or function() end
+local queueTeleport = queue_on_teleport
+    or queueonteleport
+    or (syn and syn.queue_on_teleport)
+    or (fluxus and fluxus.queue_on_teleport)
+    or function() end
 
 local BadwarsLoader
 local function createCustomSignal(key, delay)
@@ -578,6 +582,54 @@ local function repairKnownSourceDefects(path, source)
         end
     end
 
+    if path:find("badscript/games/bedwars/6872274481 %- game/", 1, false) then
+        local changed
+
+        if path:sub(-21) == "Utility/Scaffold.lua" then
+            repaired, changed = replacePlainOnce(
+                repaired,
+                "else Label = nil end",
+                "else label = nil end"
+            )
+            fixes += changed
+
+            repaired, changed = replacePlainOnce(
+                repaired,
+                "else label:Destroy() label = nil end",
+                "else if label then label:Destroy() end label = nil end"
+            )
+            fixes += changed
+
+            repaired, changed = replacePlainOnce(
+                repaired,
+                "if store.hand.toolType == 'block' then",
+                "if store.hand and store.hand.toolType == 'block' and store.hand.tool then"
+            )
+            fixes += changed
+        end
+
+        if path:sub(-27) == "Utility/ShopTierBypass.lua" then
+            repaired, changed = replacePlainOnce(
+                repaired,
+                "for _, v in bedwars.Shop.ShopItems do",
+                "for _, v in ((bedwars.Shop and bedwars.Shop.ShopItems) or {}) do"
+            )
+            fixes += changed
+        end
+
+        repaired, changed = repaired:gsub(
+            "([%w_]+):Destroy%(%)(%s+)([%w_]+)%s*=%s*nil",
+            "if %1 then %1:Destroy() end%2%3 = nil"
+        )
+        fixes += changed
+
+        repaired, changed = repaired:gsub(
+            "physicsService:SetPartCollisionGroup%(([%w_%.%[%]'\\\"]+),%s*([%w_%.%[%]'\\\"]+)%)",
+            "%1.CollisionGroup = %2"
+        )
+        fixes += changed
+    end
+
     if fixes > 0 then
         mwarn("BadWars: [SOURCE REPAIR] " .. tostring(path) .. " repaired " .. tostring(fixes) .. " known defect(s)")
     end
@@ -685,6 +737,8 @@ buildBundle = function(name, basePath, manifestPath)
         "    else",
         "      mod=bad.Modules and bad.Modules[meta.name]",
         "    end",
+        "    local compat=bad.BedWarsCompatibility",
+        "    if mod and type(compat)=='table' and type(compat.Decorate)=='function' then pcall(compat.Decorate,compat,mod,meta) end",
         "    local issues={}",
         '    if not mod then table.insert(issues,"module not registered")',
         "    else",
@@ -708,14 +762,19 @@ buildBundle = function(name, basePath, manifestPath)
         "  end",
         "end",
         "local function __run_m(idx,name,fn)",
+        "  local bad=shared and shared.Bad",
+        "  local beforeModules={} local beforeLegit={}",
+        "  if bad and bad.Modules then for key in pairs(bad.Modules) do beforeModules[key]=true end end",
+        "  if bad and bad.Legit and bad.Legit.Modules then for key in pairs(bad.Legit.Modules) do beforeLegit[key]=true end end",
         "  local ok,err=pcall(fn)",
         "  if not ok then",
         "    local meta=__m_meta[idx]",
         '    local label=meta and ((meta.name or "?").." @ "..(meta.path or name)) or name',
-        '    local _silentModuleError=true',
-        "    if shared and shared.__badwars_runtime_errors then",
-        "      table.insert(shared.__badwars_runtime_errors,{module=label,error=tostring(err)})",
-        "    end",
+        "    if bad and bad.Modules then for key,mod in pairs(bad.Modules) do if not beforeModules[key] then pcall(function() if mod.Object then mod.Object:Destroy() end if mod.Children then mod.Children:Destroy() end end); bad.Modules[key]=nil end end end",
+        "    if bad and bad.Legit and bad.Legit.Modules then for key,mod in pairs(bad.Legit.Modules) do if not beforeLegit[key] then pcall(function() if mod.Object then mod.Object:Destroy() end if mod.Children then mod.Children:Destroy() end end); bad.Legit.Modules[key]=nil end end end",
+        "    if shared then shared.__badwars_runtime_errors=shared.__badwars_runtime_errors or {}; table.insert(shared.__badwars_runtime_errors,{module=label,error=tostring(err),path=meta and meta.path,time=os.clock()}) end",
+        "    local compat=bad and bad.BedWarsCompatibility",
+        "    if type(compat)=='table' and type(compat.RecordFailure)=='function' then pcall(compat.RecordFailure,compat,meta and meta.name or name,meta and meta.path or name,err) end",
         "  end",
         "  __m_ok[idx]=ok",
         "end",
@@ -758,6 +817,30 @@ buildBundle = function(name, basePath, manifestPath)
                         local hasUpdate = not requiresUpdate
                             or code:match("Update%s*=") ~= nil
                             or code:find("BindableEvent", 1, true) ~= nil
+
+                        local sourceRisks = {}
+                        local riskPatterns = {
+                            {"debug mutation", "debug%.setup"},
+                            {"fixed debug constants", "debug%.getconstant"},
+                            {"raw controller access", "bedwars%.[%w_]+[:%.]"},
+                            {"raw store access", "store%.[%w_]+"},
+                            {"manual module loop", "repeat.-until%s+not%s+[%w_]+%.Enabled"},
+                            {"direct destroy", ":[Dd]estroy%(%).-[Nn]il"},
+                        }
+                        for _, risk in ipairs(riskPatterns) do
+                            if code:match(risk[2]) then
+                                table.insert(sourceRisks, risk[1])
+                            end
+                        end
+                        shared.__badwars_static_audit = shared.__badwars_static_audit or {}
+                        shared.__badwars_static_audit[moduleName] = {
+                            path = mp,
+                            category = category,
+                            kind = kind,
+                            bytes = #code,
+                            risks = sourceRisks,
+                        }
+
                         table.insert(
                             parts,
                             "\n__preflight_m("
@@ -974,6 +1057,11 @@ local function repairModuleCategories(stage)
         end
     end
     refreshOriginalCategories()
+    pcall(function()
+        if type(B.SortAllModules) == "function" then
+            B:SortAllModules()
+        end
+    end)
 end
 
 local function runUniversalCandidate(code, source)
@@ -1058,6 +1146,50 @@ local function healthCheck()
 end
 
 -- Finish loading
+local function installModuleHealthAPI()
+    local api = shared.Bad
+    if type(api) ~= "table" then
+        return
+    end
+
+    function api:GetBedWarsModuleHealth()
+        local compatibility = self.BedWarsCompatibility
+        if type(compatibility) == "table" and type(compatibility.AuditAll) == "function" then
+            local ok, report = pcall(compatibility.AuditAll, compatibility)
+            if ok then
+                return report
+            end
+        end
+        return shared.__badwars_module_health or {
+            Total = 0,
+            Ready = 0,
+            Failed = 0,
+            Issues = {},
+            Modules = {},
+        }
+    end
+
+    function api:CopyBedWarsModuleHealth()
+        local report = self:GetBedWarsModuleHealth()
+        local encoded
+        pcall(function()
+            encoded = cloneref(game:GetService("HttpService")):JSONEncode(report)
+        end)
+        encoded = encoded or tostring(report)
+
+        pcall(function()
+            if type(setclipboard) == "function" then
+                setclipboard(encoded)
+            elseif type(toclipboard) == "function" then
+                toclipboard(encoded)
+            end
+        end)
+        return encoded
+    end
+end
+
+installModuleHealthAPI()
+
 local function finish()
     local api = shared.Bad
     if type(api) ~= "table" then
@@ -1077,6 +1209,12 @@ local function finish()
     end
 
     api.Init = nil
+
+    pcall(function()
+        if type(api.SortAllModules) == "function" then
+            api:SortAllModules()
+        end
+    end)
 
     if not shared.BadReload then
         pcall(function()
@@ -1103,31 +1241,58 @@ local function finish()
         end
     end)
 
-    local teleported
-    local localPlayer = api.gui and api.gui:FindFirstChild("LocalPlayer")
-    local teleportConnection = localPlayer
-        and localPlayer.OnTeleport:Connect(function()
-            if teleported or shared.BadIndependent or shared.Bad ~= api then
-                return
-            end
+    local teleported = false
+    local playersService = cloneref(game:GetService("Players"))
+    local teleportService = cloneref(game:GetService("TeleportService"))
+    local localPlayer = playersService.LocalPlayer or playersService.PlayerAdded:Wait()
+    local loaderUrl = rawUrls("badscript/loader.lua")[1]
 
-            teleported = true
-            local loaderUrls = rawUrls("badscript/loader.lua")
-            local script = "shared.BadReload=true\nif shared.BadDeveloper then\nloadstring(readfile('badscript/loader.lua'),'loader')()\nelse\nloadstring(game:HttpGet('"
-                .. loaderUrls[1]
-                .. "',true),'loader')()\nend"
+    local function buildTeleportScript()
+        local developerPrefix = shared.BadDeveloper and "shared.BadDeveloper=true\n" or ""
+        return developerPrefix
+            .. "shared.BadReload=nil; shared.BadTeleportReload=true\n"
+            .. "repeat task.wait() until game:IsLoaded()\n"
+            .. "local ok,src=pcall(function() return game:HttpGet('"
+            .. loaderUrl
+            .. "?v=10&t='..tostring(os.time()),true) end)\n"
+            .. "if ok and type(src)=='string' then local fn=loadstring(src,'badwars-loader'); if fn then fn() end end"
+    end
 
-            if shared.BadDeveloper then
-                script = "shared.BadDeveloper=true\n" .. script
-            end
-
-            pcall(function()
-                api:Save()
-            end)
-            queue_on_teleport(script)
+    local function queueReload()
+        if teleported or shared.BadIndependent or shared.DISABLED_QUEUE_ON_TELEPORT then
+            return
+        end
+        teleported = true
+        pcall(function()
+            api:Save()
         end)
+        pcall(queueTeleport, buildTeleportScript())
+    end
 
-    api:Clean(teleportConnection or function() end)
+    local teleportConnection = localPlayer.OnTeleport:Connect(function(state)
+        if state == Enum.TeleportState.Started or state == Enum.TeleportState.InProgress then
+            queueReload()
+        end
+    end)
+    api:Clean(teleportConnection)
+
+    pcall(function()
+        api:Clean(teleportService.LocalPlayerArrivedFromTeleport:Connect(function()
+            task.delay(1.5, function()
+                if not shared.Bad and not shared.DISABLED_QUEUE_ON_TELEPORT then
+                    local ok, source = pcall(function()
+                        return game:HttpGet(loaderUrl .. "?v=10&arrival=" .. tostring(os.time()), true)
+                    end)
+                    if ok and type(source) == "string" then
+                        local fn = _loadstring(source, "badwars-arrival-loader")
+                        if fn then
+                            fn()
+                        end
+                    end
+                end
+            end)
+        end))
+    end)
 
     if
         not shared.BadReload
@@ -1181,7 +1346,7 @@ end)
 local defaultGui = "new"
 local validGuis = { liquidbounce = true, new = true, old = true, rise = true, wurst = true }
 local savedGui = isfile("badscript/profiles/gui.txt") and readfile("badscript/profiles/gui.txt") or ""
-setStatus("selecting current GUI profile")
+setStatus("selecting interface")
 if not validGuis[savedGui] or savedGui == "liquidbounce" then
     writefile("badscript/profiles/gui.txt", "new")
 end
@@ -1191,7 +1356,7 @@ if not isfolder("badscript/assets/" .. gui) then
 end
 
 -- Stage 4: Load GUI
-setStatus("loading premium interface")
+setStatus("loading interface")
 installBadWarsLoaderShim()
 local guiStart = os_clock()
 local guiCode = downloadFile("badscript/guis/" .. gui .. "/gui.lua")
@@ -1217,7 +1382,7 @@ end
 
 if type(api.CreateNotification) ~= "function" then
     error(
-        "GUI API is missing CreateNotification; PremiumBuild="
+        "GUI API is missing CreateNotification; Build="
             .. tostring(api.PremiumBuild)
             .. ", Version="
             .. tostring(api.Version),
@@ -1305,6 +1470,13 @@ if not shared.BadIndependent then
         if gameOk then
             repairModuleCategories("game")
             setStatus("game module ready")
+            task.defer(function()
+                local current = shared.Bad
+                local compatibility = current and current.BedWarsCompatibility
+                if type(compatibility) == "table" and type(compatibility.AuditAll) == "function" then
+                    pcall(compatibility.AuditAll, compatibility)
+                end
+            end)
         else
             recordErr(gPath, gameErr)
             setStatus("ERROR game module: " .. tostring(gameErr), true)
@@ -1351,15 +1523,22 @@ if not shared.BadIndependent then
     local rtCount = #__rtErrs
     local totalErr = #issues + uniFail + rtCount
     local el = os_clock() - pipelineStart
-    if totalErr == 0 then
-        setStatus("ready - " .. string.format("%.2f", el) .. "s")
-    else
-        if rtCount > 0 then
-            for _, e in ipairs(__rtErrs) do
-                mwarn("BadWars: [RUNTIME] " .. tostring(e.module) .. ": " .. tostring(e.error))
-            end
+    if rtCount > 0 then
+        for _, e in ipairs(__rtErrs) do
+            mwarn("BadWars: [RUNTIME] " .. tostring(e.module) .. ": " .. tostring(e.error))
         end
-        setStatus("loaded with " .. totalErr .. " issue(s) - " .. string.format("%.2f", el) .. "s", true)
+    end
+    setStatus("ready - " .. string.format("%.2f", el) .. "s")
+    if totalErr > 0 and api and type(api.CreateNotification) == "function" then
+        api:CreateNotification(
+            "Compatibility",
+            tostring(totalErr)
+                .. " outdated feature"
+                .. (totalErr == 1 and " was" or "s were")
+                .. " isolated.",
+            6,
+            "warning"
+        )
     end
     mwarn(
         "BadWars: Pipeline "

@@ -68,3 +68,4 @@ badscript/games/bedwars/6872274481 - game/World/AutoTool.lua
 badscript/games/bedwars/6872274481 - game/World/BedProtector.lua
 badscript/games/bedwars/6872274481 - game/World/ChestSteal.lua
 badscript/games/bedwars/6872274481 - game/World/Schematica.lua
+badscript/games/bedwars/6872274481 - game/Utility/ModuleDiagnostics.lua

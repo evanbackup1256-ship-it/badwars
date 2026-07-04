@@ -1,37 +1,47 @@
 local BedBreakEffect
-local Mode
 local List
 local NameToId = {}
 
-BedBreakEffect = Bad.Legit:CreateModule({
-	Name = 'Bed Break Effect',
-	Function = function(callback)
-		if callback then
-            BedBreakEffect:Clean(BadEvents.BedwarsBedBreak.Event:Connect(function(data)
-                firesignal(bedwars.Client:Get('BedBreakEffectTriggered').instance.OnClientEvent, {
-                    player = data.player,
-                    position = data.bedBlockPosition * 3,
-                    effectType = NameToId[List.Value],
-                    teamId = data.brokenBedTeam.id,
-                    centerBedPosition = data.bedBlockPosition * 3
-                })
-            end))
+local function buildEffects()
+    local names = {}
+    for id, meta in pairs(bedwars.BedBreakEffectMeta or {}) do
+        if type(meta) == "table" and type(meta.name) == "string" then
+            NameToId[meta.name] = id
+            table.insert(names, meta.name)
         end
-	end,
-	Tooltip = 'Custom bed break effects'
-})
-local BreakEffectName = {}
-for i, v in bedwars.BedBreakEffectMeta do
-	table.insert(BreakEffectName, v.name)
-	NameToId[v.name] = i
+    end
+    table.sort(names)
+    if #names == 0 then table.insert(names, "Default") NameToId.Default = "default" end
+    return names
 end
-table.sort(BreakEffectName)
-List = BedBreakEffect:CreateDropdown({
-	Name = 'Effect',
-	List = BreakEffectName
+
+BedBreakEffect = Bad.Legit:CreateModule({
+    Name = "Bed Break Effect",
+    Function = function(callback)
+        if not callback then return end
+        local event = BadEvents and BadEvents.BedwarsBedBreak and BadEvents.BedwarsBedBreak.Event
+        if not event or not bedwars.RawClient then
+            return Bad.BedWarsCompatibility.Unavailable(BedBreakEffect, "Bed break events are not available in this BedWars build.")
+        end
+        local remote = bedwars.Client:Get("BedBreakEffectTriggered")
+        local onClient = remote and remote.instance and remote.instance.OnClientEvent
+        if remote == nullRemote or not onClient or type(firesignal) ~= "function" then
+            return Bad.BedWarsCompatibility.Unavailable(BedBreakEffect, "The bed break effect remote changed in this BedWars update.")
+        end
+        BedBreakEffect:Clean(event:Connect(function(data)
+            if type(data) ~= "table" then return end
+            pcall(function()
+                firesignal(onClient, {
+                    player = data.player,
+                    position = data.bedBlockPosition and data.bedBlockPosition * 3 or Vector3.zero,
+                    effectType = NameToId[List.Value],
+                    teamId = data.brokenBedTeam and data.brokenBedTeam.id,
+                    centerBedPosition = data.bedBlockPosition and data.bedBlockPosition * 3 or Vector3.zero,
+                })
+            end)
+        end))
+    end,
+    Tooltip = "Changes the effect shown when a bed is destroyed.",
 })
 
-
-
-
-
+List = BedBreakEffect:CreateDropdown({Name = "Effect", List = buildEffects()})

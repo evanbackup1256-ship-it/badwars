@@ -1,3 +1,4 @@
+-- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
 do
@@ -16395,124 +16396,132 @@ d:Clean(q.ChildRemoved:Connect(function()
     end
 end))
 
-local function addHeldKey(keyName)
-    if keyName and keyName ~= "Unknown" and not table.find(d.HeldKeybinds, keyName) then
-        table.insert(d.HeldKeybinds, keyName)
+-- BADWARS_HELD_KEY_SCOPE_V2_BEGIN
+function d.SetupHeldKeyTracking()
+    local function addHeldKey(keyName)
+        if keyName and keyName ~= "Unknown" and not table.find(d.HeldKeybinds, keyName) then
+            table.insert(d.HeldKeybinds, keyName)
+        end
     end
-end
 
-local function removeHeldKey(keyName)
-    local index = table.find(d.HeldKeybinds, keyName)
-    if index then
-        table.remove(d.HeldKeybinds, index)
+    local function removeHeldKey(keyName)
+        local index = table.find(d.HeldKeybinds, keyName)
+        if index then
+            table.remove(d.HeldKeybinds, index)
+        end
     end
-end
 
-local function clearHeldKeys()
-    table.clear(d.HeldKeybinds)
-end
-
-d:Clean(h.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed or h:GetFocusedTextBox() or input.KeyCode == Enum.KeyCode.Unknown then
-        return
+    local function clearHeldKeys()
+        table.clear(d.HeldKeybinds)
     end
-    local keyName = input.KeyCode.Name
-    if table.find(d.HeldKeybinds, keyName) then
-        return
-    end
-    addHeldKey(keyName)
 
-    if input.KeyCode == Enum.KeyCode.Escape then
-        if d._OpenDropdown then
-            pcall(d._OpenDropdown)
-            d._OpenDropdown = nil
+    d:Clean(h.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed or h:GetFocusedTextBox() or input.KeyCode == Enum.KeyCode.Unknown then
             return
         end
-        if d.Binding then
-            d.Binding = nil
-            clearHeldKeys()
+        local keyName = input.KeyCode.Name
+        if table.find(d.HeldKeybinds, keyName) then
             return
         end
-        if z then
-            z.Visible = false
-        end
-    end
+        addHeldKey(keyName)
 
-    if d.Binding then
-        return
-    end
-
-    if checkKeybinds(d.HeldKeybinds, d.Keybind, keyName) then
-        if d.ThreadFix then
-            pcall(setthreadidentity, 8)
-        end
-        for _, window in d.Windows do
-            window.Visible = false
-        end
-        v.Visible = not v.Visible
-        z.Visible = false
-        d:BlurCheck()
-        return
-    end
-
-    local toggled = false
-    for moduleName, module in d.Modules do
-        if checkKeybinds(d.HeldKeybinds, module.Bind, keyName) then
-            toggled = true
-            if d.ToggleNotifications.Enabled then
-                d:CreateNotification(
-                    "Module Toggled",
-                    moduleName
-                        .. "<font color='#FFFFFF'> has been </font>"
-                        .. (not module.Enabled and "<font color='#5AFF5A'>Enabled</font>" or "<font color='#FF5A5A'>Disabled</font>")
-                        .. "<font color='#FFFFFF'>!</font>",
-                    0.75
-                )
+        if input.KeyCode == Enum.KeyCode.Escape then
+            if d._OpenDropdown then
+                pcall(d._OpenDropdown)
+                d._OpenDropdown = nil
+                return
             end
-            module:Toggle(true)
+            if d.Binding then
+                d.Binding = nil
+                clearHeldKeys()
+                return
+            end
+            if z then
+                z.Visible = false
+            end
         end
-    end
-    if toggled then
-        d:UpdateTextGUI()
-    end
 
-    for _, profile in d.Profiles do
-        if checkKeybinds(d.HeldKeybinds, profile.Bind, keyName) and profile.Name ~= d.Profile then
-            d:Save(profile.Name)
-            d:Load(true)
-            break
+        if d.Binding then
+            return
         end
-    end
-end))
 
-d:Clean(h.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.Unknown then
-        return
-    end
-    local keyName = input.KeyCode.Name
-    if d.Binding and not h:GetFocusedTextBox() then
-        local captured
-        if d.MultiKeybind.Enabled then
-            captured = table.clone(d.HeldKeybinds)
-        else
-            captured = { keyName }
+        if checkKeybinds(d.HeldKeybinds, d.Keybind, keyName) then
+            if d.ThreadFix then
+                pcall(setthreadidentity, 8)
+            end
+            for _, window in d.Windows do
+                window.Visible = false
+            end
+            v.Visible = not v.Visible
+            z.Visible = false
+            d:BlurCheck()
+            return
         end
-        d.Binding:SetBind(captured, true)
-        d.Binding = nil
-    end
-    removeHeldKey(keyName)
-end))
 
-pcall(function()
-    d:Clean(h.WindowFocusReleased:Connect(clearHeldKeys))
-end)
+        local toggled = false
+        for moduleName, module in d.Modules do
+            if checkKeybinds(d.HeldKeybinds, module.Bind, keyName) then
+                toggled = true
+                if d.ToggleNotifications.Enabled then
+                    d:CreateNotification(
+                        "Module Toggled",
+                        moduleName
+                            .. "<font color='#FFFFFF'> has been </font>"
+                            .. (not module.Enabled and "<font color='#5AFF5A'>Enabled</font>" or "<font color='#FF5A5A'>Disabled</font>")
+                            .. "<font color='#FFFFFF'>!</font>",
+                        0.75
+                    )
+                end
+                module:Toggle(true)
+            end
+        end
+        if toggled then
+            d:UpdateTextGUI()
+        end
+
+        for _, profile in d.Profiles do
+            if checkKeybinds(d.HeldKeybinds, profile.Bind, keyName) and profile.Name ~= d.Profile then
+                d:Save(profile.Name)
+                d:Load(true)
+                break
+            end
+        end
+    end))
+
+    d:Clean(h.InputEnded:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.Unknown then
+            return
+        end
+        local keyName = input.KeyCode.Name
+        if d.Binding and not h:GetFocusedTextBox() then
+            local captured
+            if d.MultiKeybind.Enabled then
+                captured = table.clone(d.HeldKeybinds)
+            else
+                captured = { keyName }
+            end
+            d.Binding:SetBind(captured, true)
+            d.Binding = nil
+        end
+        removeHeldKey(keyName)
+    end))
+
+    pcall(function()
+        d:Clean(h.WindowFocusReleased:Connect(clearHeldKeys))
+    end)
+end
+
+d.SetupHeldKeyTracking()
+d.SetupHeldKeyTracking = nil
+-- BADWARS_HELD_KEY_SCOPE_V2_END
 
 if d.Blur then
     d.Blur.Default = false
 end
 
 
-do
+-- BADWARS_FINAL_DESIGN_SCOPE_V2_BEGIN
+task.defer(function()
     local quietStrokeNames = {
         MainStroke = 0.62,
         NavigationStroke = 0.82,
@@ -16572,7 +16581,7 @@ do
     d:Clean(B.DescendantAdded:Connect(function(descendant)
         task.defer(applyFrameDesign, descendant)
     end))
-end
-
+end)
+-- BADWARS_FINAL_DESIGN_SCOPE_V2_END
 
 return d

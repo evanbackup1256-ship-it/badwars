@@ -1,0 +1,18 @@
+BadWars gui.lua local-register repair v2
+Applied: 2026-07-04T21:59:37
+Backup: C:\Users\evanm\OneDrive\Desktop\badwars\.badwars-register-backup\20260704-215936\badscript\guis\new\gui.lua
+
+Root cause:
+- gui.lua exceeded Luau's 200-local-register limit.
+- Compilation stopped while allocating addHeldKey.
+- The previous repair incorrectly expected an unrelated normalizeUiKey helper.
+
+Repair:
+- The complete held-key setup, including all three local helpers and input callbacks,
+  now executes inside d.SetupHeldKeyTracking.
+- Those locals belong to a separate function register frame instead of gui.lua's
+  top-level chunk.
+- The final visual-audit block now runs inside a deferred anonymous function,
+  moving quietStrokeNames and applyFrameDesign into another register frame.
+- No normalizeUiKey modification is attempted.
+- Existing held-key behavior and final design behavior are preserved.

@@ -2928,7 +2928,7 @@ H = {
             P.BackgroundTransparency = 1
             P.Text = M
             P.TextXAlignment = Enum.TextXAlignment.Left
-            P.TextColor3 = m.Dark(o.Text, 0.16)
+            P.TextColor3 = o.MutedText
             P.TextSize = 11
             P.FontFace = o.Font
             P.Parent = O
@@ -3044,7 +3044,7 @@ H = {
         N.BackgroundTransparency = 1
         N.Text = I.Name
         N.TextXAlignment = Enum.TextXAlignment.Left
-        N.TextColor3 = m.Dark(o.Text, 0.16)
+        N.TextColor3 = o.MutedText
         N.TextSize = 11
         N.FontFace = o.Font
         N.Parent = M
@@ -3056,7 +3056,7 @@ H = {
         O.Visible = false
         O.Text = ""
         O.TextXAlignment = Enum.TextXAlignment.Right
-        O.TextColor3 = m.Dark(o.Text, 0.16)
+        O.TextColor3 = o.MutedText
         O.TextSize = 11
         O.FontFace = o.Font
         O.ClearTextOnFocus = true
@@ -7846,7 +7846,7 @@ end))
             az.BackgroundTransparency = 1
             az.Text = aw
             az.TextXAlignment = Enum.TextXAlignment.Left
-            az.TextColor3 = m.Dark(o.Text, 0.16)
+            az.TextColor3 = o.MutedText
             az.TextSize = 11
             az.FontFace = o.Font
             az.Parent = ay
@@ -7888,7 +7888,7 @@ end))
                 N.Position = UDim2.new(1, -52, 0, 5)
                 N.BackgroundTransparency = 1
                 N.Text = "RESET"
-                N.TextColor3 = m.Dark(o.Text, 0.16)
+                N.TextColor3 = o.MutedText
                 N.TextSize = 11
                 N.FontFace = o.Font
                 N.Parent = ay
@@ -7962,7 +7962,7 @@ end))
         ax.BackgroundTransparency = 1
         ax.Text = as.Name
         ax.TextXAlignment = Enum.TextXAlignment.Left
-        ax.TextColor3 = m.Dark(o.Text, 0.16)
+        ax.TextColor3 = o.MutedText
         ax.TextSize = 11
         ax.FontFace = o.Font
         ax.Parent = aw
@@ -7999,7 +7999,7 @@ end))
         J.Visible = false
         J.Text = ""
         J.TextXAlignment = Enum.TextXAlignment.Right
-        J.TextColor3 = m.Dark(o.Text, 0.16)
+        J.TextColor3 = o.MutedText
         J.TextSize = 11
         J.FontFace = o.Font
         J.ClearTextOnFocus = true
@@ -8327,6 +8327,30 @@ end))
         return at
     end
 
+    local function normalizeSettingsPane(pane)
+        if not pane then
+            return
+        end
+
+        for _, item in pane:GetDescendants() do
+            if item:IsA("TextButton") or item:IsA("TextLabel") or item:IsA("TextBox") then
+                item.TextTransparency = 0
+                if item.TextColor3.Magnitude > 0 then
+                    item.TextColor3 = item.TextColor3:Lerp(o.Text, 0.55)
+                end
+            elseif item:IsA("ImageButton") or item:IsA("ImageLabel") then
+                item.ImageTransparency = math.min(item.ImageTransparency, 0.25)
+            elseif item:IsA("CanvasGroup") then
+                item.GroupTransparency = 0
+            elseif item:IsA("GuiObject") then
+                item.Visible = true
+                if item.BackgroundTransparency < 1 then
+                    item.BackgroundTransparency = math.min(item.BackgroundTransparency, 0.08)
+                end
+            end
+        end
+    end
+
     local function restoreSettingsRows()
         ap.Visible = true
         ap.Active = true
@@ -8334,22 +8358,22 @@ end))
             ap.Interactable = true
         end)
 
+        normalizeSettingsPane(ap)
+
         for _, row in ap:GetChildren() do
             if row:IsA("GuiObject") then
                 row.Visible = true
                 if row.Size.Y.Offset <= 1 then
                     row.Size = UDim2.new(1, -12, 0, 42)
                 end
-
                 if row:IsA("TextButton") or row:IsA("TextLabel") or row:IsA("TextBox") then
                     row.TextTransparency = 0
                 end
-
                 for _, item in row:GetDescendants() do
                     if item:IsA("TextButton") or item:IsA("TextLabel") or item:IsA("TextBox") then
                         item.TextTransparency = math.min(item.TextTransparency, 0.18)
                     elseif item:IsA("ImageButton") or item:IsA("ImageLabel") then
-                        item.ImageTransparency = math.min(item.ImageTransparency, 0.35)
+                        item.ImageTransparency = math.min(item.ImageTransparency, 0.15)
                     end
                 end
             end

@@ -15489,11 +15489,11 @@ a5 = a4:CreateColorSlider({
     Visible = false,
 })
 
-local bm = 0
-local bn = 0
 a3 = {
     Targets = {},
     Object = a6,
+    LastHealth = 0,
+    LastMaxHealth = 0,
     UpdateInfo = function(I)
         local J = d.Libraries
         if not J then
@@ -15526,7 +15526,7 @@ a3 = {
                 L.MaxHealth = L.MaxHealth or 100
             end
 
-            if L.Health ~= bm or L.MaxHealth ~= bn then
+            if L.Health ~= I.LastHealth or L.MaxHealth ~= I.LastMaxHealth then
                 local M = math.max(L.Health / L.MaxHealth, 0)
                 n:Tween(be, TweenInfo.new(0.3), {
                     Size = UDim2.fromScale(math.min(M, 1), 1),
@@ -15535,15 +15535,15 @@ a3 = {
                 n:Tween(bf, TweenInfo.new(0.3), {
                     Size = UDim2.fromScale(math.clamp(M - 1, 0, 0.8), 1),
                 })
-                if bm > L.Health and I.LastTarget == L then
+                if I.LastHealth > L.Health and I.LastTarget == L then
                     n:Cancel(a9)
                     a9.BackgroundTransparency = 0.3
                     n:Tween(a9, TweenInfo.new(0.5), {
                         BackgroundTransparency = 1,
                     })
                 end
-                bm = L.Health
-                bn = L.MaxHealth
+                I.LastHealth = L.Health
+                I.LastMaxHealth = L.MaxHealth
             end
 
             if not L.Character then

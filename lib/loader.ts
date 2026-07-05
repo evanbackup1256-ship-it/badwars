@@ -1,5 +1,5 @@
 export const loaderFileName = "badwars-latest-loader.lua";
-export const defaultLoaderRef = "eeb0bb7c447c389c59137b499dcd2d6632abca92";
+export const defaultLoaderRef = "0738404";
 
 export function buildLoader(origin = "https://badwars-production.up.railway.app", ref = defaultLoaderRef) {
   return `shared.BadWarsStatusApi = "${origin}/api/roblox/status"

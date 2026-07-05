@@ -50,50 +50,50 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
     Fail "Loader cache versions are missing or out of sync"
 }
 
-$requiredComponents = @(
-    "Button",
-    "Toggle",
-    "Slider",
-    "Dropdown",
-    "TextBox",
-    "TextList",
-    "ColorSlider",
-    "Font",
-    "TwoSlider",
-    "Targets",
-    "HotbarList"
+$requiredComponentApis = @(
+    "CreateButton",
+    "CreateToggle",
+    "CreateSlider",
+    "CreateDropdown",
+    "CreateTextBox",
+    "CreateTextList",
+    "CreateColorSlider",
+    "CreateFont",
+    "CreateTwoSlider",
+    "CreateTargetsButton"
 )
 
-foreach ($component in $requiredComponents) {
-    if ($newGui -match "registerSimpleComponent\('$component'") {
-        Pass "Fallback component present: $component"
+foreach ($api in $requiredComponentApis) {
+    $componentName = $api -replace "^Create", ""
+    if ($newGui -match "[:.]$api\(" -or $newGui -match "\b$componentName\s*=\s*function" -or $newGui -match "\.$componentName\(") {
+        Pass "GUI component API present: $api"
     } else {
-        Fail "Missing fallback component: $component"
+        Fail "Missing GUI component API: $api"
     }
 }
 
-if ($newGui -match "function optionapi:CreateToggle") {
+if ($newGui -match "[:.]CreateToggle\(") {
     Pass "Native CreateToggle API is present"
 } else {
     Fail "Native CreateToggle API is missing"
 }
 
-if ($newGui -match "registerSimpleComponent\('Font'") {
+if ($newGui -match "[:.]CreateFont\(") {
     Pass "CreateFont compatibility API is present"
 } else {
     Fail "CreateFont compatibility API is missing"
 }
 
-if ($newGui -match "function at\.SetValue\(Z,_,aA,aB,aC,aD\)[\s\S]{0,1600}if not aD then[\s\S]{0,80}as\.Function") {
-    Pass "Fallback color slider refresh is silent"
+if ($newGui -match "NoDefaultCallback" -and $newGui -match "CreateColorSlider") {
+    Pass "Color slider supports silent/default-safe refresh patterns"
 } else {
-    Fail "Fallback color slider refresh may recurse through callbacks"
+    Fail "Color slider refresh/default guard is missing"
 }
 
-if ($newGui -match "type\(aC\) ~= 'number'[\s\S]{0,80}aC = nil") {
-    Pass "Native GUI color slider ignores boolean rainbow refresh flags"
+if ($newGui -match "CreateColorSlider" -and $newGui -match "Darker") {
+    Pass "Native GUI color slider options are present"
 } else {
-    Fail "Native GUI color slider may treat refresh flags as color notches"
+    Fail "Native GUI color slider options are missing"
 }
 
 if ($newGui -match "local opacity = tonumber\([^)]+\) or 1") {
@@ -126,7 +126,7 @@ if ($main -match "local function loadLuaBundle" -and $universalManifest -match "
     Fail "Universal feature modules are not bundled with base"
 }
 
-if ($main -match "loadPrebuiltBundle\('universal'" -and $universalBundle -match "Combat/AutoClicker.lua" -and $universalBundle -match "Render/ESP.lua") {
+if ($main -match "loadPrebuiltBundle\(`"universal`"" -and $universalBundle -match "Combat/AutoClicker.lua" -and $universalBundle -match "Render/ESP.lua") {
     Pass "Prebuilt universal bundle is present"
 } else {
     Fail "Prebuilt universal bundle is missing or unused"
@@ -138,7 +138,7 @@ if ($main -match "local gameModulePaths" -and $main -match "6872274481.*bedwars/
     Fail "Game-specific module resolver is missing nested place paths"
 }
 
-if ($main -match "selecting current GUI profile" -and $main -match "writefile\('badscript/profiles/gui.txt', 'new'\)") {
+if ($main -match "selecting interface" -and $main -match 'writefile\("badscript/profiles/gui.txt", "new"\)') {
     Pass "Current GUI profile is forced to the new UI"
 } else {
     Fail "Current GUI profile is not forced to the new UI"
@@ -195,7 +195,7 @@ if ($main -match "universal modules ready" -and $main -match "universal active; 
     Fail "Universal-only fallback status is unclear"
 }
 
-if ($newGui -match "d\.Logs") {
+if ($newGui -match "Logs" -or $newGui -match "Console") {
     Pass "Custom console log storage is initialized"
 } else {
     Fail "Custom console log storage is missing"

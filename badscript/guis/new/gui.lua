@@ -7356,7 +7356,7 @@ function d.CreateGUI(aa)
         arrow.Parent = au
 
         local aw = Instance.new("CanvasGroup")
-        $1 aw.ClipsDescendants = true
+        aw.ClipsDescendants = true
         aw.BackgroundColor3 = o.MainSoft
         aw.BackgroundTransparency = 1
         aw.GroupTransparency = 1

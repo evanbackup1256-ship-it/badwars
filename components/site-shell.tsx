@@ -7,7 +7,7 @@ import Fuse from "fuse.js";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
-import { Copy, Download, LogIn, Menu, Moon, Search, Sun, X } from "lucide-react";
+import { Activity, Copy, Download, Gauge, LogIn, Menu, Moon, Search, ShieldCheck, Sun, Terminal, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,12 +113,12 @@ export function LandingPage() {
     <>
       <SiteNav />
       <main>
-        <section className="site-wrap grid gap-10 py-16 lg:min-h-[calc(100vh-92px)] lg:grid-cols-[1.02fr_.98fr] lg:items-center">
+        <section className="site-wrap grid gap-10 py-14 lg:min-h-[calc(100vh-92px)] lg:grid-cols-[1.02fr_.98fr] lg:items-center">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="space-y-7">
-            <Badge><span className="h-2 w-2 rounded-full bg-emerald-300" /> Signal console online</Badge>
+            <Badge><Activity className="h-3.5 w-3.5" /> Live route console</Badge>
             <div className="space-y-5">
-              <h1 className="max-w-5xl font-display text-5xl font-black leading-[.9] md:text-7xl xl:text-8xl">BadWars, rebuilt as a launch console.</h1>
-              <p className="max-w-2xl text-lg text-muted-foreground">A dark-first interface for copying the current loader, checking Roblox risk, searching supported games, and reading exactly what the runtime is doing.</p>
+              <h1 className="max-w-5xl font-display text-5xl font-black leading-[.94] md:text-7xl xl:text-8xl">BadWars launch console.</h1>
+              <p className="max-w-2xl text-lg text-muted-foreground">Copy the pinned loader, check update risk, inspect supported routes, and get useful failure context before a support thread starts.</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button size="lg" onClick={() => copyLoader(loader, commit.data?.fallback ? "GitHub sync fallback was copied." : "Synced from the latest GitHub commit.")}><Copy className="h-5 w-5" /> Copy Latest Loader</Button>
@@ -135,8 +135,8 @@ export function LandingPage() {
         <SearchSection />
         <FeatureSection />
         <GamesSection />
-        <ScreenshotsSection />
-        <TestimonialsSection />
+        <ModuleMatrixSection />
+        <OpsSection />
         <FAQSection />
       </main>
       <Footer />
@@ -202,24 +202,22 @@ function SearchSection() {
 
   return (
     <section className="site-wrap py-10" id="support">
-      <Card>
-        <CardHeader>
-          <Badge variant="secondary"><Search className="h-3.5 w-3.5" /> Instant fuzzy search</Badge>
-          <CardTitle className="text-4xl">Find routes, releases, and answers fast.</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="rounded-lg border bg-card/70 p-6 shadow-premium backdrop-blur-xl">
+        <div className="mb-5">
+          <Badge variant="secondary"><Search className="h-3.5 w-3.5" /> Fuzzy search</Badge>
+          <h2 className="mt-3 font-display text-3xl font-black md:text-5xl">Find routes, releases, and answers fast.</h2>
+        </div>
           <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search BedWars, Roblox warning, checksum, version 2.0..." />
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {results.map((item) => (
-              <div className="rounded-2xl border bg-background/45 p-4" key={`${item.type}-${item.title}`}>
+              <div className="rounded-lg border bg-background/45 p-4" key={`${item.type}-${item.title}`}>
                 <Badge variant="muted">{item.type}</Badge>
                 <div className="mt-3 font-display text-lg font-black">{item.title}</div>
                 <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+      </div>
     </section>
   );
 }
@@ -286,35 +284,47 @@ function GameCard({ game }: { game: (typeof games)[number] }) {
   );
 }
 
-function ScreenshotsSection() {
-  const shots = ["Dashboard widgets", "Download manager", "Admin analytics"];
+function ModuleMatrixSection() {
+  const rows = [
+    ["Universal base", "68 modules", "Loads before game routes"],
+    ["BedWars V11", "70 modules", "Compatibility audit exposed in runtime"],
+    ["Route map", `${games.length} families`, "Nested place IDs resolve to base files"],
+    ["Validation", "local script", "Cache, loader, GUI, bundle, and route checks"]
+  ];
+
   return (
     <section className="site-wrap py-16">
-      <SectionHead badge="Screenshots carousel" title="Interface surfaces with room to grow." description="Launcher, downloads, and admin views are designed as real product surfaces instead of one-off sections." />
-      <div className="grid gap-4 lg:grid-cols-3">
-        {shots.map((shot, index) => (
-          <Card className="overflow-hidden" key={shot}>
-            <div className="border-b bg-muted/40 p-3"><div className="flex gap-2"><span className="h-3 w-3 rounded-full bg-rose-400" /><span className="h-3 w-3 rounded-full bg-amber-300" /><span className="h-3 w-3 rounded-full bg-emerald-300" /></div></div>
-            <CardHeader>
-              <Badge>{`0${index + 1}`}</Badge>
-              <CardTitle>{shot}</CardTitle>
-              <CardDescription>Animated placeholder panel with real spacing, hierarchy, and motion-ready layout.</CardDescription>
-            </CardHeader>
-          </Card>
+      <SectionHead badge="Module matrix" title="The site now mirrors the runtime." description="Public support copy lines up with the real loader path, route inventory, and validation checks." />
+      <div className="overflow-hidden rounded-lg border bg-card/80 shadow-premium backdrop-blur-xl">
+        {rows.map(([name, value, detail]) => (
+          <div className="grid gap-3 border-b p-5 last:border-b-0 md:grid-cols-[.7fr_.45fr_1fr] md:items-center" key={name}>
+            <div className="font-display text-xl font-black">{name}</div>
+            <Badge variant="secondary">{value}</Badge>
+            <p className="text-sm text-muted-foreground">{detail}</p>
+          </div>
         ))}
       </div>
     </section>
   );
 }
 
-function TestimonialsSection() {
+function OpsSection() {
+  const items = [
+    { icon: Terminal, title: "Loader diagnostics", description: "Startup stages report cache setup, downloads, compilation, validation, and final module status." },
+    { icon: ShieldCheck, title: "Failure isolation", description: "Module toggle and option callbacks are guarded so a bad route does not take down the whole UI." },
+    { icon: Gauge, title: "Support readouts", description: "Dashboard widgets poll health, Roblox status, release data, and recent commit context." }
+  ];
+
   return (
     <section className="site-wrap py-16" id="community">
-      <SectionHead badge="Community proof" title="Placeholder testimonials, styled for launch." description="Ready for real quotes without changing the design system." />
+      <SectionHead badge="Operations" title="Built around the boring checks that save time." description="The visible experience is tied to concrete runtime checks instead of decorative panels." />
       <div className="grid gap-4 md:grid-cols-3">
-        {["Cleanest loader page I have used.", "The status text actually tells me what broke.", "Feels like a real launcher now."].map((quote, index) => (
-          <Card key={quote}><CardHeader><Badge variant="muted">User {index + 1}</Badge><CardDescription className="text-base">{quote}</CardDescription></CardHeader></Card>
-        ))}
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Card key={item.title}><CardHeader><Icon className="h-5 w-5 text-primary" /><CardTitle>{item.title}</CardTitle><CardDescription>{item.description}</CardDescription></CardHeader></Card>
+          );
+        })}
       </div>
     </section>
   );

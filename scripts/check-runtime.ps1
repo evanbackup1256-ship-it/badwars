@@ -55,16 +55,16 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"14\.0"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V14-CLEAN-ANIMATED"' -and
-    $newGui -match 'BADWARS_FINAL_DESIGN_SCOPE_V14' -and
-    $main -match "BadWars Main v14\.0" -and
-    $loader -match "BadWars Loader v14\.0" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"14\.0"'
+    $newGui -match 'Version\s*=\s*"15\.0"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V15-RECOVERED-LATEST"' -and
+    $newGui -match 'BADWARS_FINAL_DESIGN_SCOPE_V15' -and
+    $main -match "BadWars Main v15\.0" -and
+    $loader -match "BadWars Loader v15\.0" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"15\.0"'
 ) {
-    Pass "V14 runtime versions are synchronized"
+    Pass "V15 runtime versions are synchronized"
 } else {
-    Fail "V14 runtime versions are not synchronized"
+    Fail "V15 runtime versions are not synchronized"
 }
 
 $requiredComponentApis = @(
@@ -260,10 +260,10 @@ if ($newGui -notmatch "ap\.ScrollingEnabled\s*=" -and $newGui -match "setScrollE
     Fail "Settings pane scroll state can target a non-scrolling Frame"
 }
 
-if ($newGui -match "BadWarsV14Motion" -and $newGui -match "addCleanMotion" -and $newGui -match "V14Scale") {
-    Pass "V14 guarded motion layer is present"
+if ($newGui -match "BadWarsV15Motion" -and $newGui -match "addCleanMotion" -and $newGui -match "V15Scale") {
+    Pass "V15 guarded motion layer is present"
 } else {
-    Fail "V14 guarded motion layer is missing"
+    Fail "V15 guarded motion layer is missing"
 }
 
 if (

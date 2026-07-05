@@ -1,4 +1,4 @@
--- BADWARS_UI_V14_CLEAN_REWRITE
+-- BADWARS_UI_V15_RECOVERED_REWRITE
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -16749,7 +16749,7 @@ if d.Blur then
 end
 
 
--- BADWARS_FINAL_DESIGN_SCOPE_V14_BEGIN
+-- BADWARS_FINAL_DESIGN_SCOPE_V15_BEGIN
 task.defer(function()
     local quietStrokeNames = {
         MainStroke = 0.7,
@@ -16768,16 +16768,16 @@ task.defer(function()
     }
 
     local function addCleanMotion(instance)
-        if instance:GetAttribute("BadWarsV14Motion") then
+        if instance:GetAttribute("BadWarsV15Motion") then
             return
         end
 
-        instance:SetAttribute("BadWarsV14Motion", true)
+        instance:SetAttribute("BadWarsV15Motion", true)
 
-        local scale = instance:FindFirstChild("V14Scale")
+        local scale = instance:FindFirstChild("V15Scale")
         if not scale then
             scale = Instance.new("UIScale")
-            scale.Name = "V14Scale"
+            scale.Name = "V15Scale"
             scale.Scale = 1
             scale.Parent = instance
         end
@@ -16866,6 +16866,6 @@ task.defer(function()
         task.defer(applyFrameDesign, descendant)
     end))
 end)
--- BADWARS_FINAL_DESIGN_SCOPE_V14_END
+-- BADWARS_FINAL_DESIGN_SCOPE_V15_END
 
 return d

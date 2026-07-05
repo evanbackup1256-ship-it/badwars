@@ -121,7 +121,7 @@ do
 
     __badwarsLoadDiagnostics()
 end
--- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Main v14.0 - clean UI readiness pipeline
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Main v15.0 - clean UI readiness pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -617,11 +617,32 @@ local function isNotFoundBody(body)
         or (#trimmed < 200 and trimmed:find('"message"%s*:%s*"Not Found"') ~= nil)
 end
 
+local function isStaleGuiCache(path, body)
+    if path ~= "badscript/guis/new/gui.lua" then
+        return false
+    end
+    if type(body) ~= "string" or body == "" then
+        return true
+    end
+    return not (
+        body:find('Version%s*=%s*"15%.0"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V15%-RECOVERED%-LATEST"') ~= nil
+    )
+end
+
 local function downloadFile(path)
     if not HttpGet then
         return nil, "HttpGet nil"
     end
     local cached = isfile(path) and readfile(path)
+    if isStaleGuiCache(path, cached) then
+        pcall(function()
+            if isfile(path) then
+                delfile(path)
+            end
+        end)
+        cached = nil
+    end
     if type(cached) == "string" and #cached > 0 then
         return cached
     end

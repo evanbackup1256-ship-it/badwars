@@ -136,8 +136,9 @@ isfile = isfile or function(file)
 	end)
 	return suc and res ~= nil and res ~= ''
 end
-delfile = delfile or function(file)
-	writefile(file, '')
+local __nativeDelfile = type(delfile) == 'function'
+delfile = delfile or function()
+	return false
 end
 isfolder = isfolder or function() return false end
 makefolder = makefolder or function() end
@@ -418,8 +419,25 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-v15-recovered-ui-2026-07-05-03'
+local cacheVersion = 'badwars-v15-recovered-ui-2026-07-05-04'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
+local function isCurrentGuiCache(contents)
+	return type(contents) == 'string'
+		and contents:find('Version%s*=%s*"15%.0"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V15%-RECOVERED%-LATEST"') ~= nil
+end
+local function invalidateStaleGuiCache()
+	local guiPath = 'badscript/guis/new/gui.lua'
+	if isfile(guiPath) and not isCurrentGuiCache(readfile(guiPath)) then
+		setStatus('clearing stale GUI cache')
+		if __nativeDelfile then
+			pcall(delfile, guiPath)
+		end
+		if isfile(guiPath) and type(writefile) == 'function' then
+			pcall(writefile, guiPath, '')
+		end
+	end
+end
 if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersion then
 	setStatus('clearing old cache')
 	if isfile('badscript/main.lua') then delfile('badscript/main.lua') end
@@ -433,6 +451,7 @@ if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersi
 	wipeFolder('badscript/libraries')
 	writefile(cacheVersionPath, cacheVersion)
 end
+invalidateStaleGuiCache()
 
 if not shared.BadDeveloper then
 	local _, subbed = pcall(function()

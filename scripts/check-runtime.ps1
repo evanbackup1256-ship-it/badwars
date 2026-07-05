@@ -214,6 +214,18 @@ if ($loader -notmatch "delfile=delfile or function\(f\)writefile\(f,''\)end" -an
 }
 
 if (
+    $loader -match "invalidateStaleGuiCache" -and
+    $newMain -match "invalidateStaleGuiCache" -and
+    $main -match "isStaleGuiCache" -and
+    $loader -match 'V15%-RECOVERED%-LATEST' -and
+    $newMain -match 'V15%-RECOVERED%-LATEST'
+) {
+    Pass "Loadstring rejects stale GUI cache automatically"
+} else {
+    Fail "Loadstring can reuse stale cached GUI versions"
+}
+
+if (
     -not (Test-Path -LiteralPath (Join-Path $Root "badscript\security.lua")) -and
     $main -notmatch "security:Start\(Bad\)" -and
     $main -notmatch "badscript/security.lua" -and

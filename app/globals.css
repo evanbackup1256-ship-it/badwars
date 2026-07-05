@@ -66,11 +66,7 @@ body {
   min-width: 320px;
   overflow-x: clip;
   overscroll-behavior-y: none;
-  background:
-    radial-gradient(circle at 14% 6%, hsl(var(--primary) / .16), transparent 26rem),
-    radial-gradient(circle at 86% 14%, hsl(var(--secondary) / .13), transparent 25rem),
-    linear-gradient(120deg, transparent 0 42%, hsl(var(--accent) / .055) 42% 43%, transparent 43%),
-    hsl(var(--background));
+  background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-sans), Inter, sans-serif;
 }
@@ -80,25 +76,12 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    linear-gradient(hsl(var(--foreground) / .035) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(var(--foreground) / .035) 1px, transparent 1px),
-    radial-gradient(circle at 50% 8%, hsl(var(--primary) / .08), transparent 32rem);
-  background-size: 88px 88px, 88px 88px, auto;
+  background: linear-gradient(to bottom, hsl(var(--primary) / .055), transparent 420px);
   mask-image: linear-gradient(to bottom, black, transparent 86%);
 }
 
 body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  opacity: .08;
-  pointer-events: none;
-  background-image:
-    repeating-radial-gradient(circle at 30% 30%, hsl(var(--foreground) / .9) 0 1px, transparent 1px 4px);
-  mix-blend-mode: overlay;
-  animation: noise-drift 1.8s steps(2, end) infinite;
+  content: none;
 }
 
 ::selection {
@@ -117,7 +100,7 @@ body::after {
 ::-webkit-scrollbar-thumb {
   border: 3px solid hsl(var(--background));
   border-radius: 999px;
-  background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--secondary)));
+  background: hsl(var(--primary) / .72);
 }
 
 main {
@@ -140,44 +123,24 @@ section[id] {
 
 .glass {
   position: relative;
-  background:
-    linear-gradient(145deg, hsl(var(--foreground) / .075), hsl(var(--foreground) / .022)),
-    hsl(var(--card) / .72);
-  backdrop-filter: blur(22px);
-  box-shadow: inset 0 1px 0 hsl(var(--foreground) / .08), 0 24px 90px rgb(0 0 0 / .28);
+  background: hsl(var(--card) / .88);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 hsl(var(--foreground) / .055), 0 18px 50px rgb(0 0 0 / .2);
   isolation: isolate;
   overflow: hidden;
 }
 
 .glass::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(110deg, transparent 0 36%, hsl(var(--foreground) / .08), transparent 62%);
-  opacity: .35;
-  pointer-events: none;
-  animation: glass-sweep 6s ease-in-out infinite;
+  content: none;
 }
 
 .hero-grid {
   position: relative;
-  background-image:
-    linear-gradient(135deg, hsl(var(--primary) / .18), transparent 34%),
-    radial-gradient(circle at 76% 14%, hsl(var(--secondary) / .22), transparent 22rem),
-    linear-gradient(120deg, hsl(var(--foreground) / .075), transparent 58%);
+  background-image: linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / .86));
 }
 
 .hero-grid::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, transparent, hsl(var(--primary) / .18), transparent),
-    repeating-linear-gradient(0deg, transparent 0 18px, hsl(var(--foreground) / .045) 18px 19px);
-  opacity: .22;
-  pointer-events: none;
-  animation: data-scan 5.8s linear infinite;
+  content: none;
 }
 
 .premium-card {
@@ -193,38 +156,17 @@ section[id] {
 }
 
 .premium-card::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: -1;
-  border-radius: inherit;
-  background:
-    conic-gradient(from var(--spin-angle, 0deg), transparent 0 18%, hsl(var(--primary) / .55), transparent 38% 58%, hsl(var(--secondary) / .48), transparent 78% 100%);
-  opacity: .22;
-  animation: spin-border 9s linear infinite;
+  content: none;
 }
 
 .premium-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at var(--card-x, 50%) var(--card-y, 18%), hsl(var(--foreground) / .13), transparent 30%),
-    linear-gradient(115deg, transparent 0 32%, hsl(var(--foreground) / .07), transparent 58%);
-  opacity: .52;
-  transform: translateX(-18%);
-  animation: holo-shimmer 7s ease-in-out infinite;
+  content: none;
 }
 
 .premium-card:hover {
-  transform: translateY(-8px) rotateX(.7deg) scale(1.02);
-  border-color: hsl(var(--primary) / .6);
-  box-shadow: 
-    0 40px 120px rgb(0 0 0 / .45), 
-    0 0 100px hsl(var(--primary) / .25),
-    inset 0 1px 0 hsl(var(--primary) / .3);
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary) / .42);
+  box-shadow: 0 24px 70px rgb(0 0 0 / .28);
 }
 
 .premium-card > * {

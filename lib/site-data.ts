@@ -4,7 +4,6 @@ import {
   ChartNoAxesCombined,
   CheckCircle2,
   Code2,
-  Download,
   Flag,
   Gamepad2,
   History,

@@ -7,8 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node scripts/start-next.mjs",
-    "lint": "next lint",
-    "typecheck": "next typegen && tsc --noEmit"
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "validate": "powershell -ExecutionPolicy Bypass -File scripts\\check-runtime.ps1 && powershell -ExecutionPolicy Bypass -File scripts\\validate-source.ps1 && npm run typecheck && npm run lint && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",

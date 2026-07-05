@@ -10847,6 +10847,33 @@ function d.CreateOverlay(af, ag)
     local ah
     ag.Size = ag.Size or UDim2.fromOffset(14, 14)
     ag.Position = ag.Position or UDim2.fromOffset(12, 14)
+    if af.Overlays and af.Overlays[ag.Name] then
+        local previous = af.Overlays[ag.Name]
+        if previous.Connections then
+            for _, connection in previous.Connections do
+                pcall(function()
+                    connection:Disconnect()
+                end)
+            end
+            table.clear(previous.Connections)
+        end
+        for _, candidate in {
+            previous.Object,
+            previous.Children,
+            previous.Button and previous.Button.Object,
+        } do
+            if typeof(candidate) == "Instance" then
+                pcall(function()
+                    candidate:Destroy()
+                end)
+            end
+        end
+        af.Overlays[ag.Name] = nil
+        af.Categories[ag.Name] = nil
+        if d.DeveloperMode then
+            bwarn("[Overlay Registry] Replaced duplicate overlay: " .. tostring(ag.Name))
+        end
+    end
     if ag.CustomOverlay then
         ag.Pinned = true
         ag.CategorySize = 100

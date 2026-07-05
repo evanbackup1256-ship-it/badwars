@@ -348,8 +348,9 @@ isfile = isfile or function(f)
     local s, r = pcall(readfile, f)
     return s and r ~= nil and r ~= ""
 end
-delfile = delfile or function(f)
-    writefile(f, "")
+local nativeDelfileAvailable = type(delfile) == "function"
+delfile = delfile or function()
+    return false, "delfile unavailable"
 end
 isfolder = isfolder or function()
     return false
@@ -1603,6 +1604,7 @@ if not shared.BadIndependent then
         detail = universalDetail,
         registered = universalDelta,
         attemptErrors = attemptErrors,
+        failed = attemptErrors,
     }
 
     if universalReady then
@@ -1669,7 +1671,11 @@ if not shared.BadIndependent then
         if fc > 0 then
             mwarn("BadWars: Failed modules:")
             for _, e in ipairs(report.failed) do
-                mwarn("  x " .. tostring(e.name) .. " [" .. tostring(e.error) .. "]")
+                if type(e) == "table" then
+                    mwarn("  x " .. tostring(e.name) .. " [" .. tostring(e.error) .. "]")
+                else
+                    mwarn("  x " .. tostring(e))
+                end
             end
         end
         uniFail = fc

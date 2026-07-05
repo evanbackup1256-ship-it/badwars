@@ -7,7 +7,7 @@ import Fuse from "fuse.js";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
-import { Activity, Copy, Download, Gauge, LogIn, Menu, Moon, Search, ShieldCheck, Sun, Terminal, X } from "lucide-react";
+import { Activity, Copy, Download, Gauge, Menu, Moon, Search, ShieldCheck, Sun, Terminal, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -89,7 +89,7 @@ export function SiteNav() {
             <Sun className="h-4 w-4 dark:hidden" />
             <Moon className="hidden h-4 w-4 dark:block" />
           </Button>
-          <Button asChild className="hidden md:inline-flex" variant="outline"><Link href="/dashboard"><LogIn className="h-4 w-4" /> Account</Link></Button>
+          <Button asChild className="hidden md:inline-flex" variant="outline"><Link href="/dashboard">Status</Link></Button>
           <Button onClick={() => void copyLatestLoader()}><Copy className="h-4 w-4" /> Copy</Button>
           <Button aria-label="Open menu" className="lg:hidden" size="icon" variant="ghost" onClick={() => setOpen((value) => !value)}>{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</Button>
         </div>
@@ -97,7 +97,7 @@ export function SiteNav() {
       {open ? (
         <div className="glass mt-2 grid gap-1 rounded-2xl border p-2 lg:hidden">
           {navItems.map((item) => <Link className="rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" href={item.href} key={item.href} onClick={() => setOpen(false)}>{item.label}</Link>)}
-          <Link className="rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" href="/dashboard" onClick={() => setOpen(false)}>Account/Login</Link>
+          <Link className="rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" href="/dashboard" onClick={() => setOpen(false)}>Status console</Link>
         </div>
       ) : null}
     </header>

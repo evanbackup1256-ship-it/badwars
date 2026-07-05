@@ -201,6 +201,18 @@ if (
     Fail "Loader Roblox update warning integration is missing"
 }
 
+if ($loader -match "shared\.__badwars_update_watch\s*=\s*token" -and $loader -match "while shared\.__badwars_update_watch==token do") {
+    Pass "Loader update watch is reinjection-safe"
+} else {
+    Fail "Loader update watch can duplicate across reinjections"
+}
+
+if ($loader -notmatch "delfile=delfile or function\(f\)writefile\(f,''\)end" -and $main -notmatch "writefile\(f,\s*`"`"\s*\)") {
+    Pass "Delete fallbacks do not write empty files"
+} else {
+    Fail "Delete fallback can create repeated empty-file writes"
+}
+
 if (
     -not (Test-Path -LiteralPath (Join-Path $Root "badscript\security.lua")) -and
     $main -notmatch "security:Start\(Bad\)" -and
@@ -287,6 +299,12 @@ if ($newGui -match "function\s+ab\.CreateOverlayBar\(ar\)" -and $newGui -match "
     Pass "Overlay manager is internal to avoid duplicate sidebar rows"
 } else {
     Fail "Overlay manager can render as a duplicate sidebar row"
+}
+
+if ($newGui -match "Replaced duplicate overlay" -and $newGui -match "af\.Overlays\[ag\.Name\]\s*=\s*nil") {
+    Pass "Overlay registry replaces duplicate overlay definitions"
+} else {
+    Fail "Overlay registry lacks duplicate cleanup"
 }
 
 if ($newGui -match "local function restoreSettingsRows\(\)" -and $newGui -match "restoreSettingsRows\(\)" -and $newGui -match "TextTransparency\s*=\s*math\.min") {

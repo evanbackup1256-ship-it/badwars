@@ -153,16 +153,4 @@ docker-compose.override.yml
 *.rar
 *.7z
 
-.badwars-diagnostics-backup/
-
-.badwars-diagnostics-backup/
-
-.badwars-presentation-backup/
-
-.badwars-ui-backup/
-
-.badwars-encoding-backup/
-
-.badwars-register-backup/
-
-.badwars-ui-semantic-backup/
+.badwars-*/

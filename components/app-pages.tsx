@@ -4,10 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Bell, CheckCircle2, ClipboardCheck, Copy, Download, ExternalLink, Home, KeyRound, LayoutDashboard, RefreshCcw, Search, Shield, SlidersHorizontal, Trash2, UploadCloud, UserRound, Wifi } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Copy, Download, ExternalLink, Home, LayoutDashboard, RefreshCcw, Search, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,15 +12,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { SiteNav, Footer } from "@/components/site-shell";
 import { buildLoader, loaderFileName } from "@/lib/loader";
-import { activity, adminModules, changelog, features, games, releases, settingsSections } from "@/lib/site-data";
+import { activity, changelog, features, games, releases } from "@/lib/site-data";
 import { formatRelativeTime } from "@/lib/utils";
 
 const sidebar = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Downloads", href: "/downloads", icon: Download },
-  { label: "Profile", href: "/profile", icon: UserRound },
-  { label: "Settings", href: "/settings", icon: SlidersHorizontal },
-  { label: "Admin", href: "/admin", icon: Shield }
+  { label: "Features", href: "/features", icon: CheckCircle2 },
+  { label: "Changelog", href: "/changelog", icon: RefreshCcw }
 ];
 
 type RobloxStatus = {
@@ -130,17 +126,8 @@ function AppFrame({ title, description, children }: { title: string; description
 export function DashboardPage() {
   const health = useQuery({ queryKey: ["dashboard-health"], queryFn: fetchHealth, refetchInterval: 30_000 });
   const roblox = useQuery({ queryKey: ["dashboard-roblox"], queryFn: fetchRobloxStatus, refetchInterval: 120_000 });
+  const commits = useQuery({ queryKey: ["dashboard-commits"], queryFn: fetchGitHubCommits, refetchInterval: 60_000, retry: 1 });
   const [activityQuery, setActivityQuery] = useState("");
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [notifications, setNotifications] = useState([
-    { type: "success", title: "Runtime validation passed", detail: "All local checks are green." },
-    { type: "info", title: "Dashboard online", detail: "Live widgets are polling production APIs." }
-  ]);
-  const [flags, setFlags] = useState([
-    { key: "new-ui", label: "New UI profile", enabled: true },
-    { key: "roblox-watch", label: "Roblox update watch", enabled: true },
-    { key: "beta-downloads", label: "Beta download flow", enabled: false }
-  ]);
 
   const filteredActivity = useMemo(() => {
     const query = activityQuery.trim().toLowerCase();
@@ -175,30 +162,9 @@ export function DashboardPage() {
     }
   ];
 
-  const addNotification = (title: string, detail: string, type = "info") => {
-    setNotifications((current) => [{ title, detail, type }, ...current].slice(0, 6));
-    toast(title, { description: detail });
-  };
-
   const copyDashboardLoader = async () => {
     await navigator.clipboard?.writeText(await currentLoaderText());
-    addNotification("Loader copied", "The production loader was copied from the dashboard.", "success");
-  };
-
-  const startDownload = () => {
-    setDownloadProgress(8);
-    addNotification("Download started", "Preparing BadWars latest release.", "info");
-    const timer = window.setInterval(() => {
-      setDownloadProgress((value) => {
-        const next = Math.min(100, value + 14);
-        if (next >= 100) {
-          window.clearInterval(timer);
-          downloadLatestLoader();
-          toast.success("Download ready", { description: "Latest release package finished preparing." });
-        }
-        return next;
-      });
-    }, 280);
+    toast.success("Loader copied", { description: "The production loader was copied from the dashboard." });
   };
 
   return (
@@ -247,7 +213,6 @@ export function DashboardPage() {
               <div className="flex justify-between gap-3"><span className="text-muted-foreground">Checked</span><strong>{formatRelativeTime(roblox.data?.lastCheckedAt)}</strong></div>
             </div>
             <Button onClick={() => roblox.refetch()}><RefreshCcw className="h-4 w-4" /> Refresh Roblox status</Button>
-            <Button variant="outline" onClick={() => addNotification("Test notification", "Dashboard notifications are working.", "info")}><Bell className="h-4 w-4" /> Send test notification</Button>
           </CardContent>
         </Card>
       </div>
@@ -256,11 +221,11 @@ export function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Quick actions</CardTitle>
-            <CardDescription>Actions are wired with copy, refresh, notification, and route behavior.</CardDescription>
+            <CardDescription>Only actions backed by current project endpoints are shown here.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
             <Button onClick={copyDashboardLoader}><ClipboardCheck className="h-4 w-4" /> Copy loader</Button>
-            <Button variant="outline" onClick={startDownload}><UploadCloud className="h-4 w-4" /> Download latest</Button>
+            <Button variant="outline" onClick={() => { downloadLatestLoader(); toast.success("Download started", { description: loaderFileName }); }}><Download className="h-4 w-4" /> Download latest</Button>
             <Button variant="outline" onClick={() => health.refetch()}><RefreshCcw className="h-4 w-4" /> Refresh health</Button>
             <Button asChild variant="outline"><Link href="/downloads"><ExternalLink className="h-4 w-4" /> Download center</Link></Button>
           </CardContent>
@@ -268,50 +233,40 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Download manager</CardTitle>
-            <CardDescription>Latest release preparation with progress and checksum context.</CardDescription>
+            <CardTitle>Latest source commit</CardTitle>
+            <CardDescription>Live GitHub data is used when available; maintained release notes fill in when GitHub is unavailable.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <CardContent className="grid gap-3">
+            <div className="rounded-2xl border bg-background/45 p-4">
               <div>
-                <div className="font-display text-2xl font-black">{releases[0].version}</div>
-                <div className="text-sm text-muted-foreground">{releases[0].checksum}</div>
+                <div className="font-display text-2xl font-black">{commits.data?.commits[0]?.shortSha || releases[0].version}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{commits.data?.commits[0]?.message || releases[0].notes.join(", ")}</div>
               </div>
-              <Badge variant={downloadProgress === 100 ? "success" : downloadProgress > 0 ? "secondary" : "muted"}>{downloadProgress === 100 ? "Ready" : downloadProgress > 0 ? "Preparing" : "Idle"}</Badge>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-muted">
-              <motion.div className="h-full rounded-full bg-primary" animate={{ width: `${downloadProgress}%` }} transition={{ type: "spring", stiffness: 80, damping: 18 }} />
-            </div>
-            <div className="mt-3 text-sm text-muted-foreground">{downloadProgress}% complete</div>
+            <div className="text-sm text-muted-foreground">Synced {formatRelativeTime(commits.data?.syncedAt)}.</div>
           </CardContent>
         </Card>
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-3">
         <Card>
-          <CardHeader><CardTitle>Notifications</CardTitle><CardDescription>Stacking dashboard notification state.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Runtime validation</CardTitle><CardDescription>Release checks currently enforced by the repository.</CardDescription></CardHeader>
           <CardContent className="grid gap-3">
-            {notifications.map((item, index) => <div className="rounded-2xl border bg-background/45 p-4" key={`${item.title}-${index}`}><Badge variant={item.type === "success" ? "success" : item.type === "warning" ? "warning" : "secondary"}>{item.type}</Badge><div className="mt-2 font-bold">{item.title}</div><p className="text-sm text-muted-foreground">{item.detail}</p></div>)}
-            <Button variant="outline" onClick={() => setNotifications([])}><Trash2 className="h-4 w-4" /> Clear notifications</Button>
+            {["Runtime validation", "Source validation", "TypeScript", "ESLint", "Production build"].map((item) => <div className="flex items-center justify-between gap-3 rounded-2xl border bg-background/45 p-4" key={item}><span className="font-bold">{item}</span><Badge variant="success">gate</Badge></div>)}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Feature flags</CardTitle><CardDescription>Toggle runtime-facing UI states locally.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Supported routes</CardTitle><CardDescription>Visible route state comes from the maintained route inventory.</CardDescription></CardHeader>
           <CardContent className="grid gap-3">
-            {flags.map((flag) => (
-              <button type="button" className="flex items-center justify-between rounded-2xl border bg-background/45 p-4 text-left transition hover:bg-muted" key={flag.key} onClick={() => setFlags((current) => current.map((item) => item.key === flag.key ? { ...item, enabled: !item.enabled } : item))}>
-                <span><span className="block font-bold">{flag.label}</span><span className="text-sm text-muted-foreground">{flag.enabled ? "Enabled" : "Disabled"}</span></span>
-                <span className={`h-6 w-11 rounded-full p-1 transition ${flag.enabled ? "bg-primary" : "bg-muted"}`}><span className={`block h-4 w-4 rounded-full bg-background transition ${flag.enabled ? "translate-x-5" : ""}`} /></span>
-              </button>
-            ))}
+            {games.slice(0, 5).map((game) => <div className="flex items-center justify-between gap-3 rounded-2xl border bg-background/45 p-4" key={game.name}><div><div className="font-bold">{game.name}</div><div className="text-xs text-muted-foreground">{game.ids[0]}</div></div><Badge variant={game.status === "working" ? "success" : "warning"}>{game.status}</Badge></div>)}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Support queue</CardTitle><CardDescription>Actionable reports users should send.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Support checklist</CardTitle><CardDescription>What to include when reporting a real runtime failure.</CardDescription></CardHeader>
           <CardContent className="grid gap-3">
-            {games.slice(0, 4).map((game) => <div className="flex items-center justify-between gap-3 rounded-2xl border bg-background/45 p-4" key={game.name}><div><div className="font-bold">{game.name}</div><div className="text-xs text-muted-foreground">{game.ids[0]}</div></div><Badge variant={game.status === "working" ? "success" : "warning"}>{game.status}</Badge></div>)}
+            {["Visible BadWars status text", "Place ID and route name", "Developer Console error", "Whether cache was cleared"].map((item) => <div className="rounded-2xl border bg-background/45 p-4 text-sm font-bold" key={item}>{item}</div>)}
           </CardContent>
         </Card>
       </div>
@@ -321,22 +276,22 @@ export function DashboardPage() {
 
 export function ProfilePage() {
   return (
-    <AppFrame title="Profile" description="Avatar, statistics, badges, devices, sessions, preferences, and security layout.">
+    <AppFrame title="Runtime support profile" description="Public support context for reports. No account data or fake user statistics are shown.">
       <div className="grid gap-4 xl:grid-cols-[.75fr_1fr]">
         <Card>
-          <CardHeader className="items-center text-center">
-            <div className="grid h-24 w-24 place-items-center rounded-full bg-primary/15 text-3xl font-black text-primary">BW</div>
-            <CardTitle>BadWars Member</CardTitle>
-            <CardDescription>Premium dashboard profile placeholder</CardDescription>
+          <CardHeader>
+            <Badge variant="secondary">Support identity</Badge>
+            <CardTitle>What to include</CardTitle>
+            <CardDescription>BadWars does not need a website account to diagnose loader/runtime failures.</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-3 text-center">
-            {["12 badges", "4 devices", "98% health"].map((item) => <div className="rounded-2xl border p-3 text-sm font-bold" key={item}>{item}</div>)}
+          <CardContent className="grid gap-3">
+            {["Visible loader status text", "Place ID and game route", "BadWars version and commit", "Developer Console error text"].map((item) => <div className="rounded-2xl border bg-background/45 p-4 text-sm font-bold" key={item}>{item}</div>)}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Security and sessions</CardTitle><CardDescription>Device trust, active sessions, and account protections.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Local-only runtime data</CardTitle><CardDescription>Profiles, layout, translations, and cache files stay in the executor filesystem unless a user chooses to share diagnostics.</CardDescription></CardHeader>
           <CardContent className="grid gap-3">
-            {["Windows desktop · active now", "Mobile browser · 2 days ago", "Recovery codes · configured"].map((item) => <div className="flex items-center gap-3 rounded-2xl border p-4" key={item}><CheckCircle2 className="h-5 w-5 text-emerald-300" /> {item}</div>)}
+            {["badscript/profiles/*.txt", "badwars_translations/*.json", "badscript/profiles/commit.txt"].map((item) => <div className="flex items-center gap-3 rounded-2xl border p-4" key={item}><CheckCircle2 className="h-5 w-5 text-emerald-300" /> {item}</div>)}
           </CardContent>
         </Card>
       </div>
@@ -411,26 +366,25 @@ export function FeaturesPage() {
   );
 }
 
-const settingsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8, "Use at least 8 characters")
-});
-
 export function SettingsPage() {
-  const form = useForm<z.infer<typeof settingsSchema>>({ resolver: zodResolver(settingsSchema), defaultValues: { email: "user@badwars.local", password: "" } });
   return (
-    <AppFrame title="Settings" description="Theme, accent color, animation preferences, notifications, privacy, account, security, and developer options.">
+    <AppFrame title="Runtime preferences" description="Documented local preferences and reset actions. This page does not pretend to manage a hosted account.">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {settingsSections.map((section) => { const Icon = section.icon; return <Card key={section.title}><CardHeader><Icon className="h-5 w-5 text-primary" /><CardTitle>{section.title}</CardTitle><CardDescription>{section.description}</CardDescription></CardHeader></Card>; })}
+        {[
+          ["GUI profile", "Current loader forces the V14 new GUI profile for stability."],
+          ["Reduced motion", "Runtime controls use shorter, guarded animation timings."],
+          ["Cache reset", "Clear generated BadWars cache files when source validation fails."],
+          ["Diagnostics", "Open the in-game console when loader/runtime status reports an error."],
+          ["Safe reporting", "Share visible errors, not local profile contents."],
+          ["Layout recovery", "Use reset layout after moving windows off-screen."]
+        ].map(([title, description]) => <Card key={title}><CardHeader><CheckCircle2 className="h-5 w-5 text-primary" /><CardTitle>{title}</CardTitle><CardDescription>{description}</CardDescription></CardHeader></Card>)}
       </div>
       <Card className="mt-5">
-        <CardHeader><CardTitle>Security form</CardTitle><CardDescription>React Hook Form plus Zod validation with inline errors.</CardDescription></CardHeader>
-        <CardContent>
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={form.handleSubmit(() => toast.success("Settings saved"))}>
-            <label className="grid gap-2 text-sm font-bold">Email<Input {...form.register("email")} />{form.formState.errors.email ? <span className="text-xs text-destructive">{form.formState.errors.email.message}</span> : null}</label>
-            <label className="grid gap-2 text-sm font-bold">Password<Input type="password" {...form.register("password")} />{form.formState.errors.password ? <span className="text-xs text-destructive">{form.formState.errors.password.message}</span> : null}</label>
-            <Button className="md:col-span-2" type="submit"><KeyRound className="h-4 w-4" /> Save preferences</Button>
-          </form>
+        <CardHeader><CardTitle>Cache-clear steps</CardTitle><CardDescription>Use this when the loader reports stale cache, bad compile output, or invalid profile state.</CardDescription></CardHeader>
+        <CardContent className="grid gap-3 text-sm text-muted-foreground">
+          <div className="rounded-2xl border bg-background/45 p-4">Delete generated `badscript/main.lua` and generated game bundle files, then run the latest loader again.</div>
+          <div className="rounded-2xl border bg-background/45 p-4">Keep profile files unless the error points directly at profile JSON.</div>
+          <Button variant="outline" onClick={() => toast.info("Cache steps copied", { description: "Use the downloads page for the current loader." })}>Copy troubleshooting summary</Button>
         </CardContent>
       </Card>
     </AppFrame>
@@ -439,9 +393,16 @@ export function SettingsPage() {
 
 export function AdminPage() {
   return (
-    <AppFrame title="Admin panel" description="Advanced admin dashboard shell for analytics, users, announcements, flags, downloads, logs, reports, audit trail, and roles.">
+    <AppFrame title="Release validation" description="Public validation gates and maintenance notes. No fake admin tools or private controls are exposed.">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {adminModules.map((module) => { const Icon = module.icon; return <Card key={module.title}><CardHeader><Icon className="h-5 w-5 text-primary" /><CardTitle>{module.title}</CardTitle><CardDescription>{module.description}</CardDescription></CardHeader></Card>; })}
+        {[
+          ["Runtime validation", "Loader, GUI, route, cache, overlay, and branding checks."],
+          ["Source validation", "Mojibake, patch artifacts, backup staging, secrets, and monolith warnings."],
+          ["Website validation", "TypeScript, ESLint, and production Next.js build."],
+          ["Roblox executor tests", "Still require a live Roblox/executor environment before final release signoff."],
+          ["Rollback", "Use the previous Git commit if runtime smoke tests fail."],
+          ["Cache clear", "Clear generated cache before retesting compile or route issues."]
+        ].map(([title, description]) => <Card key={title}><CardHeader><CheckCircle2 className="h-5 w-5 text-primary" /><CardTitle>{title}</CardTitle><CardDescription>{description}</CardDescription></CardHeader></Card>)}
       </div>
     </AppFrame>
   );

@@ -128,7 +128,8 @@ local loaderStart=os.clock()
 
 -- Polyfills
 isfile=isfile or function(f)local s,r=pcall(readfile,f)return s and r~=nil and r~=''end
-delfile=delfile or function(f)writefile(f,'')end
+local __nativeDelfile=type(delfile)=='function'
+delfile=delfile or function()return false,'delfile unavailable'end
 isfolder=isfolder or function()return false end
 makefolder=makefolder or function()end
 listfiles=listfiles or function()return{}end
@@ -148,6 +149,24 @@ end
 local ORCH_PATH=CFG.folder..'/'..CFG.file
 
 -- httpGet: tries all URLs, returns (content, used_url)
+local function callWithTimeout(callback, timeout)
+	local done=false
+	local ok=false
+	local result
+	task.spawn(function()
+		ok,result=pcall(callback)
+		done=true
+	end)
+	local started=os.clock()
+	while not done and os.clock()-started<(timeout or 12) do
+		task.wait(0.03)
+	end
+	if not done then
+		return false,'timeout'
+	end
+	return ok,result
+end
+
 local function httpGet(urls)
 	for _,url in ipairs(urls) do
 		local fn=(game and game.HttpGet)
@@ -156,12 +175,12 @@ local function httpGet(urls)
 			fn=env and env.HttpGet
 		end
 		if type(fn)=='function' then
-			local ok,res=pcall(fn,game,url,true)
+			local ok,res=callWithTimeout(function()return fn(game,url,true)end,12)
 			if ok and type(res)=='string' and #res>0 then return res,url end
 		end
-		local ok,res=pcall(function()
+		local ok,res=callWithTimeout(function()
 			return cloneref(game:GetService('HttpService')):GetAsync(url,true)
-		end)
+		end,12)
 		if ok and type(res)=='string' and #res>0 then return res,url end
 	end
 	return nil,nil
@@ -665,11 +684,14 @@ if type(_loadstring)~='function' then local m='loadstring unavailable';setStatus
 
 -- Roblox update watch integration
 local function watchRobloxUpdates()
+  local token={}
+  shared.__badwars_update_watch=token
   task.spawn(function()
     local badStatus=shared.BadStatus
     if type(badStatus)~='function' then return end
-    while true do
+    while shared.__badwars_update_watch==token do
       task.wait(300)
+      if shared.__badwars_update_watch~=token then return end
       local ok,res=pcall(function()
         local api='https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/profiles/roblox-version.txt'
         local httpService=cloneref(game:GetService('HttpService'))
@@ -698,8 +720,8 @@ setStatus('pipeline: cache setup')
 for _,d in {'badscript','badscript/games','badscript/profiles','badscript/assets','badscript/libraries','badscript/guis'} do
 	if not isfolder(d) then makefolder(d) end
 end
-local function wipeAny(p) if isfolder(p) then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
-local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) then delfile(f) end end end end end
+local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
+local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
 local cacheVersion = 'badwars-v14-clean-ui-2026-07-05-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'

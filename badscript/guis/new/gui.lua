@@ -1,3 +1,4 @@
+-- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
@@ -3545,11 +3546,7 @@ H = {
         local outsideConnection
         local scrollConnection
         local popupGeneration = 0
-        local dropdownTransition = TweenInfo.new(
-            0.16,
-            Enum.EasingStyle.Quart,
-            Enum.EasingDirection.InOut
-        )
+        local dropdownTransition = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
         local function updateTitle()
             title.Text =
@@ -3600,15 +3597,7 @@ H = {
             end
             if instant or not d.Loaded then destroyPopup(); return end
 
-            closingPopup.Active = false
-            local fadeTween = n:Tween(closingPopup, dropdownTransition, {
-                GroupTransparency = 1,
-                BackgroundTransparency = 1,
-            })
-            if closingScale then n:Tween(closingScale, dropdownTransition, { Scale = 0.985 }) end
-            if closingStroke then n:Tween(closingStroke, dropdownTransition, { Transparency = 1 }) end
-            if closingShadow then n:Tween(closingShadow, dropdownTransition, { ImageTransparency = 1 }) end
-            if fadeTween then fadeTween.Completed:Once(destroyPopup) else task.delay(0.17, destroyPopup) end
+            closingPopup.Active = false closingPopup.GroupTransparency = 1 closingPopup.BackgroundTransparency = 1 destroyPopup()
         end
 
         function api.Save(self, target)
@@ -3716,15 +3705,12 @@ H = {
             popup.GroupTransparency = 1
             popup.BorderSizePixel = 0
             popup.ClipsDescendants = true
-            popup.ZIndex = 10000
+            popup.ZIndex = 20000
             popup.Parent = w
-            addCorner(popup, o.Radius)
-            addSurfaceGradient(popup)
-            popupShadow = addShadow(popup, true)
-            popupShadow.ImageTransparency = 1
+            addCorner(popup, o.Radius) popupShadow = nil
             popupStroke = addStroke(popup, o.BorderStrong, 1, 1, "DropdownPopupStroke")
             popupScale = addScale(popup)
-            popupScale.Scale = 0.985
+            popupScale.Scale = 1
 
             local search = Instance.new("TextBox")
             search.Name = "SearchBar"
@@ -3744,7 +3730,7 @@ H = {
             search.TextSize = d.isMobile and 14 or 13
             search.FontFace = o.Font
             search.ClearTextOnFocus = false
-            search.ZIndex = 10002
+            search.ZIndex = 20002
             search.Parent = popup
             addCorner(search, o.RadiusSmall)
             addStroke(
@@ -3780,7 +3766,7 @@ H = {
             scroll.CanvasSize = UDim2.new()
             scroll.ScrollingDirection =
                 Enum.ScrollingDirection.Y
-            scroll.ZIndex = 10001
+            scroll.ZIndex = 20001
             scroll.Parent = popup
 
             local noResults = Instance.new("TextLabel")
@@ -3797,7 +3783,7 @@ H = {
             noResults.TextSize = d.isMobile and 14 or 13
             noResults.FontFace = o.Font
             noResults.Visible = false
-            noResults.ZIndex = 10002
+            noResults.ZIndex = 20002
             noResults.Parent = scroll
 
             local entries = {}
@@ -3833,7 +3819,7 @@ H = {
                     item == api.Value
                         and o.FontSemiBold
                         or o.Font
-                option.ZIndex = 10002
+                option.ZIndex = 20002
                 option.Parent = scroll
                 addCorner(option, o.RadiusSmall)
 
@@ -3986,12 +3972,7 @@ H = {
                 filter(search.Text)
             end)
 
-            filter("")
-
-            n:Tween(popup, dropdownTransition, { GroupTransparency = 0, BackgroundTransparency = 0.01 })
-            n:Tween(popupScale, dropdownTransition, { Scale = 1 })
-            n:Tween(popupStroke, dropdownTransition, { Transparency = 0.54 })
-            n:Tween(popupShadow, dropdownTransition, { ImageTransparency = 0.78 })
+            filter("") popup.GroupTransparency = 0 popup.BackgroundTransparency = 0.01 popupScale.Scale = 1 popupStroke.Transparency = 0.54
 
             local scrollingParent = parent
             while
@@ -6329,9 +6310,9 @@ function d.CreateGUI(aa)
     ai.Parent = ah
     local aj = Instance.new("TextButton")
     aj.Name = "DiscordInvite"
-    aj.Size = UDim2.fromOffset(220, 32)
-    aj.AnchorPoint = Vector2.new(0.5, 1)
-    aj.Position = UDim2.new(0.5, 0, 1, d.isMobile and -138 or -112)
+    aj.Size = UDim2.fromOffset(172, 28)
+    aj.AnchorPoint = Vector2.new(1, 0)
+    aj.Position = UDim2.new(1, -14, 0, 54)
     aj.BackgroundColor3 = o.MainSoft
     aj.BackgroundTransparency = 0.03
     aj.BorderSizePixel = 0
@@ -6373,7 +6354,7 @@ function d.CreateGUI(aa)
     discordLabel.Size = UDim2.new(1, -66, 1, 0)
     discordLabel.Position = UDim2.fromOffset(30, 0)
     discordLabel.BackgroundTransparency = 1
-    discordLabel.Text = "BADWARS COMMUNITY"
+    discordLabel.Text = "BADWARS DISCORD"
     discordLabel.TextColor3 = o.TextStrong
     discordLabel.TextSize = 11
     discordLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -7375,8 +7356,7 @@ function d.CreateGUI(aa)
         arrow.Parent = au
 
         local aw = Instance.new("CanvasGroup")
-        aw.Name = as.Name .. "Pane"
-        aw.Size = UDim2.fromScale(1, 1)
+        $1 aw.ClipsDescendants = true
         aw.BackgroundColor3 = o.MainSoft
         aw.BackgroundTransparency = 1
         aw.GroupTransparency = 1
@@ -7472,97 +7452,223 @@ function d.CreateGUI(aa)
 
         local padding = Instance.new("UIPadding")
         padding.PaddingTop = UDim.new(0, 2)
-        padding.PaddingBottom = UDim.new(0, 8)
+        padding.PaddingBottom = UDim.new(0, 16)
         padding.Parent = children
 
         for L, M in H do
-            at["Create" .. L] = function(N, O)
-                local control = M(O, children, ab)
-                if typeof(control) == "Instance" and control:IsA("GuiObject") then
-                    control.ZIndex = math.max(control.ZIndex, 522)
+    at["Create" .. L] = function(N, O)
+        local control = M(O, children, ab)
+        local rootControl =
+            typeof(control) == "Instance"
+                and control
+                or (
+                    type(control) == "table"
+                    and (
+                        control.Object
+                        or control.Frame
+                        or control.Button
+                        or control.Instance
+                    )
+                )
+
+        if
+            typeof(rootControl) == "Instance"
+            and rootControl:IsA("GuiObject")
+        then
+            local function promote(instance)
+                if instance:IsA("GuiObject") then
+                    instance.ZIndex = math.max(instance.ZIndex, 524)
                 end
-                return control
             end
-            at["Add" .. L] = at["Create" .. L]
+
+            promote(rootControl)
+
+            for _, descendant in ipairs(rootControl:GetDescendants()) do
+                promote(descendant)
+            end
+
+            local addedConnection
+            addedConnection = rootControl.DescendantAdded:Connect(promote)
+
+            rootControl.Destroying:Once(function()
+                if addedConnection then
+                    addedConnection:Disconnect()
+                    addedConnection = nil
+                end
+            end)
         end
 
-        local paneGeneration = 0
-        local function setPaneVisible(visible, instant)
-            paneGeneration += 1
-            local generation = paneGeneration
+        return control
+    end
 
-            if d.HideTooltip then
-                d.HideTooltip(true)
-            end
-            if d._OpenDropdown then
-                pcall(d._OpenDropdown, true)
-                d._OpenDropdown = nil
-            end
+    at["Add" .. L] = at["Create" .. L]
+end
 
-            if visible then
-                aw.Visible = true
-                aw.Active = true
-                aw.GroupTransparency = 1
-                aw.BackgroundTransparency = 1
-                paneScale.Scale = 0.985
-                paneStroke.Transparency = 1
-                paneShadow.ImageTransparency = 1
+        -- BADWARS_SETTINGS_PANE_STATE_V2
+local paneGeneration = 0
+d._SettingsPaneClosers =
+    d._SettingsPaneClosers
+    or setmetatable({}, { __mode = "k" })
 
-                if instant or not d.Loaded then
-                    aw.GroupTransparency = 0
-                    aw.BackgroundTransparency = 0.01
-                    paneScale.Scale = 1
-                    paneStroke.Transparency = 0.5
-                    paneShadow.ImageTransparency = 0.82
-                    return
-                end
+local function setPaneVisible(visible, instant)
+    paneGeneration += 1
+    local generation = paneGeneration
 
-                n:Tween(aw, transition, {
-                    GroupTransparency = 0,
-                    BackgroundTransparency = 0.01,
-                })
-                n:Tween(paneScale, transition, { Scale = 1 })
-                n:Tween(paneStroke, transition, { Transparency = 0.5 })
-                n:Tween(paneShadow, transition, { ImageTransparency = 0.82 })
-                return
-            end
+    if d.HideTooltip then
+        d.HideTooltip(true)
+    end
 
-            aw.Active = false
-            local function finishClose()
-                if generation == paneGeneration then
-                    aw.Visible = false
-                end
-            end
+    if d._OpenDropdown then
+        pcall(d._OpenDropdown, true)
+        d._OpenDropdown = nil
+    end
 
-            if instant or not d.Loaded then
-                aw.GroupTransparency = 1
-                aw.BackgroundTransparency = 1
-                paneScale.Scale = 0.985
-                paneStroke.Transparency = 1
-                paneShadow.ImageTransparency = 1
-                finishClose()
-                return
-            end
+    if visible then
+        local currentPane = d._OpenSettingsPane
 
-            local closeTween = n:Tween(aw, transition, {
-                GroupTransparency = 1,
-                BackgroundTransparency = 1,
-            })
-            n:Tween(paneScale, transition, { Scale = 0.985 })
-            n:Tween(paneStroke, transition, { Transparency = 1 })
-            n:Tween(paneShadow, transition, { ImageTransparency = 1 })
+        if currentPane and currentPane ~= aw and currentPane.Parent then
+            local closer =
+                d._SettingsPaneClosers
+                and d._SettingsPaneClosers[currentPane]
 
-            if closeTween then
-                closeTween.Completed:Once(finishClose)
+            if type(closer) == "function" then
+                closer(false, true)
             else
-                task.delay(0.19, finishClose)
+                currentPane.Visible = false
+                currentPane.Active = false
+                pcall(function()
+                    currentPane.Interactable = false
+                end)
             end
         end
 
-        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        d._OpenSettingsPane = aw
+        ap.Visible = false
+        ap.ScrollingEnabled = false
+
+        pcall(function()
+            ap.Interactable = false
+        end)
+
+        aw.Visible = true
+        aw.Active = true
+
+        pcall(function()
+            aw.Interactable = true
+        end)
+
+        aw.GroupTransparency = 1
+        aw.BackgroundTransparency = 1
+        paneScale.Scale = 0.985
+        paneStroke.Transparency = 1
+        paneShadow.ImageTransparency = 1
+
+        if instant or not d.Loaded then
+            aw.GroupTransparency = 0
+            aw.BackgroundTransparency = 0.01
+            paneScale.Scale = 1
+            paneStroke.Transparency = 0.5
+            paneShadow.ImageTransparency = 0.82
+            return
+        end
+
+        n:Tween(
+            aw,
+            transition,
+            {
+                GroupTransparency = 0,
+                BackgroundTransparency = 0.01,
+            }
+        )
+        n:Tween(paneScale, transition, { Scale = 1 })
+        n:Tween(paneStroke, transition, { Transparency = 0.5 })
+        n:Tween(
+            paneShadow,
+            transition,
+            { ImageTransparency = 0.82 }
+        )
+
+        return
+    end
+
+    aw.Active = false
+
+    pcall(function()
+        aw.Interactable = false
+    end)
+
+    local function finishClose()
+        if generation ~= paneGeneration then
+            return
+        end
+
+        aw.Visible = false
+
+        if d._OpenSettingsPane == aw then
+            d._OpenSettingsPane = nil
+        end
+
+        local restoreMain =
+            ak.Visible
+            and d._OpenSettingsPane == nil
+
+        ap.Visible = restoreMain
+        ap.ScrollingEnabled = restoreMain
+
+        pcall(function()
+            ap.Interactable = restoreMain
+        end)
+    end
+
+    if instant or not d.Loaded then
+        aw.GroupTransparency = 1
+        aw.BackgroundTransparency = 1
+        paneScale.Scale = 0.985
+        paneStroke.Transparency = 1
+        paneShadow.ImageTransparency = 1
+        finishClose()
+        return
+    end
+
+    local closeTween = n:Tween(
+        aw,
+        transition,
+        {
+            GroupTransparency = 1,
+            BackgroundTransparency = 1,
+        }
+    )
+
+    n:Tween(paneScale, transition, { Scale = 0.985 })
+    n:Tween(paneStroke, transition, { Transparency = 1 })
+    n:Tween(
+        paneShadow,
+        transition,
+        { ImageTransparency = 1 }
+    )
+
+    if closeTween then
+        closeTween.Completed:Once(finishClose)
+    else
+        task.delay(0.19, finishClose)
+    end
+end
+
+d._SettingsPaneClosers[aw] = setPaneVisible
+
+aw.Destroying:Once(function()
+    if d._SettingsPaneClosers then
+        d._SettingsPaneClosers[aw] = nil
+    end
+
+    if d._OpenSettingsPane == aw then
+        d._OpenSettingsPane = nil
+    end
+end)
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             children.CanvasSize = UDim2.fromOffset(
                 0,
-                layout.AbsoluteContentSize.Y + 10
+                layout.AbsoluteContentSize.Y + 20
             )
         end)
 
@@ -8207,33 +8313,51 @@ end))
     end
 
     local function setSettingsVisible(visible)
-        if d._OpenDropdown then
-            pcall(d._OpenDropdown, true)
-            d._OpenDropdown = nil
-        end
-        if d._OpenModuleOptions then
-            pcall(d._OpenModuleOptions, true)
-            d._OpenModuleOptions = nil
-        end
-        if d._OpenLegitOptions then
-            pcall(d._OpenLegitOptions, true)
-            d._OpenLegitOptions = nil
-        end
-        if d.HideTooltip then
-            d.HideTooltip(true)
-        end
-        ak.Visible = visible
-        playerCard.Visible = not visible
-        onlineDot.Visible = not visible
-        af.Visible = not visible
+    if d._OpenDropdown then
+        pcall(d._OpenDropdown, true)
+        d._OpenDropdown = nil
     end
 
-    ak:GetPropertyChangedSignal("Visible"):Connect(function()
-        local mainVisible = not ak.Visible
-        playerCard.Visible = mainVisible
-        onlineDot.Visible = mainVisible
-        af.Visible = mainVisible
-    end)
+    if d._OpenModuleOptions then
+        pcall(d._OpenModuleOptions, true)
+        d._OpenModuleOptions = nil
+    end
+
+    if d._OpenLegitOptions then
+        pcall(d._OpenLegitOptions, true)
+        d._OpenLegitOptions = nil
+    end
+
+    if d.HideTooltip then
+        d.HideTooltip(true)
+    end
+
+    if not visible and d._OpenSettingsPane then
+        local closer =
+            d._SettingsPaneClosers
+            and d._SettingsPaneClosers[d._OpenSettingsPane]
+
+        if type(closer) == "function" then
+            closer(false, true)
+        else
+            d._OpenSettingsPane.Visible = false
+            d._OpenSettingsPane.Active = false
+            d._OpenSettingsPane = nil
+        end
+    end
+
+    ak.Visible = visible
+    playerCard.Visible = not visible
+    onlineDot.Visible = not visible
+    af.Visible = not visible
+    aj.Visible = not visible
+endak:GetPropertyChangedSignal("Visible"):Connect(function()
+    local mainVisible = not ak.Visible
+    playerCard.Visible = mainVisible
+    onlineDot.Visible = mainVisible
+    af.Visible = mainVisible
+    aj.Visible = mainVisible
+end)
 
     an.MouseEnter:Connect(function()
         an.ImageColor3 = o.Text

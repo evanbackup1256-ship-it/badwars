@@ -164,3 +164,5 @@ docker-compose.override.yml
 .badwars-encoding-backup/
 
 .badwars-register-backup/
+
+.badwars-ui-semantic-backup/

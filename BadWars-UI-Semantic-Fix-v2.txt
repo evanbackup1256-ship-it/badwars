@@ -1,0 +1,21 @@
+BadWars semantic UI fix v2
+Applied: 2026-07-04T22:11:40
+Backup: C:\Users\evanm\OneDrive\Desktop\badwars\.badwars-ui-semantic-backup\20260704-221140\badscript\guis\new\gui.lua
+
+Why the previous patch failed:
+- It depended on one exact minified string.
+- The local gui.lua had already changed, so the optional clipping line no longer
+  matched even though the real settings-pane section still existed.
+
+This repair:
+- Locates CreateSettingsPane by semantic section boundaries.
+- Rebuilds the control wrapper so API-table controls and all descendants receive
+  a visible ZIndex.
+- Tracks one active settings pane.
+- Hides the covered settings list and restores it after closing.
+- Adds bottom scrolling safety space.
+- Moves Discord to a compact top-right position and hides it in settings.
+- Rebuilds the settings visibility handler.
+- Speeds dropdowns to 0.08 seconds.
+- Removes dropdown gradients, shadows, delayed close cleanup, and scale-in work.
+- Raises dropdown contents to the 20000 ZIndex range.

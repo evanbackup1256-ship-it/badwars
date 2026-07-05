@@ -2869,7 +2869,7 @@ H = {
                 TextColor3 = o.Text,
                 Position = UDim2.new(1, -24, 0.5, -9),
             })
-            n:Tween(scale, o.TweenFast, { Scale = 1.012 })
+            n:Tween(scale, o.TweenFast, { Scale = 1.006 })
         end)
         M.MouseLeave:Connect(function()
             n:Tween(N, o.TweenFast, {
@@ -2889,7 +2889,7 @@ H = {
             n:Tween(scale, o.TweenPress, { Scale = 0.985 })
         end)
         M.MouseButton1Up:Connect(function()
-            n:Tween(scale, o.TweenFast, { Scale = 1.012 })
+            n:Tween(scale, o.TweenFast, { Scale = 1.006 })
         end)
         M.Activated:Connect(I.Function)
 
@@ -6594,14 +6594,15 @@ function d.CreateGUI(aa)
         au.ClipsDescendants = true
         au.Parent = af
         addCorner(au, o.Radius)
-        local avStroke = addStroke(au, o.Border, 0.84, 1, "NavigationStroke")
+        local avStroke = addStroke(au, o.Border, 0.9, 1, "NavigationStroke")
         local avScale = addScale(au)
         local avSweep = addV9Sweep(au)
 
         local avRail = Instance.new("Frame")
         avRail.Name = "ActiveRail"
-        avRail.Size = UDim2.new(0, 3, 1, -16)
+        avRail.Size = UDim2.new(0, 2, 1, -18)
         avRail.Position = UDim2.fromOffset(0, 8)
+        avRail.BackgroundTransparency = 0.16
         avRail.BorderSizePixel = 0
         avRail.Visible = false
         avRail.Parent = au
@@ -6657,15 +6658,16 @@ function d.CreateGUI(aa)
 
         local function applyNavigationVisual()
             local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-            local dimAccent = accent:Lerp(o.MutedText, 0.28)
+            local dimAccent = accent:Lerp(o.MutedText, 0.68)
+            local activeText = accent:Lerp(o.TextStrong, 0.72)
             avRail.Visible = at.Enabled
             n:Tween(au, o.TweenFast, {
-                BackgroundColor3 = at.Enabled and o.Elevated or o.Surface,
-                TextColor3 = at.Enabled and accent or o.MutedText,
+                BackgroundColor3 = at.Enabled and o.SurfaceHover or o.Surface,
+                TextColor3 = at.Enabled and activeText or o.MutedText,
             })
             n:Tween(avStroke, o.TweenFast, {
-                Color = at.Enabled and accent or o.Border,
-                Transparency = at.Enabled and 0.46 or 0.82,
+                Color = at.Enabled and dimAccent or o.Border,
+                Transparency = at.Enabled and 0.72 or 0.9,
             })
             n:Tween(aw, o.TweenFast, {
                 Position = UDim2.new(1, at.Enabled and -16 or -20, 0.5, -4),
@@ -6673,7 +6675,7 @@ function d.CreateGUI(aa)
             })
             if av then
                 n:Tween(av, o.TweenFast, {
-                    ImageColor3 = at.Enabled and accent or o.MutedText,
+                    ImageColor3 = at.Enabled and dimAccent or o.MutedText,
                 })
             end
         end
@@ -6700,20 +6702,22 @@ function d.CreateGUI(aa)
         if not d.isMobile then
             au.MouseEnter:Connect(function()
                 local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-                local hoverAccent = accent:Lerp(o.MutedText, 0.3)
+                local hoverAccent = accent:Lerp(o.TextStrong, 0.78)
                 n:Tween(au, o.TweenFast, {
                     BackgroundColor3 = o.SurfaceHover,
                     TextColor3 = hoverAccent,
                 })
                 n:Tween(avStroke, o.TweenFast, {
-                    Color = accent,
-                    Transparency = at.Enabled and 0.4 or 0.62,
+                    Color = accent:Lerp(o.BorderStrong, 0.55),
+                    Transparency = at.Enabled and 0.66 or 0.78,
                 })
                 n:Tween(aw, o.TweenFast, { ImageColor3 = hoverAccent })
                 if av then
                     n:Tween(av, o.TweenFast, { ImageColor3 = hoverAccent })
                 end
-                playV9Sweep(avSweep)
+                if at.Enabled then
+                    playV9Sweep(avSweep)
+                end
                 n:Tween(avScale, o.TweenFast, { Scale = 1 })
             end)
             au.MouseLeave:Connect(function()
@@ -6770,7 +6774,12 @@ function d.CreateGUI(aa)
         at.AutoButtonColor = false
         at.Text = ""
         at.ClipsDescendants = true
-        at.Parent = af
+        if ar and ar.Hidden then
+            at.Visible = false
+            at.Size = UDim2.new(1, -12, 0, 0)
+        else
+            at.Parent = af
+        end
         addCorner(at, o.Radius)
         local atStroke = addStroke(
             at,
@@ -8318,6 +8327,35 @@ end))
         return at
     end
 
+    local function restoreSettingsRows()
+        ap.Visible = true
+        ap.Active = true
+        pcall(function()
+            ap.Interactable = true
+        end)
+
+        for _, row in ap:GetChildren() do
+            if row:IsA("GuiObject") then
+                row.Visible = true
+                if row.Size.Y.Offset <= 1 then
+                    row.Size = UDim2.new(1, -12, 0, 42)
+                end
+
+                if row:IsA("TextButton") or row:IsA("TextLabel") or row:IsA("TextBox") then
+                    row.TextTransparency = 0
+                end
+
+                for _, item in row:GetDescendants() do
+                    if item:IsA("TextButton") or item:IsA("TextLabel") or item:IsA("TextBox") then
+                        item.TextTransparency = math.min(item.TextTransparency, 0.18)
+                    elseif item:IsA("ImageButton") or item:IsA("ImageLabel") then
+                        item.ImageTransparency = math.min(item.ImageTransparency, 0.35)
+                    end
+                end
+            end
+        end
+    end
+
     local function setSettingsVisible(visible)
     if d._OpenDropdown then
         pcall(d._OpenDropdown, true)
@@ -8352,11 +8390,19 @@ end))
         end
     end
 
+    if visible then
+        restoreSettingsRows()
+    end
+
     ak.Visible = visible
     playerCard.Visible = not visible
     onlineDot.Visible = not visible
     af.Visible = not visible
     aj.Visible = not visible
+
+    if visible then
+        restoreSettingsRows()
+    end
 end
 
 ak:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -13621,7 +13667,7 @@ function d.CreatePrompt(ah, ai)
         addCorner(cancel, o.Radius)
         local cancelStroke = addStroke(cancel, o.Border, 0.52, 1, "CancelStroke")
         bindPremiumMotion(cancel, cancel, cancelStroke, {
-            HoverScale = 1.012,
+            HoverScale = 1.006,
             PressScale = 0.985,
             HoverStroke = o.BorderStrong,
             NormalStroke = o.Border,
@@ -13645,7 +13691,7 @@ function d.CreatePrompt(ah, ai)
         addCorner(confirm, o.Radius)
         local confirmStroke = addStroke(confirm, o.TextStrong, 0.74, 1, "ConfirmStroke")
         bindPremiumMotion(confirm, confirm, confirmStroke, {
-            HoverScale = 1.015,
+            HoverScale = 1.008,
             PressScale = 0.98,
             HoverStroke = o.TextStrong,
             NormalStroke = o.TextStrong,
@@ -15327,7 +15373,7 @@ d:Clean(d.VisibilityChanged:Connect(function()
 end))
 ar.Object.Parent = d.Categories.Main.MainGui
 d.OverlaysModuleCategory = ar
-d.Categories.Main:CreateOverlayBar()
+d.Categories.Main:CreateOverlayBar({ Hidden = true })
 
 local as = d.Categories.Main:CreateSettingsPane({ Name = "Modules" })
 as:CreateToggle({
@@ -16693,12 +16739,12 @@ task.defer(function()
             end
 
             pcall(function()
-                n:Tween(scale, o.TweenFast, { Scale = 1.012 })
+                n:Tween(scale, o.TweenFast, { Scale = 1.004 })
                 if instance.BackgroundTransparency < 1 then
                     n:Tween(
                         instance,
                         o.TweenFast,
-                        { BackgroundTransparency = math.max(baseTransparency - 0.035, 0) }
+                        { BackgroundTransparency = math.max(baseTransparency - 0.012, 0) }
                     )
                 end
             end)

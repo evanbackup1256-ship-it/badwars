@@ -233,6 +233,18 @@ if ($newGui -match "BadWarsV14Motion" -and $newGui -match "addCleanMotion" -and 
     Fail "V14 guarded motion layer is missing"
 }
 
+if ($newGui -match "function\s+ab\.CreateOverlayBar\(ar\)" -and $newGui -match "ar\s+and\s+ar\.Hidden" -and $newGui -match "CreateOverlayBar\(\{\s*Hidden\s*=\s*true\s*\}\)") {
+    Pass "Overlay manager is internal to avoid duplicate sidebar rows"
+} else {
+    Fail "Overlay manager can render as a duplicate sidebar row"
+}
+
+if ($newGui -match "local function restoreSettingsRows\(\)" -and $newGui -match "restoreSettingsRows\(\)" -and $newGui -match "TextTransparency\s*=\s*math\.min") {
+    Pass "Settings panel restores visible rows when opened"
+} else {
+    Fail "Settings panel can open with hidden or collapsed rows"
+}
+
 $oldPinnedCommit = "b0898d95476b5a8da7cd2f37578b16ec70af95430"
 $activeRuntime = @($loader, $newMain, $main, $newGui) -join "`n"
 if ($activeRuntime -notmatch [regex]::Escape($oldPinnedCommit)) {

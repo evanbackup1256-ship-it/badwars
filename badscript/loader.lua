@@ -1,4 +1,127 @@
--- BadWars Loader v6.1
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
+do
+    shared = type(shared) == "table" and shared or {}
+    shared.__badwars_diagnostic_buffer = type(shared.__badwars_diagnostic_buffer) == "table"
+        and shared.__badwars_diagnostic_buffer
+        or {}
+
+    local function __badwarsBuffer(level, message, context)
+        context = type(context) == "table" and context or {}
+        table.insert(shared.__badwars_diagnostic_buffer, {
+            severity = level or "ERROR",
+            message = tostring(message),
+            traceback = context.traceback,
+            subsystem = context.subsystem or "Bootstrap",
+            module = context.module,
+            file = context.file,
+            stage = context.stage or "bootstrap",
+            fatal = context.fatal == true,
+            caught = context.caught ~= false,
+            native = context.native ~= false,
+        })
+    end
+
+    local function __badwarsLoadDiagnostics()
+        if type(shared.BadDiagnostics) == "table" then
+            return shared.BadDiagnostics
+        end
+
+        local source
+        local sourceName = "badscript/libraries/diagnostics.lua"
+
+        if type(isfile) == "function" and type(readfile) == "function" then
+            local ok, present = pcall(isfile, sourceName)
+            if ok and present then
+                local readOk, contents = pcall(readfile, sourceName)
+                if readOk and type(contents) == "string" and contents ~= "" then
+                    source = contents
+                elseif not readOk then
+                    __badwarsBuffer("WARN", contents, {
+                        subsystem = "BootstrapFilesystem",
+                        file = sourceName,
+                    })
+                end
+            end
+        end
+
+        if not source then
+            local urls = {
+                "https://github.com/evanbackup1256-ship-it/badwars/raw/main/badscript/libraries/diagnostics.lua",
+                "https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/libraries/diagnostics.lua",
+            }
+            for _, url in ipairs(urls) do
+                local ok, result = pcall(function()
+                    local fn = game and game.HttpGet
+                    if type(fn) == "function" then
+                        return fn(game, url, true)
+                    end
+                    local service = game:GetService("HttpService")
+                    return service:GetAsync(url, true)
+                end)
+                if ok and type(result) == "string" and result ~= "" and result ~= "404: Not Found" then
+                    source = result
+                    sourceName = url
+                    break
+                elseif not ok then
+                    __badwarsBuffer("WARN", result, {
+                        subsystem = "BootstrapHTTP",
+                        file = url,
+                    })
+                end
+            end
+        end
+
+        if type(source) ~= "string" or source == "" then
+            __badwarsBuffer("ERROR", "Unable to load diagnostics.lua", {
+                subsystem = "Bootstrap",
+                file = sourceName,
+                fatal = false,
+            })
+            return nil
+        end
+
+        local env = getgenv and type(getgenv) == "function" and getgenv() or nil
+        local compiler = (env and env.loadstring) or loadstring
+        if type(compiler) ~= "function" then
+            __badwarsBuffer("ERROR", "loadstring unavailable while loading diagnostics", {
+                subsystem = "BootstrapCompiler",
+                file = sourceName,
+                fatal = true,
+            })
+            return nil
+        end
+
+        local fn, compileError = compiler(source, "@badscript/libraries/diagnostics.lua")
+        if not fn then
+            __badwarsBuffer("FATAL", compileError, {
+                subsystem = "BootstrapCompiler",
+                file = sourceName,
+                fatal = true,
+            })
+            return nil
+        end
+
+        local ok, result = xpcall(fn, function(err)
+            if debug and type(debug.traceback) == "function" then
+                return debug.traceback(tostring(err), 2)
+            end
+            return tostring(err)
+        end)
+        if not ok then
+            __badwarsBuffer("FATAL", result, {
+                subsystem = "BootstrapRuntime",
+                file = sourceName,
+                traceback = result,
+                fatal = true,
+            })
+            return nil
+        end
+        return result
+    end
+
+    __badwarsLoadDiagnostics()
+end
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Loader v6.1
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -423,7 +546,7 @@ shared.BadStatus = function(msg, isErr)
 
 	loaderStatusGeneration += 1
 	local statusGeneration = loaderStatusGeneration
-	statusError = isErr == true
+	statusError = isErr == true if statusError then shared.__badwars_fatal_error=true end if shared.BadDiagnostics then shared.BadDiagnostics:SetStage(message); if statusError then shared.BadDiagnostics:Error(message, shared.BadDiagnostics:Traceback(message,3), {subsystem='LoaderStatus',file='badscript/loader.lua',fatal=false}) else shared.BadDiagnostics:Info(message,{subsystem='LoaderStatus',file='badscript/loader.lua',native=false}) end end
 
 	local nextProgress = resolveStatusProgress(message)
 	if terminalStatus and not statusError then
@@ -576,7 +699,7 @@ setStatus('pipeline: ready')
 -- Error tracking
 local __rtErrs=shared.__badwars_runtime_errors
 if type(__rtErrs)~='table' then __rtErrs={};shared.__badwars_runtime_errors=__rtErrs end
-local function recordErr(mod,msg) table.insert(__rtErrs,{module=tostring(mod),error=tostring(msg),time=os.clock()});warn('BadWars: [ERROR] '..tostring(mod)..': '..tostring(msg)) end
+local function recordErr(mod,msg) local trace=shared.BadDiagnostics and shared.BadDiagnostics:Traceback(msg,3) or tostring(msg) table.insert(__rtErrs,{module=tostring(mod),error=tostring(msg),traceback=trace,time=os.clock()}) if shared.BadDiagnostics then shared.BadDiagnostics:RecordRuntime(mod,msg,{subsystem='Loader',file='badscript/loader.lua',traceback=trace}) else warn('BadWars: [ERROR] '..tostring(mod)..': '..tostring(msg)) end end
 
 -- Loadstring
 local _loadstring
@@ -673,7 +796,7 @@ setStatus('main.lua compiled OK')
 
 -- Execute
 setStatus('pipeline: executing main orchestrator')
-local ok,result=xpcall(fn,debug.traceback)
+local ok,result=xpcall(fn,function(err) local d=shared.BadDiagnostics return d and d:Traceback(err,2) or ((debug and debug.traceback) and debug.traceback(tostring(err),2) or tostring(err)) end)
 if not ok then local m='main.lua runtime: '..tostring(result);setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0) end
 
 -- Validation
@@ -696,4 +819,4 @@ end
 local el=os.clock()-loaderStart
 local final='Loader complete in '..string.format('%.2f',el)..'s'
 if #issues>0 then final=final..' ('..#issues..' issue(s))' end
- setStatus(final,#issues>0) if statusCard and #issues == 0 then task.wait(0.22) loaderTween(statusCard,TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1}) task.delay(0.22,function() if statusGui then statusGui:Destroy() end end) end return result
+ setStatus(final,#issues>0) if statusCard and #issues == 0 and not shared.__badwars_fatal_error then task.wait(0.22) loaderTween(statusCard,TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1}) task.delay(0.22,function() if statusGui then statusGui:Destroy() end end) end return result

@@ -1,4 +1,127 @@
-local function safeHttpGet(inst, url, nocache)
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
+do
+    shared = type(shared) == "table" and shared or {}
+    shared.__badwars_diagnostic_buffer = type(shared.__badwars_diagnostic_buffer) == "table"
+        and shared.__badwars_diagnostic_buffer
+        or {}
+
+    local function __badwarsBuffer(level, message, context)
+        context = type(context) == "table" and context or {}
+        table.insert(shared.__badwars_diagnostic_buffer, {
+            severity = level or "ERROR",
+            message = tostring(message),
+            traceback = context.traceback,
+            subsystem = context.subsystem or "Bootstrap",
+            module = context.module,
+            file = context.file,
+            stage = context.stage or "bootstrap",
+            fatal = context.fatal == true,
+            caught = context.caught ~= false,
+            native = context.native ~= false,
+        })
+    end
+
+    local function __badwarsLoadDiagnostics()
+        if type(shared.BadDiagnostics) == "table" then
+            return shared.BadDiagnostics
+        end
+
+        local source
+        local sourceName = "badscript/libraries/diagnostics.lua"
+
+        if type(isfile) == "function" and type(readfile) == "function" then
+            local ok, present = pcall(isfile, sourceName)
+            if ok and present then
+                local readOk, contents = pcall(readfile, sourceName)
+                if readOk and type(contents) == "string" and contents ~= "" then
+                    source = contents
+                elseif not readOk then
+                    __badwarsBuffer("WARN", contents, {
+                        subsystem = "BootstrapFilesystem",
+                        file = sourceName,
+                    })
+                end
+            end
+        end
+
+        if not source then
+            local urls = {
+                "https://github.com/evanbackup1256-ship-it/badwars/raw/main/badscript/libraries/diagnostics.lua",
+                "https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/libraries/diagnostics.lua",
+            }
+            for _, url in ipairs(urls) do
+                local ok, result = pcall(function()
+                    local fn = game and game.HttpGet
+                    if type(fn) == "function" then
+                        return fn(game, url, true)
+                    end
+                    local service = game:GetService("HttpService")
+                    return service:GetAsync(url, true)
+                end)
+                if ok and type(result) == "string" and result ~= "" and result ~= "404: Not Found" then
+                    source = result
+                    sourceName = url
+                    break
+                elseif not ok then
+                    __badwarsBuffer("WARN", result, {
+                        subsystem = "BootstrapHTTP",
+                        file = url,
+                    })
+                end
+            end
+        end
+
+        if type(source) ~= "string" or source == "" then
+            __badwarsBuffer("ERROR", "Unable to load diagnostics.lua", {
+                subsystem = "Bootstrap",
+                file = sourceName,
+                fatal = false,
+            })
+            return nil
+        end
+
+        local env = getgenv and type(getgenv) == "function" and getgenv() or nil
+        local compiler = (env and env.loadstring) or loadstring
+        if type(compiler) ~= "function" then
+            __badwarsBuffer("ERROR", "loadstring unavailable while loading diagnostics", {
+                subsystem = "BootstrapCompiler",
+                file = sourceName,
+                fatal = true,
+            })
+            return nil
+        end
+
+        local fn, compileError = compiler(source, "@badscript/libraries/diagnostics.lua")
+        if not fn then
+            __badwarsBuffer("FATAL", compileError, {
+                subsystem = "BootstrapCompiler",
+                file = sourceName,
+                fatal = true,
+            })
+            return nil
+        end
+
+        local ok, result = xpcall(fn, function(err)
+            if debug and type(debug.traceback) == "function" then
+                return debug.traceback(tostring(err), 2)
+            end
+            return tostring(err)
+        end)
+        if not ok then
+            __badwarsBuffer("FATAL", result, {
+                subsystem = "BootstrapRuntime",
+                file = sourceName,
+                traceback = result,
+                fatal = true,
+            })
+            return nil
+        end
+        return result
+    end
+
+    __badwarsLoadDiagnostics()
+end
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_ENDlocal function safeHttpGet(inst, url, nocache)
 	local g = inst or game
 	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
 	if httpget then
@@ -75,10 +198,10 @@ local function createStatusLabel()
 	end
 	shared.BadStatusGui = statusGui
 	shared.BadStatus = function(message, isError)
-		local text = 'BadWars: ' .. tostring(message)
+		local text = 'BadWars: ' .. tostring(message) if isError then shared.__badwars_fatal_error = true end if shared.BadDiagnostics then shared.BadDiagnostics:SetStage(tostring(message)); if isError then shared.BadDiagnostics:Fatal(tostring(message), shared.BadDiagnostics:Traceback(message, 3), {subsystem='LoaderStatus', file='badscript/NewMainScript.lua'}) else shared.BadDiagnostics:Info(tostring(message), {subsystem='LoaderStatus', file='badscript/NewMainScript.lua', native=false}) end end
 		warn(text)
 		if statusLabel then
-			if not isError and tostring(message):find('ready', 1, true) then
+			if not isError and not shared.__badwars_fatal_error and tostring(message):find('ready', 1, true) then
 				statusGui.Enabled = false
 				return
 			end
@@ -212,7 +335,7 @@ if not mainFunc then
 end
 
 setStatus('running main.lua')
-local ok, result = xpcall(mainFunc, debug.traceback)
+local ok, result = xpcall(mainFunc, function(err) local d=shared.BadDiagnostics return d and d:Traceback(err, 2) or ((debug and debug.traceback) and debug.traceback(tostring(err), 2) or tostring(err)) end)
 if not ok then
 	setStatus('ERROR running main.lua: ' .. tostring(result), true)
 	error(result, 0)

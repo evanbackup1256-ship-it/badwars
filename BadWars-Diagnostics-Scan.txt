@@ -1,0 +1,129 @@
+BadWars diagnostics scan
+Generated: 2026-07-04T20:24:46
+Repository: C:\Users\evanm\OneDrive\Desktop\badwars
+
+Columns: file | pcall | xpcall | task.spawn | task.defer | coroutine | ignored-pcall candidates
+
+badscript/entry.lua | 5 | 2 | 0 | 0 | 0 | 0
+badscript/games/1.8arena/77790193039862 - game/base.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/1.8arena/77790193039862 - game/Blatant/Fly.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/1.8arena/77790193039862 - game/Combat/AutoClicker.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/893973440 - flee the facility/base.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/893973440 - flee the facility/Blatant/PhaseHammer.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/893973440 - flee the facility/Render/ComputerESP.lua | 0 | 0 | 2 | 0 | 0 | 0
+badscript/games/bedwars/6872265039 - lobby/base.lua | 3 | 0 | 0 | 0 | 0 | 1
+badscript/games/bedwars/6872265039 - lobby/Combat/Sprint.lua | 6 | 0 | 0 | 0 | 0 | 4
+badscript/games/bedwars/6872265039 - lobby/Minigames/AutoGamble.lua | 3 | 0 | 0 | 0 | 0 | 3
+badscript/games/bedwars/6872274481 - game/base.lua | 18 | 3 | 1 | 1 | 0 | 8
+badscript/games/bedwars/6872274481 - game/Blatant/AntiFall.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/Blatant/FastBreak.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/games/bedwars/6872274481 - game/Blatant/Fly.lua | 4 | 0 | 0 | 0 | 0 | 4
+badscript/games/bedwars/6872274481 - game/Blatant/HitBoxes.lua | 3 | 0 | 0 | 0 | 0 | 3
+badscript/games/bedwars/6872274481 - game/Blatant/KeepSprint.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/games/bedwars/6872274481 - game/Blatant/Killaura.lua | 19 | 0 | 2 | 0 | 0 | 17
+badscript/games/bedwars/6872274481 - game/Blatant/LongJump.lua | 22 | 0 | 3 | 0 | 0 | 16
+badscript/games/bedwars/6872274481 - game/Blatant/NoFall.lua | 2 | 0 | 1 | 0 | 0 | 2
+badscript/games/bedwars/6872274481 - game/Blatant/NoSlowdown.lua | 2 | 0 | 0 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/Blatant/ProjectileAimbot.lua | 3 | 0 | 0 | 0 | 0 | 3
+badscript/games/bedwars/6872274481 - game/Blatant/ProjectileAura.lua | 5 | 0 | 2 | 0 | 0 | 4
+badscript/games/bedwars/6872274481 - game/Blatant/Speed.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/Combat/AimAssist.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/games/bedwars/6872274481 - game/Combat/AutoClicker.lua | 5 | 0 | 1 | 0 | 0 | 5
+badscript/games/bedwars/6872274481 - game/Combat/Reach.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/games/bedwars/6872274481 - game/Combat/Sprint.lua | 6 | 0 | 0 | 0 | 0 | 6
+badscript/games/bedwars/6872274481 - game/Combat/TriggerBot.lua | 5 | 0 | 0 | 0 | 0 | 5
+badscript/games/bedwars/6872274481 - game/Inventory/AutoBank.lua | 0 | 0 | 2 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Inventory/AutoHotbar.lua | 2 | 0 | 0 | 2 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Inventory/FastDrop.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Legit/BedBreakEffect.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/Legit/Crosshair.lua | 2 | 0 | 0 | 1 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Legit/DamageIndicator.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Legit/KillEffect.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Minigames/BedPlates.lua | 1 | 0 | 0 | 1 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Render/Health.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/Render/KitESP.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/Render/NameTags.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/games/bedwars/6872274481 - game/Render/StorageESP.lua | 0 | 0 | 3 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Utility/AutoKit.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/Utility/AutoPearl.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Utility/AutoShoot.lua | 1 | 0 | 1 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/Utility/ModuleDiagnostics.lua | 3 | 0 | 0 | 1 | 0 | 2
+badscript/games/bedwars/6872274481 - game/Utility/PickupRange.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Utility/RavenTP.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Utility/Scaffold.lua | 4 | 1 | 1 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/Utility/StaffDetector.lua | 5 | 0 | 2 | 1 | 0 | 2
+badscript/games/bedwars/6872274481 - game/World/AutoSuffocate.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/bedwars/6872274481 - game/World/ChestSteal.lua | 1 | 0 | 1 | 0 | 0 | 1
+badscript/games/bedwars/6872274481 - game/World/Schematica.lua | 2 | 0 | 0 | 0 | 0 | 0
+badscript/games/blocktales/16483433878 - blocktales/base.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/blocktales/16483433878 - blocktales/Blatant/Fly.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/blocktales/16483433878 - blocktales/Render/PickupTracers.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/bridge duel/139566161526375 - game/base.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/bridge duel/139566161526375 - game/Inventory/AutoBuy.lua | 0 | 0 | 2 | 0 | 0 | 0
+badscript/games/bridge duel/139566161526375 - game/Utility/Scaffold.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/frontlines/5938036553 - game/base.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/frontlines/5938036553 - game/Combat/AimAssist.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/frontlines/5938036553 - game/Combat/SilentAim.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/jailbreak/606849621 - main/base.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/games/jailbreak/606849621 - main/Blatant/AutoPop.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/jailbreak/606849621 - main/Combat/SilentAim.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/prison life/155615604 - main/base.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/prison life/155615604 - main/Blatant/AntiInvisible.lua | 0 | 0 | 3 | 0 | 0 | 0
+badscript/games/prison life/155615604 - main/Blatant/AntiTaze.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/prison life/155615604 - main/Blatant/NoJumpCooldown.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/prison life/155615604 - main/Combat/SilentAim.lua | 1 | 0 | 1 | 0 | 0 | 1
+badscript/games/prison life/155615604 - main/Inventory/AutoHotbar.lua | 0 | 0 | 2 | 1 | 0 | 0
+badscript/games/prison life/155615604 - main/Inventory/AutoPickup.lua | 0 | 0 | 2 | 0 | 0 | 0
+badscript/games/prison life/155615604 - main/Legit/HitSound.lua | 0 | 0 | 0 | 1 | 0 | 0
+badscript/games/prison life/155615604 - main/Legit/Viewmodel.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/prison life/155615604 - main/Render/C4ESP.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/prison life/155615604 - main/Utility/AutoDetonate.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/prison life/155615604 - main/Utility/AutoReload.lua | 0 | 0 | 1 | 1 | 0 | 0
+badscript/games/prison life/155615604 - main/Utility/Disabler.lua | 0 | 0 | 1 | 1 | 0 | 0
+badscript/games/redliner/115875349872417 - game/base.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/redliner/115875349872417 - game/Blatant/AlwaysStun.lua | 0 | 0 | 0 | 1 | 0 | 0
+badscript/games/redliner/115875349872417 - game/Blatant/AutoParry.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/redliner/115875349872417 - game/Blatant/Killaura.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/redliner/115875349872417 - game/Combat/SilentAim.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/skywars voxel/8768229691 - skywars game/base.lua | 1 | 0 | 1 | 0 | 0 | 1
+badscript/games/skywars voxel/8768229691 - skywars game/Blatant/Killaura.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/skywars voxel/8768229691 - skywars game/Combat/Sprint.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/universal - base/base.lua | 15 | 0 | 4 | 0 | 0 | 4
+badscript/games/universal - base/Blatant/Fly.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/universal - base/Blatant/TargetStrafe.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/games/universal - base/Blatant/Timer.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/games/universal - base/bundle.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/games/universal - base/Combat/AimAssist.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/universal - base/Combat/SilentAim.lua | 2 | 0 | 0 | 0 | 0 | 1
+badscript/games/universal - base/Legit/Atmosphere.lua | 0 | 0 | 0 | 1 | 0 | 0
+badscript/games/universal - base/Legit/Clock.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/games/universal - base/Legit/Disguise.lua | 4 | 0 | 0 | 0 | 0 | 1
+badscript/games/universal - base/Legit/Keystrokes.lua | 4 | 0 | 0 | 0 | 0 | 3
+badscript/games/universal - base/Render/ESP.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/games/universal - base/Render/Fullbright.lua | 0 | 0 | 1 | 0 | 0 | 0
+badscript/games/universal - base/Render/Health.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/universal - base/Render/NameTags.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/universal - base/Render/PlayerModel.lua | 0 | 0 | 2 | 0 | 0 | 0
+badscript/games/universal - base/Render/Tracers.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/universal - base/Utility/AnimationPlayer.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/games/universal - base/Utility/StaffDetector.lua | 6 | 0 | 3 | 0 | 0 | 3
+badscript/games/universal - base/World/Freecam.lua | 1 | 0 | 0 | 0 | 0 | 1
+badscript/games/universal - base/World/SafeWalk.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/guis/liquidbounce/components/ColorSlider.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/guis/liquidbounce/components/Font.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/guis/liquidbounce/gui.lua | 5 | 0 | 3 | 0 | 0 | 0
+badscript/guis/new/components/ColorSlider.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/guis/new/components/Font.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/guis/new/gui.lua | 128 | 4 | 21 | 18 | 3 | 73
+badscript/guis/old/components/ColorSlider.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/guis/old/components/Font.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/guis/old/gui.lua | 4 | 0 | 5 | 0 | 0 | 1
+badscript/guis/rise/components/ColorSlider.lua | 1 | 0 | 0 | 0 | 0 | 0
+badscript/guis/rise/components/Font.lua | 2 | 0 | 0 | 0 | 0 | 2
+badscript/guis/rise/gui.lua | 4 | 0 | 5 | 0 | 0 | 1
+badscript/guis/wurst/gui.lua | 3 | 0 | 2 | 0 | 0 | 0
+badscript/libraries/diagnostics.lua | 18 | 1 | 1 | 5 | 0 | 10
+badscript/libraries/entity.lua | 0 | 0 | 2 | 0 | 0 | 0
+badscript/loader.lua | 16 | 2 | 1 | 0 | 0 | 7
+badscript/main.lua | 43 | 5 | 2 | 2 | 0 | 21
+badscript/NewMainScript.lua | 8 | 2 | 0 | 0 | 0 | 2

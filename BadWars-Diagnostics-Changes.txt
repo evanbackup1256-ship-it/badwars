@@ -1,0 +1,35 @@
+BadWars diagnostics patch applied
+Applied: 2026-07-04T20:24:47
+Repository: C:\Users\evanm\OneDrive\Desktop\badwars
+Backup: C:\Users\evanm\OneDrive\Desktop\badwars\.badwars-diagnostics-backup\20260704-202445
+
+Modified:
+ - badscript/libraries/diagnostics.lua
+ - badscript\NewMainScript.lua: added early diagnostics bootstrap
+ - badscript\entry.lua: added early diagnostics bootstrap
+ - badscript\loader.lua: added early diagnostics bootstrap
+ - badscript\main.lua: added early diagnostics bootstrap
+ - badscript\guis\new\gui.lua: added early diagnostics bootstrap
+ - NewMainScript.lua: forwarded loader status into diagnostics and made fatal state sticky
+ - NewMainScript.lua: prevented ready state from hiding prior fatal errors
+ - NewMainScript.lua: upgraded top-level runtime traceback handling
+ - entry.lua: instrumented executor HTTP failures
+ - entry.lua: upgraded loader traceback capture
+ - loader.lua: forwarded status transitions into diagnostics
+ - loader.lua: centralized runtime error recording with tracebacks
+ - loader.lua: upgraded main orchestrator traceback capture
+ - loader.lua: retained loader UI after fatal startup failures
+ - main.lua: instrumented internal signal callbacks
+ - main.lua: upgraded BadwarsLoader.wrap callback capture
+ - main.lua: instrumented timeout worker callbacks
+ - main.lua: upgraded game-module execution traceback capture
+
+Console:
+ - Press F8 or use the top-right CONSOLE button.
+ - Fatal startup errors remain visible and prevent automatic loader dismissal.
+ - Set shared.BadDiagnosticsSelfTest=true before loading to run controlled tests.
+ - Call shared.BadDiagnostics:RunSelfTests() to run tests manually.
+
+Validation note:
+ - This patch performs source-level validation and emits a scan inventory.
+ - Actual Roblox/executor runtime behavior must still be tested in the target executor.

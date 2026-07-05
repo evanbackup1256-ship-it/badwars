@@ -8351,7 +8351,9 @@ end))
     onlineDot.Visible = not visible
     af.Visible = not visible
     aj.Visible = not visible
-endak:GetPropertyChangedSignal("Visible"):Connect(function()
+end
+
+ak:GetPropertyChangedSignal("Visible"):Connect(function()
     local mainVisible = not ak.Visible
     playerCard.Visible = mainVisible
     onlineDot.Visible = mainVisible

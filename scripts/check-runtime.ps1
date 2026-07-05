@@ -201,6 +201,12 @@ if ($newGui -match "Logs" -or $newGui -match "Console") {
     Fail "Custom console log storage is missing"
 }
 
+if ($newGui -notmatch "\bendak\b" -and $newGui -notmatch "\$[0-9]+") {
+    Pass "GUI source has no glued end tokens or replacement artifacts"
+} else {
+    Fail "GUI source contains a likely syntax artifact"
+}
+
 $oldPinnedCommit = "b0898d95476b5a8da7cd2f37578b16ec70af95430"
 $activeRuntime = @($loader, $newMain, $main, $newGui) -join "`n"
 if ($activeRuntime -notmatch [regex]::Escape($oldPinnedCommit)) {

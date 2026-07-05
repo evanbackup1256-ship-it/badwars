@@ -8335,7 +8335,7 @@ end))
         for _, item in pane:GetDescendants() do
             if item:IsA("TextButton") or item:IsA("TextLabel") or item:IsA("TextBox") then
                 item.TextTransparency = 0
-                if item.TextColor3.Magnitude > 0 then
+                if typeof(item.TextColor3) == "Color3" then
                     item.TextColor3 = item.TextColor3:Lerp(o.Text, 0.55)
                 end
             elseif item:IsA("ImageButton") or item:IsA("ImageLabel") then
@@ -10932,7 +10932,7 @@ function d.CreateOverlay(af, ag)
         Options = {},
     }
 
-    if d.OverlaysModuleCategory then
+    if d.OverlaysModuleCategory and false then
         d.OverlaysModuleCategory:AddToggle(ai.Button, ag.Star)
     end
 

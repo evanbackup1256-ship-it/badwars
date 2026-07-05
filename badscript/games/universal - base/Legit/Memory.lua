@@ -1,8 +1,13 @@
 local Memory
 local label
 
-Memory = Bad.Legit:CreateModule({
+Memory = Bad:CreateOverlay({
 	Name = 'Memory',
+	Icon = getcustomasset('badscript/assets/new/textguiicon.png'),
+	CustomOverlay = true,
+	Pinned = true,
+	CategorySize = 100,
+	ContentHeight = 41,
 	Function = function(callback)
 		if callback then
 			repeat
@@ -18,7 +23,6 @@ Memory = Bad.Legit:CreateModule({
 			until not Memory or not Memory.Enabled
 		end
 	end,
-	Size = UDim2.fromOffset(100, 41),
 	Tooltip = 'A label showing the memory currently used by roblox'
 })
 Memory:CreateFont({

@@ -1,4 +1,4 @@
--- BADWARS_UI_V15_RECOVERED_REWRITE
+-- BADWARS_UI_V16_RENDER_HUD_PAGE_MANAGER
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -165,8 +165,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "15.0",
-    PremiumBuild = "2026.07.05-V15-RECOVERED-LATEST",
+    Version = "16.0",
+    PremiumBuild = "2026.07.05-V16-RENDER-HUD-PAGE-MANAGER",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -306,12 +306,12 @@ local o = {
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
-    TweenPress = TweenInfo.new(0.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    TweenFast = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Tween = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSlow = TweenInfo.new(0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSpring = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenBack = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenPress = TweenInfo.new(0.065, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenFast = TweenInfo.new(0.11, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    Tween = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSlow = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSpring = TweenInfo.new(0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenBack = TweenInfo.new(0.19, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 }
 
 local function getTableSize(p)
@@ -1996,6 +1996,7 @@ local LayoutIntelligence = {
     activeObject = nil,
     registrationCounter = 0,
     dirty = false,
+    resolveQueued = false,
     resolving = false,
     started = false,
     margin = d.isMobile and 6 or 8,
@@ -2246,19 +2247,15 @@ end
 
 function LayoutIntelligence:UpdateDrag(object, desired)
     self:Register(object)
-    local blockers = self:_blockerRects(object)
-    local safe, found = self:_findSafeAgainst(object, desired, blockers, 80)
+
+    -- Pointer movement stays direct. Collision resolution is deferred until
+    -- release so drag input never performs an O(n²) layout search per frame.
+    local safe = clampGuiObjectToViewport(object, desired)
     local metadata = self.metadata[object]
-
-    if found then
-        if metadata then
-            metadata.LastSafe = safe
-        end
-        return safe
+    if metadata then
+        metadata.LastSafe = safe
     end
-
-    return metadata and metadata.LastSafe
-        or clampGuiObjectToViewport(object, desired)
+    return safe
 end
 
 function LayoutIntelligence:EndDrag(object)
@@ -2334,8 +2331,13 @@ end
 
 function LayoutIntelligence:RequestResolve()
     self.dirty = true
+    if self.resolveQueued then
+        return
+    end
 
+    self.resolveQueued = true
     task.defer(function()
+        self.resolveQueued = false
         if self.dirty then
             self:ResolveAll()
         end
@@ -2359,7 +2361,7 @@ function LayoutIntelligence:Start()
             return
         end
 
-        if self.dirty or self:HasOverlap() then
+        if self.dirty then
             self:ResolveAll()
         end
     end))
@@ -6438,17 +6440,30 @@ function d.CreateGUI(aa)
     ao.Parent = ak
     addCorner(ak, o.RadiusLarge)
     addStroke(ak, o.Border, 0.32, 1)
-    local ap = Instance.new("Frame")
+    local ap = Instance.new("ScrollingFrame")
     ap.Name = "Children"
     ap.Size = UDim2.new(1, 0, 1, -57)
     ap.Position = UDim2.fromOffset(0, 41)
     ap.BackgroundColor3 = o.MainSoft
     ap.BorderSizePixel = 0
+    ap.CanvasSize = UDim2.new()
+    ap.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ap.ScrollingDirection = Enum.ScrollingDirection.Y
+    ap.ElasticBehavior = Enum.ElasticBehavior.Never
+    ap.ScrollBarThickness = d.isMobile and 6 or 2
+    ap.ScrollBarImageColor3 = o.BorderStrong
+    ap.ScrollBarImageTransparency = d.isMobile and 0.28 or 0.5
+    ap.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     ap.Parent = ak
     local aq = Instance.new("UIListLayout")
     aq.SortOrder = Enum.SortOrder.LayoutOrder
     aq.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    aq.Padding = UDim.new(0, 4)
     aq.Parent = ap
+    local settingsLandingPadding = Instance.new("UIPadding")
+    settingsLandingPadding.PaddingTop = UDim.new(0, 2)
+    settingsLandingPadding.PaddingBottom = UDim.new(0, 18)
+    settingsLandingPadding.Parent = ap
     local function setScrollEnabledIfSupported(object, enabled)
         if object and object:IsA("ScrollingFrame") then
             object.ScrollingEnabled = enabled
@@ -6754,571 +6769,6 @@ function d.CreateGUI(aa)
         return H.Divider(af, as)
     end
 
-    function ab.CreateOverlayBar(ar)
-        local as = {
-            Toggles = {},
-            Open = false,
-        }
-
-        local transition = TweenInfo.new(
-            0.18,
-            Enum.EasingStyle.Quart,
-            Enum.EasingDirection.InOut
-        )
-
-        local at = Instance.new("TextButton")
-        at.Name = "Overlays"
-        at.Size = UDim2.new(1, -12, 0, 42)
-        at.BackgroundColor3 = o.Surface
-        at.BorderSizePixel = 0
-        at.AutoButtonColor = false
-        at.Text = ""
-        at.ClipsDescendants = true
-        if ar and ar.Hidden then
-            at.Visible = false
-            at.Size = UDim2.new(1, -12, 0, 0)
-        else
-            at.Parent = af
-        end
-        addCorner(at, o.Radius)
-        local atStroke = addStroke(
-            at,
-            o.Border,
-            0.84,
-            1,
-            "NavigationStroke"
-        )
-
-        local atRail = Instance.new("Frame")
-        atRail.Name = "ActiveRail"
-        atRail.Size = UDim2.new(0, 3, 1, -16)
-        atRail.Position = UDim2.fromOffset(0, 8)
-        atRail.BorderSizePixel = 0
-        atRail.Visible = false
-        atRail.Parent = at
-        addCorner(atRail, UDim.new(1, 0))
-
-        local au = Instance.new("ImageLabel")
-        au.Name = "Icon"
-        au.Size = UDim2.fromOffset(14, 12)
-        au.Position = UDim2.fromOffset(14, 15)
-        au.BackgroundTransparency = 1
-        au.Image = u("badscript/assets/new/overlaystab.png")
-        au.ImageColor3 = o.MutedText
-        au.Parent = at
-
-        local av = Instance.new("TextLabel")
-        av.Name = "Title"
-        av.Size = UDim2.new(1, -94, 1, 0)
-        av.Position = UDim2.fromOffset(38, 0)
-        av.BackgroundTransparency = 1
-        av.Text = "Overlays"
-        av.TextXAlignment = Enum.TextXAlignment.Left
-        av.TextColor3 = o.MutedText
-        av.TextSize = 14
-        av.FontFace = o.FontSemiBold
-        av.Parent = at
-
-        local aw = Instance.new("TextLabel")
-        aw.Name = "Count"
-        aw.Size = UDim2.fromOffset(28, 20)
-        aw.Position = UDim2.new(1, -58, 0.5, -10)
-        aw.BackgroundColor3 = o.MainSoft
-        aw.BorderSizePixel = 0
-        aw.Text = "0"
-        aw.TextColor3 = o.FaintText
-        aw.TextSize = 10
-        aw.FontFace = o.FontBold
-        aw.Parent = at
-        addCorner(aw, UDim.new(1, 0))
-        addStroke(aw, o.Border, 0.78, 1, "OverlayCountStroke")
-
-        local ax = Instance.new("ImageLabel")
-        ax.Name = "Arrow"
-        ax.Size = UDim2.fromOffset(5, 9)
-        ax.Position = UDim2.new(1, -20, 0.5, -4)
-        ax.BackgroundTransparency = 1
-        ax.Image = u("badscript/assets/new/expandright.png")
-        ax.ImageColor3 = o.FaintText
-        ax.Parent = at
-
-        local ay = Instance.new("CanvasGroup")
-        ay.Name = "OverlayManager"
-        ay.Size = UDim2.fromScale(1, 1)
-        ay.BackgroundColor3 = o.MainSoft
-        ay.BackgroundTransparency = 1
-        ay.GroupTransparency = 1
-        ay.BorderSizePixel = 0
-        ay.Visible = false
-        ay.Active = true
-        ay.ZIndex = 500
-        ay.Parent = ac
-        addCorner(ay, o.RadiusLarge)
-        addSurfaceGradient(ay)
-        local ayStroke = addStroke(
-            ay,
-            o.BorderStrong,
-            1,
-            1,
-            "OverlayManagerStroke"
-        )
-        local ayShadow = addShadow(ay, true)
-        ayShadow.ImageTransparency = 1
-        local ayScale = addScale(ay)
-        ayScale.Scale = 0.985
-
-        local az = Instance.new("Frame")
-        az.Name = "Header"
-        az.Size = UDim2.new(1, 0, 0, 48)
-        az.BackgroundColor3 = o.MainSoft
-        az.BackgroundTransparency = 0.08
-        az.BorderSizePixel = 0
-        az.ZIndex = 501
-        az.Parent = ay
-        addCorner(az, o.RadiusLarge)
-
-        local aA = Instance.new("ImageButton")
-        aA.Name = "Back"
-        aA.Size = UDim2.fromOffset(28, 28)
-        aA.Position = UDim2.fromOffset(8, 10)
-        aA.BackgroundColor3 = o.Surface
-        aA.BackgroundTransparency = 0.08
-        aA.BorderSizePixel = 0
-        aA.AutoButtonColor = false
-        aA.Image = u("badscript/assets/new/back.png")
-        aA.ImageColor3 = o.MutedText
-        aA.ZIndex = 503
-        aA.Parent = az
-        addCorner(aA, o.RadiusSmall)
-        local backStroke = addStroke(aA, o.Border, 0.78, 1, "BackStroke")
-
-        local aB = Instance.new("TextLabel")
-        aB.Name = "Title"
-        aB.Size = UDim2.new(1, -82, 0, 22)
-        aB.Position = UDim2.fromOffset(45, 7)
-        aB.BackgroundTransparency = 1
-        aB.Text = "Overlays"
-        aB.TextXAlignment = Enum.TextXAlignment.Left
-        aB.TextColor3 = o.TextStrong
-        aB.TextSize = 14
-        aB.FontFace = o.FontSemiBold
-        aB.ZIndex = 502
-        aB.Parent = az
-
-        local aC = Instance.new("TextLabel")
-        aC.Name = "Subtitle"
-        aC.Size = UDim2.new(1, -82, 0, 14)
-        aC.Position = UDim2.fromOffset(45, 27)
-        aC.BackgroundTransparency = 1
-        aC.Text = "Choose what appears on screen"
-        aC.TextXAlignment = Enum.TextXAlignment.Left
-        aC.TextColor3 = o.FaintText
-        aC.TextSize = 9
-        aC.FontFace = o.Font
-        aC.ZIndex = 502
-        aC.Parent = az
-
-        local aD = addCloseButton(az, 10)
-        aD.ZIndex = 503
-
-        local aE = Instance.new("Frame")
-        aE.Name = "HeaderDivider"
-        aE.Size = UDim2.new(1, -20, 0, 1)
-        aE.Position = UDim2.fromOffset(10, 47)
-        aE.BackgroundColor3 = o.Border
-        aE.BackgroundTransparency = 0.68
-        aE.BorderSizePixel = 0
-        aE.ZIndex = 502
-        aE.Parent = ay
-
-        local aF = Instance.new("ScrollingFrame")
-        aF.Name = "Items"
-        aF.Size = UDim2.new(1, -12, 1, -60)
-        aF.Position = UDim2.fromOffset(6, 54)
-        aF.BackgroundTransparency = 1
-        aF.BorderSizePixel = 0
-        aF.ScrollBarThickness = 2
-        aF.ScrollBarImageColor3 = o.BorderStrong
-        aF.ScrollBarImageTransparency = 0.42
-        aF.ScrollingDirection = Enum.ScrollingDirection.Y
-        aF.ElasticBehavior = Enum.ElasticBehavior.Never
-        aF.CanvasSize = UDim2.new()
-        aF.ZIndex = 501
-        aF.Parent = ay
-
-        local aG = Instance.new("UIListLayout")
-        aG.SortOrder = Enum.SortOrder.LayoutOrder
-        aG.Padding = UDim.new(0, 6)
-        aG.HorizontalAlignment = Enum.HorizontalAlignment.Center
-        aG.Parent = aF
-
-        local aH = Instance.new("UIPadding")
-        aH.PaddingTop = UDim.new(0, 2)
-        aH.PaddingBottom = UDim.new(0, 8)
-        aH.Parent = aF
-
-        local managerGeneration = 0
-
-        local function updateCount()
-            local enabled = 0
-            for _, toggle in as.Toggles do
-                if toggle.Enabled then
-                    enabled += 1
-                end
-            end
-
-            aw.Text = tostring(enabled)
-            local accent = Color3.fromHSV(
-                d.GUIColor.Hue,
-                d.GUIColor.Sat,
-                d.GUIColor.Value
-            )
-            aw.TextColor3 = enabled > 0 and accent or o.FaintText
-            atRail.Visible = enabled > 0
-            atRail.BackgroundColor3 = accent
-        end
-
-        local function setManagerVisible(visible, instant)
-            managerGeneration += 1
-            local generation = managerGeneration
-            as.Open = visible
-
-            if d.HideTooltip then
-                d.HideTooltip(true)
-            end
-            if d._OpenDropdown then
-                pcall(d._OpenDropdown, true)
-                d._OpenDropdown = nil
-            end
-
-            if visible then
-                ay.Visible = true
-                ay.Active = true
-                ay.GroupTransparency = 1
-                ay.BackgroundTransparency = 1
-                ayScale.Scale = 0.985
-                ayStroke.Transparency = 1
-                ayShadow.ImageTransparency = 1
-
-                af.Visible = false
-                playerCard.Visible = false
-                onlineDot.Visible = false
-
-                if instant or not d.Loaded then
-                    ay.GroupTransparency = 0
-                    ay.BackgroundTransparency = 0.01
-                    ayScale.Scale = 1
-                    ayStroke.Transparency = 0.5
-                    ayShadow.ImageTransparency = 0.82
-                    return
-                end
-
-                n:Tween(ay, transition, {
-                    GroupTransparency = 0,
-                    BackgroundTransparency = 0.01,
-                })
-                n:Tween(ayScale, transition, { Scale = 1 })
-                n:Tween(ayStroke, transition, { Transparency = 0.5 })
-                n:Tween(ayShadow, transition, { ImageTransparency = 0.82 })
-                return
-            end
-
-            ay.Active = false
-            local function finishClose()
-                if generation ~= managerGeneration then
-                    return
-                end
-                ay.Visible = false
-                local showMain = not ak.Visible
-                af.Visible = showMain
-                playerCard.Visible = showMain
-                onlineDot.Visible = showMain
-            end
-
-            if instant or not d.Loaded then
-                ay.GroupTransparency = 1
-                ay.BackgroundTransparency = 1
-                ayScale.Scale = 0.985
-                ayStroke.Transparency = 1
-                ayShadow.ImageTransparency = 1
-                finishClose()
-                return
-            end
-
-            local closeTween = n:Tween(ay, transition, {
-                GroupTransparency = 1,
-                BackgroundTransparency = 1,
-            })
-            n:Tween(ayScale, transition, { Scale = 0.985 })
-            n:Tween(ayStroke, transition, { Transparency = 1 })
-            n:Tween(ayShadow, transition, { ImageTransparency = 1 })
-
-            if closeTween then
-                closeTween.Completed:Once(finishClose)
-            else
-                task.delay(0.19, finishClose)
-            end
-        end
-
-        function as.CreateToggle(L, M)
-            local N = {
-                Enabled = false,
-                Index = getTableSize(as.Toggles),
-                Toggled = c(`{tostring(M.Name)}_Overlays`),
-                Name = M.Name,
-            }
-
-            local hovered = false
-            local P = Instance.new("TextButton")
-            P.Name = M.Name .. "Toggle"
-            P.Size = UDim2.new(1, -4, 0, 46)
-            P.BackgroundColor3 = o.Surface
-            P.BorderSizePixel = 0
-            P.AutoButtonColor = false
-            P.Text = ""
-            P.LayoutOrder = N.Index
-            P.ClipsDescendants = true
-            P.ZIndex = 502
-            P.Parent = aF
-            addCorner(P, o.Radius)
-            local rowStroke = addStroke(
-                P,
-                o.Border,
-                0.86,
-                1,
-                "OverlayToggleStroke"
-            )
-
-            local Q = Instance.new("Frame")
-            Q.Name = "IconContainer"
-            Q.Size = UDim2.fromOffset(28, 28)
-            Q.Position = UDim2.fromOffset(8, 9)
-            Q.BackgroundColor3 = o.MainSoft
-            Q.BackgroundTransparency = 0.08
-            Q.BorderSizePixel = 0
-            Q.ZIndex = 503
-            Q.Parent = P
-            addCorner(Q, o.RadiusSmall)
-            addStroke(Q, o.Border, 0.82, 1, "OverlayIconStroke")
-
-            local R = Instance.new("ImageLabel")
-            R.Name = "Icon"
-            R.Size = M.Size
-            R.AnchorPoint = Vector2.new(0.5, 0.5)
-            R.Position = UDim2.fromScale(0.5, 0.5)
-            R.BackgroundTransparency = 1
-            R.Image = M.Icon
-            R.ImageColor3 = o.MutedText
-            R.ZIndex = 504
-            R.Parent = Q
-
-            local S = Instance.new("TextLabel")
-            S.Name = "Title"
-            S.Size = UDim2.new(1, -96, 1, 0)
-            S.Position = UDim2.fromOffset(46, 0)
-            S.BackgroundTransparency = 1
-            S.Text = M.Name
-            S.TextXAlignment = Enum.TextXAlignment.Left
-            S.TextColor3 = o.MutedText
-            S.TextSize = 13
-            S.FontFace = o.FontSemiBold
-            S.ZIndex = 503
-            S.Parent = P
-
-            local T = Instance.new("Frame")
-            T.Name = "Track"
-            T.Size = UDim2.fromOffset(34, 18)
-            T.Position = UDim2.new(1, -44, 0.5, -9)
-            T.BackgroundColor3 = o.Elevated
-            T.BorderSizePixel = 0
-            T.ZIndex = 503
-            T.Parent = P
-            addCorner(T, UDim.new(1, 0))
-            local trackStroke = addStroke(T, o.Border, 0.72, 1, "TrackStroke")
-
-            local U = Instance.new("Frame")
-            U.Name = "Knob"
-            U.Size = UDim2.fromOffset(14, 14)
-            U.Position = UDim2.fromOffset(2, 2)
-            U.BackgroundColor3 = o.MutedText
-            U.BorderSizePixel = 0
-            U.ZIndex = 504
-            U.Parent = T
-            addCorner(U, UDim.new(1, 0))
-
-            local V = Instance.new("Frame")
-            V.Name = "Frame"
-            V.Size = UDim2.fromOffset(3, 20)
-            V.Position = UDim2.fromOffset(1, 13)
-            V.BackgroundColor3 = o.BorderStrong
-            V.BackgroundTransparency = 1
-            V.BorderSizePixel = 0
-            V.ZIndex = 504
-            V.Parent = P
-            addCorner(V, UDim.new(1, 0))
-
-            N.Object = P
-
-            local function applyVisual(instant)
-                local accent = Color3.fromHSV(
-                    d.GUIColor.Hue,
-                    d.GUIColor.Sat,
-                    d.GUIColor.Value
-                )
-                local info = instant and TweenInfo.new(0) or o.TweenFast
-
-                n:Tween(P, info, {
-                    BackgroundColor3 = N.Enabled
-                        and accent:Lerp(o.Elevated, 0.86)
-                        or (hovered and o.SurfaceHover or o.Surface),
-                })
-                n:Tween(rowStroke, info, {
-                    Color = N.Enabled and accent or o.Border,
-                    Transparency = N.Enabled and 0.58 or (hovered and 0.7 or 0.86),
-                })
-                n:Tween(S, info, {
-                    TextColor3 = N.Enabled and accent or o.MutedText,
-                })
-                n:Tween(R, info, {
-                    ImageColor3 = N.Enabled and accent or o.MutedText,
-                })
-                n:Tween(T, info, {
-                    BackgroundColor3 = N.Enabled and accent or o.Elevated,
-                })
-                n:Tween(trackStroke, info, {
-                    Color = N.Enabled and accent or o.Border,
-                    Transparency = N.Enabled and 0.42 or 0.72,
-                })
-                n:Tween(U, info, {
-                    Position = UDim2.fromOffset(N.Enabled and 18 or 2, 2),
-                    BackgroundColor3 = N.Enabled and o.TextStrong or o.MutedText,
-                })
-                n:Tween(V, info, {
-                    BackgroundColor3 = accent,
-                    BackgroundTransparency = N.Enabled and 0 or 1,
-                })
-            end
-
-            function N.Toggle(toggleApi, forced)
-                local nextState = forced
-                if nextState == nil then
-                    nextState = not toggleApi.Enabled
-                end
-                if nextState == toggleApi.Enabled then
-                    return
-                end
-
-                toggleApi.Enabled = nextState
-                applyVisual(false)
-                updateCount()
-                toggleApi.Toggled:Fire()
-
-                local success, err = xpcall(function()
-                    M.Function(toggleApi.Enabled)
-                end, debug.traceback)
-                if not success then
-                    bwarn("[Overlay Toggle] " .. tostring(M.Name) .. ": " .. tostring(err))
-                end
-            end
-
-            P.MouseEnter:Connect(function()
-                hovered = true
-                applyVisual(false)
-            end)
-            P.MouseLeave:Connect(function()
-                hovered = false
-                applyVisual(false)
-            end)
-            P.Activated:Connect(function()
-                N:Toggle()
-            end)
-
-            table.insert(as.Toggles, N)
-            applyVisual(true)
-            updateCount()
-            return N
-        end
-
-        aG:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            aF.CanvasSize = UDim2.fromOffset(
-                0,
-                aG.AbsoluteContentSize.Y + 10
-            )
-        end)
-
-        at.MouseEnter:Connect(function()
-            local accent = Color3.fromHSV(
-                d.GUIColor.Hue,
-                d.GUIColor.Sat,
-                d.GUIColor.Value
-            )
-            n:Tween(at, o.TweenFast, { BackgroundColor3 = o.SurfaceHover })
-            n:Tween(atStroke, o.TweenFast, {
-                Color = accent,
-                Transparency = 0.68,
-            })
-            n:Tween(av, o.TweenFast, {
-                TextColor3 = accent:Lerp(o.MutedText, 0.28),
-            })
-            n:Tween(au, o.TweenFast, {
-                ImageColor3 = accent:Lerp(o.MutedText, 0.28),
-            })
-            n:Tween(ax, o.TweenFast, {
-                ImageColor3 = accent:Lerp(o.MutedText, 0.28),
-            })
-        end)
-        at.MouseLeave:Connect(function()
-            n:Tween(at, o.TweenFast, { BackgroundColor3 = o.Surface })
-            n:Tween(atStroke, o.TweenFast, {
-                Color = o.Border,
-                Transparency = 0.84,
-            })
-            n:Tween(av, o.TweenFast, { TextColor3 = o.MutedText })
-            n:Tween(au, o.TweenFast, { ImageColor3 = o.MutedText })
-            n:Tween(ax, o.TweenFast, { ImageColor3 = o.FaintText })
-        end)
-        at.Activated:Connect(function()
-            setManagerVisible(true)
-        end)
-
-        aA.MouseEnter:Connect(function()
-            local accent = Color3.fromHSV(
-                d.GUIColor.Hue,
-                d.GUIColor.Sat,
-                d.GUIColor.Value
-            )
-            n:Tween(aA, o.TweenFast, {
-                BackgroundColor3 = o.SurfaceHover,
-                ImageColor3 = accent,
-            })
-            n:Tween(backStroke, o.TweenFast, {
-                Color = accent,
-                Transparency = 0.58,
-            })
-        end)
-        aA.MouseLeave:Connect(function()
-            n:Tween(aA, o.TweenFast, {
-                BackgroundColor3 = o.Surface,
-                ImageColor3 = o.MutedText,
-            })
-            n:Tween(backStroke, o.TweenFast, {
-                Color = o.Border,
-                Transparency = 0.78,
-            })
-        end)
-
-        aA.Activated:Connect(function()
-            setManagerVisible(false)
-        end)
-        aD.Activated:Connect(function()
-            setManagerVisible(false)
-        end)
-
-        d.Overlays = as
-        as.SetVisible = setManagerVisible
-        return as
-    end
-
     function ab.CreateSettingsDivider(ar)
         H.Divider(ap)
     end
@@ -7326,9 +6776,9 @@ function d.CreateGUI(aa)
     function ab.CreateSettingsPane(ar, as)
         local at = {}
         local transition = TweenInfo.new(
-            0.18,
-            Enum.EasingStyle.Quart,
-            Enum.EasingDirection.InOut
+            0.14,
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.Out
         )
 
         local au = Instance.new("TextButton")
@@ -7370,14 +6820,16 @@ function d.CreateGUI(aa)
         arrow.ImageColor3 = o.FaintText
         arrow.Parent = au
 
-        local aw = Instance.new("CanvasGroup")
+        local aw = Instance.new("Frame")
+        aw.Name = as.Name .. "SettingsPane"
+        aw.Size = UDim2.fromScale(1, 1)
+        aw.Position = UDim2.fromOffset(0, 0)
         aw.ClipsDescendants = true
         aw.BackgroundColor3 = o.MainSoft
-        aw.BackgroundTransparency = 1
-        aw.GroupTransparency = 1
+        aw.BackgroundTransparency = 0.01
         aw.BorderSizePixel = 0
         aw.Visible = false
-        aw.Active = true
+        aw.Active = false
         aw.ZIndex = 520
         aw.Parent = ac
         addCorner(aw, o.RadiusLarge)
@@ -7519,168 +6971,146 @@ function d.CreateGUI(aa)
     at["Add" .. L] = at["Create" .. L]
 end
 
-        -- BADWARS_SETTINGS_PANE_STATE_V2
-local paneGeneration = 0
-d._SettingsPaneClosers =
-    d._SettingsPaneClosers
-    or setmetatable({}, { __mode = "k" })
+        -- BADWARS_SETTINGS_PAGE_MANAGER_V3
+        d._SettingsPageState = d._SettingsPageState or {
+            Current = nil,
+            Generation = 0,
+        }
+        d._SettingsPaneClosers = d._SettingsPaneClosers
+            or setmetatable({}, { __mode = "k" })
 
-local function setPaneVisible(visible, instant)
-    paneGeneration += 1
-    local generation = paneGeneration
+        local function cancelPaneTweens()
+            n:Cancel(aw)
+            n:Cancel(paneScale)
+            n:Cancel(paneStroke)
+            n:Cancel(paneShadow)
+        end
 
-    if d.HideTooltip then
-        d.HideTooltip(true)
-    end
+        local function setPaneVisible(visible, instant)
+            local state = d._SettingsPageState
+            state.Generation += 1
+            local generation = state.Generation
 
-    if d._OpenDropdown then
-        pcall(d._OpenDropdown, true)
-        d._OpenDropdown = nil
-    end
+            if d.HideTooltip then
+                d.HideTooltip(true)
+            end
 
-    if visible then
-        local currentPane = d._OpenSettingsPane
+            if d._OpenDropdown then
+                pcall(d._OpenDropdown, true)
+                d._OpenDropdown = nil
+            end
 
-        if currentPane and currentPane ~= aw and currentPane.Parent then
-            local closer =
-                d._SettingsPaneClosers
-                and d._SettingsPaneClosers[currentPane]
+            cancelPaneTweens()
 
-            if type(closer) == "function" then
-                closer(false, true)
-            else
-                currentPane.Visible = false
-                currentPane.Active = false
+            if visible then
+                local currentPane = state.Current
+                if currentPane and currentPane ~= aw and currentPane.Parent then
+                    local closer = d._SettingsPaneClosers[currentPane]
+                    if type(closer) == "function" then
+                        closer(false, true)
+                    else
+                        currentPane.Visible = false
+                        currentPane.Active = false
+                        pcall(function()
+                            currentPane.Interactable = false
+                        end)
+                    end
+                end
+
+                state.Current = aw
+                d._OpenSettingsPane = aw
+
+                ap.Visible = false
+                ap.Active = false
+                setScrollEnabledIfSupported(ap, false)
                 pcall(function()
-                    currentPane.Interactable = false
+                    ap.Interactable = false
                 end)
+
+                aw.Visible = true
+                aw.Active = true
+                pcall(function()
+                    aw.Interactable = true
+                end)
+
+                -- The page is placed into a valid final render state before
+                -- animation so an interrupted tween can never leave it blank.
+                aw.BackgroundTransparency = 0.01
+                paneScale.Scale = (instant or not d.Loaded) and 1 or 0.992
+                paneStroke.Transparency = (instant or not d.Loaded) and 0.5 or 0.8
+                paneShadow.ImageTransparency = (instant or not d.Loaded) and 0.82 or 0.92
+
+                if instant or not d.Loaded then
+                    return
+                end
+
+                n:Tween(paneScale, transition, { Scale = 1 })
+                n:Tween(paneStroke, transition, { Transparency = 0.5 })
+                n:Tween(paneShadow, transition, { ImageTransparency = 0.82 })
+                return
+            end
+
+            aw.Active = false
+            pcall(function()
+                aw.Interactable = false
+            end)
+
+            local function finishClose()
+                if generation ~= state.Generation then
+                    return
+                end
+
+                aw.Visible = false
+                paneScale.Scale = 1
+                paneStroke.Transparency = 0.5
+                paneShadow.ImageTransparency = 0.82
+
+                if state.Current == aw then
+                    state.Current = nil
+                end
+                if d._OpenSettingsPane == aw then
+                    d._OpenSettingsPane = nil
+                end
+
+                local restoreMain = ak.Visible and state.Current == nil
+                ap.Visible = restoreMain
+                ap.Active = restoreMain
+                setScrollEnabledIfSupported(ap, restoreMain)
+                pcall(function()
+                    ap.Interactable = restoreMain
+                end)
+            end
+
+            if instant or not d.Loaded then
+                finishClose()
+                return
+            end
+
+            local closeTween = n:Tween(paneScale, transition, { Scale = 0.992 })
+            n:Tween(paneStroke, transition, { Transparency = 0.82 })
+            n:Tween(paneShadow, transition, { ImageTransparency = 0.94 })
+
+            if closeTween then
+                closeTween.Completed:Once(finishClose)
+            else
+                finishClose()
             end
         end
 
-        d._OpenSettingsPane = aw
-        ap.Visible = false
-        setScrollEnabledIfSupported(ap, false)
+        d._SettingsPaneClosers[aw] = setPaneVisible
 
-        pcall(function()
-            ap.Interactable = false
+        aw.Destroying:Once(function()
+            if d._SettingsPaneClosers then
+                d._SettingsPaneClosers[aw] = nil
+            end
+            if d._SettingsPageState and d._SettingsPageState.Current == aw then
+                d._SettingsPageState.Current = nil
+            end
+            if d._OpenSettingsPane == aw then
+                d._OpenSettingsPane = nil
+            end
         end)
-
-        aw.Visible = true
-        aw.Active = true
-
-        pcall(function()
-            aw.Interactable = true
-        end)
-
-        aw.GroupTransparency = 1
-        aw.BackgroundTransparency = 1
-        paneScale.Scale = 0.985
-        paneStroke.Transparency = 1
-        paneShadow.ImageTransparency = 1
-
-        if instant or not d.Loaded then
-            aw.GroupTransparency = 0
-            aw.BackgroundTransparency = 0.01
-            paneScale.Scale = 1
-            paneStroke.Transparency = 0.5
-            paneShadow.ImageTransparency = 0.82
-            return
-        end
-
-        n:Tween(
-            aw,
-            transition,
-            {
-                GroupTransparency = 0,
-                BackgroundTransparency = 0.01,
-            }
-        )
-        n:Tween(paneScale, transition, { Scale = 1 })
-        n:Tween(paneStroke, transition, { Transparency = 0.5 })
-        n:Tween(
-            paneShadow,
-            transition,
-            { ImageTransparency = 0.82 }
-        )
-
-        return
-    end
-
-    aw.Active = false
-
-    pcall(function()
-        aw.Interactable = false
-    end)
-
-    local function finishClose()
-        if generation ~= paneGeneration then
-            return
-        end
-
-        aw.Visible = false
-
-        if d._OpenSettingsPane == aw then
-            d._OpenSettingsPane = nil
-        end
-
-        local restoreMain =
-            ak.Visible
-            and d._OpenSettingsPane == nil
-
-        ap.Visible = restoreMain
-        setScrollEnabledIfSupported(ap, restoreMain)
-
-        pcall(function()
-            ap.Interactable = restoreMain
-        end)
-    end
-
-    if instant or not d.Loaded then
-        aw.GroupTransparency = 1
-        aw.BackgroundTransparency = 1
-        paneScale.Scale = 0.985
-        paneStroke.Transparency = 1
-        paneShadow.ImageTransparency = 1
-        finishClose()
-        return
-    end
-
-    local closeTween = n:Tween(
-        aw,
-        transition,
-        {
-            GroupTransparency = 1,
-            BackgroundTransparency = 1,
-        }
-    )
-
-    n:Tween(paneScale, transition, { Scale = 0.985 })
-    n:Tween(paneStroke, transition, { Transparency = 1 })
-    n:Tween(
-        paneShadow,
-        transition,
-        { ImageTransparency = 1 }
-    )
-
-    if closeTween then
-        closeTween.Completed:Once(finishClose)
-    else
-        task.delay(0.19, finishClose)
-    end
-end
-
-d._SettingsPaneClosers[aw] = setPaneVisible
-
-aw.Destroying:Once(function()
-    if d._SettingsPaneClosers then
-        d._SettingsPaneClosers[aw] = nil
-    end
-
-    if d._OpenSettingsPane == aw then
-        d._OpenSettingsPane = nil
-    end
-end)
-local function refreshSettingsCanvas()
+        local function refreshSettingsCanvas()
             task.defer(function()
                 if not children or not children.Parent then
                     return
@@ -8338,57 +7768,15 @@ end))
         return at
     end
 
-    local function normalizeSettingsPane(pane)
-        if not pane then
-            return
-        end
-
-        for _, item in pane:GetDescendants() do
-            if item:IsA("TextButton") or item:IsA("TextLabel") or item:IsA("TextBox") then
-                item.TextTransparency = 0
-                if typeof(item.TextColor3) == "Color3" then
-                    item.TextColor3 = item.TextColor3:Lerp(o.Text, 0.55)
-                end
-            elseif item:IsA("ImageButton") or item:IsA("ImageLabel") then
-                item.ImageTransparency = math.min(item.ImageTransparency, 0.25)
-            elseif item:IsA("CanvasGroup") then
-                item.GroupTransparency = 0
-            elseif item:IsA("GuiObject") then
-                item.Visible = true
-                if item.BackgroundTransparency < 1 then
-                    item.BackgroundTransparency = math.min(item.BackgroundTransparency, 0.08)
-                end
-            end
-        end
-    end
-
     local function restoreSettingsRows()
+        -- Restore only the landing container. Individual controls retain their
+        -- own intentional Visible state (for example conditional color rows).
         ap.Visible = true
         ap.Active = true
+        setScrollEnabledIfSupported(ap, true)
         pcall(function()
             ap.Interactable = true
         end)
-
-        normalizeSettingsPane(ap)
-
-        for _, row in ap:GetChildren() do
-            if row:IsA("GuiObject") then
-                row.Visible = true
-                if row.Size.Y.Offset <= 1 then
-                    row.Size = UDim2.new(1, -12, 0, 42)
-                end
-                if row:IsA("TextButton") or row:IsA("TextLabel") or row:IsA("TextBox") then
-                    row.TextTransparency = 0
-                end
-                for _, item in row:GetDescendants() do
-                    if item:IsA("TextButton") or item:IsA("TextLabel") or item:IsA("TextBox") then
-                        item.TextTransparency = math.min(item.TextTransparency, 0.18)
-                    elseif item:IsA("ImageButton") or item:IsA("ImageLabel") then
-                        item.ImageTransparency = math.min(item.ImageTransparency, 0.15)
-                    end
-                end
-            end
-        end
     end
 
     local function setSettingsVisible(visible)
@@ -8422,6 +7810,10 @@ end))
             d._OpenSettingsPane.Visible = false
             d._OpenSettingsPane.Active = false
             d._OpenSettingsPane = nil
+            if d._SettingsPageState then
+                d._SettingsPageState.Current = nil
+                d._SettingsPageState.Generation += 1
+            end
         end
     end
 
@@ -9136,9 +8528,9 @@ function d.CreateCategory(aa, ab)
         local closeOptions
         local lastOptionsToggle = 0
         local optionsTransition = TweenInfo.new(
-            0.18,
-            Enum.EasingStyle.Quart,
-            Enum.EasingDirection.InOut
+            0.13,
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.Out
         )
 
         local function openOptions()
@@ -9279,7 +8671,7 @@ function d.CreateCategory(aa, ab)
 
         local function toggleOptions()
             local now = os.clock()
-            if now - lastOptionsToggle < 0.12 then
+            if now - lastOptionsToggle < 0.06 then
                 return
             end
             lastOptionsToggle = now
@@ -10883,11 +10275,20 @@ shared.TRANSLATION_FUNCTION = function(af)
 end
 
 function d.CreateOverlay(af, ag)
-    local ah
+    ag = type(ag) == "table" and ag or {}
+    assert(type(ag.Name) == "string" and ag.Name ~= "", "CreateOverlay requires a name")
+
     ag.Size = ag.Size or UDim2.fromOffset(14, 14)
     ag.Position = ag.Position or UDim2.fromOffset(12, 14)
-    if af.Overlays and af.Overlays[ag.Name] then
-        local previous = af.Overlays[ag.Name]
+    if ag.CustomOverlay then
+        ag.Pinned = true
+        ag.CategorySize = ag.CategorySize or 100
+        ag.ContentHeight = ag.ContentHeight or 40
+    end
+
+    af.Overlays = type(af.Overlays) == "table" and af.Overlays or {}
+    local previous = af.Overlays[ag.Name]
+    if previous then
         if previous.Connections then
             for _, connection in previous.Connections do
                 pcall(function()
@@ -10896,10 +10297,17 @@ function d.CreateOverlay(af, ag)
             end
             table.clear(previous.Connections)
         end
+        if previous._FunctionThread then
+            pcall(task.cancel, previous._FunctionThread)
+            previous._FunctionThread = nil
+        end
+
+        -- Destroy the floating display before removing the normal module row.
+        -- d:Remove clears table fields recursively, so doing this afterward can
+        -- lose the only reference to the old HUD and leave it on screen.
         for _, candidate in {
             previous.Object,
             previous.Children,
-            previous.Button and previous.Button.Object,
         } do
             if typeof(candidate) == "Instance" then
                 pcall(function()
@@ -10907,53 +10315,83 @@ function d.CreateOverlay(af, ag)
                 end)
             end
         end
+
+        pcall(function()
+            af:Remove(ag.Name)
+        end)
         af.Overlays[ag.Name] = nil
-        af.Categories[ag.Name] = nil
-        if d.DeveloperMode then
-            bwarn("[Overlay Registry] Replaced duplicate overlay: " .. tostring(ag.Name))
+        if af.Categories[ag.Name] == previous then
+            af.Categories[ag.Name] = nil
         end
     end
-    if ag.CustomOverlay then
-        ag.Pinned = true
-        ag.CategorySize = 100
-        ag.Size = UDim2.fromOffset(14, 14)
-    end
 
-    local ai
-    ai = {
+    local renderCategory = af.Categories and af.Categories.Render
+    assert(
+        renderCategory and type(renderCategory.CreateModule) == "function",
+        "Render category must exist before CreateOverlay"
+    )
+
+    local ah
+    local ai = {
         Type = "Overlay",
+        Name = ag.Name,
+        Category = "Render",
         Expanded = false,
-        UpExpand = ag.UpExpand or false,
-        Button = af.Overlays:CreateToggle({
-            Name = ag.Name,
-            Function = function(aj)
-                ah.Visible = aj and (v.Visible or ai.Pinned)
-                if not aj then
-                    for ak, al in ai.Connections do
-                        al:Disconnect()
-                    end
-                    table.clear(ai.Connections)
-                end
-
-                if ag.Function then
-                    task.spawn(ag.Function, aj)
-                end
-            end,
-            Icon = ag.Icon,
-            Size = ag.Size,
-            Position = ag.Position,
-        }),
-        Pinned = false,
+        UpExpand = false,
+        Pinned = ag.Pinned == true,
+        Enabled = false,
         Options = {},
     }
+    addMaid(ai)
 
-    if d.OverlaysModuleCategory and false then
-        d.OverlaysModuleCategory:AddToggle(ai.Button, ag.Star)
+    local function cleanOverlayConnections()
+        if type(ai.Cleanup) == "function" then
+            ai:Cleanup()
+        end
     end
+
+    local moduleApi
+    moduleApi = renderCategory:CreateModule({
+        Name = ag.Name,
+        DisplayName = ag.DisplayName,
+        SavingID = ag.SavingID or ag.Name,
+        Tooltip = ag.Tooltip or ("Shows " .. ag.Name .. " on screen"),
+        Function = function(enabled)
+            ai.Enabled = enabled == true
+
+            if ai._FunctionThread then
+                pcall(task.cancel, ai._FunctionThread)
+                ai._FunctionThread = nil
+            end
+
+            if not enabled then
+                cleanOverlayConnections()
+            end
+
+            if ah and ah.Parent then
+                ai:Update()
+            end
+
+            if type(ag.Function) == "function" then
+                local callbackThread = task.spawn(ag.Function, enabled)
+                if enabled then
+                    ai._FunctionThread = callbackThread
+                end
+            end
+        end,
+    })
+
+    ai.Button = moduleApi
+    ai.Module = moduleApi
+    ai.Options = moduleApi.Options
+    moduleApi.Overlay = ai
+
+    local width = math.max(72, tonumber(ag.CategorySize) or 220)
+    local contentHeight = math.max(1, tonumber(ag.ContentHeight) or (ag.CustomOverlay and 40 or 200))
 
     ah = Instance.new("TextButton")
     ah.Name = ag.Name .. "Overlay"
-    ah.Size = UDim2.fromOffset(ag.CategorySize or 220, 41)
+    ah.Size = UDim2.fromOffset(width, 41)
     ah.Position = UDim2.fromOffset(240, 46)
     ah.BackgroundColor3 = o.MainSoft
     ah.AutoButtonColor = false
@@ -10962,14 +10400,14 @@ function d.CreateOverlay(af, ag)
     ah.ClipsDescendants = false
     ah.Parent = w
 
-    ai.WindowXOffset = (ag.CategorySize or 220)
+    ai.WindowXOffset = width
 
-    local aj = addBlur(ah)
+    local overlayShadow = addBlur(ah)
     addCorner(ah, o.RadiusLarge)
     addSurfaceGradient(ah)
-    addShadow(ah)
     local overlayStroke = addStroke(ah, o.BorderStrong, 0.66, 1, "OverlayStroke")
     addV9Chrome(ah)
+
     local overlayAccent = Instance.new("Frame")
     overlayAccent.Name = "OverlayAccent"
     overlayAccent.Size = UDim2.new(1, -18, 0, 1)
@@ -10985,56 +10423,50 @@ function d.CreateOverlay(af, ag)
             overlayAccent.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
         end
     end)
+
     makeDraggable(ah)
 
-    local ak = Instance.new("ImageLabel")
-    ak.Name = "Icon"
-    ak.Size = ag.Size
-    ak.Position = UDim2.fromOffset(12, (ak.Size.X.Offset > 14 and 14 or 13))
-    ak.BackgroundTransparency = 1
-    ak.Image = ag.Icon
-    ak.ImageColor3 = o.Text
-    ak.Parent = ah
+    local icon = Instance.new("ImageLabel")
+    icon.Name = "Icon"
+    icon.Size = ag.Size
+    icon.Position = UDim2.fromOffset(12, (icon.Size.X.Offset > 14 and 14 or 13))
+    icon.BackgroundTransparency = 1
+    icon.Image = ag.Icon or u("badscript/assets/new/textguiicon.png")
+    icon.ImageColor3 = o.Text
+    icon.Parent = ah
 
-    local al = Instance.new("TextLabel")
-    al.Name = "Title"
-    al.Size = UDim2.new(1, -32, 0, 41)
-    al.Position = UDim2.fromOffset(math.abs(al.Size.X.Offset), 0)
-    al.BackgroundTransparency = 1
-    al.Text = ag.Name
-    al.TextXAlignment = Enum.TextXAlignment.Left
-    al.TextColor3 = o.TextStrong
-    al.TextSize = 13
-    al.FontFace = o.FontSemiBold
-    al.Parent = ah
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -64, 0, 41)
+    title.Position = UDim2.fromOffset(36, 0)
+    title.BackgroundTransparency = 1
+    title.Text = ag.DisplayName or ag.Name
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextColor3 = o.TextStrong
+    title.TextSize = 13
+    title.FontFace = o.FontSemiBold
+    title.Parent = ah
 
-    local am = Instance.new("ImageButton")
-    am.Name = "Pin"
-    am.Size = UDim2.fromOffset(16, 16)
-    am.Position = UDim2.new(1, -47, 0, 12)
-    am.BackgroundTransparency = 1
-    am.AutoButtonColor = false
-    am.Image = u("badscript/assets/new/pin.png")
-    am.ImageColor3 = m.Dark(o.Text, 0.43)
-    am.Parent = ah
-    am.Visible = not ag.Pinned
+    local pin = Instance.new("ImageButton")
+    pin.Name = "Pin"
+    pin.Size = UDim2.fromOffset(18, 18)
+    pin.Position = UDim2.new(1, -28, 0, 11)
+    pin.BackgroundTransparency = 1
+    pin.AutoButtonColor = false
+    pin.Image = u("badscript/assets/new/pin.png")
+    pin.ImageColor3 = ai.Pinned and o.Text or o.FaintText
+    pin.Visible = not ag.Pinned
+    pin.Parent = ah
+    addTooltip(pin, "Keep this display visible while the menu is closed")
 
-    local an = Instance.new("TextButton")
-    an.Name = "Dots"
-    an.Size = UDim2.fromOffset(17, 40)
-    an.Position = UDim2.new(1, -17, 0, 0)
-    an.BackgroundTransparency = 1
-    an.Text = ""
-    an.Parent = ah
-
-    local ao = Instance.new("ImageLabel")
-    ao.Name = "Dots"
-    ao.Size = UDim2.fromOffset(3, 16)
-    ao.Position = UDim2.fromOffset(4, 12)
-    ao.BackgroundTransparency = 1
-    ao.Image = u("badscript/assets/new/dots.png")
-    ao.ImageColor3 = o.FaintText
-    ao.Parent = an
+    local content = Instance.new("Frame")
+    content.Name = "CustomChildren"
+    content.Size = UDim2.new(1, 0, 0, contentHeight)
+    content.Position = UDim2.fromScale(0, 1)
+    content.BackgroundTransparency = 1
+    content.BorderSizePixel = 0
+    content.ClipsDescendants = false
+    content.Parent = ah
 
     ah.MouseEnter:Connect(function()
         n:Tween(ah, o.TweenFast, { BackgroundColor3 = o.Elevated })
@@ -11051,170 +10483,75 @@ function d.CreateOverlay(af, ag)
         })
     end)
 
-    local ap = Instance.new("Frame")
-    ap.Name = "CustomChildren"
-    ap.Size = UDim2.new(1, 0, 0, ag.CustomOverlay and 40 or 200)
-    ap.Position = UDim2.fromScale(0, 1)
-    ap.BackgroundTransparency = 1
-    ap.Parent = ah
-
-    local aq = Instance.new("ScrollingFrame")
-    aq.Name = "Children"
-    aq.Size = UDim2.new(1, 0, 1, -41)
-
-    if ai.UpExpand then
-        aq.AnchorPoint = Vector2.new(0, 1)
-        aq.Position = UDim2.new(0, 0, 1, -4)
-    else
-        aq.Position = UDim2.fromOffset(0, 37)
+    for componentName in H do
+        ai["Create" .. componentName] = function(_, settings)
+            local creator = moduleApi["Create" .. componentName]
+            if type(creator) ~= "function" then
+                return nil
+            end
+            local option = creator(moduleApi, settings)
+            ai.Options = moduleApi.Options
+            return option
+        end
+        ai["Add" .. componentName] = ai["Create" .. componentName]
     end
 
-    aq.BackgroundColor3 = o.MainSoft
-    aq.BorderSizePixel = 0
-    aq.Visible = false
-    aq.ScrollBarThickness = 2
-    aq.ScrollBarImageTransparency = 0.75
-    aq.CanvasSize = UDim2.new()
-    aq.Parent = ah
-
-    local ar = Instance.new("UIListLayout")
-    ar.SortOrder = Enum.SortOrder.LayoutOrder
-    ar.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    ar.VerticalAlignment = ai.UpExpand and Enum.VerticalAlignment.Bottom or Enum.VerticalAlignment.Top
-    ar.Parent = aq
-
-    addMaid(ai)
-
-    function ai.Expand(as, at)
-        if at and not aj.Visible then
-            return
-        end
-        as.Expanded = not as.Expanded
-        aq.Visible = as.Expanded
-        ao.ImageColor3 = as.Expanded and o.Text or m.Light(o.Main, 0.37)
-
-        local au = ar.AbsoluteContentSize.Y / A.Scale
-        local av = math.min(41 + au, 601)
-
-        if as.Expanded then
-            if as.UpExpand then
-                n:Tween(ah, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Size = UDim2.fromOffset(220, av),
-                    Position = UDim2.fromOffset(ah.Position.X.Offset, ah.Position.Y.Offset - (av - 41)),
-                })
-            else
-                n:Tween(ah, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Size = UDim2.fromOffset(220, av),
-                })
-            end
-        else
-            if as.UpExpand then
-                local aw = ah.Size.Y.Offset
-                n:Tween(ah, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Size = UDim2.fromOffset(as.WindowXOffset, 41),
-                    Position = UDim2.fromOffset(ah.Position.X.Offset, ah.Position.Y.Offset + (aw - 41)),
-                })
-            else
-                n:Tween(ah, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Size = UDim2.fromOffset(as.WindowXOffset, 41),
-                })
-            end
-        end
+    function ai.Expand()
+        -- Overlay settings live in the ordinary Render module options pane.
+        return false
     end
 
-    function ai.Pin(as)
-        as.Pinned = not as.Pinned
+    function ai.Pin(self, forced)
+        local nextPinned = forced
+        if nextPinned == nil then
+            nextPinned = not self.Pinned
+        end
         if ag.Pinned then
-            as.Pinned = true
+            nextPinned = true
         end
-        am.ImageColor3 = as.Pinned and o.Text or m.Dark(o.Text, 0.43)
+        self.Pinned = nextPinned == true
+        pin.ImageColor3 = self.Pinned and o.Text or o.FaintText
+        self:Update()
     end
 
-    if ag.Pinned then
-        ai.Pinned = true
+    function ai.Update(self)
+        local enabled = moduleApi.Enabled == true
+        local showChrome = v.Visible == true
+
+        ah.Visible = enabled and (showChrome or self.Pinned)
+        content.Visible = enabled
+        ah.Size = UDim2.fromOffset(width, showChrome and 41 or 0)
+        ah.BackgroundTransparency = showChrome and 0 or 1
+        overlayStroke.Enabled = showChrome
+        overlayShadow.Visible = showChrome
+        overlayAccent.Visible = showChrome
+        icon.Visible = showChrome
+        title.Visible = showChrome
+        pin.Visible = showChrome and not ag.Pinned
     end
 
-    function ai.Update(as)
-        ah.Visible = as.Button.Enabled and (v.Visible or as.Pinned)
-        if as.Expanded then
-            as:Expand()
-        end
-        if v.Visible then
-            ah.Size = UDim2.fromOffset(ah.Size.X.Offset, 41)
-            ah.BackgroundTransparency = 0
-            aj.Visible = true
-            ak.Visible = true
-            al.Visible = true
-            am.Visible = not ag.Pinned
-            an.Visible = true
-        else
-            ah.Size = UDim2.fromOffset(ah.Size.X.Offset, 0)
-            ah.BackgroundTransparency = 1
-            aj.Visible = false
-            ak.Visible = false
-            al.Visible = false
-            am.Visible = false
-            an.Visible = false
-        end
-    end
-
-    for as, at in H do
-        ai["Create" .. as] = function(au, av)
-            return at(av, aq, ai)
-        end
-        ai["Add" .. as] = ai["Create" .. as]
-    end
-
-    an.MouseEnter:Connect(function()
-        if not aq.Visible then
-            ao.ImageColor3 = o.Text
-        end
-    end)
-    an.MouseLeave:Connect(function()
-        if not aq.Visible then
-            ao.ImageColor3 = m.Light(o.Main, 0.37)
-        end
-    end)
-    an.Activated:Connect(function()
-        ai:Expand(true)
-    end)
-    connectDoubleClick(an, function()
-        if not ai.Expanded then
-            ai:Expand(true)
-        end
-    end)
-    am.Activated:Connect(function()
+    pin.Activated:Connect(function()
         ai:Pin()
     end)
-    ar:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        if af.ThreadFix then
-            setthreadidentity(8)
-        end
-        aq.CanvasSize = UDim2.fromOffset(0, ar.AbsoluteContentSize.Y / A.Scale)
-        if ai.Expanded then
-            local as = ar.AbsoluteContentSize.Y / A.Scale
-            local at = math.min(41 + as, 601)
 
-            if ai.UpExpand then
-                local au = ah.Size.Y.Offset
-                local av = at - au
-                ah.Size = UDim2.fromOffset(ah.Size.X.Offset, at)
-                ah.Position = UDim2.fromOffset(ah.Position.X.Offset, ah.Position.Y.Offset - av)
-            else
-                ah.Size = UDim2.fromOffset(ah.Size.X.Offset, at)
-            end
-        end
-    end)
     af:Clean(v:GetPropertyChangedSignal("Visible"):Connect(function()
         ai:Update()
     end))
 
-    ai:Update()
+    ah.Destroying:Once(function()
+        cleanOverlayConnections()
+        if ai._FunctionThread then
+            pcall(task.cancel, ai._FunctionThread)
+            ai._FunctionThread = nil
+        end
+    end)
+
     ai.Object = ah
-    ai.Children = ap
+    ai.Children = content
     af.Overlays[ag.Name] = ai
     af.Categories[ag.Name] = ai
 
+    ai:Update()
     return ai
 end
 
@@ -12597,9 +11934,9 @@ function d.CreateLegit(ag)
 
         local legitOptionsGeneration = 0
         local legitOptionsTransition = TweenInfo.new(
-            0.18,
-            Enum.EasingStyle.Quart,
-            Enum.EasingDirection.InOut
+            0.13,
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.Out
         )
         local closeLegitOptions
 
@@ -14050,7 +13387,10 @@ function d.Load(ah, ai, aj)
             end
 
             for ap, aq in ao.Legit do
+                local overlay = ah.Overlays and ah.Overlays[ap]
                 local ar = ah.Legit.Modules[ap]
+                    or (overlay and overlay.Button)
+                    or ah.Modules[ap]
                 if not ar then
                     continue
                 end
@@ -14060,8 +13400,12 @@ function d.Load(ah, ai, aj)
                 if ar.Enabled ~= aq.Enabled then
                     ar:Toggle()
                 end
-                if aq.Position and ar.Children then
-                    ar.Children.Position = UDim2.fromOffset(aq.Position.X, aq.Position.Y)
+                if aq.Position then
+                    if overlay and overlay.Object then
+                        overlay.Object.Position = UDim2.fromOffset(aq.Position.X, aq.Position.Y)
+                    elseif ar.Children then
+                        ar.Children.Position = UDim2.fromOffset(aq.Position.X, aq.Position.Y)
+                    end
                 end
             end
         end
@@ -14984,6 +14328,48 @@ d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
     end)
 end))
 
+local cursorConnection
+local function stopCursorTracking()
+    if cursorConnection then
+        cursorConnection:Disconnect()
+        cursorConnection = nil
+    end
+    aj.Visible = false
+end
+
+local function startCursorTracking()
+    stopCursorTracking()
+    if not v.Visible or not h.MouseEnabled then
+        return
+    end
+
+    cursorConnection = k.RenderStepped:Connect(function()
+        if not v.Visible or d.Loaded == nil then
+            stopCursorTracking()
+            return
+        end
+
+        local anyVisible = v.Visible
+        for _, window in d.Windows do
+            anyVisible = anyVisible or window.Visible
+        end
+        if not anyVisible then
+            stopCursorTracking()
+            return
+        end
+
+        aj.Visible = not h.MouseIconEnabled
+        if aj.Visible then
+            local mouse = h:GetMouseLocation()
+            aj.Position = UDim2.fromOffset(mouse.X - 31, mouse.Y - 32)
+        end
+    end)
+end
+
+d:Clean(function()
+    stopCursorTracking()
+end)
+
 d:Clean(v:GetPropertyChangedSignal("Visible"):Connect(function()
     if not v.Visible then
         if d.HideTooltip then
@@ -15001,29 +14387,14 @@ d:Clean(v:GetPropertyChangedSignal("Visible"):Connect(function()
             pcall(d._OpenLegitOptions, true)
             d._OpenLegitOptions = nil
         end
+        stopCursorTracking()
+    else
+        startCursorTracking()
     end
+
     d:UpdateGUI(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value, true)
-    if v.Visible and h.MouseEnabled then
-        repeat
-            local am = v.Visible
-            for an, ao in d.Windows do
-                am = am or ao.Visible
-            end
-            if not am then
-                break
-            end
-
-            aj.Visible = not h.MouseIconEnabled
-            if aj.Visible then
-                local an = h:GetMouseLocation()
-                aj.Position = UDim2.fromOffset(an.X - 31, an.Y - 32)
-            end
-
-            task.wait()
-        until d.Loaded == nil
-        aj.Visible = false
-    end
 end))
+
 
 d:CreateGUI()
 d.Categories.Main:CreateDivider()
@@ -15348,101 +14719,9 @@ d:Clean(aq.Update)
 
 d:CreateLegit()
 d:CreateSearch()
-d.Categories.Main:CreateDivider("overlays")
-local ar = d.Categories.World:CreateModuleCategory({
-    Name = "Overlays",
-    Icon = u("badscript/assets/new/overlaysicon.png"),
-    Size = UDim2.fromOffset(24, 18),
-    GuiColorSync = true,
-    UpExpand = true,
-})
-ar.ExpandEvent:Connect(function()
-    local as = d.Categories.Main.MainGui
-    for at, au in as:GetChildren() do
-        if au:IsA("TextButton") then
-            if not ar.Expanded then
-                au.Visible = true
-            end
-            local av = n:Tween(au, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.fromOffset(220, ar.Expanded and 0 or 40),
-                TextTransparency = ar.Expanded and 1 or 0,
-            })
-            if ar.Expanded and av then
-                av.Completed:Once(function()
-                    au.Visible = false
-                end)
-            elseif ar.Expanded then
-                au.Visible = false
-            end
-        elseif au:IsA("TextLabel") and not au.Name:lower():find("overlays") then
-            n:Tween(au, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.fromOffset(218, ar.Expanded and 0 or 27),
-                TextTransparency = ar.Expanded and 1 or 0,
-            })
-        end
-    end
-    for at, au in d.Categories do
-        if not (au.OriginalCategory or (au.Type ~= nil and au.Type == "CategoryList")) then
-            continue
-        end
-        if not au.Object then
-            continue
-        end
-        if au.Object.Parent == nil then
-            continue
-        end
-        if not au.Button then
-            continue
-        end
-        if not au.Button.Enabled then
-            continue
-        end
-        local av = au.Object:FindFirstChild("Title")
-        if av then
-            n:Tween(av, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                TextTransparency = ar.Expanded and 1 or 0,
-            })
-        end
-        local aw = au.Object:FindFirstChild("Icon")
-        if aw then
-            n:Tween(aw, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                ImageTransparency = ar.Expanded and 1 or 0,
-            })
-        end
-        if ar.Expanded and not au.OriginalCategorySize then
-            au.OriginalCategorySize = au.Object.Size.Y.Offset
-        end
-        if au.OriginalCategorySize then
-            if not ar.Expanded then
-                au.Object.Visible = true
-            end
-            local ax = n:Tween(au.Object, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.fromOffset(220, (ar.Expanded and 0 or au.OriginalCategorySize)),
-            })
-            if ar.Expanded and ax then
-                ax.Completed:Once(function()
-                    au.Object.Visible = false
-                end)
-            elseif ar.Expanded then
-                au.Object.Visible = false
-            end
-        end
-    end
-end)
-d:Clean(d.MainGuiSettingsOpenedEvent:Connect(function()
-    if ar.Expanded then
-        ar:Toggle()
-    end
-end))
-d:Clean(d.VisibilityChanged:Connect(function()
-    if ar.Expanded then
-        ar:Toggle()
-    end
-end))
--- Keep Overlays ModuleCategory parented inside World category only.
--- Do NOT reparent to MainGui to avoid duplicate sidebar entries.
-d.OverlaysModuleCategory = ar
-d.Categories.Main:CreateOverlayBar({ Hidden = true })
+-- HUD/display features are ordinary Render modules.  There is intentionally
+-- no Overlays sidebar entry, module-category expander, page, or input blocker.
+d.OverlaysModuleCategory = nil
 
 local as = d.Categories.Main:CreateSettingsPane({ Name = "Modules" })
 as:CreateToggle({
@@ -16588,12 +15867,6 @@ function d.UpdateGUI(I, J, K, L, M)
             end
         end
     end
-    for O, P in d.Overlays.Toggles do
-        if P.Enabled then
-            applyToggleAccent(P, J, K, L, N, O)
-        end
-    end
-
     if d.Legit.Icon then
         d.Legit.Icon.ImageColor3 = Color3.fromHSV(J, K, L)
     end

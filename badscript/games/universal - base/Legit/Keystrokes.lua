@@ -6,7 +6,7 @@ local ShowSpacebar
 local keys = {}
 local holder
 
-local PremiumKeystrokesBuild = "2026.07.04.9-NEXUS"
+local PremiumKeystrokesBuild = "2026.07.05.10-RENDER-HUD"
 
 local NORMAL_BACKGROUND = Color3.fromRGB(15, 16, 29)
 local NORMAL_TEXT = Color3.fromRGB(218, 227, 240)
@@ -53,9 +53,19 @@ local function getPressedTextColor(accent)
 		or Color3.fromRGB(245, 249, 255)
 end
 
+local activeTweens = setmetatable({}, { __mode = "k" })
+
 local function tween(object, info, properties)
 	if not object or not object.Parent then
 		return nil
+	end
+
+	local previous = activeTweens[object]
+	if previous then
+		pcall(function()
+			previous:Cancel()
+		end)
+		activeTweens[object] = nil
 	end
 
 	if tweenService then
@@ -64,6 +74,12 @@ local function tween(object, info, properties)
 		end)
 
 		if success and created then
+			activeTweens[object] = created
+			created.Completed:Once(function()
+				if activeTweens[object] == created then
+					activeTweens[object] = nil
+				end
+			end)
 			created:Play()
 			return created
 		end
@@ -107,7 +123,7 @@ local function ensureHolder()
 	holder.Size = UDim2.fromScale(1, 1)
 	holder.BackgroundTransparency = 1
 	holder.BorderSizePixel = 0
-	holder.ClipsDescendants = true
+	holder.ClipsDescendants = false
 
 	if Keystrokes and Keystrokes.Children then
 		holder.Parent = Keystrokes.Children
@@ -272,10 +288,10 @@ local function keyText(keyCode)
 	end
 
 	local arrows = {
-		[Enum.KeyCode.W] = "?",
-		[Enum.KeyCode.A] = "<-",
-		[Enum.KeyCode.S] = "?",
-		[Enum.KeyCode.D] = "->",
+		[Enum.KeyCode.W] = "^",
+		[Enum.KeyCode.A] = "<",
+		[Enum.KeyCode.S] = "v",
+		[Enum.KeyCode.D] = ">",
 	}
 
 	return arrows[keyCode] or keyCode.Name
@@ -335,8 +351,13 @@ local function setKeyState(keyCode, pressed)
 	end
 end
 
-Keystrokes = Bad.Legit:CreateModule({
+Keystrokes = Bad:CreateOverlay({
 	Name = "Keystrokes",
+	Icon = getcustomasset("badscript/assets/new/textguiicon.png"),
+	CustomOverlay = true,
+	Pinned = true,
+	CategorySize = 126,
+	ContentHeight = 122,
 	Function = function(callback)
 		if callback then
 			rebuildKeys()
@@ -374,7 +395,6 @@ Keystrokes = Bad.Legit:CreateModule({
 			end
 		end
 	end,
-	Size = UDim2.fromOffset(126, 122),
 	Tooltip = "Shows premium movement keys onscreen",
 })
 

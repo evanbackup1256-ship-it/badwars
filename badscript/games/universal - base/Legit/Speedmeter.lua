@@ -1,8 +1,13 @@
 local Speedmeter
 local label
 
-Speedmeter = Bad.Legit:CreateModule({
+Speedmeter = Bad:CreateOverlay({
 	Name = 'Speedmeter',
+	Icon = getcustomasset('badscript/assets/new/textguiicon.png'),
+	CustomOverlay = true,
+	Pinned = true,
+	CategorySize = 100,
+	ContentHeight = 41,
 	Function = function(callback)
 		if callback then
 			repeat

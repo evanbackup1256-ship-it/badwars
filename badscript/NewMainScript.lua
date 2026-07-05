@@ -153,6 +153,31 @@ local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring 
 
 -- BADWARS_EARLY_LOADER_PRESENTATION_V1_BEGIN
 local function createStatusLabel()
+    -- Reuse existing loader GUI if present to avoid flash on transition
+    local existingGui
+    pcall(function()
+        local parent = cloneref(game:GetService("CoreGui"))
+        existingGui = parent:FindFirstChild("BadWarsLoaderStatus")
+    end)
+    if existingGui then
+        local existingStage = existingGui:FindFirstChild("Loader", true)
+            and existingGui:FindFirstChild("Loader", true):FindFirstChild("Stage")
+        local existingFill = existingGui:FindFirstChild("Loader", true)
+            and existingGui:FindFirstChild("Loader", true):FindFirstChild("Line")
+            and existingGui:FindFirstChild("Loader", true):FindFirstChild("Line"):FindFirstChild("Fill")
+        if existingStage then
+            shared.BadStatusGui = existingGui
+            return function(message, isError)
+                local text = tostring(message or "Working")
+                if existingStage then existingStage.Text = isError and "Loader stopped" or text end
+                if existingFill then
+                    existingFill.BackgroundColor3 = isError and Color3.fromRGB(239, 105, 116) or Color3.fromRGB(70, 196, 150)
+                    existingFill.Size = UDim2.fromScale(isError and 1 or math.min(existingFill.Size.X.Scale + 0.08, 0.92), 1)
+                end
+            end
+        end
+    end
+
     local statusGui
     local card
     local stageText
@@ -419,12 +444,12 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-v15-recovered-ui-2026-07-05-04'
+local cacheVersion = 'badwars-v16-render-hud-page-manager-2026-07-05-01'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents) == 'string'
-		and contents:find('Version%s*=%s*"15%.0"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V15%-RECOVERED%-LATEST"') ~= nil
+		and contents:find('Version%s*=%s*"16%.0"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V16%-RENDER%-HUD%-PAGE%-MANAGER"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath = 'badscript/guis/new/gui.lua'

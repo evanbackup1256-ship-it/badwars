@@ -5,8 +5,13 @@
 local FPS
 local label
 
-FPS = Bad.Legit:CreateModule({
+FPS = Bad:CreateOverlay({
 	Name = 'FPS',
+	Icon = getcustomasset('badscript/assets/new/textguiicon.png'),
+	CustomOverlay = true,
+	Pinned = true,
+	CategorySize = 100,
+	ContentHeight = 41,
 	Function = function(callback)
 		if callback then
 			local frames = {}
@@ -29,7 +34,6 @@ FPS = Bad.Legit:CreateModule({
 			end))
 		end
 	end,
-	Size = UDim2.fromOffset(100, 41),
 	Tooltip = 'Shows the current framerate'
 })
 FPS:CreateFont({

@@ -2,8 +2,13 @@ local Clock
 local TwentyFourHour
 local label
 
-Clock = Bad.Legit:CreateModule({
+Clock = Bad:CreateOverlay({
 	Name = 'Clock',
+	Icon = getcustomasset('badscript/assets/new/textguiicon.png'),
+	CustomOverlay = true,
+	Pinned = true,
+	CategorySize = 100,
+	ContentHeight = 41,
 	Function = function(callback)
 		if callback then
 			repeat
@@ -19,7 +24,6 @@ Clock = Bad.Legit:CreateModule({
 			until not Clock or not Clock.Enabled
 		end
 	end,
-	Size = UDim2.fromOffset(100, 41),
 	Tooltip = 'Shows the current local time'
 })
 Clock:CreateFont({

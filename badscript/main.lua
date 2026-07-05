@@ -121,7 +121,7 @@ do
 
     __badwarsLoadDiagnostics()
 end
--- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Main v15.0 - clean UI readiness pipeline
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Main v16.0 - clean UI readiness pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -625,8 +625,8 @@ local function isStaleGuiCache(path, body)
         return true
     end
     return not (
-        body:find('Version%s*=%s*"15%.0"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V15%-RECOVERED%-LATEST"') ~= nil
+        body:find('Version%s*=%s*"16%.0"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V16%-RENDER%-HUD%-PAGE%-MANAGER"') ~= nil
     )
 end
 
@@ -1520,13 +1520,15 @@ end)
 
 -- Stage 3: GUI Profile
 local defaultGui = "new"
-local validGuis = { liquidbounce = true, new = true, old = true, rise = true, wurst = true }
+local gui = defaultGui
 local savedGui = isfile("badscript/profiles/gui.txt") and readfile("badscript/profiles/gui.txt") or ""
+savedGui = tostring(savedGui):lower():gsub("%s+", "")
 setStatus("selecting interface")
-if not validGuis[savedGui] or savedGui == "liquidbounce" then
-    writefile("badscript/profiles/gui.txt", "new")
+if savedGui ~= gui then
+    -- Production is fail-closed to the current UI generation. Legacy UI
+    -- selectors are overwritten before any presentation source is loaded.
+    writefile("badscript/profiles/gui.txt", gui)
 end
-local gui = readfile("badscript/profiles/gui.txt")
 if not isfolder("badscript/assets/" .. gui) then
     makefolder("badscript/assets/" .. gui)
 end

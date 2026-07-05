@@ -55,16 +55,16 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"15\.0"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V15-RECOVERED-LATEST"' -and
-    $newGui -match 'BADWARS_FINAL_DESIGN_SCOPE_V15' -and
-    $main -match "BadWars Main v15\.0" -and
-    $loader -match "BadWars Loader v15\.0" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"15\.0"'
+    $newGui -match 'Version\s*=\s*"16\.0"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V16-RENDER-HUD-PAGE-MANAGER"' -and
+    $newGui -match 'BADWARS_UI_V16_RENDER_HUD_PAGE_MANAGER' -and
+    $main -match "BadWars Main v16\.0" -and
+    $loader -match "BadWars Loader v16\.0" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"16\.0"'
 ) {
-    Pass "V15 runtime versions are synchronized"
+    Pass "V16 runtime versions are synchronized"
 } else {
-    Fail "V15 runtime versions are not synchronized"
+    Fail "V16 runtime versions are not synchronized"
 }
 
 $requiredComponentApis = @(
@@ -161,6 +161,40 @@ if ($main -match "selecting interface" -and $main -match 'writefile\("badscript/
     Fail "Current GUI profile is not forced to the new UI"
 }
 
+$legacyGuiPaths = @(
+    "badscript\guis\old",
+    "badscript\guis\rise",
+    "badscript\guis\wurst",
+    "badscript\guis\liquidbounce"
+)
+$presentLegacyGuiPaths = @($legacyGuiPaths | Where-Object { Test-Path -LiteralPath (Join-Path $Root $_) })
+if ($presentLegacyGuiPaths.Count -eq 0 -and $main -match 'local gui = defaultGui' -and $main -notmatch 'validGuis') {
+    Pass "Legacy UI implementations are absent and unreachable"
+} else {
+    Fail "A legacy UI implementation or selector remains reachable"
+}
+
+if (
+    $newGui -match 'HUD/display features are ordinary Render modules' -and
+    $newGui -match 'renderCategory:CreateModule' -and
+    $newGui -notmatch 'Name\s*=\s*"Overlays"' -and
+    $newGui -notmatch 'CreateOverlayBar\(\{\s*Hidden\s*=\s*true'
+) {
+    Pass "Overlay navigation is removed and HUDs register in Render"
+} else {
+    Fail "Overlay navigation or special overlay registration still exists"
+}
+
+if (
+    $newGui -match 'local aw = Instance\.new\("Frame"\)[\s\S]{0,260}SettingsPane' -and
+    $newGui -match 'BADWARS_SETTINGS_PAGE_MANAGER_V3' -and
+    $newGui -notmatch 'aw\.GroupTransparency'
+) {
+    Pass "Settings pages use visible frame state instead of shared CanvasGroup fading"
+} else {
+    Fail "Settings page visibility architecture is still vulnerable to blank panes"
+}
+
 $unescapedPathDownloads = Get-ChildItem -Path "$Root\badscript" -Recurse -File -Include "*.lua" |
     Select-String -Pattern "raw\.githubusercontent\.com/evanbackup1256-ship-it/badwars/main/' \.\. path, true" -SimpleMatch
 if ($unescapedPathDownloads) {
@@ -217,8 +251,8 @@ if (
     $loader -match "invalidateStaleGuiCache" -and
     $newMain -match "invalidateStaleGuiCache" -and
     $main -match "isStaleGuiCache" -and
-    $loader -match 'V15%-RECOVERED%-LATEST' -and
-    $newMain -match 'V15%-RECOVERED%-LATEST'
+    $loader -match 'V16%-RENDER%-HUD%-PAGE%-MANAGER' -and
+    $newMain -match 'V16%-RENDER%-HUD%-PAGE%-MANAGER'
 ) {
     Pass "Loadstring rejects stale GUI cache automatically"
 } else {

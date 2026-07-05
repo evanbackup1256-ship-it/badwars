@@ -1,8 +1,13 @@
 local Ping
 local label
 
-Ping = Bad.Legit:CreateModule({
+Ping = Bad:CreateOverlay({
 	Name = 'Ping',
+	Icon = getcustomasset('badscript/assets/new/textguiicon.png'),
+	CustomOverlay = true,
+	Pinned = true,
+	CategorySize = 100,
+	ContentHeight = 41,
 	Function = function(callback)
 		if callback then
 			repeat
@@ -18,7 +23,6 @@ Ping = Bad.Legit:CreateModule({
 			until not Ping or not Ping.Enabled
 		end
 	end,
-	Size = UDim2.fromOffset(100, 41),
 	Tooltip = 'Shows the current connection speed to the roblox server'
 })
 Ping:CreateFont({

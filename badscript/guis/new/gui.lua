@@ -6448,6 +6448,11 @@ function d.CreateGUI(aa)
     aq.SortOrder = Enum.SortOrder.LayoutOrder
     aq.HorizontalAlignment = Enum.HorizontalAlignment.Center
     aq.Parent = ap
+    local function setScrollEnabledIfSupported(object, enabled)
+        if object and object:IsA("ScrollingFrame") then
+            object.ScrollingEnabled = enabled
+        end
+    end
     ab.Object = ac
 
     function ab.CreateBind(ar)
@@ -7544,7 +7549,7 @@ local function setPaneVisible(visible, instant)
 
         d._OpenSettingsPane = aw
         ap.Visible = false
-        ap.ScrollingEnabled = false
+        setScrollEnabledIfSupported(ap, false)
 
         pcall(function()
             ap.Interactable = false
@@ -7613,7 +7618,7 @@ local function setPaneVisible(visible, instant)
             and d._OpenSettingsPane == nil
 
         ap.Visible = restoreMain
-        ap.ScrollingEnabled = restoreMain
+        setScrollEnabledIfSupported(ap, restoreMain)
 
         pcall(function()
             ap.Interactable = restoreMain

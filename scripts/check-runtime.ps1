@@ -207,6 +207,12 @@ if ($newGui -notmatch "\bendak\b" -and $newGui -notmatch "\$[0-9]+") {
     Fail "GUI source contains a likely syntax artifact"
 }
 
+if ($newGui -notmatch "ap\.ScrollingEnabled\s*=" -and $newGui -match "setScrollEnabledIfSupported\(ap") {
+    Pass "Settings pane scroll state is guarded by instance type"
+} else {
+    Fail "Settings pane scroll state can target a non-scrolling Frame"
+}
+
 $oldPinnedCommit = "b0898d95476b5a8da7cd2f37578b16ec70af95430"
 $activeRuntime = @($loader, $newMain, $main, $newGui) -join "`n"
 if ($activeRuntime -notmatch [regex]::Escape($oldPinnedCommit)) {

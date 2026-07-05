@@ -671,7 +671,7 @@ local function watchRobloxUpdates()
     while true do
       task.wait(300)
       local ok,res=pcall(function()
-        local api='https://api.github.com/repos/evanbackup1256-ship-it/badwars/raw/main/badscript/profiles/roblox-version.txt'
+        local api='https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/profiles/roblox-version.txt'
         local httpService=cloneref(game:GetService('HttpService'))
         local body=httpService:GetAsync(api,true)
         return body

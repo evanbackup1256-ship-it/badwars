@@ -36,6 +36,9 @@ $entityLib = Read-ProjectFile "badscript\libraries\entity.lua"
 $universalBase = Read-ProjectFile "badscript\games\universal - base\base.lua"
 $universalManifest = Read-ProjectFile "badscript\games\universal - base\files.txt"
 $universalBundle = Read-ProjectFile "badscript\games\universal - base\bundle.lua"
+$languageFlags = Read-ProjectFile "badscript\translations\LanguageFlags.json"
+$languagesIndex = Read-ProjectFile "badscript\translations\Languages.json"
+$robloxVersionStatus = Read-ProjectFile "badscript\profiles\roblox-version.txt"
 
 $cacheVersions = @()
 foreach ($content in @($loader, $newMain)) {
@@ -185,7 +188,14 @@ if ($loader -match "shared\.BadStatus" -and $newMain -match "shared\.BadStatus" 
     Fail "Startup status surface is not wired through every entry point"
 }
 
-if ($loader -match "shared\.BadWarsStatusApi" -and $loader -match "Roblox update watch" -and $loader -match "JSONDecode") {
+if (
+    $loader -match "shared\.BadWarsStatusApi" -and
+    $loader -match "Roblox update watch" -and
+    $loader -match "JSONDecode" -and
+    $loader -match "raw\.githubusercontent\.com/evanbackup1256-ship-it/badwars/main/badscript/profiles/roblox-version\.txt" -and
+    $loader -notmatch "api\.github\.com/repos/evanbackup1256-ship-it/badwars/raw" -and
+    $robloxVersionStatus -match '"status"\s*:\s*"ok"'
+) {
     Pass "Loader can show Roblox update warnings from the website API"
 } else {
     Fail "Loader Roblox update warning integration is missing"
@@ -221,6 +231,17 @@ if ($newGui -notmatch "\bendak\b" -and $newGui -notmatch "\$[0-9]+") {
     Fail "GUI source contains a likely syntax artifact"
 }
 
+$activeLuaFiles = Get-ChildItem -Path "$Root\badscript" -Recurse -File -Include "*.lua"
+$syntaxArtifactMatches = $activeLuaFiles |
+    Where-Object { $_.FullName -notmatch '\\(\.git|voidware|v11-module-backup|\.badwars-[^\\]+-backup)\\' } |
+    Select-String -Pattern "\bendak\b|\$[0-9]+"
+if ($syntaxArtifactMatches) {
+    Fail "Active Lua files contain likely pasted syntax artifacts"
+    $syntaxArtifactMatches | ForEach-Object { Write-Host "       $($_.Path):$($_.LineNumber)" -ForegroundColor DarkYellow }
+} else {
+    Pass "Active Lua files are free of known pasted syntax artifacts"
+}
+
 if ($newGui -notmatch "ap\.ScrollingEnabled\s*=" -and $newGui -match "setScrollEnabledIfSupported\(ap") {
     Pass "Settings pane scroll state is guarded by instance type"
 } else {
@@ -231,6 +252,35 @@ if ($newGui -match "BadWarsV14Motion" -and $newGui -match "addCleanMotion" -and 
     Pass "V14 guarded motion layer is present"
 } else {
     Fail "V14 guarded motion layer is missing"
+}
+
+if (
+    $newGui -match "badscript/translations/LanguageFlags\.json" -and
+    $newGui -match "badscript/translations/Languages\.json" -and
+    $newGui -match "badscript/translations/locales/\{ab\}\.json" -and
+    $newGui -notmatch "vapevoidware|VapeVoidware" -and
+    $languageFlags -match '"en"\s*:\s*"US"' -and
+    $languagesIndex -match '"en"'
+) {
+    Pass "GUI translations use first-party BadWars fallbacks"
+} else {
+    Fail "GUI translations still depend on legacy external endpoints"
+}
+
+if ($newGui -match "BrandLogo" -and $newGui -match "MobileToggleButton" -and $newGui -notmatch "VapeLogo|VapeButton") {
+    Pass "Active GUI branding identifiers are BadWars-native"
+} else {
+    Fail "Active GUI still contains legacy branding identifiers"
+}
+
+$legacyRuntimeMatches = $activeLuaFiles |
+    Where-Object { $_.FullName -notmatch '\\(\.git|voidware|v11-module-backup|\.badwars-[^\\]+-backup)\\' } |
+    Select-String -Pattern "vapevoidware|VapeVoidware|VapeLogo|VapeButton"
+if ($legacyRuntimeMatches) {
+    Fail "Active Lua runtime contains legacy external branding references"
+    $legacyRuntimeMatches | ForEach-Object { Write-Host "       $($_.Path):$($_.LineNumber)" -ForegroundColor DarkYellow }
+} else {
+    Pass "Active Lua runtime avoids legacy external branding references"
 }
 
 if ($newGui -match "function\s+ab\.CreateOverlayBar\(ar\)" -and $newGui -match "ar\s+and\s+ar\.Hidden" -and $newGui -match "CreateOverlayBar\(\{\s*Hidden\s*=\s*true\s*\}\)") {

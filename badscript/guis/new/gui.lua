@@ -6123,7 +6123,7 @@ function d.CreateGUI(aa)
     end)
 
     local ad = Instance.new("TextLabel")
-    ad.Name = "VapeLogo"
+    ad.Name = "BrandLogo"
     ad.Size = UDim2.fromOffset(118, 24)
     ad.Position = UDim2.fromOffset(12, 8)
     ad.BackgroundTransparency = 1
@@ -6525,9 +6525,9 @@ function d.CreateGUI(aa)
         function as.SetBind(ax, ay)
             d.Keybind = #ay <= 0 and d.Keybind or table.clone(ay)
             ax.Bind = d.Keybind
-            if d.VapeButton then
-                d.VapeButton:Destroy()
-                d.VapeButton = nil
+            if d.MobileToggleButton then
+                d.MobileToggleButton:Destroy()
+                d.MobileToggleButton = nil
             end
 
             au.Visible = true
@@ -10607,7 +10607,7 @@ local aa = shared.LANGUAGE_FLAGS_CACHE
         function()
             return game:GetService("HttpService"):JSONDecode(
                 d.http_function(
-                    `https://files.vapevoidware.xyz/VapeVoidware/translations/main/LanguageFlags.json`,
+                    `https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/translations/LanguageFlags.json`,
                     true
                 )
             )
@@ -10686,7 +10686,7 @@ local ac = {
             function()
                 return game:GetService("HttpService"):JSONDecode(
                     d.http_function(
-                        `https://files.vapevoidware.xyz/VapeVoidware/translations/main/Languages.json`,
+                        `https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/translations/Languages.json`,
                         true
                     )
                 )
@@ -10736,7 +10736,7 @@ local ac = {
                 end
                 return decode(
                     d.http_function(
-                        `https://files.vapevoidware.xyz/VapeVoidware/translations/main/locales/{ab}.json`,
+                        `https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/translations/locales/{ab}.json`,
                         true
                     )
                 )
@@ -14050,7 +14050,7 @@ function d.Load(ah, ai, aj)
         aq.Parent = ao
         local ar = Instance.new("UICorner")
         ar.Parent = ao
-        ah.VapeButton = ao
+        ah.MobileToggleButton = ao
         local function toggleGui()
             if ah.ThreadFix then
                 setthreadidentity(8)
@@ -15254,7 +15254,7 @@ d:connectOnLoad(function(aq)
                     d.TutorialAPI:tweenToSecondPosition()
                     task.wait(1)
                     d.TutorialAPI:setText(
-                        d.VapeButton and "Press the button in the top right to open GUI"
+                        d.MobileToggleButton and "Press the button in the top right to open GUI"
                             or "Press " .. table.concat(d.Keybind, " + "):upper() .. " to open & close the GUI"
                     )
                     task.wait(3)
@@ -16397,7 +16397,7 @@ function d.UpdateGUI(I, J, K, L, M)
     for O, P in d.Categories do
         if O == "Main" then
             local mainObject = P.Object
-            local brand = mainObject and mainObject:FindFirstChild("VapeLogo")
+            local brand = mainObject and mainObject:FindFirstChild("BrandLogo")
             local version = brand and brand:FindFirstChild("V4Logo")
             local accent = Color3.fromHSV(J, K, L)
 

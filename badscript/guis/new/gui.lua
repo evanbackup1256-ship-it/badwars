@@ -1,4 +1,17 @@
--- BADWARS_UI_REPAIR_2026_07_05
+-- BADWARS_GUI_ARCHITECTURE_REPAIR_2026_07_05
+do
+    local environment = getgenv and getgenv() or _G
+    local previousApi = rawget(environment, "__BADWARS_GUI_API")
+    if type(previousApi) == "table" and type(previousApi.Uninject) == "function" then
+        pcall(previousApi.Uninject, previousApi, true)
+    end
+    local previousRoot = rawget(environment, "__BADWARS_GUI_ROOT")
+    if typeof(previousRoot) == "Instance" then
+        pcall(function() previousRoot:Destroy() end)
+    end
+    environment.__BADWARS_GUI_API = nil
+    environment.__BADWARS_GUI_ROOT = nil
+end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
 do
     shared = type(shared) == "table" and shared or {}
@@ -320,6 +333,12 @@ local function getTableSize(p)
         q += 1
     end
     return q
+end
+
+local function normalizeUiKey(value)
+    return tostring(value or "")
+        :lower()
+        :gsub("[^%w]+", "")
 end
 
 local function loopClean(p, q)
@@ -1214,10 +1233,17 @@ end
 
 local function tooltipTargetAllowed(target)
     local openPane = d._OpenSettingsPane
-    if not openPane or not openPane.Parent or not openPane.Visible then
-        return true
+    if openPane and openPane.Parent and openPane.Visible then
+        return target == openPane or target:IsDescendantOf(openPane)
     end
-    return target == openPane or target:IsDescendantOf(openPane)
+
+    local overlayApi = d._OverlayBarAPI
+    local overlayWindow = overlayApi and overlayApi.Window
+    if overlayApi and overlayApi.Open and overlayWindow and overlayWindow.Parent and overlayWindow.Visible then
+        return target == overlayWindow or target:IsDescendantOf(overlayWindow)
+    end
+
+    return true
 end
 
 local function stopTooltipFollow()
@@ -4938,7 +4964,7 @@ H = {
         local ae = false
         local af = Instance.new("TextButton")
         af.Name = aa.Name .. "Toggle"
-        af.Size = UDim2.new(1, 0, 0, d.isMobile and 46 or 40)
+        af.Size = UDim2.new(1, 0, 0, d.isMobile and 50 or 44) af.ClipsDescendants = false
         af.BackgroundTransparency = 1
         af.BorderSizePixel = 0
         af.AutoButtonColor = false
@@ -4949,11 +4975,11 @@ H = {
 
         local ag = Instance.new("Frame")
         ag.Name = "Card"
-        ag.Size = UDim2.new(1, -16, 1, -6)
-        ag.Position = UDim2.fromOffset(8, 3)
+        ag.Size = UDim2.new(1, -12, 1, -8)
+        ag.Position = UDim2.fromOffset(6, 4)
         ag.BackgroundColor3 = aa.Darker and o.MainSoft or o.Surface
         ag.BorderSizePixel = 0
-        ag.ClipsDescendants = true
+        ag.ClipsDescendants = false
         ag.Parent = af
         addCorner(ag, o.Radius)
         local ah = addStroke(ag, o.Border, 0.72, 1, "ToggleStroke")
@@ -4967,6 +4993,7 @@ H = {
         ai.TextXAlignment = Enum.TextXAlignment.Left
         ai.TextColor3 = o.MutedText
         ai.TextSize = d.isMobile and 15 or 14
+        ai.TextTruncate = Enum.TextTruncate.AtEnd
         ai.FontFace = o.Font
         ai.Parent = ag
 
@@ -5932,8 +5959,8 @@ function d.CreateGUI(aa)
     addStroke(ak, o.Border, 0.32, 1)
     local ap = Instance.new("ScrollingFrame")
     ap.Name = "Children"
-    ap.Size = UDim2.new(1, 0, 1, -57)
-    ap.Position = UDim2.fromOffset(0, 41)
+    ap.Size = UDim2.new(1, 0, 1, -64)
+    ap.Position = UDim2.fromOffset(0, 44)
     ap.BackgroundColor3 = o.MainSoft
     ap.BorderSizePixel = 0
     ap.ClipsDescendants = true
@@ -5955,12 +5982,12 @@ function d.CreateGUI(aa)
     aq.Parent = ap
 
     local settingsPadding = Instance.new("UIPadding")
-    settingsPadding.PaddingTop = UDim.new(0, 4)
-    settingsPadding.PaddingBottom = UDim.new(0, 10)
+    settingsPadding.PaddingTop = UDim.new(0, 6)
+    settingsPadding.PaddingBottom = UDim.new(0, 18)
     settingsPadding.Parent = ap
 
     local function refreshSettingsCanvas()
-        local contentHeight = math.max(0, aq.AbsoluteContentSize.Y + 14)
+        local contentHeight = math.max(0, aq.AbsoluteContentSize.Y + settingsPadding.PaddingTop.Offset + settingsPadding.PaddingBottom.Offset + 2)
         ap.CanvasSize = UDim2.fromOffset(0, contentHeight)
         ap.ScrollingEnabled = contentHeight > ap.AbsoluteSize.Y + 1
         ap.ScrollBarThickness = ap.ScrollingEnabled and (d.isMobile and 6 or 3) or 0
@@ -6286,8 +6313,25 @@ function d.CreateGUI(aa)
     end
 
     function ab.CreateOverlayBar(ar)
+        local existingBar = d._OverlayBarAPI
+        if existingBar and existingBar.Object and existingBar.Object.Parent then
+            return existingBar
+        end
+
+        for _, child in ipairs(af:GetChildren()) do
+            if child:IsA("GuiObject") and child.Name == "Overlays" then
+                child:Destroy()
+            end
+        end
+        for _, child in ipairs(ac:GetChildren()) do
+            if child:IsA("GuiObject") and child.Name == "OverlayManager" then
+                child:Destroy()
+            end
+        end
+
         local as = {
             Toggles = {},
+            ToggleByKey = {},
             Open = false,
         }
 
@@ -6487,13 +6531,15 @@ function d.CreateGUI(aa)
 
         local function updateCount()
             local enabled = 0
+            local total = 0
             for _, toggle in as.Toggles do
+                total += 1
                 if toggle.Enabled then
                     enabled += 1
                 end
             end
 
-            aw.Text = tostring(enabled)
+            aw.Text = tostring(total)
             local accent = Color3.fromHSV(
                 d.GUIColor.Hue,
                 d.GUIColor.Sat,
@@ -6518,6 +6564,12 @@ function d.CreateGUI(aa)
             end
 
             if visible then
+                if d._OpenSettingsPane and d._SettingsPaneClosers then
+                    local closer = d._SettingsPaneClosers[d._OpenSettingsPane]
+                    if type(closer) == "function" then
+                        closer(false, true)
+                    end
+                end
                 ay.Visible = true
                 ay.Active = true
                 ay.GroupTransparency = 1
@@ -6555,6 +6607,7 @@ function d.CreateGUI(aa)
                     return
                 end
                 ay.Visible = false
+                as.Open = false
                 local showMain = not ak.Visible
                 af.Visible = showMain
                 playerCard.Visible = showMain
@@ -6587,6 +6640,13 @@ function d.CreateGUI(aa)
         end
 
         function as.CreateToggle(L, M)
+            M = type(M) == "table" and M or {}
+            local toggleKey = normalizeUiKey(M.Name)
+            local existingToggle = as.ToggleByKey[toggleKey]
+            if existingToggle and existingToggle.Object and existingToggle.Object.Parent then
+                return existingToggle
+            end
+
             local N = {
                 Enabled = false,
                 Index = getTableSize(as.Toggles),
@@ -6603,7 +6663,7 @@ function d.CreateGUI(aa)
             P.AutoButtonColor = false
             P.Text = ""
             P.LayoutOrder = N.Index
-            P.ClipsDescendants = true
+            P.ClipsDescendants = false
             P.ZIndex = 502
             P.Parent = aF
             addCorner(P, o.Radius)
@@ -6760,17 +6820,31 @@ function d.CreateGUI(aa)
             end)
 
             table.insert(as.Toggles, N)
+            as.ToggleByKey[toggleKey] = N
+            P.Destroying:Once(function()
+                if as.ToggleByKey[toggleKey] == N then
+                    as.ToggleByKey[toggleKey] = nil
+                end
+            end)
             applyVisual(true)
             updateCount()
             return N
         end
 
-        aG:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            aF.CanvasSize = UDim2.fromOffset(
-                0,
-                aG.AbsoluteContentSize.Y + 10
-            )
-        end)
+        aF.AutomaticCanvasSize = Enum.AutomaticSize.None
+        aF.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+        local function refreshOverlayCanvas()
+            local contentHeight = aG.AbsoluteContentSize.Y
+                + aH.PaddingTop.Offset
+                + aH.PaddingBottom.Offset
+                + 2
+            aF.CanvasSize = UDim2.fromOffset(0, contentHeight)
+            aF.ScrollingEnabled = contentHeight > aF.AbsoluteSize.Y + 1
+            aF.ScrollBarThickness = aF.ScrollingEnabled and (d.isMobile and 6 or 3) or 0
+        end
+        aG:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshOverlayCanvas)
+        aF:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshOverlayCanvas)
+        task.defer(refreshOverlayCanvas)
 
         at.MouseEnter:Connect(function()
             local accent = Color3.fromHSV(
@@ -6841,7 +6915,15 @@ function d.CreateGUI(aa)
         end)
 
         d.Overlays = as
+        d._OverlayBarAPI = as
+        as.Object = at
+        as.Window = ay
         as.SetVisible = setManagerVisible
+        at.Destroying:Once(function()
+            if d._OverlayBarAPI == as then
+                d._OverlayBarAPI = nil
+            end
+        end)
         return as
     end
 
@@ -6850,30 +6932,44 @@ function d.CreateGUI(aa)
     end
 
     function ab.CreateSettingsPane(ar, as)
-        local at = {}
+        as = type(as) == "table" and as or {}
+        as.Name = tostring(as.Name or "Settings")
+
+        d._SettingsPaneRegistry = d._SettingsPaneRegistry or {}
+        d._SettingsPaneClosers = d._SettingsPaneClosers or setmetatable({}, { __mode = "k" })
+
+        local paneKey = normalizeUiKey(as.Name)
+        local existingPane = d._SettingsPaneRegistry[paneKey]
+        if existingPane and existingPane.Window and existingPane.Window.Parent then
+            return existingPane
+        end
+
+        local at = {
+            Name = as.Name,
+            Key = paneKey,
+        }
         local transition = TweenInfo.new(
             0.18,
             Enum.EasingStyle.Quart,
             Enum.EasingDirection.InOut
         )
+        local paneBaseZ = 520
+        local controlBaseZ = 540
+        local headerHeight = 48
+        local contentTop = 54
+        local bottomGap = 10
 
         local au = Instance.new("TextButton")
         au.Name = as.Name
-        au.Size = UDim2.new(1, -12, 0, 42)
+        au.Size = UDim2.new(1, -12, 0, d.isMobile and 48 or 44)
         au.BackgroundColor3 = o.Surface
         au.BorderSizePixel = 0
         au.AutoButtonColor = false
         au.Text = ""
-        au.ClipsDescendants = true
+        au.ClipsDescendants = false
         au.Parent = ap
         addCorner(au, o.Radius)
-        local rowStroke = addStroke(
-            au,
-            o.Border,
-            0.84,
-            1,
-            "SettingsRowStroke"
-        )
+        local rowStroke = addStroke(au, o.Border, 0.84, 1, "SettingsRowStroke")
 
         local av = Instance.new("TextLabel")
         av.Name = "Title"
@@ -6899,7 +6995,7 @@ function d.CreateGUI(aa)
 
         local aw = Instance.new("CanvasGroup")
         aw.Name = as.Name .. "Pane"
-        aw.Size = UDim2.new(1, 0, 0, 112)
+        aw.Size = UDim2.new(1, 0, 0, 120)
         aw.Position = UDim2.fromOffset(0, 0)
         aw.BackgroundColor3 = o.MainSoft
         aw.BackgroundTransparency = 1
@@ -6907,21 +7003,14 @@ function d.CreateGUI(aa)
         aw.BorderSizePixel = 0
         aw.Visible = false
         aw.Active = false
-        aw.ZIndex = 520
+        aw.ClipsDescendants = true
+        aw.ZIndex = paneBaseZ
         aw.Parent = ac
-        pcall(function()
-            aw.Interactable = false
-        end)
+        pcall(function() aw.Interactable = false end)
         addCorner(aw, o.RadiusLarge)
         addSurfaceGradient(aw)
 
-        local paneStroke = addStroke(
-            aw,
-            o.BorderStrong,
-            1,
-            1,
-            "SettingsPaneStroke"
-        )
+        local paneStroke = addStroke(aw, o.BorderStrong, 1, 1, "SettingsPaneStroke")
         local paneShadow = addShadow(aw, true)
         paneShadow.ImageTransparency = 1
         local paneScale = addScale(aw)
@@ -6929,11 +7018,11 @@ function d.CreateGUI(aa)
 
         local header = Instance.new("Frame")
         header.Name = "Header"
-        header.Size = UDim2.new(1, 0, 0, 48)
+        header.Size = UDim2.new(1, 0, 0, headerHeight)
         header.BackgroundColor3 = o.MainSoft
         header.BackgroundTransparency = 0.08
         header.BorderSizePixel = 0
-        header.ZIndex = 530
+        header.ZIndex = paneBaseZ + 10
         header.Parent = aw
 
         local back = Instance.new("ImageButton")
@@ -6946,7 +7035,7 @@ function d.CreateGUI(aa)
         back.AutoButtonColor = false
         back.Image = u("badscript/assets/new/back.png")
         back.ImageColor3 = o.MutedText
-        back.ZIndex = 532
+        back.ZIndex = paneBaseZ + 12
         back.Parent = header
         addCorner(back, o.RadiusSmall)
         local backStroke = addStroke(back, o.Border, 0.78, 1, "BackStroke")
@@ -6962,28 +7051,29 @@ function d.CreateGUI(aa)
         title.TextSize = d.isMobile and 15 or 14
         title.TextTruncate = Enum.TextTruncate.AtEnd
         title.FontFace = o.FontSemiBold
-        title.ZIndex = 531
+        title.ZIndex = paneBaseZ + 11
         title.Parent = header
 
         local close = addCloseButton(header, 10)
-        close.ZIndex = 532
+        close.ZIndex = paneBaseZ + 12
 
         local divider = Instance.new("Frame")
         divider.Name = "Divider"
         divider.Size = UDim2.new(1, -20, 0, 1)
-        divider.Position = UDim2.fromOffset(10, 47)
+        divider.Position = UDim2.fromOffset(10, headerHeight - 1)
         divider.BackgroundColor3 = o.Border
         divider.BackgroundTransparency = 0.68
         divider.BorderSizePixel = 0
-        divider.ZIndex = 531
+        divider.ZIndex = paneBaseZ + 11
         divider.Parent = aw
 
         local children = Instance.new("ScrollingFrame")
         children.Name = "Children"
-        children.Size = UDim2.new(1, -12, 0, 52)
-        children.Position = UDim2.fromOffset(6, 54)
+        children.Size = UDim2.new(1, -12, 0, 56)
+        children.Position = UDim2.fromOffset(6, contentTop)
         children.BackgroundTransparency = 1
         children.BorderSizePixel = 0
+        children.ClipsDescendants = true
         children.AutomaticCanvasSize = Enum.AutomaticSize.None
         children.CanvasSize = UDim2.new()
         children.ScrollingDirection = Enum.ScrollingDirection.Y
@@ -6992,37 +7082,55 @@ function d.CreateGUI(aa)
         children.ScrollBarImageColor3 = o.BorderStrong
         children.ScrollBarImageTransparency = d.isMobile and 0.25 or 0.42
         children.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
-        children.ZIndex = 522
+        children.ZIndex = paneBaseZ + 2
         children.Parent = aw
 
         local layout = Instance.new("UIListLayout")
         layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.Padding = UDim.new(0, 6)
+        layout.Padding = UDim.new(0, d.isMobile and 8 or 7)
         layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         layout.Parent = children
 
         local padding = Instance.new("UIPadding")
-        padding.PaddingTop = UDim.new(0, 2)
-        padding.PaddingBottom = UDim.new(0, 8)
+        padding.PaddingTop = UDim.new(0, 6)
+        padding.PaddingBottom = UDim.new(0, 14)
         padding.Parent = children
 
         local function promotePaneDescendant(instance)
             if not instance:IsA("GuiObject") then
                 return
             end
+            local localZ = math.clamp(tonumber(instance.ZIndex) or 1, 0, 80)
+            instance.ZIndex = controlBaseZ + localZ
+        end
 
-            if instance.Name == "SoftShadow" then
-                instance.ZIndex = math.max(instance.ZIndex, 522)
+        local function normalizeControlRoot(control, root)
+            if typeof(root) ~= "Instance" or not root:IsA("GuiObject") then
                 return
             end
 
-            if instance.ZIndex < 523 then
-                instance.ZIndex = 522 + math.max(instance.ZIndex, 1)
+            local minimumHeight = d.isMobile and 50 or 44
+            local controlType = type(control) == "table" and control.Type or nil
+            if controlType == "Slider" or controlType == "TwoSlider" then
+                minimumHeight = d.isMobile and 60 or 52
+            elseif controlType == "ColorSlider" or controlType == "TextList" then
+                minimumHeight = math.max(minimumHeight, root.Size.Y.Offset)
             end
-        end
 
-        for _, descendant in ipairs(children:GetDescendants()) do
-            promotePaneDescendant(descendant)
+            if root.Size.Y.Scale == 0 and root.Size.Y.Offset > 0 and root.Size.Y.Offset < minimumHeight then
+                root.Size = UDim2.new(root.Size.X.Scale, root.Size.X.Offset, 0, minimumHeight)
+            end
+            root.ClipsDescendants = false
+
+            local card = root:FindFirstChild("Card") or root:FindFirstChild("BKG")
+            if card and card:IsA("GuiObject") then
+                card.ClipsDescendants = false
+            end
+
+            promotePaneDescendant(root)
+            for _, descendant in ipairs(root:GetDescendants()) do
+                promotePaneDescendant(descendant)
+            end
         end
 
         local descendantConnection = children.DescendantAdded:Connect(function(descendant)
@@ -7031,44 +7139,48 @@ function d.CreateGUI(aa)
             end
         end)
 
-        for L, M in H do
-            at["Create" .. L] = function(N, O)
-                local control = M(O, children, ab)
-                local root = type(control) == "table"
-                    and (control.Object or control.Frame or control.Button or control.Instance)
-                    or control
-
-                if typeof(root) == "Instance" then
-                    promotePaneDescendant(root)
-                    for _, descendant in ipairs(root:GetDescendants()) do
-                        promotePaneDescendant(descendant)
-                    end
-                end
-
-                task.defer(function()
-                    if aw.Parent then
-                        at:RefreshLayout(true)
-                    end
-                end)
-
-                return control
-            end
-            at["Add" .. L] = at["Create" .. L]
-        end
-
         local paneGeneration = 0
+        local refreshGeneration = 0
         local layoutConnection
         local boundsConnection
 
+        local function measureContentHeight()
+            local manualHeight = padding.PaddingTop.Offset + padding.PaddingBottom.Offset
+            local visibleCount = 0
+            for _, child in ipairs(children:GetChildren()) do
+                if child:IsA("GuiObject") and child.Visible then
+                    local height = child.AbsoluteSize.Y
+                    if height <= 0 then
+                        height = child.Size.Y.Offset
+                    end
+                    manualHeight += math.max(0, height)
+                    visibleCount += 1
+                end
+            end
+            if visibleCount > 1 then
+                manualHeight += layout.Padding.Offset * (visibleCount - 1)
+            end
+
+            local layoutHeight = layout.AbsoluteContentSize.Y
+                + padding.PaddingTop.Offset
+                + padding.PaddingBottom.Offset
+            return math.max(0, manualHeight, layoutHeight)
+        end
+
         local function refreshPaneGeometry(instant)
-            local contentHeight = math.max(0, layout.AbsoluteContentSize.Y + 10)
+            if not aw.Parent then
+                return
+            end
+
+            local contentHeight = measureContentHeight()
             local availableHeight = ac.AbsoluteSize.Y > 0 and ac.AbsoluteSize.Y or 560
-            local targetHeight = math.clamp(contentHeight + 60, 112, math.max(112, availableHeight))
-            local viewportHeight = math.max(0, targetHeight - 60)
+            local desiredHeight = contentTop + contentHeight + bottomGap
+            local targetHeight = math.clamp(desiredHeight, 120, math.max(120, availableHeight))
+            local viewportHeight = math.max(48, targetHeight - contentTop - bottomGap)
 
             aw.Size = UDim2.new(1, 0, 0, targetHeight)
             children.Size = UDim2.new(1, -12, 0, viewportHeight)
-            children.CanvasSize = UDim2.fromOffset(0, contentHeight)
+            children.CanvasSize = UDim2.fromOffset(0, contentHeight + 2)
             children.ScrollingEnabled = contentHeight > viewportHeight + 1
             children.ScrollBarThickness = children.ScrollingEnabled and (d.isMobile and 6 or 3) or 0
 
@@ -7084,16 +7196,42 @@ function d.CreateGUI(aa)
             end
         end
 
+        local function queuePaneRefresh()
+            refreshGeneration += 1
+            local generation = refreshGeneration
+            task.defer(function()
+                if generation ~= refreshGeneration or not aw.Parent then
+                    return
+                end
+                refreshPaneGeometry(true)
+            end)
+        end
+
         function at.RefreshLayout(N, instant)
-            refreshPaneGeometry(instant == true)
+            if instant then
+                refreshPaneGeometry(true)
+            else
+                queuePaneRefresh()
+            end
+        end
+
+        for L, M in H do
+            at["Create" .. L] = function(N, O)
+                local control = M(O, children, ab)
+                local root = type(control) == "table"
+                    and (control.Object or control.Frame or control.Button or control.Instance)
+                    or control
+                normalizeControlRoot(control, root)
+                queuePaneRefresh()
+                return control
+            end
+            at["Add" .. L] = at["Create" .. L]
         end
 
         local function restoreSettingsList()
             if d._OpenSettingsPane == nil then
                 ap.Visible = true
-                pcall(function()
-                    ap.Interactable = true
-                end)
+                pcall(function() ap.Interactable = true end)
                 refreshSettingsCanvas()
             end
         end
@@ -7102,13 +7240,9 @@ function d.CreateGUI(aa)
             if generation ~= paneGeneration then
                 return
             end
-
             aw.Visible = false
             aw.Active = false
-            pcall(function()
-                aw.Interactable = false
-            end)
-
+            pcall(function() aw.Interactable = false end)
             if d._OpenSettingsPane == aw then
                 d._OpenSettingsPane = nil
             end
@@ -7126,36 +7260,31 @@ function d.CreateGUI(aa)
                 pcall(d._OpenDropdown, true)
                 d._OpenDropdown = nil
             end
+            if d._OverlayBarAPI and d._OverlayBarAPI.Open and d._OverlayBarAPI.SetVisible then
+                d._OverlayBarAPI.SetVisible(false, true)
+            end
 
             if visible then
                 local currentPane = d._OpenSettingsPane
                 if currentPane and currentPane ~= aw and currentPane.Parent then
-                    local closer = d._SettingsPaneClosers
-                        and d._SettingsPaneClosers[currentPane]
+                    local closer = d._SettingsPaneClosers[currentPane]
                     if type(closer) == "function" then
                         closer(false, true)
                     else
                         currentPane.Visible = false
                         currentPane.Active = false
-                        pcall(function()
-                            currentPane.Interactable = false
-                        end)
+                        pcall(function() currentPane.Interactable = false end)
                     end
                 end
 
                 d._OpenSettingsPane = aw
                 ap.Visible = false
-                pcall(function()
-                    ap.Interactable = false
-                end)
-
+                pcall(function() ap.Interactable = false end)
                 refreshPaneGeometry(true)
+
                 aw.Visible = true
                 aw.Active = true
-                pcall(function()
-                    aw.Interactable = true
-                end)
-
+                pcall(function() aw.Interactable = true end)
                 arrow.Rotation = 90
                 aw.GroupTransparency = 1
                 aw.BackgroundTransparency = 1
@@ -7184,9 +7313,7 @@ function d.CreateGUI(aa)
 
             arrow.Rotation = 0
             aw.Active = false
-            pcall(function()
-                aw.Interactable = false
-            end)
+            pcall(function() aw.Interactable = false end)
 
             if instant or not d.Loaded then
                 aw.GroupTransparency = 1
@@ -7207,106 +7334,61 @@ function d.CreateGUI(aa)
             n:Tween(paneShadow, transition, { ImageTransparency = 1 })
 
             if closeTween then
-                closeTween.Completed:Once(function()
-                    finishPaneClose(generation)
-                end)
+                closeTween.Completed:Once(function() finishPaneClose(generation) end)
             else
-                task.delay(0.19, function()
-                    finishPaneClose(generation)
-                end)
+                task.delay(0.19, function() finishPaneClose(generation) end)
             end
         end
 
-        d._SettingsPaneClosers = d._SettingsPaneClosers
-            or setmetatable({}, { __mode = "k" })
+        d._SettingsPaneRegistry[paneKey] = at
         d._SettingsPaneClosers[aw] = setPaneVisible
 
-        layoutConnection = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            refreshPaneGeometry(false)
-        end)
+        layoutConnection = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queuePaneRefresh)
         boundsConnection = ac:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
             refreshPaneGeometry(true)
         end)
 
         au.MouseEnter:Connect(function()
-            local accent = Color3.fromHSV(
-                d.GUIColor.Hue,
-                d.GUIColor.Sat,
-                d.GUIColor.Value
-            )
+            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
             n:Tween(au, o.TweenFast, { BackgroundColor3 = o.SurfaceHover })
-            n:Tween(rowStroke, o.TweenFast, {
-                Color = accent,
-                Transparency = 0.68,
-            })
-            n:Tween(av, o.TweenFast, {
-                TextColor3 = accent:Lerp(o.MutedText, 0.28),
-            })
-            n:Tween(arrow, o.TweenFast, {
-                ImageColor3 = accent:Lerp(o.MutedText, 0.28),
-            })
+            n:Tween(rowStroke, o.TweenFast, { Color = accent, Transparency = 0.68 })
+            n:Tween(av, o.TweenFast, { TextColor3 = accent:Lerp(o.MutedText, 0.28) })
+            n:Tween(arrow, o.TweenFast, { ImageColor3 = accent:Lerp(o.MutedText, 0.28) })
         end)
         au.MouseLeave:Connect(function()
             n:Tween(au, o.TweenFast, { BackgroundColor3 = o.Surface })
-            n:Tween(rowStroke, o.TweenFast, {
-                Color = o.Border,
-                Transparency = 0.84,
-            })
+            n:Tween(rowStroke, o.TweenFast, { Color = o.Border, Transparency = 0.84 })
             n:Tween(av, o.TweenFast, { TextColor3 = o.MutedText })
             n:Tween(arrow, o.TweenFast, { ImageColor3 = o.FaintText })
         end)
 
         back.MouseEnter:Connect(function()
-            local accent = Color3.fromHSV(
-                d.GUIColor.Hue,
-                d.GUIColor.Sat,
-                d.GUIColor.Value
-            )
+            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
             n:Tween(back, o.TweenFast, {
                 BackgroundColor3 = o.SurfaceHover,
                 ImageColor3 = accent:Lerp(o.MutedText, 0.18),
             })
-            n:Tween(backStroke, o.TweenFast, {
-                Color = accent,
-                Transparency = 0.58,
-            })
+            n:Tween(backStroke, o.TweenFast, { Color = accent, Transparency = 0.58 })
         end)
         back.MouseLeave:Connect(function()
             n:Tween(back, o.TweenFast, {
                 BackgroundColor3 = o.Surface,
                 ImageColor3 = o.MutedText,
             })
-            n:Tween(backStroke, o.TweenFast, {
-                Color = o.Border,
-                Transparency = 0.78,
-            })
+            n:Tween(backStroke, o.TweenFast, { Color = o.Border, Transparency = 0.78 })
         end)
 
-        au.Activated:Connect(function()
-            setPaneVisible(true)
-        end)
-        back.Activated:Connect(function()
-            setPaneVisible(false)
-        end)
-        close.Activated:Connect(function()
-            setPaneVisible(false)
-        end)
+        au.Activated:Connect(function() setPaneVisible(true) end)
+        back.Activated:Connect(function() setPaneVisible(false) end)
+        close.Activated:Connect(function() setPaneVisible(false) end)
 
         aw.Destroying:Once(function()
-            if layoutConnection then
-                layoutConnection:Disconnect()
-                layoutConnection = nil
-            end
-            if boundsConnection then
-                boundsConnection:Disconnect()
-                boundsConnection = nil
-            end
-            if descendantConnection then
-                descendantConnection:Disconnect()
-                descendantConnection = nil
-            end
-            if d._SettingsPaneClosers then
-                d._SettingsPaneClosers[aw] = nil
+            if layoutConnection then layoutConnection:Disconnect(); layoutConnection = nil end
+            if boundsConnection then boundsConnection:Disconnect(); boundsConnection = nil end
+            if descendantConnection then descendantConnection:Disconnect(); descendantConnection = nil end
+            d._SettingsPaneClosers[aw] = nil
+            if d._SettingsPaneRegistry[paneKey] == at then
+                d._SettingsPaneRegistry[paneKey] = nil
             end
             if d._OpenSettingsPane == aw then
                 d._OpenSettingsPane = nil
@@ -7912,6 +7994,9 @@ end))
         if d.HideTooltip then
             d.HideTooltip(true)
         end
+        if visible and d._OverlayBarAPI and d._OverlayBarAPI.Open and d._OverlayBarAPI.SetVisible then
+            d._OverlayBarAPI.SetVisible(false, true)
+        end
 
         if not visible and d._OpenSettingsPane then
             local openPane = d._OpenSettingsPane
@@ -8138,7 +8223,10 @@ end))
 end
 
 function d.CreateCategory(aa, ab)
-    local previousCategory = aa.Categories[ab.Name]
+    ab = type(ab) == "table" and ab or {}
+    local categoryKey = normalizeUiKey(ab.Name)
+    aa._CategoryRegistry = aa._CategoryRegistry or {}
+    local previousCategory = aa._CategoryRegistry[categoryKey] or aa.Categories[ab.Name]
     if previousCategory and previousCategory.Object then
         pcall(function()
             previousCategory.Object:Destroy()
@@ -9593,6 +9681,14 @@ function d.CreateCategory(aa, ab)
     end
 
     function ac.CreateModuleCategory(am, an)
+        an = type(an) == "table" and an or {}
+        local moduleCategoryKey = normalizeUiKey(an.Name)
+        ac._ModuleCategoryRegistry = ac._ModuleCategoryRegistry or {}
+        local existingModuleCategory = ac._ModuleCategoryRegistry[moduleCategoryKey]
+        if existingModuleCategory and existingModuleCategory.Object and existingModuleCategory.Object.Parent then
+            return existingModuleCategory
+        end
+
         local ao, ap = pcall(function()
             local ao = {
                 Type = "ModuleCategory",
@@ -10107,6 +10203,16 @@ function d.CreateCategory(aa, ab)
             bwarn("[ModuleCategory] CreateModuleCategory failed:", ap)
             return nil
         end
+        if ap then
+            ac._ModuleCategoryRegistry[moduleCategoryKey] = ap
+            if ap.Object then
+                ap.Object.Destroying:Once(function()
+                    if ac._ModuleCategoryRegistry[moduleCategoryKey] == ap then
+                        ac._ModuleCategoryRegistry[moduleCategoryKey] = nil
+                    end
+                end)
+            end
+        end
         return ao and ap
     end
 
@@ -10148,6 +10254,12 @@ function d.CreateCategory(aa, ab)
     ac.Layout = al
     ac.RefreshLayout = refreshCategoryLayout
     aa.Categories[ab.Name] = ac
+    aa._CategoryRegistry[categoryKey] = ac
+    ad.Destroying:Once(function()
+        if aa._CategoryRegistry[categoryKey] == ac then
+            aa._CategoryRegistry[categoryKey] = nil
+        end
+    end)
 
     return ac
 end
@@ -10394,6 +10506,14 @@ shared.TRANSLATION_FUNCTION = function(af)
 end
 
 function d.CreateOverlay(af, ag)
+    ag = type(ag) == "table" and ag or {}
+    local overlayKey = normalizeUiKey(ag.Name)
+    af._OverlayRegistry = af._OverlayRegistry or {}
+    local existingOverlay = af._OverlayRegistry[overlayKey]
+    if existingOverlay and existingOverlay.Object and existingOverlay.Object.Parent then
+        return existingOverlay
+    end
+
     local ah
     ag.Size = ag.Size or UDim2.fromOffset(14, 14)
     ag.Position = ag.Position or UDim2.fromOffset(12, 14)
@@ -10430,10 +10550,6 @@ function d.CreateOverlay(af, ag)
         Pinned = false,
         Options = {},
     }
-
-    if d.OverlaysModuleCategory then
-        d.OverlaysModuleCategory:AddToggle(ai.Button, ag.Star)
-    end
 
     ah = Instance.new("TextButton")
     ah.Name = ag.Name .. "Overlay"
@@ -10698,6 +10814,12 @@ function d.CreateOverlay(af, ag)
     ai.Children = ap
     af.Overlays[ag.Name] = ai
     af.Categories[ag.Name] = ai
+    af._OverlayRegistry[overlayKey] = ai
+    ah.Destroying:Once(function()
+        if af._OverlayRegistry[overlayKey] == ai then
+            af._OverlayRegistry[overlayKey] = nil
+        end
+    end)
 
     return ai
 end
@@ -15815,6 +15937,27 @@ function d.Uninject(ah, ai)
     end)
 
     table.clear(ah.Libraries)
+    table.clear(ah.Categories)
+    table.clear(ah.Modules)
+    if type(ah.Overlays) == "table" then
+        table.clear(ah.Overlays)
+    end
+    ah._SettingsPaneRegistry = nil
+    ah._SettingsPaneClosers = nil
+    ah._OpenSettingsPane = nil
+    ah._OverlayBarAPI = nil
+    ah._OverlayRegistry = nil
+    ah._CategoryRegistry = nil
+
+    local environment = getgenv and getgenv() or _G
+    if rawget(environment, "__BADWARS_GUI_API") == ah then
+        environment.__BADWARS_GUI_API = nil
+    end
+    local registeredRoot = rawget(environment, "__BADWARS_GUI_ROOT")
+    if typeof(registeredRoot) ~= "Instance" or not registeredRoot.Parent then
+        environment.__BADWARS_GUI_ROOT = nil
+    end
+
     shared.vape = nil
     shared.BadReload = nil
     shared.BadIndependent = nil
@@ -15833,6 +15976,10 @@ B.Parent = e(game:GetService("Players")).LocalPlayer.PlayerGui
 B.ResetOnSpawn = false
 
 d.gui = B
+pcall(function() B:SetAttribute("BadWarsGuiRoot", true) end)
+local badwarsEnvironment = getgenv and getgenv() or _G
+badwarsEnvironment.__BADWARS_GUI_API = d
+badwarsEnvironment.__BADWARS_GUI_ROOT = B
 
 tooltipLayer = Instance.new("Frame")
 tooltipLayer.Name = "TooltipLayer"
@@ -15844,6 +15991,15 @@ tooltipLayer.Active = false
 tooltipLayer.Selectable = false
 tooltipLayer.ZIndex = 99990
 tooltipLayer.Parent = B
+B.Destroying:Once(function()
+    local environment = getgenv and getgenv() or _G
+    if rawget(environment, "__BADWARS_GUI_ROOT") == B then
+        environment.__BADWARS_GUI_ROOT = nil
+    end
+    if rawget(environment, "__BADWARS_GUI_API") == d then
+        environment.__BADWARS_GUI_API = nil
+    end
+end)
 
 w = Instance.new("Frame")
 w.Name = "ScaledGui"
@@ -16503,98 +16659,6 @@ d:Clean(aq.Update)
 d:CreateLegit()
 d:CreateSearch()
 d.Categories.Main:CreateDivider("overlays")
-local ar = d.Categories.World:CreateModuleCategory({
-    Name = "Overlays",
-    Icon = u("badscript/assets/new/overlaysicon.png"),
-    Size = UDim2.fromOffset(24, 18),
-    GuiColorSync = true,
-    UpExpand = true,
-})
-ar.ExpandEvent:Connect(function()
-    local as = d.Categories.Main.MainGui
-    for at, au in as:GetChildren() do
-        if au:IsA("TextButton") then
-            if not ar.Expanded then
-                au.Visible = true
-            end
-            local av = n:Tween(au, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.fromOffset(220, ar.Expanded and 0 or 40),
-                TextTransparency = ar.Expanded and 1 or 0,
-            })
-            if ar.Expanded and av then
-                av.Completed:Once(function()
-                    au.Visible = false
-                end)
-            elseif ar.Expanded then
-                au.Visible = false
-            end
-        elseif au:IsA("TextLabel") and not au.Name:lower():find("overlays") then
-            n:Tween(au, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.fromOffset(218, ar.Expanded and 0 or 27),
-                TextTransparency = ar.Expanded and 1 or 0,
-            })
-        end
-    end
-    for at, au in d.Categories do
-        if not (au.OriginalCategory or (au.Type ~= nil and au.Type == "CategoryList")) then
-            continue
-        end
-        if not au.Object then
-            continue
-        end
-        if au.Object.Parent == nil then
-            continue
-        end
-        if not au.Button then
-            continue
-        end
-        if not au.Button.Enabled then
-            continue
-        end
-        local av = au.Object:FindFirstChild("Title")
-        if av then
-            n:Tween(av, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                TextTransparency = ar.Expanded and 1 or 0,
-            })
-        end
-        local aw = au.Object:FindFirstChild("Icon")
-        if aw then
-            n:Tween(aw, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                ImageTransparency = ar.Expanded and 1 or 0,
-            })
-        end
-        if ar.Expanded and not au.OriginalCategorySize then
-            au.OriginalCategorySize = au.Object.Size.Y.Offset
-        end
-        if au.OriginalCategorySize then
-            if not ar.Expanded then
-                au.Object.Visible = true
-            end
-            local ax = n:Tween(au.Object, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.fromOffset(220, (ar.Expanded and 0 or au.OriginalCategorySize)),
-            })
-            if ar.Expanded and ax then
-                ax.Completed:Once(function()
-                    au.Object.Visible = false
-                end)
-            elseif ar.Expanded then
-                au.Object.Visible = false
-            end
-        end
-    end
-end)
-d:Clean(d.MainGuiSettingsOpenedEvent:Connect(function()
-    if ar.Expanded then
-        ar:Toggle()
-    end
-end))
-d:Clean(d.VisibilityChanged:Connect(function()
-    if ar.Expanded then
-        ar:Toggle()
-    end
-end))
-ar.Object.Parent = d.Categories.Main.MainGui
-d.OverlaysModuleCategory = ar
 d.Categories.Main:CreateOverlayBar()
 
 local as = d.Categories.Main:CreateSettingsPane({ Name = "Modules" })

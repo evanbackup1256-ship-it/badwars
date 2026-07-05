@@ -1,5 +1,4 @@
--- BADWARS_SETTINGS_VISIBILITY_FIX_V1
--- BADWARS_NOTIFICATIONS_DIRECT_FIX_V2
+-- BADWARS_UI_REPAIR_2026_07_05
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
 do
     shared = type(shared) == "table" and shared or {}
@@ -123,7 +122,8 @@ do
 
     __badwarsLoadDiagnostics()
 end
--- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Studio UI | Build 2026.07.04.13.4
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
+-- BadWars Studio UI | Build 2026.07.04.13.4
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -773,6 +773,7 @@ local z
 local tooltipStroke
 local tooltipScale
 local tooltipAccent
+local tooltipLayer
 local tooltipFollowConnection
 local tooltipGeneration = 0
 local tooltipTarget
@@ -1165,7 +1166,7 @@ local function addCloseButton(F, G)
     H.MouseEnter:Connect(function()
         n:Tween(H, o.TweenFast, {
             BackgroundTransparency = 0.72,
-            ImageColor3 = o.TextStrong,
+            ImageColor3 = o.Danger:Lerp(o.TextStrong, 0.18),
         })
     end)
     H.MouseLeave:Connect(function()
@@ -1211,6 +1212,14 @@ local function tooltipInterfaceVisible()
     return false
 end
 
+local function tooltipTargetAllowed(target)
+    local openPane = d._OpenSettingsPane
+    if not openPane or not openPane.Parent or not openPane.Visible then
+        return true
+    end
+    return target == openPane or target:IsDescendantOf(openPane)
+end
+
 local function stopTooltipFollow()
     if tooltipFollowConnection then
         tooltipFollowConnection:Disconnect()
@@ -1223,11 +1232,10 @@ local function getTooltipPosition()
         return nil
     end
 
-    local scale = getGuiScale()
-    local viewport =
-        (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
-        / scale
-    local mouse = h:GetMouseLocation() / scale
+    local viewport = (B and B.AbsoluteSize)
+        or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
+        or Vector2.new(1920, 1080)
+    local mouse = h:GetMouseLocation()
     local width = z.Size.X.Offset
     local height = z.Size.Y.Offset
     local padding = 10
@@ -1291,6 +1299,7 @@ local function ensureTooltipFollow()
             not target
             or not target.Parent
             or not isEffectivelyVisible(target)
+            or not tooltipTargetAllowed(target)
             or not tooltipInterfaceVisible()
             or d.TooltipsEnabled == false
         then
@@ -1405,6 +1414,7 @@ local function showTooltip(ownerToken, target, tooltipText)
         not target
         or not target.Parent
         or not isEffectivelyVisible(target)
+        or not tooltipTargetAllowed(target)
         or d.TooltipsEnabled == false
         or not tooltipInterfaceVisible()
         or not z
@@ -1413,10 +1423,9 @@ local function showTooltip(ownerToken, target, tooltipText)
         return
     end
 
-    local scale = getGuiScale()
-    local viewport =
-        (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
-        / scale
+    local viewport = (B and B.AbsoluteSize)
+        or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
+        or Vector2.new(1920, 1080)
     local maxWidth = math.clamp(viewport.X * 0.28, 190, 340)
     local bounds = E(
         tooltipText,
@@ -5878,6 +5887,7 @@ function d.CreateGUI(aa)
     ak.AutoButtonColor = false
     ak.Visible = false
     ak.Text = ""
+    ak.ZIndex = 400
     ak.Parent = ac
     local al = Instance.new("TextLabel")
     al.Name = "Title"
@@ -5889,8 +5899,10 @@ function d.CreateGUI(aa)
     al.TextColor3 = o.TextStrong
     al.TextSize = 13
     al.FontFace = o.FontSemiBold
+    al.ZIndex = 402
     al.Parent = ak
     local am = addCloseButton(ak)
+    am.ZIndex = 402
     local an = Instance.new("ImageButton")
     an.Name = "Back"
     an.Size = UDim2.fromOffset(16, 16)
@@ -5898,6 +5910,7 @@ function d.CreateGUI(aa)
     an.BackgroundTransparency = 1
     an.Image = u("badscript/assets/new/back.png")
     an.ImageColor3 = m.Light(o.Main, 0.37)
+    an.ZIndex = 402
     an.Parent = ak
     local ao = Instance.new("TextLabel")
     ao.Name = "Version"
@@ -5913,20 +5926,69 @@ function d.CreateGUI(aa)
     ao.TextXAlignment = Enum.TextXAlignment.Right
     ao.TextSize = 10
     ao.FontFace = o.Font
+    ao.ZIndex = 402
     ao.Parent = ak
     addCorner(ak, o.RadiusLarge)
     addStroke(ak, o.Border, 0.32, 1)
-    local ap = Instance.new("Frame")
+    local ap = Instance.new("ScrollingFrame")
     ap.Name = "Children"
     ap.Size = UDim2.new(1, 0, 1, -57)
     ap.Position = UDim2.fromOffset(0, 41)
     ap.BackgroundColor3 = o.MainSoft
     ap.BorderSizePixel = 0
+    ap.ClipsDescendants = true
+    ap.AutomaticCanvasSize = Enum.AutomaticSize.None
+    ap.CanvasSize = UDim2.new()
+    ap.ScrollingDirection = Enum.ScrollingDirection.Y
+    ap.ElasticBehavior = Enum.ElasticBehavior.Never
+    ap.ScrollBarThickness = d.isMobile and 6 or 3
+    ap.ScrollBarImageColor3 = o.BorderStrong
+    ap.ScrollBarImageTransparency = d.isMobile and 0.25 or 0.55
+    ap.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    ap.ZIndex = 401
     ap.Parent = ak
+
     local aq = Instance.new("UIListLayout")
     aq.SortOrder = Enum.SortOrder.LayoutOrder
     aq.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    aq.Padding = UDim.new(0, 6)
     aq.Parent = ap
+
+    local settingsPadding = Instance.new("UIPadding")
+    settingsPadding.PaddingTop = UDim.new(0, 4)
+    settingsPadding.PaddingBottom = UDim.new(0, 10)
+    settingsPadding.Parent = ap
+
+    local function refreshSettingsCanvas()
+        local contentHeight = math.max(0, aq.AbsoluteContentSize.Y + 14)
+        ap.CanvasSize = UDim2.fromOffset(0, contentHeight)
+        ap.ScrollingEnabled = contentHeight > ap.AbsoluteSize.Y + 1
+        ap.ScrollBarThickness = ap.ScrollingEnabled and (d.isMobile and 6 or 3) or 0
+    end
+
+    d:Clean(aq:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshSettingsCanvas))
+    d:Clean(ap:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshSettingsCanvas))
+
+    local function promoteMainSettingsDescendant(instance)
+        if not instance:IsA("GuiObject") then
+            return
+        end
+        if instance.ZIndex < 403 then
+            instance.ZIndex = 402 + math.max(instance.ZIndex, 1)
+        end
+    end
+
+    for _, descendant in ipairs(ap:GetDescendants()) do
+        promoteMainSettingsDescendant(descendant)
+    end
+    d:Clean(ap.DescendantAdded:Connect(function(descendant)
+        if descendant and descendant.Parent then
+            promoteMainSettingsDescendant(descendant)
+        end
+    end))
+
+    task.defer(refreshSettingsCanvas)
+
     ab.Object = ac
 
     function ab.CreateBind(ar)
@@ -6821,7 +6883,8 @@ function d.CreateGUI(aa)
         av.Text = as.Name
         av.TextXAlignment = Enum.TextXAlignment.Left
         av.TextColor3 = o.MutedText
-        av.TextSize = 13
+        av.TextSize = d.isMobile and 14 or 13
+        av.TextTruncate = Enum.TextTruncate.AtEnd
         av.FontFace = o.FontSemiBold
         av.Parent = au
 
@@ -6836,17 +6899,22 @@ function d.CreateGUI(aa)
 
         local aw = Instance.new("CanvasGroup")
         aw.Name = as.Name .. "Pane"
-        aw.Size = UDim2.fromScale(1, 1)
+        aw.Size = UDim2.new(1, 0, 0, 112)
+        aw.Position = UDim2.fromOffset(0, 0)
         aw.BackgroundColor3 = o.MainSoft
         aw.BackgroundTransparency = 1
         aw.GroupTransparency = 1
         aw.BorderSizePixel = 0
         aw.Visible = false
-        aw.Active = true
+        aw.Active = false
         aw.ZIndex = 520
         aw.Parent = ac
+        pcall(function()
+            aw.Interactable = false
+        end)
         addCorner(aw, o.RadiusLarge)
         addSurfaceGradient(aw)
+
         local paneStroke = addStroke(
             aw,
             o.BorderStrong,
@@ -6865,7 +6933,7 @@ function d.CreateGUI(aa)
         header.BackgroundColor3 = o.MainSoft
         header.BackgroundTransparency = 0.08
         header.BorderSizePixel = 0
-        header.ZIndex = 521
+        header.ZIndex = 530
         header.Parent = aw
 
         local back = Instance.new("ImageButton")
@@ -6878,7 +6946,7 @@ function d.CreateGUI(aa)
         back.AutoButtonColor = false
         back.Image = u("badscript/assets/new/back.png")
         back.ImageColor3 = o.MutedText
-        back.ZIndex = 523
+        back.ZIndex = 532
         back.Parent = header
         addCorner(back, o.RadiusSmall)
         local backStroke = addStroke(back, o.Border, 0.78, 1, "BackStroke")
@@ -6891,13 +6959,14 @@ function d.CreateGUI(aa)
         title.Text = as.Name
         title.TextXAlignment = Enum.TextXAlignment.Left
         title.TextColor3 = o.TextStrong
-        title.TextSize = 14
+        title.TextSize = d.isMobile and 15 or 14
+        title.TextTruncate = Enum.TextTruncate.AtEnd
         title.FontFace = o.FontSemiBold
-        title.ZIndex = 522
+        title.ZIndex = 531
         title.Parent = header
 
         local close = addCloseButton(header, 10)
-        close.ZIndex = 523
+        close.ZIndex = 532
 
         local divider = Instance.new("Frame")
         divider.Name = "Divider"
@@ -6906,22 +6975,24 @@ function d.CreateGUI(aa)
         divider.BackgroundColor3 = o.Border
         divider.BackgroundTransparency = 0.68
         divider.BorderSizePixel = 0
-        divider.ZIndex = 522
+        divider.ZIndex = 531
         divider.Parent = aw
 
         local children = Instance.new("ScrollingFrame")
         children.Name = "Children"
-        children.Size = UDim2.new(1, -12, 1, -60)
+        children.Size = UDim2.new(1, -12, 0, 52)
         children.Position = UDim2.fromOffset(6, 54)
         children.BackgroundTransparency = 1
         children.BorderSizePixel = 0
-        children.ScrollBarThickness = 2
-        children.ScrollBarImageColor3 = o.BorderStrong
-        children.ScrollBarImageTransparency = 0.42
+        children.AutomaticCanvasSize = Enum.AutomaticSize.None
+        children.CanvasSize = UDim2.new()
         children.ScrollingDirection = Enum.ScrollingDirection.Y
         children.ElasticBehavior = Enum.ElasticBehavior.Never
-        children.CanvasSize = UDim2.new()
-        children.ZIndex = 521
+        children.ScrollBarThickness = 0
+        children.ScrollBarImageColor3 = o.BorderStrong
+        children.ScrollBarImageTransparency = d.isMobile and 0.25 or 0.42
+        children.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+        children.ZIndex = 522
         children.Parent = aw
 
         local layout = Instance.new("UIListLayout")
@@ -6935,18 +7006,115 @@ function d.CreateGUI(aa)
         padding.PaddingBottom = UDim.new(0, 8)
         padding.Parent = children
 
+        local function promotePaneDescendant(instance)
+            if not instance:IsA("GuiObject") then
+                return
+            end
+
+            if instance.Name == "SoftShadow" then
+                instance.ZIndex = math.max(instance.ZIndex, 522)
+                return
+            end
+
+            if instance.ZIndex < 523 then
+                instance.ZIndex = 522 + math.max(instance.ZIndex, 1)
+            end
+        end
+
+        for _, descendant in ipairs(children:GetDescendants()) do
+            promotePaneDescendant(descendant)
+        end
+
+        local descendantConnection = children.DescendantAdded:Connect(function(descendant)
+            if descendant and descendant.Parent then
+                promotePaneDescendant(descendant)
+            end
+        end)
+
         for L, M in H do
             at["Create" .. L] = function(N, O)
                 local control = M(O, children, ab)
-                if typeof(control) == "Instance" and control:IsA("GuiObject") then
-                    control.ZIndex = math.max(control.ZIndex, 522)
+                local root = type(control) == "table"
+                    and (control.Object or control.Frame or control.Button or control.Instance)
+                    or control
+
+                if typeof(root) == "Instance" then
+                    promotePaneDescendant(root)
+                    for _, descendant in ipairs(root:GetDescendants()) do
+                        promotePaneDescendant(descendant)
+                    end
                 end
+
+                task.defer(function()
+                    if aw.Parent then
+                        at:RefreshLayout(true)
+                    end
+                end)
+
                 return control
             end
             at["Add" .. L] = at["Create" .. L]
         end
 
         local paneGeneration = 0
+        local layoutConnection
+        local boundsConnection
+
+        local function refreshPaneGeometry(instant)
+            local contentHeight = math.max(0, layout.AbsoluteContentSize.Y + 10)
+            local availableHeight = ac.AbsoluteSize.Y > 0 and ac.AbsoluteSize.Y or 560
+            local targetHeight = math.clamp(contentHeight + 60, 112, math.max(112, availableHeight))
+            local viewportHeight = math.max(0, targetHeight - 60)
+
+            aw.Size = UDim2.new(1, 0, 0, targetHeight)
+            children.Size = UDim2.new(1, -12, 0, viewportHeight)
+            children.CanvasSize = UDim2.fromOffset(0, contentHeight)
+            children.ScrollingEnabled = contentHeight > viewportHeight + 1
+            children.ScrollBarThickness = children.ScrollingEnabled and (d.isMobile and 6 or 3) or 0
+
+            if instant then
+                children.CanvasPosition = Vector2.new(
+                    0,
+                    math.clamp(
+                        children.CanvasPosition.Y,
+                        0,
+                        math.max(0, contentHeight - viewportHeight)
+                    )
+                )
+            end
+        end
+
+        function at.RefreshLayout(N, instant)
+            refreshPaneGeometry(instant == true)
+        end
+
+        local function restoreSettingsList()
+            if d._OpenSettingsPane == nil then
+                ap.Visible = true
+                pcall(function()
+                    ap.Interactable = true
+                end)
+                refreshSettingsCanvas()
+            end
+        end
+
+        local function finishPaneClose(generation)
+            if generation ~= paneGeneration then
+                return
+            end
+
+            aw.Visible = false
+            aw.Active = false
+            pcall(function()
+                aw.Interactable = false
+            end)
+
+            if d._OpenSettingsPane == aw then
+                d._OpenSettingsPane = nil
+            end
+            restoreSettingsList()
+        end
+
         local function setPaneVisible(visible, instant)
             paneGeneration += 1
             local generation = paneGeneration
@@ -6960,8 +7128,35 @@ function d.CreateGUI(aa)
             end
 
             if visible then
+                local currentPane = d._OpenSettingsPane
+                if currentPane and currentPane ~= aw and currentPane.Parent then
+                    local closer = d._SettingsPaneClosers
+                        and d._SettingsPaneClosers[currentPane]
+                    if type(closer) == "function" then
+                        closer(false, true)
+                    else
+                        currentPane.Visible = false
+                        currentPane.Active = false
+                        pcall(function()
+                            currentPane.Interactable = false
+                        end)
+                    end
+                end
+
+                d._OpenSettingsPane = aw
+                ap.Visible = false
+                pcall(function()
+                    ap.Interactable = false
+                end)
+
+                refreshPaneGeometry(true)
                 aw.Visible = true
                 aw.Active = true
+                pcall(function()
+                    aw.Interactable = true
+                end)
+
+                arrow.Rotation = 90
                 aw.GroupTransparency = 1
                 aw.BackgroundTransparency = 1
                 paneScale.Scale = 0.985
@@ -6987,12 +7182,11 @@ function d.CreateGUI(aa)
                 return
             end
 
+            arrow.Rotation = 0
             aw.Active = false
-            local function finishClose()
-                if generation == paneGeneration then
-                    aw.Visible = false
-                end
-            end
+            pcall(function()
+                aw.Interactable = false
+            end)
 
             if instant or not d.Loaded then
                 aw.GroupTransparency = 1
@@ -7000,7 +7194,7 @@ function d.CreateGUI(aa)
                 paneScale.Scale = 0.985
                 paneStroke.Transparency = 1
                 paneShadow.ImageTransparency = 1
-                finishClose()
+                finishPaneClose(generation)
                 return
             end
 
@@ -7013,17 +7207,25 @@ function d.CreateGUI(aa)
             n:Tween(paneShadow, transition, { ImageTransparency = 1 })
 
             if closeTween then
-                closeTween.Completed:Once(finishClose)
+                closeTween.Completed:Once(function()
+                    finishPaneClose(generation)
+                end)
             else
-                task.delay(0.19, finishClose)
+                task.delay(0.19, function()
+                    finishPaneClose(generation)
+                end)
             end
         end
 
-        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            children.CanvasSize = UDim2.fromOffset(
-                0,
-                layout.AbsoluteContentSize.Y + 10
-            )
+        d._SettingsPaneClosers = d._SettingsPaneClosers
+            or setmetatable({}, { __mode = "k" })
+        d._SettingsPaneClosers[aw] = setPaneVisible
+
+        layoutConnection = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            refreshPaneGeometry(false)
+        end)
+        boundsConnection = ac:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            refreshPaneGeometry(true)
         end)
 
         au.MouseEnter:Connect(function()
@@ -7062,7 +7264,7 @@ function d.CreateGUI(aa)
             )
             n:Tween(back, o.TweenFast, {
                 BackgroundColor3 = o.SurfaceHover,
-                ImageColor3 = accent,
+                ImageColor3 = accent:Lerp(o.MutedText, 0.18),
             })
             n:Tween(backStroke, o.TweenFast, {
                 Color = accent,
@@ -7090,12 +7292,40 @@ function d.CreateGUI(aa)
             setPaneVisible(false)
         end)
 
+        aw.Destroying:Once(function()
+            if layoutConnection then
+                layoutConnection:Disconnect()
+                layoutConnection = nil
+            end
+            if boundsConnection then
+                boundsConnection:Disconnect()
+                boundsConnection = nil
+            end
+            if descendantConnection then
+                descendantConnection:Disconnect()
+                descendantConnection = nil
+            end
+            if d._SettingsPaneClosers then
+                d._SettingsPaneClosers[aw] = nil
+            end
+            if d._OpenSettingsPane == aw then
+                d._OpenSettingsPane = nil
+                restoreSettingsList()
+            end
+        end)
+
+        task.defer(function()
+            if aw.Parent then
+                refreshPaneGeometry(true)
+            end
+        end)
+
         at.Object = au
         at.Window = aw
+        at.Children = children
         at.SetVisible = setPaneVisible
         return at
     end
-
 
 local function restyleLegacySettingsControl(instance)
     if not instance or not instance.Parent then
@@ -7682,10 +7912,39 @@ end))
         if d.HideTooltip then
             d.HideTooltip(true)
         end
+
+        if not visible and d._OpenSettingsPane then
+            local openPane = d._OpenSettingsPane
+            local closer = d._SettingsPaneClosers
+                and d._SettingsPaneClosers[openPane]
+            if type(closer) == "function" then
+                closer(false, true)
+            else
+                openPane.Visible = false
+                openPane.Active = false
+                pcall(function()
+                    openPane.Interactable = false
+                end)
+                d._OpenSettingsPane = nil
+                ap.Visible = true
+                pcall(function()
+                    ap.Interactable = true
+                end)
+            end
+        elseif visible and not d._OpenSettingsPane then
+            ap.Visible = true
+            pcall(function()
+                ap.Interactable = true
+            end)
+            refreshSettingsCanvas()
+        end
+
         ak.Visible = visible
+        ak.Active = visible
         playerCard.Visible = not visible
         onlineDot.Visible = not visible
         af.Visible = not visible
+        aj.Visible = not visible
     end
 
     ak:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -7693,10 +7952,15 @@ end))
         playerCard.Visible = mainVisible
         onlineDot.Visible = mainVisible
         af.Visible = mainVisible
+        aj.Visible = mainVisible
     end)
 
     an.MouseEnter:Connect(function()
-        an.ImageColor3 = o.Text
+        an.ImageColor3 = Color3.fromHSV(
+            d.GUIColor.Hue,
+            d.GUIColor.Sat,
+            d.GUIColor.Value
+        ):Lerp(o.MutedText, 0.18)
     end)
     an.MouseLeave:Connect(function()
         an.ImageColor3 = m.Light(o.Main, 0.37)
@@ -7782,7 +8046,11 @@ end))
         end
     end)
     ah.MouseEnter:Connect(function()
-        ai.ImageColor3 = o.TextStrong
+        ai.ImageColor3 = Color3.fromHSV(
+            d.GUIColor.Hue,
+            d.GUIColor.Sat,
+            d.GUIColor.Value
+        ):Lerp(o.MutedText, 0.18)
         n:Tween(ah, o.TweenFast, { BackgroundTransparency = 0.86, BackgroundColor3 = o.ElevatedHover })
         n:Tween(settingsStroke, o.TweenFast, {
             Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
@@ -15565,6 +15833,18 @@ B.Parent = e(game:GetService("Players")).LocalPlayer.PlayerGui
 B.ResetOnSpawn = false
 
 d.gui = B
+
+tooltipLayer = Instance.new("Frame")
+tooltipLayer.Name = "TooltipLayer"
+tooltipLayer.Size = UDim2.fromScale(1, 1)
+tooltipLayer.Position = UDim2.fromOffset(0, 0)
+tooltipLayer.BackgroundTransparency = 1
+tooltipLayer.BorderSizePixel = 0
+tooltipLayer.Active = false
+tooltipLayer.Selectable = false
+tooltipLayer.ZIndex = 99990
+tooltipLayer.Parent = B
+
 w = Instance.new("Frame")
 w.Name = "ScaledGui"
 w.Size = UDim2.fromScale(1, 1)
@@ -15738,7 +16018,9 @@ z.TextXAlignment = Enum.TextXAlignment.Left
 z.TextYAlignment = Enum.TextYAlignment.Center
 z.FontFace = o.FontSemiBold
 z.BackgroundTransparency = 1
-z.Parent = w
+z.Active = false
+z.Selectable = false
+z.Parent = tooltipLayer
 addCorner(z, o.Radius)
 tooltipStroke = addStroke(z, o.BorderStrong, 1, 1, "TooltipStroke")
 y = addShadow(z, true)

@@ -41,11 +41,14 @@ export async function getLatestGitHubCommit(fallbackRef: string): Promise<GitHub
   );
 
   if (!response.ok) {
+    const fallbackIsSha = /^[0-9a-f]{7,40}$/i.test(fallbackRef);
     return {
       sha: fallbackRef,
       shortSha: fallbackRef.slice(0, 7),
       message: "GitHub sync fallback",
-      htmlUrl: `https://github.com/${githubRepo.owner}/${githubRepo.name}/commit/${fallbackRef}`,
+      htmlUrl: fallbackIsSha
+        ? `https://github.com/${githubRepo.owner}/${githubRepo.name}/commit/${fallbackRef}`
+        : `https://github.com/${githubRepo.owner}/${githubRepo.name}/tree/${fallbackRef}`,
       syncedAt: new Date().toISOString(),
       fallback: true
     };

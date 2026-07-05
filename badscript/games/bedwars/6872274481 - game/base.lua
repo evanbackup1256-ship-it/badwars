@@ -1,4 +1,4 @@
--- BadWars V11 BedWars compatibility and module-health bootstrap
+-- BadWars V14 BedWars compatibility and module-health bootstrap
 local Bad = shared.Bad
 if type(Bad) ~= "table" then
     return
@@ -382,9 +382,9 @@ end)
 if type(Bad.Clean) == "function" then Bad:Clean(phaseConnection) end
 
 
--- V11 shared compatibility, runtime guards, and module health.
+-- V14 shared compatibility, runtime guards, and module health.
 local compatibility = Bad.BedWarsCompatibility or {}
-compatibility.Version = "11.0"
+compatibility.Version = "14.0"
 compatibility.Missing = bedwars.Missing
 compatibility.Modules = compatibility.Modules or {}
 compatibility.Notified = compatibility.Notified or {}
@@ -656,11 +656,11 @@ function compatibility:Decorate(module, metadata)
     if type(module) ~= "table" then
         return module
     end
-    if module.__BedWarsV11Decorated then
+    if module.__BedWarsV14Decorated then
         return module
     end
 
-    module.__BedWarsV11Decorated = true
+    module.__BedWarsV14Decorated = true
     module.SourcePath = metadata and metadata.path or module.SourcePath
     module.Health = module.Health or "ready"
     module.FailureCount = tonumber(module.FailureCount) or 0
@@ -676,18 +676,18 @@ function compatibility:Decorate(module, metadata)
     local rawToggle = module.Toggle
     if type(rawToggle) == "function" then
         module.Toggle = function(selfModule, ...)
-            if selfModule.__BedWarsV11ToggleBusy then
+            if selfModule.__BedWarsV14ToggleBusy then
                 return false
             end
 
-            selfModule.__BedWarsV11ToggleBusy = true
+            selfModule.__BedWarsV14ToggleBusy = true
             local results = table.pack(xpcall(
                 rawToggle,
                 traceError,
                 selfModule,
                 ...
             ))
-            selfModule.__BedWarsV11ToggleBusy = false
+            selfModule.__BedWarsV14ToggleBusy = false
 
             if not results[1] then
                 compatibility:RecordFailure(
@@ -711,9 +711,9 @@ function compatibility:Decorate(module, metadata)
         if
             type(option) == "table"
             and type(option.Function) == "function"
-            and not option.__BedWarsV11Decorated
+            and not option.__BedWarsV14Decorated
         then
-            option.__BedWarsV11Decorated = true
+            option.__BedWarsV14Decorated = true
             local rawFunction = option.Function
             option.Function = function(...)
                 local results = table.pack(xpcall(

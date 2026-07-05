@@ -121,7 +121,7 @@ do
 
     __badwarsLoadDiagnostics()
 end
--- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Loader v6.1
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Loader v14.0
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -701,7 +701,7 @@ end
 local function wipeAny(p) if isfolder(p) then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-site-runtime-overhaul-2026-07-05-01'
+local cacheVersion = 'badwars-v14-clean-ui-2026-07-05-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 if (isfile(cacheFile) and readfile(cacheFile) or '') ~= cacheVersion then
 	setStatus('cache cleared (version mismatch)')

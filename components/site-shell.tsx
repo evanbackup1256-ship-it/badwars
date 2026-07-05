@@ -287,7 +287,7 @@ function GameCard({ game }: { game: (typeof games)[number] }) {
 function ModuleMatrixSection() {
   const rows = [
     ["Universal base", "68 modules", "Loads before game routes"],
-    ["BedWars V11", "70 modules", "Compatibility audit exposed in runtime"],
+    ["BedWars V14", "70 modules", "Compatibility audit exposed in runtime"],
     ["Route map", `${games.length} families`, "Nested place IDs resolve to base files"],
     ["Validation", "local script", "Cache, loader, GUI, bundle, and route checks"]
   ];

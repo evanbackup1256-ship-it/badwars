@@ -121,7 +121,7 @@ do
 
     __badwarsLoadDiagnostics()
 end
--- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Main v4.2 - Studio V13 readiness pipeline
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Main v14.0 - clean UI readiness pipeline
 repeat
     task.wait()
 until game:IsLoaded()

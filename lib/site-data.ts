@@ -54,12 +54,14 @@ export const games = [
 ];
 
 export const releases = [
-  { version: "2.1.0", channel: "Latest", date: "July 2026", checksum: "ref: 0738404", notes: ["Website overhaul", "Runtime validation repair", "Module inventory refresh", "Loader pin sync"] },
+  { version: "2.2.0", channel: "Latest", date: "July 2026", checksum: "ref: main", notes: ["V14 clean UI", "Safer settings panes", "Animated polish layer", "Version sync"] },
+  { version: "2.1.0", channel: "Stable", date: "July 2026", checksum: "ref: 060d847", notes: ["Website overhaul", "Runtime validation repair", "Module inventory refresh", "Loader pin sync"] },
   { version: "2.0.0", channel: "Stable", date: "July 2026", checksum: "sha256: 5cc7...b9e1", notes: ["Next.js rebuild", "Roblox update API", "Dashboard shell", "Download center"] },
   { version: "1.7.9", channel: "Legacy", date: "June 2026", checksum: "sha256: 08de...6a10", notes: ["Raw path fixes", "Universal bundle validation"] }
 ];
 
 export const changelog = [
+  { version: "2.2.0", category: "V14", title: "Clean animated UI pass", description: "Game GUI moved to V14 with cleaner chrome, guarded settings panes, fresh motion, and synced loader fallback.", date: "Jul 2026" },
   { version: "2.1.0", category: "Overhaul", title: "Runtime and website refresh", description: "Sharper public UI, larger game inventory, synced loader refs, and repaired local validation checks.", date: "Jul 2026" },
   { version: "2.0.0", category: "Website", title: "Premium Next.js launch", description: "Landing, dashboard, downloads, changelog, settings, admin shell, themes, and animations rebuilt.", date: "Jul 2026" },
   { version: "1.8.4", category: "Runtime", title: "Roblox warning layer", description: "Loader can read the website status API and warn when Roblox client versions move.", date: "Jul 2026" },

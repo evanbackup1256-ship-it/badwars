@@ -29,6 +29,7 @@ $loader = Read-ProjectFile "badscript\loader.lua"
 $newMain = Read-ProjectFile "badscript\NewMainScript.lua"
 $main = Read-ProjectFile "badscript\main.lua"
 $newGui = Read-ProjectFile "badscript\guis\new\gui.lua"
+$bedwarsBase = Read-ProjectFile "badscript\games\bedwars\6872274481 - game\base.lua"
 $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
 $entityLib = Read-ProjectFile "badscript\libraries\entity.lua"
@@ -48,6 +49,19 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
     Pass "Loader cache versions are synchronized"
 } else {
     Fail "Loader cache versions are missing or out of sync"
+}
+
+if (
+    $newGui -match 'Version\s*=\s*"14\.0"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V14-CLEAN-ANIMATED"' -and
+    $newGui -match 'BADWARS_FINAL_DESIGN_SCOPE_V14' -and
+    $main -match "BadWars Main v14\.0" -and
+    $loader -match "BadWars Loader v14\.0" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"14\.0"'
+) {
+    Pass "V14 runtime versions are synchronized"
+} else {
+    Fail "V14 runtime versions are not synchronized"
 }
 
 $requiredComponentApis = @(
@@ -211,6 +225,12 @@ if ($newGui -notmatch "ap\.ScrollingEnabled\s*=" -and $newGui -match "setScrollE
     Pass "Settings pane scroll state is guarded by instance type"
 } else {
     Fail "Settings pane scroll state can target a non-scrolling Frame"
+}
+
+if ($newGui -match "BadWarsV14Motion" -and $newGui -match "addCleanMotion" -and $newGui -match "V14Scale") {
+    Pass "V14 guarded motion layer is present"
+} else {
+    Fail "V14 guarded motion layer is missing"
 }
 
 $oldPinnedCommit = "b0898d95476b5a8da7cd2f37578b16ec70af95430"

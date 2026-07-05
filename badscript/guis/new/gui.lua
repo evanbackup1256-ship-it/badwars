@@ -1,3 +1,4 @@
+-- BADWARS_UI_V14_CLEAN_REWRITE
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -164,8 +165,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "4.18",
-    PremiumBuild = "2026.07.05-ADAPTIVE-LAYOUT",
+    Version = "14.0",
+    PremiumBuild = "2026.07.05-V14-CLEAN-ANIMATED",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -282,26 +283,26 @@ local n = {
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
-    Main = Color3.fromRGB(9, 12, 16),
-    MainSoft = Color3.fromRGB(12, 16, 21),
-    Text = Color3.fromRGB(219, 226, 234),
-    TextStrong = Color3.fromRGB(244, 247, 250),
-    Surface = Color3.fromRGB(16, 21, 27),
-    SurfaceSoft = Color3.fromRGB(19, 25, 32),
-    SurfaceHover = Color3.fromRGB(23, 30, 38),
-    Elevated = Color3.fromRGB(27, 35, 44),
-    ElevatedHover = Color3.fromRGB(32, 42, 53),
-    Border = Color3.fromRGB(42, 52, 64),
-    BorderStrong = Color3.fromRGB(70, 86, 104),
-    MutedText = Color3.fromRGB(145, 157, 171),
-    FaintText = Color3.fromRGB(91, 103, 117),
+    Main = Color3.fromRGB(7, 10, 14),
+    MainSoft = Color3.fromRGB(10, 14, 19),
+    Text = Color3.fromRGB(224, 231, 239),
+    TextStrong = Color3.fromRGB(248, 251, 255),
+    Surface = Color3.fromRGB(13, 18, 24),
+    SurfaceSoft = Color3.fromRGB(17, 23, 30),
+    SurfaceHover = Color3.fromRGB(22, 30, 39),
+    Elevated = Color3.fromRGB(24, 33, 42),
+    ElevatedHover = Color3.fromRGB(30, 42, 54),
+    Border = Color3.fromRGB(34, 46, 58),
+    BorderStrong = Color3.fromRGB(63, 84, 101),
+    MutedText = Color3.fromRGB(158, 169, 184),
+    FaintText = Color3.fromRGB(103, 117, 132),
     Danger = Color3.fromRGB(248, 101, 122),
     Warning = Color3.fromRGB(247, 188, 91),
     Success = Color3.fromRGB(80, 221, 167),
     Shadow = Color3.fromRGB(0, 2, 5),
-    RadiusSmall = UDim.new(0, 5),
-    Radius = UDim.new(0, 8),
-    RadiusLarge = UDim.new(0, 12),
+    RadiusSmall = UDim.new(0, 4),
+    Radius = UDim.new(0, 7),
+    RadiusLarge = UDim.new(0, 10),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
@@ -6140,7 +6141,7 @@ function d.CreateGUI(aa)
     ae.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
     ae.BackgroundTransparency = 0.08
     ae.BorderSizePixel = 0
-    ae.Text = "12"
+    ae.Text = tostring(d.Version):match("^(%d+)") or "14"
     ae.TextColor3 = o.Main
     ae.TextSize = 10
     ae.FontFace = o.FontBold
@@ -16651,23 +16652,71 @@ if d.Blur then
 end
 
 
--- BADWARS_FINAL_DESIGN_SCOPE_V2_BEGIN
+-- BADWARS_FINAL_DESIGN_SCOPE_V14_BEGIN
 task.defer(function()
     local quietStrokeNames = {
-        MainStroke = 0.62,
-        NavigationStroke = 0.82,
-        CategoryStroke = 0.72,
-        ModuleStroke = 0.86,
-        ModuleCategoryStroke = 0.84,
-        LegitStroke = 0.64,
-        LegitCardStroke = 0.78,
-        LegitWidgetStroke = 0.68,
-        OptionsStroke = 0.92,
-        TextBoxStroke = 0.82,
-        OverlayStroke = 0.68,
-        NotificationStroke = 0.62,
-        TooltipStroke = 0.52,
+        MainStroke = 0.7,
+        NavigationStroke = 0.88,
+        CategoryStroke = 0.78,
+        ModuleStroke = 0.9,
+        ModuleCategoryStroke = 0.88,
+        LegitStroke = 0.72,
+        LegitCardStroke = 0.82,
+        LegitWidgetStroke = 0.74,
+        OptionsStroke = 0.94,
+        TextBoxStroke = 0.86,
+        OverlayStroke = 0.74,
+        NotificationStroke = 0.68,
+        TooltipStroke = 0.58,
     }
+
+    local function addCleanMotion(instance)
+        if instance:GetAttribute("BadWarsV14Motion") then
+            return
+        end
+
+        instance:SetAttribute("BadWarsV14Motion", true)
+
+        local scale = instance:FindFirstChild("V14Scale")
+        if not scale then
+            scale = Instance.new("UIScale")
+            scale.Name = "V14Scale"
+            scale.Scale = 1
+            scale.Parent = instance
+        end
+
+        local baseTransparency = instance.BackgroundTransparency
+
+        instance.MouseEnter:Connect(function()
+            if not instance.Parent then
+                return
+            end
+
+            pcall(function()
+                n:Tween(scale, o.TweenFast, { Scale = 1.012 })
+                if instance.BackgroundTransparency < 1 then
+                    n:Tween(
+                        instance,
+                        o.TweenFast,
+                        { BackgroundTransparency = math.max(baseTransparency - 0.035, 0) }
+                    )
+                end
+            end)
+        end)
+
+        instance.MouseLeave:Connect(function()
+            if not instance.Parent then
+                return
+            end
+
+            pcall(function()
+                n:Tween(scale, o.TweenFast, { Scale = 1 })
+                if instance.BackgroundTransparency < 1 then
+                    n:Tween(instance, o.TweenFast, { BackgroundTransparency = baseTransparency })
+                end
+            end)
+        end)
+    end
 
     local function applyFrameDesign(instance)
         if instance.Name == "V9Sweep" or instance.Name == "SignalNodes" then
@@ -16703,6 +16752,13 @@ task.defer(function()
         if instance:IsA("UIGradient") and instance.Name == "SurfaceGradient" then
             instance.Rotation = 90
         end
+
+        if
+            instance:IsA("TextButton")
+            or instance:IsA("ImageButton")
+        then
+            addCleanMotion(instance)
+        end
     end
 
     for _, descendant in ipairs(B:GetDescendants()) do
@@ -16713,6 +16769,6 @@ task.defer(function()
         task.defer(applyFrameDesign, descendant)
     end))
 end)
--- BADWARS_FINAL_DESIGN_SCOPE_V2_END
+-- BADWARS_FINAL_DESIGN_SCOPE_V14_END
 
 return d

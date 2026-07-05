@@ -670,7 +670,7 @@ shared.BadStatus = function(msg, isErr)
 end
 
 local setStatus = shared.BadStatus
-setStatus("pipeline: ready")
+setStatus("pipeline: initialized")
 -- BADWARS_LOADER_PRESENTATION_V1_END
 -- Error tracking
 local __rtErrs=shared.__badwars_runtime_errors
@@ -816,4 +816,17 @@ end
 local el=os.clock()-loaderStart
 local final='Loader complete in '..string.format('%.2f',el)..'s'
 if #issues>0 then final=final..' ('..#issues..' issue(s))' end
- setStatus(final,#issues>0) if statusCard and #issues == 0 and not shared.__badwars_fatal_error then task.wait(0.22) loaderTween(statusCard,TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1}) task.delay(0.22,function() if statusGui then statusGui:Destroy() end end) end return result
+ setStatus(final,#issues>0)
+if #issues == 0 and not shared.__badwars_fatal_error then
+	task.wait(0.22)
+	if statusCard and statusCard.Parent then
+		loaderTween(statusCard,TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1})
+	end
+	task.delay(0.22,function()
+		if statusGui and statusGui.Parent then
+			statusGui:Destroy()
+		end
+		shared.BadStatusGui = nil
+	end)
+end
+return result

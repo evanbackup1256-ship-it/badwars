@@ -1,17 +1,4 @@
--- BADWARS_GUI_ARCHITECTURE_REPAIR_2026_07_05
-do
-    local environment = getgenv and getgenv() or _G
-    local previousApi = rawget(environment, "__BADWARS_GUI_API")
-    if type(previousApi) == "table" and type(previousApi.Uninject) == "function" then
-        pcall(previousApi.Uninject, previousApi, true)
-    end
-    local previousRoot = rawget(environment, "__BADWARS_GUI_ROOT")
-    if typeof(previousRoot) == "Instance" then
-        pcall(function() previousRoot:Destroy() end)
-    end
-    environment.__BADWARS_GUI_API = nil
-    environment.__BADWARS_GUI_ROOT = nil
-end
+-- BADWARS_ADAPTIVE_UI_REWRITE_V1
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
 do
     shared = type(shared) == "table" and shared or {}
@@ -136,7 +123,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Studio UI | Build 2026.07.04.13.4
+-- BadWars Studio UI | Build 2026.07.05 Adaptive
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -176,7 +163,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "4.18",
-    PremiumBuild = "2026.07.04.13.4-UNIFIED-SUBPANELS",
+    PremiumBuild = "2026.07.05-ADAPTIVE-LAYOUT",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -333,12 +320,6 @@ local function getTableSize(p)
         q += 1
     end
     return q
-end
-
-local function normalizeUiKey(value)
-    return tostring(value or "")
-        :lower()
-        :gsub("[^%w]+", "")
 end
 
 local function loopClean(p, q)
@@ -792,7 +773,6 @@ local z
 local tooltipStroke
 local tooltipScale
 local tooltipAccent
-local tooltipLayer
 local tooltipFollowConnection
 local tooltipGeneration = 0
 local tooltipTarget
@@ -873,6 +853,108 @@ local D = isfile
         end)
         return E and F ~= nil and F ~= ""
     end
+
+
+local fileIOState = {
+    failures = 0,
+    blockedUntil = 0,
+    lastReport = {},
+    warnedUnavailable = false,
+}
+
+local function ensureFolderTree(path)
+    if type(makefolder) ~= "function" then
+        return false
+    end
+
+    local folder = tostring(path or ""):match("^(.*)[/\\][^/\\]+$")
+    if not folder or folder == "" then
+        return true
+    end
+
+    local current = ""
+    for segment in folder:gmatch("[^/\\]+") do
+        current = current == "" and segment or (current .. "/" .. segment)
+        local exists = false
+        if type(isfolder) == "function" then
+            local ok, result = pcall(isfolder, current)
+            exists = ok and result == true
+        end
+        if not exists then
+            local ok = pcall(makefolder, current)
+            if not ok then
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
+local function reportFileIssue(path, err, context)
+    local now = os.clock()
+    local key = tostring(path) .. "\31" .. tostring(err)
+    local last = fileIOState.lastReport[key] or 0
+    if now - last < 12 then
+        return
+    end
+    fileIOState.lastReport[key] = now
+
+    local diagnostics = shared.BadDiagnostics
+    if type(diagnostics) == "table" and type(diagnostics.Warn) == "function" then
+        diagnostics:Warn(
+            "File write skipped: " .. tostring(path),
+            {
+                subsystem = "GUIFileSystem",
+                file = tostring(path),
+                stage = tostring(context or "runtime"),
+                details = tostring(err),
+                native = false,
+            }
+        )
+    elseif GUI_VERBOSE_LOGS then
+        bwarn("[BadWars FileSystem]", tostring(path), tostring(err))
+    end
+end
+
+local function safeWriteFile(path, contents, context)
+    path = tostring(path or "")
+    if path == "" then
+        return false, "empty path"
+    end
+
+    local now = os.clock()
+    if now < fileIOState.blockedUntil then
+        return false, "file writes temporarily paused"
+    end
+
+    if type(writefile) ~= "function" then
+        if not fileIOState.warnedUnavailable then
+            fileIOState.warnedUnavailable = true
+            reportFileIssue(path, "writefile is unavailable", context)
+        end
+        return false, "writefile is unavailable"
+    end
+
+    ensureFolderTree(path)
+
+    local ok, err = pcall(writefile, path, tostring(contents or ""))
+    if ok then
+        fileIOState.failures = 0
+        fileIOState.blockedUntil = 0
+        return true
+    end
+
+    fileIOState.failures += 1
+    if fileIOState.failures >= 2 then
+        fileIOState.blockedUntil = now + 30
+    end
+
+    reportFileIssue(path, err, context)
+    return false, tostring(err)
+end
+
+d.SafeWriteFile = safeWriteFile
 
 local E = function(E, F, G, H)
     p.Text = tostring(E or "")
@@ -1185,7 +1267,7 @@ local function addCloseButton(F, G)
     H.MouseEnter:Connect(function()
         n:Tween(H, o.TweenFast, {
             BackgroundTransparency = 0.72,
-            ImageColor3 = o.Danger:Lerp(o.TextStrong, 0.18),
+            ImageColor3 = o.TextStrong,
         })
     end)
     H.MouseLeave:Connect(function()
@@ -1231,21 +1313,6 @@ local function tooltipInterfaceVisible()
     return false
 end
 
-local function tooltipTargetAllowed(target)
-    local openPane = d._OpenSettingsPane
-    if openPane and openPane.Parent and openPane.Visible then
-        return target == openPane or target:IsDescendantOf(openPane)
-    end
-
-    local overlayApi = d._OverlayBarAPI
-    local overlayWindow = overlayApi and overlayApi.Window
-    if overlayApi and overlayApi.Open and overlayWindow and overlayWindow.Parent and overlayWindow.Visible then
-        return target == overlayWindow or target:IsDescendantOf(overlayWindow)
-    end
-
-    return true
-end
-
 local function stopTooltipFollow()
     if tooltipFollowConnection then
         tooltipFollowConnection:Disconnect()
@@ -1258,10 +1325,11 @@ local function getTooltipPosition()
         return nil
     end
 
-    local viewport = (B and B.AbsoluteSize)
-        or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
-        or Vector2.new(1920, 1080)
-    local mouse = h:GetMouseLocation()
+    local scale = getGuiScale()
+    local viewport =
+        (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
+        / scale
+    local mouse = h:GetMouseLocation() / scale
     local width = z.Size.X.Offset
     local height = z.Size.Y.Offset
     local padding = 10
@@ -1325,7 +1393,6 @@ local function ensureTooltipFollow()
             not target
             or not target.Parent
             or not isEffectivelyVisible(target)
-            or not tooltipTargetAllowed(target)
             or not tooltipInterfaceVisible()
             or d.TooltipsEnabled == false
         then
@@ -1440,7 +1507,6 @@ local function showTooltip(ownerToken, target, tooltipText)
         not target
         or not target.Parent
         or not isEffectivelyVisible(target)
-        or not tooltipTargetAllowed(target)
         or d.TooltipsEnabled == false
         or not tooltipInterfaceVisible()
         or not z
@@ -1449,9 +1515,10 @@ local function showTooltip(ownerToken, target, tooltipText)
         return
     end
 
-    local viewport = (B and B.AbsoluteSize)
-        or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
-        or Vector2.new(1920, 1080)
+    local scale = getGuiScale()
+    local viewport =
+        (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
+        / scale
     local maxWidth = math.clamp(viewport.X * 0.28, 190, 340)
     local bounds = E(
         tooltipText,
@@ -1870,14 +1937,37 @@ getGuiScale = function()
 end
 
 clampGuiObjectToViewport = function(guiObject, desiredAbsolute)
-    local viewport = (B and B.AbsoluteSize) or workspace.CurrentCamera.ViewportSize
+    local camera = workspace.CurrentCamera
+    local viewport = (B and B.AbsoluteSize)
+        or (camera and camera.ViewportSize)
+        or Vector2.new(1920, 1080)
     local size = guiObject.AbsoluteSize
-    local titleAccess = math.min(40, size.Y)
-    local minX = d.isMobile and 0 or math.min(0, -size.X + 48)
-    local maxX = d.isMobile and math.max(0, viewport.X - size.X) or math.max(minX, viewport.X - 48)
-    local minY = 0
-    local maxY = math.max(0, viewport.Y - titleAccess)
-    return Vector2.new(math.clamp(desiredAbsolute.X, minX, maxX), math.clamp(desiredAbsolute.Y, minY, maxY))
+    local margin = d.isMobile and 4 or 8
+
+    local minX
+    local maxX
+    if size.X <= viewport.X - (margin * 2) then
+        minX = margin
+        maxX = math.max(margin, viewport.X - size.X - margin)
+    else
+        minX = math.min(margin, viewport.X - size.X - margin)
+        maxX = margin
+    end
+
+    local minY
+    local maxY
+    if size.Y <= viewport.Y - (margin * 2) then
+        minY = margin
+        maxY = math.max(margin, viewport.Y - size.Y - margin)
+    else
+        minY = math.min(margin, viewport.Y - size.Y - margin)
+        maxY = margin
+    end
+
+    return Vector2.new(
+        math.clamp(desiredAbsolute.X, minX, maxX),
+        math.clamp(desiredAbsolute.Y, minY, maxY)
+    )
 end
 
 setGuiAbsolutePosition = function(guiObject, absolutePosition)
@@ -1895,13 +1985,396 @@ setGuiAbsolutePosition = function(guiObject, absolutePosition)
     )
 end
 
+
+-- BADWARS_ADAPTIVE_LAYOUT_ENGINE_V1_BEGIN
+local LayoutIntelligence = {
+    objects = setmetatable({}, { __mode = "k" }),
+    metadata = setmetatable({}, { __mode = "k" }),
+    activeObject = nil,
+    registrationCounter = 0,
+    dirty = false,
+    resolving = false,
+    started = false,
+    margin = d.isMobile and 6 or 8,
+    stepInterval = 0.12,
+    lastStep = 0,
+}
+
+d.LayoutIntelligence = LayoutIntelligence
+d.LayoutAI = LayoutIntelligence
+
+local function layoutRect(position, size)
+    return {
+        X = position.X,
+        Y = position.Y,
+        Width = math.max(0, size.X),
+        Height = math.max(0, size.Y),
+    }
+end
+
+local function layoutRectsOverlap(left, right, margin)
+    margin = margin or 0
+    return left.X < right.X + right.Width + margin
+        and left.X + left.Width + margin > right.X
+        and left.Y < right.Y + right.Height + margin
+        and left.Y + left.Height + margin > right.Y
+end
+
+function LayoutIntelligence:_isVisible(object)
+    return typeof(object) == "Instance"
+        and object:IsA("GuiObject")
+        and object.Parent ~= nil
+        and object.Visible
+        and object.AbsoluteSize.X > 1
+        and object.AbsoluteSize.Y > 1
+        and isEffectivelyVisible(object)
+end
+
+function LayoutIntelligence:_visibleObjects(exclude)
+    local objects = {}
+
+    for object in pairs(self.objects) do
+        if object ~= exclude and self:_isVisible(object) and object:GetAttribute("AllowUIOverlap") ~= true then
+            objects[#objects + 1] = object
+        end
+    end
+
+    table.sort(objects, function(left, right)
+        local leftMeta = self.metadata[left]
+        local rightMeta = self.metadata[right]
+        return (leftMeta and leftMeta.Order or 0) < (rightMeta and rightMeta.Order or 0)
+    end)
+
+    return objects
+end
+
+function LayoutIntelligence:_reservedRects()
+    local rects = {}
+
+    local function collect(folder)
+        if not folder or not folder.Parent then
+            return
+        end
+
+        for _, child in ipairs(folder:GetChildren()) do
+            if child:IsA("GuiObject") and child.Visible and child.AbsoluteSize.X > 1 and child.AbsoluteSize.Y > 1 then
+                rects[#rects + 1] = layoutRect(child.AbsolutePosition, child.AbsoluteSize)
+            end
+        end
+    end
+
+    collect(q)
+    collect(s)
+    return rects
+end
+
+function LayoutIntelligence:_blockerRects(exclude)
+    local rects = self:_reservedRects()
+
+    for _, object in ipairs(self:_visibleObjects(exclude)) do
+        rects[#rects + 1] = layoutRect(object.AbsolutePosition, object.AbsoluteSize)
+    end
+
+    return rects
+end
+
+function LayoutIntelligence:_positionIsFree(object, position, blockers)
+    local candidate = layoutRect(position, object.AbsoluteSize)
+
+    for _, blocker in ipairs(blockers) do
+        if layoutRectsOverlap(candidate, blocker, self.margin) then
+            return false
+        end
+    end
+
+    return true
+end
+
+function LayoutIntelligence:_addCandidate(candidates, seen, object, position)
+    local clamped = clampGuiObjectToViewport(object, position)
+    local key = tostring(math.floor(clamped.X + 0.5)) .. ":" .. tostring(math.floor(clamped.Y + 0.5))
+
+    if not seen[key] then
+        seen[key] = true
+        candidates[#candidates + 1] = clamped
+    end
+end
+
+function LayoutIntelligence:_findSafeAgainst(object, desired, blockers, maxRadius)
+    desired = clampGuiObjectToViewport(object, desired)
+    if self:_positionIsFree(object, desired, blockers) then
+        return desired, true
+    end
+
+    local size = object.AbsoluteSize
+    local candidates = {}
+    local seen = {}
+
+    self:_addCandidate(candidates, seen, object, desired)
+
+    for _, blocker in ipairs(blockers) do
+        self:_addCandidate(
+            candidates,
+            seen,
+            object,
+            Vector2.new(blocker.X - size.X - self.margin, desired.Y)
+        )
+        self:_addCandidate(
+            candidates,
+            seen,
+            object,
+            Vector2.new(blocker.X + blocker.Width + self.margin, desired.Y)
+        )
+        self:_addCandidate(
+            candidates,
+            seen,
+            object,
+            Vector2.new(desired.X, blocker.Y - size.Y - self.margin)
+        )
+        self:_addCandidate(
+            candidates,
+            seen,
+            object,
+            Vector2.new(desired.X, blocker.Y + blocker.Height + self.margin)
+        )
+        self:_addCandidate(
+            candidates,
+            seen,
+            object,
+            Vector2.new(blocker.X - size.X - self.margin, blocker.Y - size.Y - self.margin)
+        )
+        self:_addCandidate(
+            candidates,
+            seen,
+            object,
+            Vector2.new(blocker.X + blocker.Width + self.margin, blocker.Y - size.Y - self.margin)
+        )
+        self:_addCandidate(
+            candidates,
+            seen,
+            object,
+            Vector2.new(blocker.X - size.X - self.margin, blocker.Y + blocker.Height + self.margin)
+        )
+        self:_addCandidate(
+            candidates,
+            seen,
+            object,
+            Vector2.new(blocker.X + blocker.Width + self.margin, blocker.Y + blocker.Height + self.margin)
+        )
+    end
+
+    local radiusLimit = math.max(24, tonumber(maxRadius) or 320)
+    local radius = 20
+    while radius <= radiusLimit do
+        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, 0))
+        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, 0))
+        self:_addCandidate(candidates, seen, object, desired + Vector2.new(0, radius))
+        self:_addCandidate(candidates, seen, object, desired + Vector2.new(0, -radius))
+        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, radius))
+        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, radius))
+        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, -radius))
+        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, -radius))
+        radius += 20
+    end
+
+    table.sort(candidates, function(left, right)
+        return (left - desired).Magnitude < (right - desired).Magnitude
+    end)
+
+    for _, candidate in ipairs(candidates) do
+        if self:_positionIsFree(object, candidate, blockers) then
+            return candidate, true
+        end
+    end
+
+    return desired, false
+end
+
+function LayoutIntelligence:Register(object, options)
+    if typeof(object) ~= "Instance" or not object:IsA("GuiObject") then
+        return object
+    end
+
+    if self.objects[object] then
+        return object
+    end
+
+    options = type(options) == "table" and options or {}
+    self.registrationCounter += 1
+    self.objects[object] = true
+    self.metadata[object] = {
+        Order = tonumber(options.Priority) or self.registrationCounter,
+        LastSafe = object.AbsolutePosition,
+    }
+    object:SetAttribute("AdaptiveLayoutManaged", true)
+
+    local function request()
+        self:RequestResolve()
+    end
+
+    d:Clean(object:GetPropertyChangedSignal("Visible"):Connect(request))
+    d:Clean(object:GetPropertyChangedSignal("AbsoluteSize"):Connect(request))
+    object.Destroying:Once(function()
+        self:Unregister(object)
+    end)
+
+    task.defer(request)
+    return object
+end
+
+function LayoutIntelligence:Unregister(object)
+    self.objects[object] = nil
+    self.metadata[object] = nil
+
+    if self.activeObject == object then
+        self.activeObject = nil
+    end
+end
+
+function LayoutIntelligence:BeginDrag(object)
+    self:Register(object)
+    self.activeObject = object
+
+    local metadata = self.metadata[object]
+    if metadata then
+        metadata.LastSafe = object.AbsolutePosition
+    end
+end
+
+function LayoutIntelligence:UpdateDrag(object, desired)
+    self:Register(object)
+    local blockers = self:_blockerRects(object)
+    local safe, found = self:_findSafeAgainst(object, desired, blockers, 80)
+    local metadata = self.metadata[object]
+
+    if found then
+        if metadata then
+            metadata.LastSafe = safe
+        end
+        return safe
+    end
+
+    return metadata and metadata.LastSafe
+        or clampGuiObjectToViewport(object, desired)
+end
+
+function LayoutIntelligence:EndDrag(object)
+    if self.activeObject == object then
+        self.activeObject = nil
+    end
+
+    local metadata = self.metadata[object]
+    if metadata and self:_isVisible(object) then
+        metadata.LastSafe = object.AbsolutePosition
+    end
+
+    self:RequestResolve()
+end
+
+function LayoutIntelligence:HasOverlap()
+    local objects = self:_visibleObjects()
+    local reserved = self:_reservedRects()
+
+    for index, object in ipairs(objects) do
+        local rect = layoutRect(object.AbsolutePosition, object.AbsoluteSize)
+
+        for _, reservedRect in ipairs(reserved) do
+            if layoutRectsOverlap(rect, reservedRect, self.margin) then
+                return true
+            end
+        end
+
+        for otherIndex = index + 1, #objects do
+            local other = objects[otherIndex]
+            local otherRect = layoutRect(other.AbsolutePosition, other.AbsoluteSize)
+            if layoutRectsOverlap(rect, otherRect, self.margin) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+function LayoutIntelligence:ResolveAll()
+    if self.resolving or self.activeObject then
+        return
+    end
+
+    self.resolving = true
+    local blockers = self:_reservedRects()
+    local objects = self:_visibleObjects()
+
+    for _, object in ipairs(objects) do
+        local current = clampGuiObjectToViewport(object, object.AbsolutePosition)
+        local safe = current
+
+        if not self:_positionIsFree(object, current, blockers) then
+            safe = select(1, self:_findSafeAgainst(object, current, blockers, 520))
+        end
+
+        if (safe - object.AbsolutePosition).Magnitude > 0.5 then
+            setGuiAbsolutePosition(object, safe)
+        end
+
+        local metadata = self.metadata[object]
+        if metadata then
+            metadata.LastSafe = safe
+        end
+
+        blockers[#blockers + 1] = layoutRect(safe, object.AbsoluteSize)
+    end
+
+    self.dirty = false
+    self.resolving = false
+end
+
+function LayoutIntelligence:RequestResolve()
+    self.dirty = true
+
+    task.defer(function()
+        if self.dirty then
+            self:ResolveAll()
+        end
+    end)
+end
+
+function LayoutIntelligence:Start()
+    if self.started then
+        return
+    end
+    self.started = true
+
+    d:Clean(k.Heartbeat:Connect(function()
+        local now = os.clock()
+        if now - self.lastStep < self.stepInterval then
+            return
+        end
+        self.lastStep = now
+
+        if self.activeObject then
+            return
+        end
+
+        if self.dirty or self:HasOverlap() then
+            self:ResolveAll()
+        end
+    end))
+end
+-- BADWARS_ADAPTIVE_LAYOUT_ENGINE_V1_END
+
 local function makeDraggable(H, I)
     local activeInput
     local moveConnection
     local endConnection
     local beganConnection
 
+    LayoutIntelligence:Register(H)
+
     local function stopDragging()
+        if activeInput then
+            LayoutIntelligence:EndDrag(H)
+        end
         activeInput = nil
         if moveConnection then
             moveConnection:Disconnect()
@@ -1917,37 +2390,50 @@ local function makeDraggable(H, I)
         if I and not I.Visible then
             return
         end
+
         local inputType = input.UserInputType
         if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then
             return
         end
+
         if not I and input.Position.Y - H.AbsolutePosition.Y > 40 * getGuiScale() then
             return
         end
 
         stopDragging()
         activeInput = input
+        LayoutIntelligence:BeginDrag(H)
+
         local startPointer = input.Position
         local startAbsolute = H.AbsolutePosition
-        local expectedMovement = inputType == Enum.UserInputType.MouseButton1 and Enum.UserInputType.MouseMovement
+        local expectedMovement = inputType == Enum.UserInputType.MouseButton1
+                and Enum.UserInputType.MouseMovement
             or Enum.UserInputType.Touch
 
         moveConnection = h.InputChanged:Connect(function(changed)
             if not activeInput or changed.UserInputType ~= expectedMovement or not H.Parent then
                 return
             end
+
             local delta = changed.Position - startPointer
             if inputType == Enum.UserInputType.MouseButton1 and h:IsKeyDown(Enum.KeyCode.LeftShift) then
-                delta = Vector3.new(math.round(delta.X / 3) * 3, math.round(delta.Y / 3) * 3, delta.Z)
+                delta = Vector3.new(
+                    math.round(delta.X / 3) * 3,
+                    math.round(delta.Y / 3) * 3,
+                    delta.Z
+                )
             end
-            local desired =
-                clampGuiObjectToViewport(H, Vector2.new(startAbsolute.X + delta.X, startAbsolute.Y + delta.Y))
-            setGuiAbsolutePosition(H, desired)
+
+            local desired = Vector2.new(
+                startAbsolute.X + delta.X,
+                startAbsolute.Y + delta.Y
+            )
+            local safe = LayoutIntelligence:UpdateDrag(H, desired)
+            setGuiAbsolutePosition(H, safe)
         end)
 
         endConnection = input.Changed:Connect(function()
-            if
-                input.UserInputState == Enum.UserInputState.End
+            if input.UserInputState == Enum.UserInputState.End
                 or input.UserInputState == Enum.UserInputState.Cancel
             then
                 stopDragging()
@@ -1957,6 +2443,7 @@ local function makeDraggable(H, I)
 
     H.Destroying:Once(function()
         stopDragging()
+        LayoutIntelligence:Unregister(H)
         if beganConnection then
             beganConnection:Disconnect()
         end
@@ -1964,11 +2451,18 @@ local function makeDraggable(H, I)
 end
 
 local function makeDraggable2(H, I)
+    local activeInput
     local moveConnection
     local endConnection
     local beganConnection
 
+    LayoutIntelligence:Register(I)
+
     local function stopDragging()
+        if activeInput then
+            LayoutIntelligence:EndDrag(I)
+        end
+        activeInput = nil
         if moveConnection then
             moveConnection:Disconnect()
             moveConnection = nil
@@ -1983,29 +2477,38 @@ local function makeDraggable2(H, I)
         if not I.Visible then
             return
         end
+
         local inputType = input.UserInputType
         if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then
             return
         end
+
         stopDragging()
+        activeInput = input
+        LayoutIntelligence:BeginDrag(I)
+
         local startPointer = input.Position
         local startAbsolute = I.AbsolutePosition
-        local expectedMovement = inputType == Enum.UserInputType.MouseButton1 and Enum.UserInputType.MouseMovement
+        local expectedMovement = inputType == Enum.UserInputType.MouseButton1
+                and Enum.UserInputType.MouseMovement
             or Enum.UserInputType.Touch
 
         moveConnection = h.InputChanged:Connect(function(changed)
-            if changed.UserInputType ~= expectedMovement or not I.Parent then
+            if not activeInput or changed.UserInputType ~= expectedMovement or not I.Parent then
                 return
             end
+
             local delta = changed.Position - startPointer
-            local desired =
-                clampGuiObjectToViewport(I, Vector2.new(startAbsolute.X + delta.X, startAbsolute.Y + delta.Y))
-            setGuiAbsolutePosition(I, desired)
+            local desired = Vector2.new(
+                startAbsolute.X + delta.X,
+                startAbsolute.Y + delta.Y
+            )
+            local safe = LayoutIntelligence:UpdateDrag(I, desired)
+            setGuiAbsolutePosition(I, safe)
         end)
 
         endConnection = input.Changed:Connect(function()
-            if
-                input.UserInputState == Enum.UserInputState.End
+            if input.UserInputState == Enum.UserInputState.End
                 or input.UserInputState == Enum.UserInputState.Cancel
             then
                 stopDragging()
@@ -2015,6 +2518,7 @@ local function makeDraggable2(H, I)
 
     I.Destroying:Once(function()
         stopDragging()
+        LayoutIntelligence:Unregister(I)
         if beganConnection then
             beganConnection:Disconnect()
         end
@@ -4964,7 +5468,7 @@ H = {
         local ae = false
         local af = Instance.new("TextButton")
         af.Name = aa.Name .. "Toggle"
-        af.Size = UDim2.new(1, 0, 0, d.isMobile and 50 or 44) af.ClipsDescendants = false
+        af.Size = UDim2.new(1, 0, 0, d.isMobile and 46 or 40)
         af.BackgroundTransparency = 1
         af.BorderSizePixel = 0
         af.AutoButtonColor = false
@@ -4975,11 +5479,11 @@ H = {
 
         local ag = Instance.new("Frame")
         ag.Name = "Card"
-        ag.Size = UDim2.new(1, -12, 1, -8)
-        ag.Position = UDim2.fromOffset(6, 4)
+        ag.Size = UDim2.new(1, -16, 1, -6)
+        ag.Position = UDim2.fromOffset(8, 3)
         ag.BackgroundColor3 = aa.Darker and o.MainSoft or o.Surface
         ag.BorderSizePixel = 0
-        ag.ClipsDescendants = false
+        ag.ClipsDescendants = true
         ag.Parent = af
         addCorner(ag, o.Radius)
         local ah = addStroke(ag, o.Border, 0.72, 1, "ToggleStroke")
@@ -4993,7 +5497,6 @@ H = {
         ai.TextXAlignment = Enum.TextXAlignment.Left
         ai.TextColor3 = o.MutedText
         ai.TextSize = d.isMobile and 15 or 14
-        ai.TextTruncate = Enum.TextTruncate.AtEnd
         ai.FontFace = o.Font
         ai.Parent = ag
 
@@ -5914,7 +6417,6 @@ function d.CreateGUI(aa)
     ak.AutoButtonColor = false
     ak.Visible = false
     ak.Text = ""
-    ak.ZIndex = 400
     ak.Parent = ac
     local al = Instance.new("TextLabel")
     al.Name = "Title"
@@ -5926,10 +6428,8 @@ function d.CreateGUI(aa)
     al.TextColor3 = o.TextStrong
     al.TextSize = 13
     al.FontFace = o.FontSemiBold
-    al.ZIndex = 402
     al.Parent = ak
     local am = addCloseButton(ak)
-    am.ZIndex = 402
     local an = Instance.new("ImageButton")
     an.Name = "Back"
     an.Size = UDim2.fromOffset(16, 16)
@@ -5937,7 +6437,6 @@ function d.CreateGUI(aa)
     an.BackgroundTransparency = 1
     an.Image = u("badscript/assets/new/back.png")
     an.ImageColor3 = m.Light(o.Main, 0.37)
-    an.ZIndex = 402
     an.Parent = ak
     local ao = Instance.new("TextLabel")
     ao.Name = "Version"
@@ -5953,69 +6452,20 @@ function d.CreateGUI(aa)
     ao.TextXAlignment = Enum.TextXAlignment.Right
     ao.TextSize = 10
     ao.FontFace = o.Font
-    ao.ZIndex = 402
     ao.Parent = ak
     addCorner(ak, o.RadiusLarge)
     addStroke(ak, o.Border, 0.32, 1)
-    local ap = Instance.new("ScrollingFrame")
+    local ap = Instance.new("Frame")
     ap.Name = "Children"
-    ap.Size = UDim2.new(1, 0, 1, -64)
-    ap.Position = UDim2.fromOffset(0, 44)
+    ap.Size = UDim2.new(1, 0, 1, -57)
+    ap.Position = UDim2.fromOffset(0, 41)
     ap.BackgroundColor3 = o.MainSoft
     ap.BorderSizePixel = 0
-    ap.ClipsDescendants = true
-    ap.AutomaticCanvasSize = Enum.AutomaticSize.None
-    ap.CanvasSize = UDim2.new()
-    ap.ScrollingDirection = Enum.ScrollingDirection.Y
-    ap.ElasticBehavior = Enum.ElasticBehavior.Never
-    ap.ScrollBarThickness = d.isMobile and 6 or 3
-    ap.ScrollBarImageColor3 = o.BorderStrong
-    ap.ScrollBarImageTransparency = d.isMobile and 0.25 or 0.55
-    ap.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
-    ap.ZIndex = 401
     ap.Parent = ak
-
     local aq = Instance.new("UIListLayout")
     aq.SortOrder = Enum.SortOrder.LayoutOrder
     aq.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    aq.Padding = UDim.new(0, 6)
     aq.Parent = ap
-
-    local settingsPadding = Instance.new("UIPadding")
-    settingsPadding.PaddingTop = UDim.new(0, 6)
-    settingsPadding.PaddingBottom = UDim.new(0, 18)
-    settingsPadding.Parent = ap
-
-    local function refreshSettingsCanvas()
-        local contentHeight = math.max(0, aq.AbsoluteContentSize.Y + settingsPadding.PaddingTop.Offset + settingsPadding.PaddingBottom.Offset + 2)
-        ap.CanvasSize = UDim2.fromOffset(0, contentHeight)
-        ap.ScrollingEnabled = contentHeight > ap.AbsoluteSize.Y + 1
-        ap.ScrollBarThickness = ap.ScrollingEnabled and (d.isMobile and 6 or 3) or 0
-    end
-
-    d:Clean(aq:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshSettingsCanvas))
-    d:Clean(ap:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshSettingsCanvas))
-
-    local function promoteMainSettingsDescendant(instance)
-        if not instance:IsA("GuiObject") then
-            return
-        end
-        if instance.ZIndex < 403 then
-            instance.ZIndex = 402 + math.max(instance.ZIndex, 1)
-        end
-    end
-
-    for _, descendant in ipairs(ap:GetDescendants()) do
-        promoteMainSettingsDescendant(descendant)
-    end
-    d:Clean(ap.DescendantAdded:Connect(function(descendant)
-        if descendant and descendant.Parent then
-            promoteMainSettingsDescendant(descendant)
-        end
-    end))
-
-    task.defer(refreshSettingsCanvas)
-
     ab.Object = ac
 
     function ab.CreateBind(ar)
@@ -6313,25 +6763,8 @@ function d.CreateGUI(aa)
     end
 
     function ab.CreateOverlayBar(ar)
-        local existingBar = d._OverlayBarAPI
-        if existingBar and existingBar.Object and existingBar.Object.Parent then
-            return existingBar
-        end
-
-        for _, child in ipairs(af:GetChildren()) do
-            if child:IsA("GuiObject") and child.Name == "Overlays" then
-                child:Destroy()
-            end
-        end
-        for _, child in ipairs(ac:GetChildren()) do
-            if child:IsA("GuiObject") and child.Name == "OverlayManager" then
-                child:Destroy()
-            end
-        end
-
         local as = {
             Toggles = {},
-            ToggleByKey = {},
             Open = false,
         }
 
@@ -6531,15 +6964,13 @@ function d.CreateGUI(aa)
 
         local function updateCount()
             local enabled = 0
-            local total = 0
             for _, toggle in as.Toggles do
-                total += 1
                 if toggle.Enabled then
                     enabled += 1
                 end
             end
 
-            aw.Text = tostring(total)
+            aw.Text = tostring(enabled)
             local accent = Color3.fromHSV(
                 d.GUIColor.Hue,
                 d.GUIColor.Sat,
@@ -6564,12 +6995,6 @@ function d.CreateGUI(aa)
             end
 
             if visible then
-                if d._OpenSettingsPane and d._SettingsPaneClosers then
-                    local closer = d._SettingsPaneClosers[d._OpenSettingsPane]
-                    if type(closer) == "function" then
-                        closer(false, true)
-                    end
-                end
                 ay.Visible = true
                 ay.Active = true
                 ay.GroupTransparency = 1
@@ -6607,7 +7032,6 @@ function d.CreateGUI(aa)
                     return
                 end
                 ay.Visible = false
-                as.Open = false
                 local showMain = not ak.Visible
                 af.Visible = showMain
                 playerCard.Visible = showMain
@@ -6640,13 +7064,6 @@ function d.CreateGUI(aa)
         end
 
         function as.CreateToggle(L, M)
-            M = type(M) == "table" and M or {}
-            local toggleKey = normalizeUiKey(M.Name)
-            local existingToggle = as.ToggleByKey[toggleKey]
-            if existingToggle and existingToggle.Object and existingToggle.Object.Parent then
-                return existingToggle
-            end
-
             local N = {
                 Enabled = false,
                 Index = getTableSize(as.Toggles),
@@ -6663,7 +7080,7 @@ function d.CreateGUI(aa)
             P.AutoButtonColor = false
             P.Text = ""
             P.LayoutOrder = N.Index
-            P.ClipsDescendants = false
+            P.ClipsDescendants = true
             P.ZIndex = 502
             P.Parent = aF
             addCorner(P, o.Radius)
@@ -6820,31 +7237,17 @@ function d.CreateGUI(aa)
             end)
 
             table.insert(as.Toggles, N)
-            as.ToggleByKey[toggleKey] = N
-            P.Destroying:Once(function()
-                if as.ToggleByKey[toggleKey] == N then
-                    as.ToggleByKey[toggleKey] = nil
-                end
-            end)
             applyVisual(true)
             updateCount()
             return N
         end
 
-        aF.AutomaticCanvasSize = Enum.AutomaticSize.None
-        aF.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
-        local function refreshOverlayCanvas()
-            local contentHeight = aG.AbsoluteContentSize.Y
-                + aH.PaddingTop.Offset
-                + aH.PaddingBottom.Offset
-                + 2
-            aF.CanvasSize = UDim2.fromOffset(0, contentHeight)
-            aF.ScrollingEnabled = contentHeight > aF.AbsoluteSize.Y + 1
-            aF.ScrollBarThickness = aF.ScrollingEnabled and (d.isMobile and 6 or 3) or 0
-        end
-        aG:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshOverlayCanvas)
-        aF:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshOverlayCanvas)
-        task.defer(refreshOverlayCanvas)
+        aG:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            aF.CanvasSize = UDim2.fromOffset(
+                0,
+                aG.AbsoluteContentSize.Y + 10
+            )
+        end)
 
         at.MouseEnter:Connect(function()
             local accent = Color3.fromHSV(
@@ -6915,15 +7318,7 @@ function d.CreateGUI(aa)
         end)
 
         d.Overlays = as
-        d._OverlayBarAPI = as
-        as.Object = at
-        as.Window = ay
         as.SetVisible = setManagerVisible
-        at.Destroying:Once(function()
-            if d._OverlayBarAPI == as then
-                d._OverlayBarAPI = nil
-            end
-        end)
         return as
     end
 
@@ -6932,44 +7327,30 @@ function d.CreateGUI(aa)
     end
 
     function ab.CreateSettingsPane(ar, as)
-        as = type(as) == "table" and as or {}
-        as.Name = tostring(as.Name or "Settings")
-
-        d._SettingsPaneRegistry = d._SettingsPaneRegistry or {}
-        d._SettingsPaneClosers = d._SettingsPaneClosers or setmetatable({}, { __mode = "k" })
-
-        local paneKey = normalizeUiKey(as.Name)
-        local existingPane = d._SettingsPaneRegistry[paneKey]
-        if existingPane and existingPane.Window and existingPane.Window.Parent then
-            return existingPane
-        end
-
-        local at = {
-            Name = as.Name,
-            Key = paneKey,
-        }
+        local at = {}
         local transition = TweenInfo.new(
             0.18,
             Enum.EasingStyle.Quart,
             Enum.EasingDirection.InOut
         )
-        local paneBaseZ = 520
-        local controlBaseZ = 540
-        local headerHeight = 48
-        local contentTop = 54
-        local bottomGap = 10
 
         local au = Instance.new("TextButton")
         au.Name = as.Name
-        au.Size = UDim2.new(1, -12, 0, d.isMobile and 48 or 44)
+        au.Size = UDim2.new(1, -12, 0, 42)
         au.BackgroundColor3 = o.Surface
         au.BorderSizePixel = 0
         au.AutoButtonColor = false
         au.Text = ""
-        au.ClipsDescendants = false
+        au.ClipsDescendants = true
         au.Parent = ap
         addCorner(au, o.Radius)
-        local rowStroke = addStroke(au, o.Border, 0.84, 1, "SettingsRowStroke")
+        local rowStroke = addStroke(
+            au,
+            o.Border,
+            0.84,
+            1,
+            "SettingsRowStroke"
+        )
 
         local av = Instance.new("TextLabel")
         av.Name = "Title"
@@ -6979,8 +7360,7 @@ function d.CreateGUI(aa)
         av.Text = as.Name
         av.TextXAlignment = Enum.TextXAlignment.Left
         av.TextColor3 = o.MutedText
-        av.TextSize = d.isMobile and 14 or 13
-        av.TextTruncate = Enum.TextTruncate.AtEnd
+        av.TextSize = 13
         av.FontFace = o.FontSemiBold
         av.Parent = au
 
@@ -6995,22 +7375,24 @@ function d.CreateGUI(aa)
 
         local aw = Instance.new("CanvasGroup")
         aw.Name = as.Name .. "Pane"
-        aw.Size = UDim2.new(1, 0, 0, 120)
-        aw.Position = UDim2.fromOffset(0, 0)
+        aw.Size = UDim2.fromScale(1, 1)
         aw.BackgroundColor3 = o.MainSoft
         aw.BackgroundTransparency = 1
         aw.GroupTransparency = 1
         aw.BorderSizePixel = 0
         aw.Visible = false
-        aw.Active = false
-        aw.ClipsDescendants = true
-        aw.ZIndex = paneBaseZ
+        aw.Active = true
+        aw.ZIndex = 520
         aw.Parent = ac
-        pcall(function() aw.Interactable = false end)
         addCorner(aw, o.RadiusLarge)
         addSurfaceGradient(aw)
-
-        local paneStroke = addStroke(aw, o.BorderStrong, 1, 1, "SettingsPaneStroke")
+        local paneStroke = addStroke(
+            aw,
+            o.BorderStrong,
+            1,
+            1,
+            "SettingsPaneStroke"
+        )
         local paneShadow = addShadow(aw, true)
         paneShadow.ImageTransparency = 1
         local paneScale = addScale(aw)
@@ -7018,11 +7400,11 @@ function d.CreateGUI(aa)
 
         local header = Instance.new("Frame")
         header.Name = "Header"
-        header.Size = UDim2.new(1, 0, 0, headerHeight)
+        header.Size = UDim2.new(1, 0, 0, 48)
         header.BackgroundColor3 = o.MainSoft
         header.BackgroundTransparency = 0.08
         header.BorderSizePixel = 0
-        header.ZIndex = paneBaseZ + 10
+        header.ZIndex = 521
         header.Parent = aw
 
         local back = Instance.new("ImageButton")
@@ -7035,7 +7417,7 @@ function d.CreateGUI(aa)
         back.AutoButtonColor = false
         back.Image = u("badscript/assets/new/back.png")
         back.ImageColor3 = o.MutedText
-        back.ZIndex = paneBaseZ + 12
+        back.ZIndex = 523
         back.Parent = header
         addCorner(back, o.RadiusSmall)
         local backStroke = addStroke(back, o.Border, 0.78, 1, "BackStroke")
@@ -7048,207 +7430,62 @@ function d.CreateGUI(aa)
         title.Text = as.Name
         title.TextXAlignment = Enum.TextXAlignment.Left
         title.TextColor3 = o.TextStrong
-        title.TextSize = d.isMobile and 15 or 14
-        title.TextTruncate = Enum.TextTruncate.AtEnd
+        title.TextSize = 14
         title.FontFace = o.FontSemiBold
-        title.ZIndex = paneBaseZ + 11
+        title.ZIndex = 522
         title.Parent = header
 
         local close = addCloseButton(header, 10)
-        close.ZIndex = paneBaseZ + 12
+        close.ZIndex = 523
 
         local divider = Instance.new("Frame")
         divider.Name = "Divider"
         divider.Size = UDim2.new(1, -20, 0, 1)
-        divider.Position = UDim2.fromOffset(10, headerHeight - 1)
+        divider.Position = UDim2.fromOffset(10, 47)
         divider.BackgroundColor3 = o.Border
         divider.BackgroundTransparency = 0.68
         divider.BorderSizePixel = 0
-        divider.ZIndex = paneBaseZ + 11
+        divider.ZIndex = 522
         divider.Parent = aw
 
         local children = Instance.new("ScrollingFrame")
         children.Name = "Children"
-        children.Size = UDim2.new(1, -12, 0, 56)
-        children.Position = UDim2.fromOffset(6, contentTop)
+        children.Size = UDim2.new(1, -12, 1, -60)
+        children.Position = UDim2.fromOffset(6, 54)
         children.BackgroundTransparency = 1
         children.BorderSizePixel = 0
-        children.ClipsDescendants = true
-        children.AutomaticCanvasSize = Enum.AutomaticSize.None
-        children.CanvasSize = UDim2.new()
+        children.ScrollBarThickness = 2
+        children.ScrollBarImageColor3 = o.BorderStrong
+        children.ScrollBarImageTransparency = 0.42
         children.ScrollingDirection = Enum.ScrollingDirection.Y
         children.ElasticBehavior = Enum.ElasticBehavior.Never
-        children.ScrollBarThickness = 0
-        children.ScrollBarImageColor3 = o.BorderStrong
-        children.ScrollBarImageTransparency = d.isMobile and 0.25 or 0.42
-        children.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
-        children.ZIndex = paneBaseZ + 2
+        children.CanvasSize = UDim2.new()
+        children.ZIndex = 521
         children.Parent = aw
 
         local layout = Instance.new("UIListLayout")
         layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.Padding = UDim.new(0, d.isMobile and 8 or 7)
+        layout.Padding = UDim.new(0, 6)
         layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         layout.Parent = children
 
         local padding = Instance.new("UIPadding")
-        padding.PaddingTop = UDim.new(0, 6)
-        padding.PaddingBottom = UDim.new(0, 14)
+        padding.PaddingTop = UDim.new(0, 2)
+        padding.PaddingBottom = UDim.new(0, 8)
         padding.Parent = children
-
-        local function promotePaneDescendant(instance)
-            if not instance:IsA("GuiObject") then
-                return
-            end
-            local localZ = math.clamp(tonumber(instance.ZIndex) or 1, 0, 80)
-            instance.ZIndex = controlBaseZ + localZ
-        end
-
-        local function normalizeControlRoot(control, root)
-            if typeof(root) ~= "Instance" or not root:IsA("GuiObject") then
-                return
-            end
-
-            local minimumHeight = d.isMobile and 50 or 44
-            local controlType = type(control) == "table" and control.Type or nil
-            if controlType == "Slider" or controlType == "TwoSlider" then
-                minimumHeight = d.isMobile and 60 or 52
-            elseif controlType == "ColorSlider" or controlType == "TextList" then
-                minimumHeight = math.max(minimumHeight, root.Size.Y.Offset)
-            end
-
-            if root.Size.Y.Scale == 0 and root.Size.Y.Offset > 0 and root.Size.Y.Offset < minimumHeight then
-                root.Size = UDim2.new(root.Size.X.Scale, root.Size.X.Offset, 0, minimumHeight)
-            end
-            root.ClipsDescendants = false
-
-            local card = root:FindFirstChild("Card") or root:FindFirstChild("BKG")
-            if card and card:IsA("GuiObject") then
-                card.ClipsDescendants = false
-            end
-
-            promotePaneDescendant(root)
-            for _, descendant in ipairs(root:GetDescendants()) do
-                promotePaneDescendant(descendant)
-            end
-        end
-
-        local descendantConnection = children.DescendantAdded:Connect(function(descendant)
-            if descendant and descendant.Parent then
-                promotePaneDescendant(descendant)
-            end
-        end)
-
-        local paneGeneration = 0
-        local refreshGeneration = 0
-        local layoutConnection
-        local boundsConnection
-
-        local function measureContentHeight()
-            local manualHeight = padding.PaddingTop.Offset + padding.PaddingBottom.Offset
-            local visibleCount = 0
-            for _, child in ipairs(children:GetChildren()) do
-                if child:IsA("GuiObject") and child.Visible then
-                    local height = child.AbsoluteSize.Y
-                    if height <= 0 then
-                        height = child.Size.Y.Offset
-                    end
-                    manualHeight += math.max(0, height)
-                    visibleCount += 1
-                end
-            end
-            if visibleCount > 1 then
-                manualHeight += layout.Padding.Offset * (visibleCount - 1)
-            end
-
-            local layoutHeight = layout.AbsoluteContentSize.Y
-                + padding.PaddingTop.Offset
-                + padding.PaddingBottom.Offset
-            return math.max(0, manualHeight, layoutHeight)
-        end
-
-        local function refreshPaneGeometry(instant)
-            if not aw.Parent then
-                return
-            end
-
-            local contentHeight = measureContentHeight()
-            local availableHeight = ac.AbsoluteSize.Y > 0 and ac.AbsoluteSize.Y or 560
-            local desiredHeight = contentTop + contentHeight + bottomGap
-            local targetHeight = math.clamp(desiredHeight, 120, math.max(120, availableHeight))
-            local viewportHeight = math.max(48, targetHeight - contentTop - bottomGap)
-
-            aw.Size = UDim2.new(1, 0, 0, targetHeight)
-            children.Size = UDim2.new(1, -12, 0, viewportHeight)
-            children.CanvasSize = UDim2.fromOffset(0, contentHeight + 2)
-            children.ScrollingEnabled = contentHeight > viewportHeight + 1
-            children.ScrollBarThickness = children.ScrollingEnabled and (d.isMobile and 6 or 3) or 0
-
-            if instant then
-                children.CanvasPosition = Vector2.new(
-                    0,
-                    math.clamp(
-                        children.CanvasPosition.Y,
-                        0,
-                        math.max(0, contentHeight - viewportHeight)
-                    )
-                )
-            end
-        end
-
-        local function queuePaneRefresh()
-            refreshGeneration += 1
-            local generation = refreshGeneration
-            task.defer(function()
-                if generation ~= refreshGeneration or not aw.Parent then
-                    return
-                end
-                refreshPaneGeometry(true)
-            end)
-        end
-
-        function at.RefreshLayout(N, instant)
-            if instant then
-                refreshPaneGeometry(true)
-            else
-                queuePaneRefresh()
-            end
-        end
 
         for L, M in H do
             at["Create" .. L] = function(N, O)
                 local control = M(O, children, ab)
-                local root = type(control) == "table"
-                    and (control.Object or control.Frame or control.Button or control.Instance)
-                    or control
-                normalizeControlRoot(control, root)
-                queuePaneRefresh()
+                if typeof(control) == "Instance" and control:IsA("GuiObject") then
+                    control.ZIndex = math.max(control.ZIndex, 522)
+                end
                 return control
             end
             at["Add" .. L] = at["Create" .. L]
         end
 
-        local function restoreSettingsList()
-            if d._OpenSettingsPane == nil then
-                ap.Visible = true
-                pcall(function() ap.Interactable = true end)
-                refreshSettingsCanvas()
-            end
-        end
-
-        local function finishPaneClose(generation)
-            if generation ~= paneGeneration then
-                return
-            end
-            aw.Visible = false
-            aw.Active = false
-            pcall(function() aw.Interactable = false end)
-            if d._OpenSettingsPane == aw then
-                d._OpenSettingsPane = nil
-            end
-            restoreSettingsList()
-        end
-
+        local paneGeneration = 0
         local function setPaneVisible(visible, instant)
             paneGeneration += 1
             local generation = paneGeneration
@@ -7260,32 +7497,10 @@ function d.CreateGUI(aa)
                 pcall(d._OpenDropdown, true)
                 d._OpenDropdown = nil
             end
-            if d._OverlayBarAPI and d._OverlayBarAPI.Open and d._OverlayBarAPI.SetVisible then
-                d._OverlayBarAPI.SetVisible(false, true)
-            end
 
             if visible then
-                local currentPane = d._OpenSettingsPane
-                if currentPane and currentPane ~= aw and currentPane.Parent then
-                    local closer = d._SettingsPaneClosers[currentPane]
-                    if type(closer) == "function" then
-                        closer(false, true)
-                    else
-                        currentPane.Visible = false
-                        currentPane.Active = false
-                        pcall(function() currentPane.Interactable = false end)
-                    end
-                end
-
-                d._OpenSettingsPane = aw
-                ap.Visible = false
-                pcall(function() ap.Interactable = false end)
-                refreshPaneGeometry(true)
-
                 aw.Visible = true
                 aw.Active = true
-                pcall(function() aw.Interactable = true end)
-                arrow.Rotation = 90
                 aw.GroupTransparency = 1
                 aw.BackgroundTransparency = 1
                 paneScale.Scale = 0.985
@@ -7311,9 +7526,12 @@ function d.CreateGUI(aa)
                 return
             end
 
-            arrow.Rotation = 0
             aw.Active = false
-            pcall(function() aw.Interactable = false end)
+            local function finishClose()
+                if generation == paneGeneration then
+                    aw.Visible = false
+                end
+            end
 
             if instant or not d.Loaded then
                 aw.GroupTransparency = 1
@@ -7321,7 +7539,7 @@ function d.CreateGUI(aa)
                 paneScale.Scale = 0.985
                 paneStroke.Transparency = 1
                 paneShadow.ImageTransparency = 1
-                finishPaneClose(generation)
+                finishClose()
                 return
             end
 
@@ -7334,80 +7552,89 @@ function d.CreateGUI(aa)
             n:Tween(paneShadow, transition, { ImageTransparency = 1 })
 
             if closeTween then
-                closeTween.Completed:Once(function() finishPaneClose(generation) end)
+                closeTween.Completed:Once(finishClose)
             else
-                task.delay(0.19, function() finishPaneClose(generation) end)
+                task.delay(0.19, finishClose)
             end
         end
 
-        d._SettingsPaneRegistry[paneKey] = at
-        d._SettingsPaneClosers[aw] = setPaneVisible
-
-        layoutConnection = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queuePaneRefresh)
-        boundsConnection = ac:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            refreshPaneGeometry(true)
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            children.CanvasSize = UDim2.fromOffset(
+                0,
+                layout.AbsoluteContentSize.Y + 10
+            )
         end)
 
         au.MouseEnter:Connect(function()
-            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            local accent = Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            )
             n:Tween(au, o.TweenFast, { BackgroundColor3 = o.SurfaceHover })
-            n:Tween(rowStroke, o.TweenFast, { Color = accent, Transparency = 0.68 })
-            n:Tween(av, o.TweenFast, { TextColor3 = accent:Lerp(o.MutedText, 0.28) })
-            n:Tween(arrow, o.TweenFast, { ImageColor3 = accent:Lerp(o.MutedText, 0.28) })
+            n:Tween(rowStroke, o.TweenFast, {
+                Color = accent,
+                Transparency = 0.68,
+            })
+            n:Tween(av, o.TweenFast, {
+                TextColor3 = accent:Lerp(o.MutedText, 0.28),
+            })
+            n:Tween(arrow, o.TweenFast, {
+                ImageColor3 = accent:Lerp(o.MutedText, 0.28),
+            })
         end)
         au.MouseLeave:Connect(function()
             n:Tween(au, o.TweenFast, { BackgroundColor3 = o.Surface })
-            n:Tween(rowStroke, o.TweenFast, { Color = o.Border, Transparency = 0.84 })
+            n:Tween(rowStroke, o.TweenFast, {
+                Color = o.Border,
+                Transparency = 0.84,
+            })
             n:Tween(av, o.TweenFast, { TextColor3 = o.MutedText })
             n:Tween(arrow, o.TweenFast, { ImageColor3 = o.FaintText })
         end)
 
         back.MouseEnter:Connect(function()
-            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            local accent = Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            )
             n:Tween(back, o.TweenFast, {
                 BackgroundColor3 = o.SurfaceHover,
-                ImageColor3 = accent:Lerp(o.MutedText, 0.18),
+                ImageColor3 = accent,
             })
-            n:Tween(backStroke, o.TweenFast, { Color = accent, Transparency = 0.58 })
+            n:Tween(backStroke, o.TweenFast, {
+                Color = accent,
+                Transparency = 0.58,
+            })
         end)
         back.MouseLeave:Connect(function()
             n:Tween(back, o.TweenFast, {
                 BackgroundColor3 = o.Surface,
                 ImageColor3 = o.MutedText,
             })
-            n:Tween(backStroke, o.TweenFast, { Color = o.Border, Transparency = 0.78 })
+            n:Tween(backStroke, o.TweenFast, {
+                Color = o.Border,
+                Transparency = 0.78,
+            })
         end)
 
-        au.Activated:Connect(function() setPaneVisible(true) end)
-        back.Activated:Connect(function() setPaneVisible(false) end)
-        close.Activated:Connect(function() setPaneVisible(false) end)
-
-        aw.Destroying:Once(function()
-            if layoutConnection then layoutConnection:Disconnect(); layoutConnection = nil end
-            if boundsConnection then boundsConnection:Disconnect(); boundsConnection = nil end
-            if descendantConnection then descendantConnection:Disconnect(); descendantConnection = nil end
-            d._SettingsPaneClosers[aw] = nil
-            if d._SettingsPaneRegistry[paneKey] == at then
-                d._SettingsPaneRegistry[paneKey] = nil
-            end
-            if d._OpenSettingsPane == aw then
-                d._OpenSettingsPane = nil
-                restoreSettingsList()
-            end
+        au.Activated:Connect(function()
+            setPaneVisible(true)
         end)
-
-        task.defer(function()
-            if aw.Parent then
-                refreshPaneGeometry(true)
-            end
+        back.Activated:Connect(function()
+            setPaneVisible(false)
+        end)
+        close.Activated:Connect(function()
+            setPaneVisible(false)
         end)
 
         at.Object = au
         at.Window = aw
-        at.Children = children
         at.SetVisible = setPaneVisible
         return at
     end
+
 
 local function restyleLegacySettingsControl(instance)
     if not instance or not instance.Parent then
@@ -7994,42 +8221,10 @@ end))
         if d.HideTooltip then
             d.HideTooltip(true)
         end
-        if visible and d._OverlayBarAPI and d._OverlayBarAPI.Open and d._OverlayBarAPI.SetVisible then
-            d._OverlayBarAPI.SetVisible(false, true)
-        end
-
-        if not visible and d._OpenSettingsPane then
-            local openPane = d._OpenSettingsPane
-            local closer = d._SettingsPaneClosers
-                and d._SettingsPaneClosers[openPane]
-            if type(closer) == "function" then
-                closer(false, true)
-            else
-                openPane.Visible = false
-                openPane.Active = false
-                pcall(function()
-                    openPane.Interactable = false
-                end)
-                d._OpenSettingsPane = nil
-                ap.Visible = true
-                pcall(function()
-                    ap.Interactable = true
-                end)
-            end
-        elseif visible and not d._OpenSettingsPane then
-            ap.Visible = true
-            pcall(function()
-                ap.Interactable = true
-            end)
-            refreshSettingsCanvas()
-        end
-
         ak.Visible = visible
-        ak.Active = visible
         playerCard.Visible = not visible
         onlineDot.Visible = not visible
         af.Visible = not visible
-        aj.Visible = not visible
     end
 
     ak:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -8037,15 +8232,10 @@ end))
         playerCard.Visible = mainVisible
         onlineDot.Visible = mainVisible
         af.Visible = mainVisible
-        aj.Visible = mainVisible
     end)
 
     an.MouseEnter:Connect(function()
-        an.ImageColor3 = Color3.fromHSV(
-            d.GUIColor.Hue,
-            d.GUIColor.Sat,
-            d.GUIColor.Value
-        ):Lerp(o.MutedText, 0.18)
+        an.ImageColor3 = o.Text
     end)
     an.MouseLeave:Connect(function()
         an.ImageColor3 = m.Light(o.Main, 0.37)
@@ -8131,11 +8321,7 @@ end))
         end
     end)
     ah.MouseEnter:Connect(function()
-        ai.ImageColor3 = Color3.fromHSV(
-            d.GUIColor.Hue,
-            d.GUIColor.Sat,
-            d.GUIColor.Value
-        ):Lerp(o.MutedText, 0.18)
+        ai.ImageColor3 = o.TextStrong
         n:Tween(ah, o.TweenFast, { BackgroundTransparency = 0.86, BackgroundColor3 = o.ElevatedHover })
         n:Tween(settingsStroke, o.TweenFast, {
             Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
@@ -8223,10 +8409,7 @@ end))
 end
 
 function d.CreateCategory(aa, ab)
-    ab = type(ab) == "table" and ab or {}
-    local categoryKey = normalizeUiKey(ab.Name)
-    aa._CategoryRegistry = aa._CategoryRegistry or {}
-    local previousCategory = aa._CategoryRegistry[categoryKey] or aa.Categories[ab.Name]
+    local previousCategory = aa.Categories[ab.Name]
     if previousCategory and previousCategory.Object then
         pcall(function()
             previousCategory.Object:Destroy()
@@ -9681,14 +9864,6 @@ function d.CreateCategory(aa, ab)
     end
 
     function ac.CreateModuleCategory(am, an)
-        an = type(an) == "table" and an or {}
-        local moduleCategoryKey = normalizeUiKey(an.Name)
-        ac._ModuleCategoryRegistry = ac._ModuleCategoryRegistry or {}
-        local existingModuleCategory = ac._ModuleCategoryRegistry[moduleCategoryKey]
-        if existingModuleCategory and existingModuleCategory.Object and existingModuleCategory.Object.Parent then
-            return existingModuleCategory
-        end
-
         local ao, ap = pcall(function()
             local ao = {
                 Type = "ModuleCategory",
@@ -10203,16 +10378,6 @@ function d.CreateCategory(aa, ab)
             bwarn("[ModuleCategory] CreateModuleCategory failed:", ap)
             return nil
         end
-        if ap then
-            ac._ModuleCategoryRegistry[moduleCategoryKey] = ap
-            if ap.Object then
-                ap.Object.Destroying:Once(function()
-                    if ac._ModuleCategoryRegistry[moduleCategoryKey] == ap then
-                        ac._ModuleCategoryRegistry[moduleCategoryKey] = nil
-                    end
-                end)
-            end
-        end
         return ao and ap
     end
 
@@ -10254,12 +10419,6 @@ function d.CreateCategory(aa, ab)
     ac.Layout = al
     ac.RefreshLayout = refreshCategoryLayout
     aa.Categories[ab.Name] = ac
-    aa._CategoryRegistry[categoryKey] = ac
-    ad.Destroying:Once(function()
-        if aa._CategoryRegistry[categoryKey] == ac then
-            aa._CategoryRegistry[categoryKey] = nil
-        end
-    end)
 
     return ac
 end
@@ -10296,7 +10455,7 @@ local aa = shared.LANGUAGE_FLAGS_CACHE
                     if not isfolder("badwars_translations") then
                         makefolder("badwars_translations")
                     end
-                    writefile(`badwars_translations/LanguageFlags.json`, game:GetService("HttpService"):JSONEncode(ab))
+                    safeWriteFile(`badwars_translations/LanguageFlags.json`, game:GetService("HttpService"):JSONEncode(ab), "translation-flags")
                 end, 5)
                 shared.LANGUAGE_FLAGS_CACHE = ab
                 return ab
@@ -10319,7 +10478,7 @@ local ab = shared.TargetLanguage and tostring(shared.TargetLanguage)
                     if not isfolder("badwars_translations") then
                         makefolder("badwars_translations")
                     end
-                    writefile("badwars_translations/lang.txt", "en")
+                    safeWriteFile("badwars_translations/lang.txt", "en", "translation-language")
                 end)
                 return "en"
             end
@@ -10375,7 +10534,7 @@ local ac = {
                         if not isfolder("badwars_translations") then
                             makefolder("badwars_translations")
                         end
-                        writefile(`badwars_translations/Languages.json`, game:GetService("HttpService"):JSONEncode(ad))
+                        safeWriteFile(`badwars_translations/Languages.json`, game:GetService("HttpService"):JSONEncode(ad), "translation-index")
                     end, 5)
                     local ae = populateLanguages(ad)
                     shared.LANGUAGES_TRANSLATION_API_CACHE = ae
@@ -10424,7 +10583,7 @@ local ac = {
                         if not isfolder("badwars_translations") then
                             makefolder("badwars_translations")
                         end
-                        writefile(`badwars_translations/{ab}.json`, game:GetService("HttpService"):JSONEncode(ad))
+                        safeWriteFile(`badwars_translations/{ab}.json`, game:GetService("HttpService"):JSONEncode(ad), "translation-locale")
                     end, 5)
                     shared[`TRANSLATION_API_LANGUAGE_CACHE_{tostring(ab)}`] = ad
                     return ad
@@ -10461,7 +10620,7 @@ function d.GetTranslation(af, ag)
     ae[ag] = ai
     if ag == ai and not table.find(ad, ag) and shared.VoidDev then
         table.insert(ad, ag)
-        writefile("FAILED_TRANSLATION.json", encode(ad))
+        safeWriteFile("FAILED_TRANSLATION.json", encode(ad), "translation-debug")
     end
     return ai
 end
@@ -10506,14 +10665,6 @@ shared.TRANSLATION_FUNCTION = function(af)
 end
 
 function d.CreateOverlay(af, ag)
-    ag = type(ag) == "table" and ag or {}
-    local overlayKey = normalizeUiKey(ag.Name)
-    af._OverlayRegistry = af._OverlayRegistry or {}
-    local existingOverlay = af._OverlayRegistry[overlayKey]
-    if existingOverlay and existingOverlay.Object and existingOverlay.Object.Parent then
-        return existingOverlay
-    end
-
     local ah
     ag.Size = ag.Size or UDim2.fromOffset(14, 14)
     ag.Position = ag.Position or UDim2.fromOffset(12, 14)
@@ -10550,6 +10701,10 @@ function d.CreateOverlay(af, ag)
         Pinned = false,
         Options = {},
     }
+
+    if d.OverlaysModuleCategory then
+        d.OverlaysModuleCategory:AddToggle(ai.Button, ag.Star)
+    end
 
     ah = Instance.new("TextButton")
     ah.Name = ag.Name .. "Overlay"
@@ -10814,1920 +10969,20 @@ function d.CreateOverlay(af, ag)
     ai.Children = ap
     af.Overlays[ag.Name] = ai
     af.Categories[ag.Name] = ai
-    af._OverlayRegistry[overlayKey] = ai
-    ah.Destroying:Once(function()
-        if af._OverlayRegistry[overlayKey] == ai then
-            af._OverlayRegistry[overlayKey] = nil
-        end
-    end)
 
     return ai
 end
 
 local af = Instance.new("BindableEvent")
+
+-- BADWARS_PUBLIC_CONFIGS_DISABLED_V1_BEGIN
 function d.CreateProfilesGUI(ag, ah)
-    local ai = { Sorts = {} }
-    local aj
-    local ak = a.createCustomSignal("ProfilesGUI_DropdownEvent")
-    local al = a.createCustomSignal("modeActivated_Signal")
-    local am = a.createCustomSignal("uploadPopupClosed_Signal")
-    ag.PublicConfigs = ai
-
-    local an = "newest"
-
-    local ao = function() end
-    local ap = function() end
-    local aq = function() end
-    local ar = function() end
-    local as = function() end
-
-    local at = false
-    local au = false
-    local av = false
-
-    local aw = Instance.new("Frame")
-    aw.Name = "ConfigGUI"
-    aw.Size = UDim2.fromOffset(1000, 550)
-    aw.Position = UDim2.new(0.5, -500, 0.5, -275)
-    aw.BackgroundColor3 = o.Main
-    aw.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    aw.Visible = false
-    aw.Parent = w
-    x = aw
-    addBlur(aw)
-    addCorner(aw)
-    makeDraggable(aw)
-
-    ai.Window = aw
-    table.insert(d.Windows, aw)
-
-    local ax = Instance.new("TextButton")
-    ax.BackgroundTransparency = 1
-    ax.Text = ""
-    ax.Modal = true
-    ax.Parent = aw
-
-    local ay = Instance.new("TextButton")
-    ay.Name = "UploadButton"
-    ay.Parent = aw
-    ay.BackgroundColor3 = Color3.fromRGB(5, 134, 105)
-    ay.Size = UDim2.fromOffset(140, 40)
-    ay.Position = UDim2.new(1, -156, 0, 54)
-    ay.Font = Enum.Font.GothamBold
-    ay.Text = "UPLOAD CONFIG"
-    ay.TextColor3 = Color3.new(1, 1, 1)
-    ay.TextSize = 12
-    ay.AutoButtonColor = false
-    ay.ZIndex = 3
-    ay.Visible = (getgenv().username ~= nil and getgenv().password ~= nil)
-    addCorner(ay)
-
-    ay.MouseEnter:Connect(function()
-        if av then
-            return
-        end
-        g:Create(ay, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(10, 160, 120) }):Play()
-    end)
-    ay.MouseLeave:Connect(function()
-        if av then
-            return
-        end
-        g:Create(ay, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(5, 134, 105) }):Play()
-    end)
-
-    local az = Instance.new("Frame")
-    az.Name = "UploadPopup"
-    az.Parent = aw
-    az.AnchorPoint = Vector2.new(0.5, 0.5)
-    az.Position = UDim2.fromScale(0.5, 0.55)
-    az.Size = UDim2.fromOffset(420, 320)
-    az.BackgroundColor3 = m.Dark(o.Main, 0.1)
-    az.Visible = false
-    az.ZIndex = 2
-    az.ChildAdded:Connect(function(aA)
-        pcall(function()
-            aA.ZIndex = 2
-        end)
-    end)
-    addCorner(az)
-    addBlur(az)
-
-    local aA = Instance.new("UIStroke")
-    aA.Color = Color3.fromRGB(42, 41, 42)
-    aA.Thickness = 2
-    aA.Parent = az
-
-    local aB = addCloseButton(az)
-    aB.ZIndex = 11
-
-    aB.Activated:Connect(function()
-        az.Visible = false
-        am:Fire()
-        al:Fire("")
-    end)
-
-    local aC = true
-
-    local I = Instance.new("TextLabel")
-    I.Parent = az
-    I.BackgroundTransparency = 1
-    I.Position = UDim2.new(0, 16, 0, 12)
-    I.Size = UDim2.new(1, -32, 0, 30)
-    I.Font = Enum.Font.GothamBold
-    I.Text = "Upload Config"
-    I.TextColor3 = Color3.fromRGB(220, 220, 220)
-    I.TextSize = 16
-    I.TextXAlignment = Enum.TextXAlignment.Left
-
-    local J = Instance.new("ScrollingFrame")
-    J.Parent = az
-    J.BackgroundTransparency = 1
-    J.Size = UDim2.fromScale(1, 0.23)
-    J.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    J.ScrollBarThickness = 4
-    J.Position = UDim2.new(0, 10, 0, 60)
-    J.CanvasSize = UDim2.new()
-
-    local K = Instance.new("UIScale")
-    K.Parent = J
-    K.Scale = 0.97
-
-    J.ChildAdded:Connect(function(L)
-        pcall(function()
-            L.ZIndex = 3
-        end)
-    end)
-
-    local L = Instance.new("UIListLayout")
-    L.Parent = J
-    L.Padding = UDim.new(0, 6)
-    L.SortOrder = Enum.SortOrder.LayoutOrder
-
-    local M
-
-    local function populateLocalProfiles()
-        for N, O in J:GetChildren() do
-            if O:IsA("TextButton") then
-                O:Destroy()
-            end
-        end
-        for N, O in d.Profiles do
-            local P = Instance.new("TextButton")
-            P.Parent = J
-            P.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            P.Size = UDim2.new(1, -10, 0, 38)
-            P.Text = O.Name
-            P.TextColor3 = Color3.new(1, 1, 1)
-            P.Font = Enum.Font.Gotham
-            P.TextSize = 16
-            P.ZIndex = 2
-            P.TextTruncate = Enum.TextTruncate.AtEnd
-            addCorner(P)
-
-            P.Activated:Connect(function()
-                M = O.Name
-                for Q, R in J:GetChildren() do
-                    if R:IsA("TextButton") then
-                        R.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                    end
-                end
-                P.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-            end)
-        end
-        J.CanvasSize = UDim2.fromOffset(0, L.AbsoluteContentSize.Y + 10)
-    end
-
-    populateLocalProfiles()
-
-    local N = Instance.new("TextBox")
-    N.Parent = az
-    N.BackgroundColor3 = m.Light(o.Main, 0.3)
-    N.Position = UDim2.new(0, 16, 0, 150)
-    N.Size = UDim2.new(1, -32, 0, 36)
-    N.PlaceholderText = "Config name (required)"
-    N.Text = ""
-    N.Font = Enum.Font.Gotham
-    N.TextColor3 = Color3.new(1, 1, 1)
-    N.TextSize = 15
-    addCorner(N)
-
-    local O = Instance.new("TextBox")
-    O.Parent = az
-    O.BackgroundColor3 = m.Light(o.Main, 0.3)
-    O.Position = UDim2.new(0, 16, 0, 190)
-    O.Size = UDim2.new(1, -32, 0, 36)
-    O.PlaceholderText = "Description (optional)"
-    O.Text = ""
-    O.Font = Enum.Font.Gotham
-    O.TextColor3 = Color3.new(1, 1, 1)
-    O.TextSize = 15
-    addCorner(O)
-
-    local P = Instance.new("TextButton")
-    P.Parent = az
-    P.BackgroundColor3 = Color3.fromRGB(5, 134, 105)
-    P.Position = UDim2.new(0, 16, 1, -60)
-    P.Size = UDim2.new(0.5, -24, 0, 40)
-    P.Text = "PUBLISH"
-    P.TextColor3 = Color3.new(1, 1, 1)
-    P.Font = Enum.Font.GothamBold
-    P.TextSize = 13
-    addCorner(P)
-
-    local Q = Instance.new("TextButton")
-    Q.Parent = az
-    Q.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    Q.Position = UDim2.new(0.5, 8, 1, -60)
-    Q.Size = UDim2.new(0.5, -24, 0, 40)
-    Q.Text = "CANCEL"
-    Q.TextColor3 = Color3.new(1, 1, 1)
-    Q.Font = Enum.Font.GothamBold
-    Q.TextSize = 13
-    addCorner(Q)
-
-    local R = function() end
-    local function resetConfigs()
-        for S, T in ai do
-            pcall(function()
-                if T.instance ~= nil then
-                    pcall(function()
-                        T:Destroy()
-                    end)
-                end
-            end)
-        end
-    end
-
-    local S = function() end
-
-    local T = Instance.new("TextButton")
-    T.Name = "DeleteButton"
-    T.Parent = aw
-    T.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    T.Size = UDim2.fromOffset(140, 40)
-    T.Position = UDim2.new(1, -312, 0, 54)
-    T.Font = Enum.Font.GothamBold
-    T.Text = "DELETE CONFIG"
-    T.TextColor3 = Color3.new(1, 1, 1)
-    T.TextSize = 12
-    T.AutoButtonColor = false
-    T.Visible = (getgenv().username and getgenv().password) and true or false
-    T.ZIndex = 2
-    addCorner(T)
-
-    T.MouseEnter:Connect(function()
-        if at then
-            return
-        end
-        g:Create(T, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(220, 50, 50) }):Play()
-    end)
-    T.MouseLeave:Connect(function()
-        if at then
-            return
-        end
-        g:Create(T, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(180, 40, 40) }):Play()
-    end)
-
-    local U = Instance.new("TextButton")
-    U.Name = "UpdateButton"
-    U.Parent = aw
-    U.BackgroundColor3 = Color3.fromRGB(100, 80, 200)
-    U.Size = UDim2.fromOffset(140, 40)
-    U.Position = UDim2.new(1, -468, 0, 54)
-    U.Font = Enum.Font.GothamBold
-    U.Text = "UPDATE CONFIG"
-    U.TextColor3 = Color3.new(1, 1, 1)
-    U.TextSize = 12
-    U.AutoButtonColor = false
-    U.Visible = (getgenv().username and getgenv().password) and true or false
-    U.ZIndex = 2
-    addCorner(U)
-
-    U.MouseEnter:Connect(function()
-        if au then
-            return
-        end
-        g:Create(U, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(130, 100, 230) }):Play()
-    end)
-    U.MouseLeave:Connect(function()
-        if au then
-            return
-        end
-        g:Create(U, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(100, 80, 200) }):Play()
-    end)
-
-    local function revertToNormalMode(V)
-        au = false
-        if not V then
-            as()
-        end
-
-        for W, X in ai do
-            if X.instance and X.deleteIcon and X.canDelete and not X.specialDelete then
-                X.deleteIcon.Image = u("trash", true)
-                n:Tween(X.deleteIcon, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                    BackgroundColor3 = Color3.fromRGB(60, 60, 60),
-                })
-                local Y = X.deleteIcon:FindFirstChild("UpdateStroke")
-                if Y then
-                    Y:Destroy()
-                end
-            end
-        end
-    end
-
-    aq = function()
-        au = true
-
-        local V = 0
-
-        for W, X in ai do
-            if X.instance and X.deleteIcon and X.canDelete and not X.specialDelete then
-                V = V + 1
-                X.deleteIcon.Image = u("upload", true)
-                n:Tween(X.deleteIcon, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                    BackgroundColor3 = Color3.fromRGB(70, 60, 140),
-                })
-
-                local oldStroke = X.deleteIcon:FindFirstChild("UpdateStroke")
-                if oldStroke then
-                    oldStroke:Destroy()
-                end
-                local Y = Instance.new("UIStroke")
-                Y.Name = "UpdateStroke"
-                Y.Color = Color3.fromRGB(130, 100, 230)
-                Y.Thickness = 0
-                Y.Transparency = 1
-                Y.Parent = X.deleteIcon
-                n:Tween(Y, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                    Thickness = 1.5,
-                    Transparency = 0.3,
-                })
-            end
-        end
-        if V == 0 then
-            flickerTextEffect(U, true, "UPDATE CONFIG")
-            n:Tween(U, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(100, 80, 200),
-            })
-            revertToNormalMode(true)
-            ar("No Configs To Update :c", true)
-            task.delay(1.3, function()
-                as()
-            end)
-        else
-            d:CreateNotification("BadWars", "Click the upload icon on any of your configs to update them", 5, "info")
-            ar("Click the 'Upload' icon to update a config", true)
-        end
-    end
-
-    al:Connect(function(V)
-        if V == "Update" then
-            return
-        end
-        if au then
-            flickerTextEffect(U, true, "UPDATE CONFIG")
-            n:Tween(U, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(100, 80, 200),
-            })
-            revertToNormalMode()
-        end
-    end)
-
-    U.Activated:Connect(function()
-        if not getgenv().username or not getgenv().password then
-            d:CreateNotification("BadWars", "You must be logged in to update configs", 6, "warning")
-            return
-        end
-
-        al:Fire("Update")
-
-        if au then
-            flickerTextEffect(U, true, "UPDATE CONFIG")
-            n:Tween(U, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(100, 80, 200),
-            })
-            revertToNormalMode()
-            d:CreateNotification("BadWars", "Update mode cancelled", 3, "info")
-        else
-            flickerTextEffect(U, true, "STOP UPDATING")
-            n:Tween(U, TweenInfo.new(0.15), {
-                BackgroundColor3 = m.Dark(Color3.fromRGB(100, 80, 200), 0.3),
-            })
-            aq()
-        end
-    end)
-
-    local function timestampToDate(V)
-        local W = (os.time() - (tonumber(V) or 0)) / 86400
-        if W < 1 then
-            return "Today"
-        else
-            local X = math.floor(W)
-            return X .. " day" .. (X > 1 and "s" or "") .. " ago"
-        end
-    end
-
-    local V = {}
-    local W
-    local X = "all"
-
-    local Y = Instance.new("Frame")
-    Y.Name = "PlaceFilterFrame"
-    Y.Parent = az
-    Y.BackgroundTransparency = 1
-    Y.Position = UDim2.new(0, 16, 0, 50)
-    Y.Size = UDim2.new(1, -32, 0, 30)
-    Y.Visible = false
-
-    local Z = Instance.new("UIListLayout")
-    Z.Parent = Y
-    Z.FillDirection = Enum.FillDirection.Horizontal
-    Z.SortOrder = Enum.SortOrder.LayoutOrder
-    Z.Padding = UDim.new(0, 6)
-    Z.HorizontalAlignment = Enum.HorizontalAlignment.Left
-
-    local _ = {}
-
-    local aD = {
-        ["6872265039"] = "BW Lobby",
-        ["6872274481"] = "BW Game",
-    }
-
-    local function createPlaceFilterButton(aE, aF)
-        local aG = Instance.new("TextButton")
-        aG.Name = aD[aE] or aE
-        aG.Parent = Y
-        aG.ZIndex = 3
-        aG.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-        aG.BackgroundTransparency = (X == aF) and 0 or 0.8
-        aG.Size = UDim2.fromOffset(85, 28)
-        aG.Font = Enum.Font.GothamBold
-        aG.Text = aG.Name:upper()
-        aG.TextColor3 = Color3.new(1, 1, 1)
-        aG.TextSize = 10
-        aG.TextTransparency = (X == aF) and 0 or 0.6
-        aG.AutoButtonColor = false
-        addCorner(aG)
-
-        local aH = {
-            Button = aG,
-            PlaceId = aF,
-            SetActive = function(aH, aI)
-                aG.BackgroundTransparency = aI and 0 or 0.8
-                aG.TextTransparency = aI and 0 or 0.6
-            end,
-        }
-
-        aG.Activated:Connect(function()
-            X = aF
-            for aI, aJ in _ do
-                aJ:SetActive(false)
-            end
-            aH:SetActive(true)
-            ao()
-        end)
-
-        connectguicolorchange(function(aI, aJ, aK)
-            aG.BackgroundColor3 = Color3.fromHSV(aI, aJ, aK)
-        end)
-
-        table.insert(_, aH)
-        return aH
-    end
-
-    local function populateDeleteConfigs()
-        for aE, aF in J:GetChildren() do
-            if aF:IsA("TextButton") or aF:IsA("TextLabel") then
-                aF:Destroy()
-            end
-        end
-
-        local aE = {}
-        for aF, aG in V do
-            local aH = tostring(aG.place or "")
-            if X == "all" then
-                table.insert(aE, aG)
-            elseif X == "no_place" then
-                if aH == "" or aH == "nil" then
-                    table.insert(aE, aG)
-                end
-            else
-                if aH == X then
-                    table.insert(aE, aG)
-                end
-            end
-        end
-
-        if #aE == 0 then
-            local aF = Instance.new("TextLabel")
-            aF.Parent = J
-            aF.BackgroundTransparency = 1
-            aF.Size = UDim2.new(1, -10, 0, 40)
-            aF.Text = "No configs found for this filter"
-            aF.TextColor3 = Color3.fromRGB(150, 150, 150)
-            aF.Font = Enum.Font.Gotham
-            aF.TextSize = 13
-            return
-        end
-
-        for aF, aG in aE do
-            local aH = Instance.new("TextButton")
-            aH.Parent = J
-            aH.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            aH.Size = UDim2.new(1, -10, 0, 40)
-
-            local aI = ""
-            local aJ = tostring(aG.place or "")
-            if aJ ~= "" and aJ ~= "nil" then
-                aI = " [Place: " .. aJ .. "]"
-            end
-
-            aH.Text = aG.name .. aI .. " (Last Edited: " .. timestampToDate(aG.edited) .. ")"
-            aH.TextColor3 = Color3.new(1, 1, 1)
-            aH.Font = Enum.Font.Gotham
-            aH.TextSize = 14
-            aH.TextTruncate = Enum.TextTruncate.AtEnd
-            addCorner(aH)
-
-            aH.Activated:Connect(function()
-                W = aG.name
-                for aK, aL in J:GetChildren() do
-                    if aL:IsA("TextButton") then
-                        aL.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                    end
-                end
-                aH.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-            end)
-        end
-
-        J.CanvasSize = UDim2.fromOffset(0, L.AbsoluteContentSize.Y + 10)
-    end
-
-    ao = function()
-        ar("Click on the config you want to delete", true)
-        I.Text = "Delete Config"
-        J.Size = UDim2.fromScale(1, 0.52)
-        J.Position = UDim2.new(0, 10, 0, 90)
-        N.Visible = false
-        O.Visible = false
-        P.Text = "DELETE"
-        P.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        Q.Text = "CANCEL"
-        Y.Visible = true
-
-        for aE, aF in _ do
-            aF.Button:Destroy()
-        end
-        _ = {}
-
-        if #V == 0 then
-            Y.Visible = false
-            for aE, aF in J:GetChildren() do
-                if aF:IsA("TextButton") or aF:IsA("TextLabel") then
-                    aF:Destroy()
-                end
-            end
-            local aE = Instance.new("TextLabel")
-            aE.Parent = J
-            aE.BackgroundTransparency = 1
-            aE.Size = UDim2.new(1, -10, 0, 40)
-            aE.Text = "No uploaded configs found"
-            aE.TextColor3 = Color3.fromRGB(150, 150, 150)
-            aE.Font = Enum.Font.Gotham
-            aE.TextSize = 13
-            return
-        end
-
-        local aE = {}
-        local aF = false
-        for aG, aH in V do
-            local aI = tostring(aH.place or "")
-            if aI == "" or aI == "nil" then
-                aF = true
-            else
-                if not table.find(aE, aI) then
-                    table.insert(aE, aI)
-                end
-            end
-        end
-
-        createPlaceFilterButton("All", "all")
-
-        if aF then
-            createPlaceFilterButton("No Place", "no_place")
-        end
-
-        table.sort(aE)
-        for aG, aH in aE do
-            local aI = aH
-
-            if #aH > 10 then
-                aI = aH:sub(1, 8) .. ".."
-            end
-            createPlaceFilterButton(aI, aH)
-        end
-
-        for aG, aH in _ do
-            aH:SetActive(aH.PlaceId == X)
-        end
-
-        populateDeleteConfigs()
-    end
-
-    ap = function()
-        ar("Click on the config you want to upload", true)
-        av = true
-        I.Text = "Upload Config"
-        N.Visible = true
-        O.Visible = true
-        P.Text = "PUBLISH"
-        P.BackgroundColor3 = Color3.fromRGB(5, 134, 105)
-        Q.Text = "CANCEL"
-        M = nil
-        Y.Visible = false
-        J.Size = UDim2.fromScale(1, 0.23)
-        J.Position = UDim2.new(0, 10, 0, 60)
-        populateLocalProfiles()
-    end
-
-    local aE = {
-        oldest = function(aE, aF)
-            return (aE.edited or 0) < (aF.edited or 0)
-        end,
-        newest = function(aE, aF)
-            return (aE.edited or 0) > (aF.edited or 0)
-        end,
-    }
-
-    am:Connect(function()
-        if at then
-            flickerTextEffect(T, true, "DELETE CONFIG")
-            n:Tween(T, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(180, 40, 40),
-            })
-            as()
-        end
-        at = false
-    end)
-
-    al:Connect(function(aF)
-        if aF == "Delete" then
-            return
-        end
-        if at then
-            flickerTextEffect(T, true, "DELETE CONFIG")
-            n:Tween(T, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(180, 40, 40),
-            })
-        end
-        at = false
-        az.Visible = false
-    end)
-
-    T.Activated:Connect(function()
-        if not getgenv().username or not getgenv().password then
-            d:CreateNotification("BadWars", "You must be logged in to delete configs", 6, "warning")
-            return
-        end
-        al:Fire("Delete")
-
-        d:CreateNotification("BadWars", "Fetching your uploaded configs...", 4, "info")
-        ar("Fetching uploaded configs...", true)
-
-        local aF, aG = pcall(function()
-            return request({
-                Url = "https://configs.vapevoidware.xyz/configs/by-username",
-                Method = "POST",
-                Headers = { ["Content-Type"] = "application/json" },
-                Body = l:JSONEncode({
-                    username = getgenv().username,
-                    password = getgenv().password,
-                }),
-            })
-        end)
-
-        if at then
-            flickerTextEffect(T, true, "DELETE CONFIG")
-            n:Tween(T, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(180, 40, 40),
-            })
-        else
-            flickerTextEffect(T, true, "STOP DELETING")
-            n:Tween(T, TweenInfo.new(0.15), {
-                BackgroundColor3 = m.Dark(Color3.fromRGB(180, 40, 40), 0.3),
-            })
-        end
-
-        if aF and aG and aG.StatusCode == 200 then
-            local aH = l:JSONDecode(aG.Body)
-            V = aH.configs or {}
-
-            if #V == 0 then
-                d:CreateNotification("BadWars", "You have no uploaded configs", 5, "info")
-                return
-            end
-
-            at = true
-            ao()
-            J.Visible = true
-            az.Visible = true
-        else
-            local aH = aG and aG.Body or "Request failed"
-            if aG and aG.StatusCode == 401 then
-                aH = "Invalid username/password"
-            else
-                local aI = decode(aH)
-                if aI ~= nil and type(aI) == "table" and aI.detail ~= nil then
-                    aH = aI.detail
-                end
-            end
-
-            ar("Couldn't fetch your configs :c", true)
-            task.delay(0.5, function()
-                as()
-            end)
-            d:CreateNotification("BadWars", "Failed to fetch your configs: " .. aH, 8, "warning")
-        end
-    end)
-
-    P.Activated:Connect(function()
-        if at then
-            if not W then
-                d:CreateNotification("BadWars", "Please select a config to delete", 5, "warning")
-                return
-            end
-
-            d:CreateNotification("BadWars", `Deleting {W}...`, 5, "info")
-
-            local aF, aG = pcall(function()
-                return request({
-                    Url = "https://configs.vapevoidware.xyz/configs",
-                    Method = "DELETE",
-                    Headers = { ["Content-Type"] = "application/json" },
-                    Body = l:JSONEncode({
-                        username = getgenv().username,
-                        password = getgenv().password,
-                        config = W,
-                        place = tostring(d.Place or game.PlaceId),
-                    }),
-                })
-            end)
-
-            if aF and aG and aG.StatusCode == 200 then
-                d:CreateNotification("BadWars", `Successfully deleted {W}`, 6, "info")
-                az.Visible = false
-                am:Fire()
-
-                task.spawn(function()
-                    task.wait(1)
-                    S()
-                end)
-            else
-                local aH = aG and aG.Body or "Unknown error"
-                if aG and aG.StatusCode == 401 then
-                    aH = "Invalid username/password!"
-                else
-                    local aI = decode(aH)
-                    if aI ~= nil and type(aI) == "table" and aI.detail ~= nil then
-                        aH = aI.detail
-                    end
-                end
-                d:CreateNotification("BadWars", "Delete failed: " .. aH, 8, "warning")
-            end
-        else
-            if not M then
-                d:CreateNotification("BadWars", "Please select a local profile first", 5, "warning")
-                return
-            end
-            if N.Text == "" then
-                d:CreateNotification("BadWars", "Config name is required", 5, "warning")
-                flickerTextEffect(N, true, "Name Required!")
-                task.wait(0.3)
-                flickerTextEffect(N, true, "")
-                return
-            end
-
-            local aF = "badscript/profiles/" .. M .. d.Place .. ".txt"
-            if not D(aF) then
-                d:CreateNotification(
-                    "BadWars",
-                    "Failed to read config file. Please choose different profile :c",
-                    6,
-                    "warning"
-                )
-                return
-            end
-            local aG, aH = pcall(readfile, aF)
-            if not (aG and aH ~= nil) then
-                d:CreateNotification(
-                    "BadWars",
-                    "Failed to read config file. Please choose different profile :c",
-                    6,
-                    "warning"
-                )
-                return
-            end
-
-            d:CreateNotification("BadWars", "Publishing config...", 5, "info")
-
-            local aI = {
-                username = getgenv().username,
-                password = getgenv().password,
-                config_name = N.Text,
-                config = aH,
-                color = { d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value },
-                description = O.Text,
-            }
-            if aC then
-                aI.place = d.Place or game.PlaceId
-                aI.place = tostring(aI.place)
-            end
-
-            local aJ, aK = pcall(function()
-                return request({
-                    Url = "https://configs.vapevoidware.xyz/configs",
-                    Method = "POST",
-                    Headers = { ["Content-Type"] = "application/json" },
-                    Body = l:JSONEncode(aI),
-                })
-            end)
-
-            if aJ and aK and aK.StatusCode == 200 then
-                local aL = aK.Body
-                local aM = string.find(aL, "isOverwritten", 1, true) and true or false
-                d:CreateNotification(
-                    "BadWars",
-                    `Successfully published "{N.Text}"`
-                        .. (aM and " (overwritten)" or "")
-                        .. (aC and " [Place Based]" or ""),
-                    8,
-                    "info"
-                )
-
-                az.Visible = false
-                am:Fire()
-
-                task.spawn(function()
-                    task.wait(1)
-                    S()
-                end)
-            else
-                local aL = aJ and (aK and aK.Body or "Unknown error") or tostring(aK)
-                if aK.StatusCode == 401 then
-                    aL = "Username or Password missing/invalid!"
-                else
-                    local aM = decode(aL)
-                    if aM ~= nil and type(aM) == "table" and aM.detail ~= nil then
-                        aL = aM.detail
-                    end
-                end
-                if string.lower(aL):find("rate limit") then
-                    ar("Please wait before uploading a config!", true)
-                    task.delay(2, function()
-                        ar("Click on the config you want to upload", true)
-                    end)
-                end
-                d:CreateNotification("BadWars", "Failed to publish: " .. aL, 10, "warning")
-            end
-        end
-    end)
-
-    Q.Activated:Connect(function()
-        az.Visible = false
-        at = false
-        av = false
-        ap()
-    end)
-
-    am:Connect(function()
-        if av then
-            flickerTextEffect(ay, true, "UPLOAD CONFIG")
-            n:Tween(ay, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(5, 134, 105),
-            })
-            av = false
-            as()
-        end
-    end)
-
-    al:Connect(function(aF)
-        if aF == "Upload" then
-            return
-        end
-        if av then
-            flickerTextEffect(ay, true, "UPLOAD CONFIG")
-            n:Tween(ay, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(5, 134, 105),
-            })
-            av = false
-            az.Visible = false
-            as()
-        end
-    end)
-
-    ay.Activated:Connect(function()
-        al:Fire("Upload")
-        at = false
-
-        if av then
-            flickerTextEffect(ay, true, "UPLOAD CONFIG")
-            n:Tween(ay, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(5, 134, 105),
-            })
-            av = false
-            az.Visible = false
-            as()
-        else
-            flickerTextEffect(ay, true, "STOP UPLOADING")
-            n:Tween(ay, TweenInfo.new(0.15), {
-                BackgroundColor3 = m.Dark(Color3.fromRGB(5, 134, 105), 0.3),
-            })
-            av = true
-            ap()
-            populateLocalProfiles()
-            O.Text = ""
-            az.Visible = true
-        end
-    end)
-
-    local function updateDeleteButtonVisibility()
-        T.Visible = (getgenv().username ~= nil and getgenv().password ~= nil)
-        ay.Visible = T.Visible
-        U.Visible = T.Visible
-    end
-    updateDeleteButtonVisibility()
-
-    local aF = Instance.new("ImageLabel")
-    aF.Name = "Icon"
-    aF.Size = UDim2.fromOffset(16, 16)
-    aF.Position = UDim2.fromOffset(16, 14)
-    aF.BackgroundTransparency = 1
-    aF.Image = u("badscript/assets/new/profilesicon.png")
-    aF.ImageColor3 = o.Text
-    aF.Parent = aw
-
-    local aG = Instance.new("TextLabel")
-    aG.Parent = aF
-    aG.BackgroundTransparency = 1
-    aG.Position = UDim2.new(0, 24, 0, 0)
-    aG.Size = UDim2.new(1, 100, 0, 16)
-    aG.Font = Enum.Font.GothamBold
-    aG.Text = "Public Profiles"
-    aG.TextColor3 = o.Text
-    aG.TextSize = 14
-    aG.TextXAlignment = Enum.TextXAlignment.Left
-
-    local aH = Instance.new("Frame")
-    aH.Name = "BadgeContainer"
-    aH.Parent = aw
-    aH.BackgroundTransparency = 1
-    aH.Position = UDim2.new(0, 160, 0, 12)
-    aH.Size = UDim2.fromOffset(400, 20)
-
-    local aI = Instance.new("UIListLayout")
-    aI.Parent = aH
-    aI.FillDirection = Enum.FillDirection.Horizontal
-    aI.SortOrder = Enum.SortOrder.LayoutOrder
-    aI.Padding = UDim.new(0, 6)
-    aI.VerticalAlignment = Enum.VerticalAlignment.Center
-
-    if getgenv().username then
-        local aJ = Instance.new("Frame")
-        aJ.Name = "UserBadge"
-        aJ.Parent = aH
-        aJ.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-        aJ.Size = UDim2.fromOffset(0, 20)
-        aJ.AutomaticSize = Enum.AutomaticSize.X
-        addCorner(aJ, UDim.new(0, 10))
-
-        local aK = Instance.new("UIPadding")
-        aK.Parent = aJ
-        aK.PaddingLeft = UDim.new(0, 8)
-        aK.PaddingRight = UDim.new(0, 8)
-
-        local aL = Instance.new("TextLabel")
-        aL.Parent = aJ
-        aL.BackgroundTransparency = 1
-        aL.Position = UDim2.fromOffset(4, -1)
-        aL.Size = UDim2.fromOffset(12, 20)
-        aL.Font = Enum.Font.GothamBold
-        aL.Text = "@"
-        aL.TextColor3 = Color3.fromRGB(150, 150, 150)
-        aL.TextSize = 12
-
-        local aM = Instance.new("TextLabel")
-        aM.Parent = aJ
-        aM.BackgroundTransparency = 1
-        aM.Position = UDim2.fromOffset(16, 0)
-        aM.Size = UDim2.fromOffset(0, 20)
-        aM.AutomaticSize = Enum.AutomaticSize.X
-        aM.Font = Enum.Font.Gotham
-        aM.Text = tostring(getgenv().username)
-        aM.TextColor3 = Color3.fromRGB(200, 200, 200)
-        aM.TextSize = 13
-        aM.TextXAlignment = Enum.TextXAlignment.Left
-
-        local aN = Instance.new("UIStroke")
-        aN.Color = Color3.fromRGB(70, 70, 70)
-        aN.Thickness = 1
-        aN.Parent = aJ
-    end
-
-    if getgenv().admin_config_api_key ~= nil and shared.VoidDev then
-        local aJ = Instance.new("Frame")
-        aJ.Name = "AdminBadge"
-        aJ.Parent = aH
-        aJ.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
-        aJ.Size = UDim2.fromOffset(0, 20)
-        aJ.AutomaticSize = Enum.AutomaticSize.X
-        addCorner(aJ, UDim.new(0, 10))
-
-        local aK = Instance.new("UIPadding")
-        aK.Parent = aJ
-        aK.PaddingLeft = UDim.new(0, 8)
-        aK.PaddingRight = UDim.new(0, 8)
-
-        local aL = Instance.new("TextLabel")
-        aL.Parent = aJ
-        aL.BackgroundTransparency = 1
-        aL.Position = UDim2.fromOffset(3, -1)
-        aL.Size = UDim2.fromOffset(12, 20)
-        aL.Font = Enum.Font.GothamBold
-        aL.Text = "*"
-        aL.TextColor3 = Color3.fromRGB(255, 100, 100)
-        aL.TextSize = 12
-
-        local aM = Instance.new("TextLabel")
-        aM.Parent = aJ
-        aM.BackgroundTransparency = 1
-        aM.Position = UDim2.fromOffset(16, 0)
-        aM.Size = UDim2.fromOffset(0, 20)
-        aM.AutomaticSize = Enum.AutomaticSize.X
-        aM.Font = Enum.Font.GothamBold
-        aM.Text = "ADMIN"
-        aM.TextColor3 = Color3.fromRGB(255, 120, 120)
-        aM.TextSize = 13
-        aM.TextXAlignment = Enum.TextXAlignment.Left
-
-        local aN = Instance.new("UIStroke")
-        aN.Color = Color3.fromRGB(255, 80, 80)
-        aN.Thickness = 1
-        aN.Transparency = 0.3
-        aN.Parent = aJ
-    end
-
-    local aJ = Instance.new("TextLabel")
-    aJ.Parent = aF
-    aJ.BackgroundTransparency = 1
-    aJ.Position = UDim2.new(0, 24, 0, 0)
-    aJ.Size = UDim2.new(1, 100, 0, 16)
-    aJ.Font = Enum.Font.GothamBold
-    aJ.Text = "Public Profiles"
-    aJ.TextColor3 = o.Text
-    aJ.TextSize = 14
-    aJ.TextXAlignment = Enum.TextXAlignment.Left
-
-    local aK = Instance.new("ImageButton")
-    aK.Name = "CloseButton"
-    aK.Size = UDim2.fromOffset(24, 24)
-    aK.Position = UDim2.new(1, -40, 0, 12)
-    aK.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    aK.AutoButtonColor = false
-    aK.Image = u("badscript/assets/new/close.png")
-    aK.ImageColor3 = Color3.fromRGB(200, 200, 200)
-    aK.Parent = aw
-    addCorner(aK)
-
-    aK.MouseEnter:Connect(function()
-        g:Create(aK, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = Color3.fromRGB(220, 53, 53),
-            ImageColor3 = Color3.fromRGB(255, 255, 255),
-        }):Play()
-    end)
-
-    aK.MouseLeave:Connect(function()
-        g:Create(aK, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = Color3.fromRGB(60, 60, 60),
-            ImageColor3 = Color3.fromRGB(200, 200, 200),
-        }):Play()
-    end)
-
-    aK.Activated:Connect(function()
-        aw.Visible = false
-        v.Visible = true
-        if d.TutorialAPI.isActive then
-            d.TutorialAPI:setText("Tutorial Cancelled")
-            task.delay(0.3, function()
-                d.TutorialAPI:revertTutorialMode()
-            end)
-        end
-    end)
-
-    local aL = Instance.new("Frame")
-    aL.Parent = aw
-    aL.BackgroundColor3 = Color3.new(1, 1, 1)
-    aL.BackgroundTransparency = 0.95
-    aL.BorderSizePixel = 0
-    aL.Position = UDim2.new(0, 0, 0, 44)
-    aL.Size = UDim2.new(1, 0, 0, 1)
-
-    local aM = Instance.new("Frame")
-    aM.Name = "Search"
-    aM.Parent = aw
-    aM.BackgroundColor3 = m.Dark(o.Main, 0.05)
-    aM.BorderSizePixel = 0
-    aM.Position = UDim2.new(0, 16, 0, 54)
-    aM.Size = UDim2.fromOffset(968, 40)
-
-    local aN = Instance.new("UIStroke")
-    aN.Color = Color3.fromRGB(42, 41, 42)
-    aN.Thickness = 1
-    aN.Parent = aM
-
-    addCorner(aM)
-
-    local aO = Instance.new("ImageLabel")
-    aO.Parent = aM
-    aO.BackgroundTransparency = 1
-    aO.BorderSizePixel = 0
-    aO.Position = UDim2.new(0, 14, 0.5, -8)
-    aO.Size = UDim2.fromOffset(16, 16)
-    aO.Image = u("badscript/assets/new/search.png")
-    aO.ImageColor3 = Color3.fromRGB(150, 150, 150)
-
-    local aP = Instance.new("TextBox")
-    aP.Parent = aM
-    aP.BackgroundTransparency = 1
-    aP.BorderSizePixel = 0
-    aP.Position = UDim2.new(0, 40, 0, 0)
-    aP.Size = UDim2.new(1, -50, 1, 0)
-    aP.Font = Enum.Font.Gotham
-    aP.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
-    aP.PlaceholderText = "Search profile name or username..."
-    aP.Text = ""
-    aP.TextColor3 = Color3.fromRGB(200, 200, 200)
-    aP.TextSize = 15
-    aP.TextXAlignment = Enum.TextXAlignment.Left
-
-    local aQ = Instance.new("Frame")
-    aQ.Parent = aw
-    aQ.BackgroundTransparency = 1
-    aQ.BorderSizePixel = 0
-    aQ.Position = UDim2.new(0, 16, 0, 104)
-    aQ.Size = UDim2.fromOffset(968, 32)
-
-    local aR = Instance.new("UIListLayout")
-    aR.Parent = aQ
-    aR.FillDirection = Enum.FillDirection.Horizontal
-    aR.SortOrder = Enum.SortOrder.LayoutOrder
-    aR.VerticalAlignment = Enum.VerticalAlignment.Center
-    aR.Padding = UDim.new(0, 8)
-
-    local aS = Instance.new("ScrollingFrame")
-    aS.Name = "Children"
-    aS.Parent = aw
-    aS.Position = UDim2.new(0, 16, 0, 144)
-    aS.Size = UDim2.fromOffset(968, 390)
-    aS.BackgroundTransparency = 1
-    aS.BorderSizePixel = 0
-    aS.ScrollBarThickness = 3
-    aS.ScrollBarImageTransparency = 0.5
-    aS.AutomaticCanvasSize = Enum.AutomaticSize.XY
-    aS.CanvasSize = UDim2.new()
-    aS.ClipsDescendants = false
-
-    local aT = Instance.new("TextLabel")
-    aT.Name = "ConfigsInfo"
-    aT.Parent = aw
-    aT.Position = aS.Position
-    aT.Size = aS.Size
-    aT.Text = "No configs found :c"
-    aT.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    aT.TextSize = 18
-    aT.Visible = false
-
-    local aU = {
-        SetStep = function(aU, aV, aW)
-            if aW ~= nil then
-                aT.Visible = aW
-            end
-            if aV ~= nil then
-                aT.Text = aV
-            end
-        end,
-    }
-
-    S = function()
-        ar("Refreshing Configs...", true)
-        local aV, aW = F(function()
-            return l:JSONDecode(d.http_function("https://configs.vapevoidware.xyz"))
-        end, 3)
-        if not aV then
-            errorNotification("BadWars | Configs", "Couldn't load the configs data :c Try again later", 5)
-            ar("Couldn't load configs :c", true)
-            return
-        end
-
-        resetConfigs()
-        for aX, aY in aS:GetChildren() do
-            pcall(function()
-                if aY:IsA("TextButton") then
-                    aY:Destroy()
-                end
-            end)
-        end
-        ai = { Sorts = ai.Sorts }
-
-        table.sort(aW, aE[an])
-        local aX = 0
-        for aY, aZ in aW do
-            local a_ = d.Place or game.PlaceId
-            if not aZ.place or tostring(aZ.place) == tostring(a_) then
-                aX = aX + 1
-                aS.ClipsDescendants = (aX > 10)
-                R(aZ.name, aZ.username, aZ)
-            end
-        end
-        if aX < 1 then
-            aU:SetStep("No Configs found :C", true)
-        else
-            aU:SetStep(nil, false)
-        end
-        if aj ~= nil then
-            local aY = { "all" }
-            for aZ, a_ in table.clone(aW) do
-                if not a_.username then
-                    continue
-                end
-                a_.username = tostring(a_.username)
-                if table.find(aY, a_.username) then
-                    continue
-                end
-                table.insert(aY, a_.username)
-            end
-            aj:SetValues(aY, "all")
-        end
-        as()
-    end
-    d.ConfigsAPIRefresh = function()
-        task.spawn(S)
-    end
-
-    local aV = Instance.new("UIGridLayout")
-    aV.Parent = aS
-    aV.SortOrder = Enum.SortOrder.LayoutOrder
-    aV.CellSize = UDim2.fromOffset(180, 180)
-    aV.CellPadding = UDim2.fromOffset(12, 12)
-    aV.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-    aV:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        if ag.ThreadFix then
-            setthreadidentity(8)
-        end
-        aS.CanvasSize = UDim2.fromOffset(0, aV.AbsoluteContentSize.Y + 20)
-    end)
-
-    ak:Connect(function()
-        local aW = aj.Value
-        for aX, aY in ai do
-            if aY.instance ~= nil and aY.username ~= nil then
-                aY.instance.Visible = (aW == "all" or tostring(aY.username) == aW)
-            end
-        end
-    end)
-
-    R = function(aW, aX, aY)
-        if ai[aW] then
-            return
-        end
-        ai[aW] = table.clone(aY)
-
-        local aZ = false
-        local a_ = false
-
-        if getgenv().username and aX and aX:lower() == tostring(getgenv().username):lower() then
-            a_ = true
-        elseif getgenv().admin_config_api_key ~= nil and shared.VoidDev then
-            a_ = true
-            aZ = true
-        end
-        local a0 = Instance.new("TextButton")
-        a0.Parent = aS
-        a0.BackgroundTransparency = 1
-        a0.LayoutOrder = #aS:GetChildren() + 1
-        a0.ClipsDescendants = false
-        a0.AutoButtonColor = false
-        a0.Text = ""
-        a0.Size = UDim2.fromOffset(220, 220)
-
-        ai[aW].instance = a0
-
-        local a1, a2
-        if aY.color ~= nil and type(aY.color) == "table" then
-            a1, a2 = hsv(unpack(aY.color))
-        else
-            a1 = false
-            a2 = nil
-        end
-
-        local a3 = a1 and a2 ~= nil and "config" or "gui"
-        local function getStrokeColor()
-            return a3 == "gui" and Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value) or a2
-        end
-
-        local a4 = Instance.new("UIStroke")
-        a4.Color = Color3.fromRGB(50, 50, 50)
-        if a3 == "gui" then
-            connectguicolorchange(function(a5, a6, a7)
-                a4.Color = Color3.fromHSV(a5, a6, a7)
-            end)
-        else
-            a4.Color = a2
-        end
-        a4.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        a4.Thickness = 1
-        a4.Parent = a0
-
-        addCorner(a0)
-
-        local a5 = Instance.new("TextLabel")
-        a5.Parent = a0
-        a5.BackgroundTransparency = 1
-        a5.Position = UDim2.new(0, 12, 0, 12)
-        a5.Size = UDim2.new(1, -24, 0, 40)
-        a5.Font = Enum.Font.GothamBold
-        a5.RichText = true
-        a5.Text = aW
-        a5.TextColor3 = Color3.fromRGB(220, 220, 220)
-        a5.TextSize = 15
-        a5.TextWrapped = true
-        a5.TextXAlignment = Enum.TextXAlignment.Left
-        a5.TextYAlignment = Enum.TextYAlignment.Top
-
-        local a6 = Instance.new("TextLabel")
-        a6.Parent = a0
-        a6.BackgroundTransparency = 1
-        a6.Position = UDim2.new(0, 12, 0, 52)
-        a6.Size = UDim2.new(1, -24, 0, 18)
-        a6.Font = Enum.Font.Gotham
-        a6.Text = "By: @" .. aX
-        a6.TextColor3 = Color3.fromRGB(150, 150, 150)
-        a6.TextSize = 15
-        a6.TextXAlignment = Enum.TextXAlignment.Left
-
-        local a7 = Instance.new("TextLabel")
-        a7.Parent = a0
-        a7.BackgroundTransparency = 1
-        a7.Position = UDim2.new(0, 12, 0, 70)
-        a7.Size = UDim2.new(1, -24, 0, 65)
-        a7.Font = Enum.Font.Gotham
-        a7.Text = aY.description or "No description provided"
-        a7.TextColor3 = Color3.fromRGB(130, 130, 130)
-        a7.TextSize = 15
-        a7.TextWrapped = true
-        a7.TextXAlignment = Enum.TextXAlignment.Left
-        a7.TextYAlignment = Enum.TextYAlignment.Top
-
-        local a8 = Instance.new("TextLabel")
-        a8.Parent = a0
-        a8.BackgroundTransparency = 1
-        a8.Position = UDim2.new(0, 12, 0, 100)
-        a8.Size = UDim2.new(1, -24, 0, 16)
-        a8.Font = Enum.Font.Gotham
-        a8.Text = "Last Update: " .. timestampToDate(aY.edited)
-        a8.TextColor3 = Color3.fromRGB(100, 100, 100)
-        a8.TextSize = 14
-
-        local a9 = false
-
-        local ba = Instance.new("TextButton")
-        ba.Parent = a0
-        ba.BackgroundColor3 = Color3.fromRGB(5, 134, 105)
-        connectguicolorchange(function(bb, bc, bd)
-            ba.BackgroundColor3 = a9 and m.Dark(Color3.fromHSV(bb, bc, bd), 0.3) or Color3.fromHSV(bb, bc, bd)
-        end)
-        ba.Size = a_ and UDim2.new(1, -64, 0, 38) or UDim2.new(1, -24, 0, 38)
-        ba.Position = UDim2.new(0, 12, 1, -50)
-        ba.Font = Enum.Font.GothamBold
-        ba.Text = "DOWNLOAD"
-        ba.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ba.TextSize = 12
-        ba.AutoButtonColor = false
-        ba.BorderSizePixel = 0
-
-        addCorner(ba)
-
-        ba.MouseEnter:Connect(function()
-            local bb, bc, bd = d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value
-            local be = a9 and m.Dark(Color3.fromHSV(bb, bc, bd), 0.3) or Color3.fromHSV(bb, bc, bd)
-            g:Create(ba, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = m.Light(be, 0.3),
-            }):Play()
-        end)
-
-        ba.MouseLeave:Connect(function()
-            local bb, bc, bd = d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value
-            local be = a9 and m.Dark(Color3.fromHSV(bb, bc, bd), 0.3) or Color3.fromHSV(bb, bc, bd)
-            g:Create(ba, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = be,
-            }):Play()
-        end)
-
-        if a_ then
-            local bb = aZ
-
-            local bc = bb
-                    and {
-                        Title = "Force Delete Config",
-                        ActionWord = '<b><font color="#ff3b3b">Force Deleting</font></b>',
-                        DoneWord = '<b><font color="#ff6b6b">Force Deleted</font></b>',
-                        FailWord = '<b><font color="#ffb86b">Force Failed</font></b>',
-                        PromptNote = '<br/><font color="#ff6b6b"><b>Admin action.</b> This will permanently remove the config.</font>',
-                        Accent = Color3.fromRGB(200, 45, 45),
-                    }
-                or {
-                    Title = "Delete Config",
-                    ActionWord = '<b><font color="#ff6b6b">Deleting</font></b>',
-                    DoneWord = '<b><font color="#7CFF7C">Deleted</font></b>',
-                    FailWord = '<b><font color="#ffb86b">Failed</font></b>',
-                    PromptNote = '<br/><font color="#aaaaaa">This action cannot be undone.</font>',
-                    Accent = Color3.fromRGB(180, 40, 40),
-                }
-
-            local bd = Instance.new("ImageButton")
-            bd.Parent = a0
-            bd.Size = UDim2.fromOffset(35, 35)
-            bd.Position = UDim2.new(1, -47, 1, -50)
-            bd.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            bd.AutoButtonColor = false
-            bd.Image = u((aZ and "hammer" or "trash"), true)
-            bd.ImageColor3 = Color3.fromRGB(220, 220, 220)
-            bd.ZIndex = ba.ZIndex
-            addCorner(bd)
-
-            ai[aW].deleteIcon = bd
-            ai[aW].canDelete = a_
-            ai[aW].specialDelete = aZ
-
-            if bb then
-                bd.BackgroundColor3 = Color3.fromRGB(90, 30, 30)
-
-                local be = Instance.new("UIStroke")
-                be.Color = Color3.fromRGB(255, 80, 80)
-                be.Thickness = 1.5
-                be.Transparency = 0.3
-                be.Parent = bd
-            else
-                bd.MouseEnter:Connect(function()
-                    g:Create(bd, TweenInfo.new(0.15), {
-                        BackgroundColor3 = Color3.fromRGB(180, 40, 40),
-                        ImageColor3 = Color3.fromRGB(255, 255, 255),
-                    }):Play()
-                end)
-
-                bd.MouseLeave:Connect(function()
-                    g:Create(bd, TweenInfo.new(0.15), {
-                        BackgroundColor3 = Color3.fromRGB(60, 60, 60),
-                        ImageColor3 = Color3.fromRGB(220, 220, 220),
-                    }):Play()
-                end)
-            end
-
-            bd.Activated:Connect(function()
-                if au then
-                    local be = d.Profile or "Unknown Profile"
-
-                    d:CreatePrompt({
-                        Title = "Update Config",
-                        Text = string.format(
-                            'Overwrite <b><font color="rgb(150,150,255)">"%s"</font></b> with your current profile <b><font color="rgb(100,200,100)">"%s"</font></b>?\n\n<font color="rgb(180,180,180)">This will update the config with your current settings and GUI color.</font>',
-                            aW,
-                            be
-                        ),
-                        ConfirmText = "UPDATE",
-                        CancelText = "CANCEL",
-                        OnConfirm = function()
-                            local bf = "badscript/profiles/" .. be .. d.Place .. ".txt"
-                            if not D(bf) then
-                                d:CreateNotification(
-                                    "BadWars",
-                                    "Failed to read current profile config file",
-                                    6,
-                                    "warning"
-                                )
-                                revertToNormalMode()
-                                return
-                            end
-                            local bg, bh = pcall(readfile, bf)
-                            if not (bg and bh ~= nil) then
-                                d:CreateNotification(
-                                    "BadWars",
-                                    "Failed to read current profile config file",
-                                    6,
-                                    "warning"
-                                )
-                                revertToNormalMode()
-                                return
-                            end
-
-                            d:CreateNotification("BadWars", `Updating "{aW}"...`, 5, "info")
-
-                            local bi = {
-                                username = getgenv().username,
-                                password = getgenv().password,
-                                config_name = aW,
-                                config = bh,
-                                color = { d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value },
-                                description = aY.description or "",
-                            }
-
-                            if aC then
-                                bi.place = d.Place or game.PlaceId
-                                bi.place = tostring(bi.place)
-                            end
-
-                            local bj, bk = pcall(function()
-                                return request({
-                                    Url = "https://configs.vapevoidware.xyz/configs",
-                                    Method = "POST",
-                                    Headers = { ["Content-Type"] = "application/json" },
-                                    Body = l:JSONEncode(bi),
-                                })
-                            end)
-
-                            if bj and bk and bk.StatusCode == 200 then
-                                d:CreateNotification(
-                                    "BadWars",
-                                    `Successfully updated "{aW}" with profile "{be}"!`,
-                                    8,
-                                    "info"
-                                )
-
-                                revertToNormalMode()
-
-                                task.spawn(function()
-                                    task.wait(1)
-                                    S()
-                                end)
-                            else
-                                local bl = bj and (bk and bk.Body or "Unknown error") or tostring(bk)
-                                if bk and bk.StatusCode == 401 then
-                                    bl = "Username or Password missing/invalid!"
-                                else
-                                    local bm = decode(bl)
-                                    if bm ~= nil and type(bm) == "table" and bm.detail ~= nil then
-                                        bl = bm.detail
-                                    end
-                                end
-                                d:CreateNotification("BadWars", "Failed to update: " .. bl, 10, "warning")
-                                revertToNormalMode()
-                            end
-                        end,
-                        OnCancel = function()
-                            revertToNormalMode()
-                        end,
-                    })
-                else
-                    d:CreatePrompt({
-                        Title = bc.Title,
-                        Text = ([[Are you sure you want to delete "%s"?%s]]):format(aW, bc.PromptNote),
-                        ConfirmText = "DELETE",
-                        CancelText = "CANCEL",
-                        OnConfirm = function()
-                            d:CreateNotification("BadWars", (bc.ActionWord .. ' "%s"...'):format(aW), 5, "info")
-
-                            local be = {
-                                username = getgenv().username,
-                                password = getgenv().password,
-                                config = aW,
-                                place = tostring(d.Place or game.PlaceId),
-                            }
-
-                            if bb then
-                                be.adminkey = getgenv().admin_config_api_key
-                                be.username = tostring(aX)
-                                be.password = nil
-                            end
-
-                            local bf, bg = pcall(function()
-                                return request({
-                                    Url = "https://configs.vapevoidware.xyz/configs",
-                                    Method = "DELETE",
-                                    Headers = { ["Content-Type"] = "application/json" },
-                                    Body = l:JSONEncode(be),
-                                })
-                            end)
-
-                            if bf and bg and bg.StatusCode == 200 then
-                                d:CreateNotification("BadWars", (bc.DoneWord .. ' "%s"'):format(aW), 6, "info")
-                                S()
-                            else
-                                local bh = bg and bg.Body or "Unknown error"
-                                if bg and bg.StatusCode == 401 then
-                                    bh = "Invalid username/password!"
-                                else
-                                    local bi = decode(bh)
-                                    if bi and type(bi) == "table" and bi.detail then
-                                        bh = bi.detail
-                                    end
-                                end
-
-                                d:CreateNotification("BadWars", (bc.FailWord .. ": %s"):format(bh), 8, "warning")
-                            end
-                        end,
-                    })
-                end
-            end)
-        end
-
-        n:Tween(a0, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = m.Light(o.Main, 0.08),
-            BackgroundTransparency = 0,
-        })
-
-        a0.MouseEnter:Connect(function()
-            n:Tween(a0, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = m.Light(o.Main, 0.2),
-            })
-            n:Tween(a5, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
-                TextSize = 17,
-            })
-            n:Tween(a6, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                TextColor3 = Color3.fromRGB(230, 230, 230),
-            })
-            n:Tween(a8, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                TextColor3 = Color3.fromRGB(200, 200, 200),
-            })
-            n:Tween(a4, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-
-                Color = getStrokeColor(),
-                Thickness = 2,
-            })
-        end)
-
-        a0.MouseLeave:Connect(function()
-            n:Tween(a0, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = m.Light(o.Main, 0.08),
-            })
-            n:Tween(a5, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
-                TextSize = 15,
-            })
-            n:Tween(a6, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                TextColor3 = Color3.fromRGB(150, 150, 150),
-            })
-            n:Tween(a8, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                TextColor3 = Color3.fromRGB(100, 100, 100),
-            })
-            n:Tween(a4, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-
-                Color = m.Dark(getStrokeColor(), 0.3),
-                Thickness = 1,
-            })
-        end)
-
-        pcall(function()
-            local bb = ai[aW]
-            if bb then
-                local bc = `{bb.name} ({bb.username})`
-                local bd = d.Profiles
-                if bd ~= nil and type(bd) == "table" then
-                    for be, bf in bd do
-                        if type(bf) ~= "table" then
-                            continue
-                        end
-                        if bf.Name == bc then
-                            ba.Text = "REINSTALL"
-                            a9 = true
-                            local bg, bh, bi = d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value
-                            ba.BackgroundColor3 = a9 and m.Dark(Color3.fromHSV(bg, bh, bi), 0.3)
-                                or Color3.fromHSV(bg, bh, bi)
-                            break
-                        end
-                    end
-                end
-            end
-        end)
-
-        ba.Activated:Connect(function()
-            local bb = ai[aW]
-            if bb then
-                local bc = string.format("%s (%s)", bb.name, bb.username)
-                local bd, be = bb.link:match("^(.-/)([^/]+)$")
-                if not bd or not be then
-                    errorNotification(
-                        "BadWars | Configs",
-                        `Invalid URL for {tostring(aW)}. Please report this to a developer in BadWars support`,
-                        10
-                    )
-                    bwarn("Invalid URL:", bb.link)
-                    return
-                end
-                local bf, bg = pcall(function()
-                    return bd .. l:UrlEncode(be)
-                end)
-                if not bg then
-                    errorNotification(
-                        "BadWars | Configs",
-                        `Couldn't resolve the url for {tostring(aW)}. Please report this to a developer in BadWars support`,
-                        10
-                    )
-                    bwarn(`Invalid URL resolve: {tostring(bg)}`)
-                    return
-                end
-                local bh = d.http_function(bg)
-                if bh:sub(1, 1) == '"' and bh:sub(-1) == '"' then
-                    local bi, bj = pcall(function()
-                        return l:JSONDecode(bh)
-                    end)
-                    if bi then
-                        bh = bj
-                    end
-                end
-                local bi = false
-                for bj, bk in d.Profiles do
-                    if bk.Name == bc then
-                        bi = true
-                        break
-                    end
-                end
-                if not bi then
-                    table.insert(d.Profiles, { Name = bc, Bind = {} })
-                end
-                local bj
-                if bb.color ~= nil and type(bb.color) == "table" then
-                    local bk, bl, bm = unpack(bb.color)
-                    bk, bl, bm = num(bk), num(bl), num(bm)
-                    if bk ~= nil and bl ~= nil and bm ~= nil then
-                        bj = {
-                            Hue = bk,
-                            Sat = bl,
-                            Value = bm,
-                            CustomColor = true,
-                            Rainbow = false,
-                        }
-                        shared[`FORCE_PROFILE_GUI_COLOR_SET_{tostring(bc)}`] = bj
-                    end
-                end
-                if bb.description ~= nil then
-                    shared[`FORCE_PROFILE_TEXT_GUI_CUSTOM_TEXT_{tostring(bc)}`] = tostring(bb.description)
-                end
-                d:Save(bc)
-                writefile("badscript/profiles/" .. bc .. d.Place .. ".txt", bh)
-                d:Load(true, bc)
-                local bk = bi and "Reinstalled" or "Downloaded"
-                d:CreateNotification("BadWars", `{bk} "{aW}" by @{bb.username}`, 5, "info")
-                ba.Text = "REINSTALL"
-                a9 = true
-                local bl, bm, bn = d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value
-                ba.BackgroundColor3 = a9 and m.Dark(Color3.fromHSV(bl, bm, bn), 0.3) or Color3.fromHSV(bl, bm, bn)
-                S()
-            else
-                d:CreateNotification("BadWars", `Failed to fetch config ({aW})`, 10, "warning")
-            end
-        end)
-        task.wait(0.15)
-    end
-
-    local function addSorting(aW, aX, aY)
-        local aZ = aY.Size
-        local a_ = aY.On
-
-        local a0 = Instance.new("TextButton")
-        a0.Name = aW
-        a0.Parent = aQ
-        a0.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-        connectguicolorchange(a0)
-        a0.BackgroundTransparency = a_ and 0 or 0.8
-        a0.BorderSizePixel = 0
-        a0.Text = ""
-        a0.AutoButtonColor = false
-        a0.Size = aZ
-
-        local a1 = Instance.new("TextLabel")
-        a1.Parent = a0
-        a1.Name = "label"
-        a1.BackgroundTransparency = 1
-        a1.BorderSizePixel = 0
-        a1.Size = UDim2.new(1, 0, 1, 0)
-        a1.Font = Enum.Font.GothamBold
-        a1.TextTransparency = a_ and 0 or 0.6
-        a1.Text = aW:upper()
-        a1.TextColor3 = Color3.new(1, 1, 1)
-        a1.TextSize = 11
-
-        addCorner(a0, UDim.new(1, 0))
-
-        local a2 = {
-            SetVisible = function(a2)
-                for a3, a4 in ai.Sorts do
-                    a4.Window.BackgroundTransparency = 0.8
-                    a4.Window.label.TextTransparency = 0.6
-                end
-
-                a0.BackgroundTransparency = a2 and 0 or 0.8
-                a1.TextTransparency = a2 and 0 or 0.6
-            end,
-            Window = a0,
-        }
-
-        a0.Activated:Connect(function()
-            a2:SetVisible(true)
-            an = aW:lower()
-            S()
-        end)
-
-        table.insert(ai.Sorts, a2)
-
-        return a2
-    end
-
-    addSorting("newest", nil, {
-        Size = UDim2.fromOffset(90, 32),
-        On = true,
-    })
-
-    addSorting("oldest", nil, {
-        Size = UDim2.fromOffset(90, 32),
-        On = false,
-    })
-
-    aj = H.Dropdown({
-        Name = "Author",
-        List = { "all" },
-        Function = function(aW)
-            ak:Fire(aW)
-        end,
-        Default = "all",
-        Size = UDim2.new(0.2, 0, 0, 40),
-        Visible = false,
-    }, aQ, { Options = {} })
-    aj.Object.BackgroundTransparency = 1
-
-    local aW = Instance.new("TextLabel")
-    aW.Parent = aQ
-    aW.TextSize = 15
-    aW.LayoutOrder = 5
-    aW.TextColor3 = Color3.fromRGB(200, 200, 200)
-    aW.TextTransparency = 1
-    aW.Size = UDim2.new(0, 600, 1, 0)
-    aW.BackgroundTransparency = 1
-
-    ar = function(aX, aY)
-        task.spawn(function()
-            if aY ~= nil then
-                flickerTextEffect(aW, aY, aX)
-            elseif aX ~= nil then
-                aW.Text = aX
-            end
-        end)
-    end
-
-    if getgenv().username ~= nil then
-        ar(`Welcome back {tostring(getgenv().username)}!`, true)
-    end
-
-    as = function()
-        ar(`Awesome configs made by & for awesome people :D`, true)
-    end
-
-    aP:GetPropertyChangedSignal("Text"):Connect(function()
-        for aX, aY in ai do
-            if aY and typeof(aY) == "table" and aY.instance then
-                aY.instance.Visible = false
-
-                if aX:lower():gsub(" ", ""):find(aP.Text:lower():gsub(" ", ""), 1, true) or aP.Text == "" then
-                    aY.instance.Visible = true
-                end
-            end
-        end
-    end)
-
-    af.Event:Connect(S)
-
-    local aX = false
-    aw:GetPropertyChangedSignal("Visible"):Connect(function()
-        if not aw.Visible then
-            if aX then
-                v.Visible = true
-                aX = false
-            end
-            az.Visible = false
-        else
-            v.Visible = false
-            aX = true
-        end
-        local aY = d
-        if not aY.UpdateGUI then
-            return
-        end
-        aY:UpdateGUI(aY.GUIColor.Hue, aY.GUIColor.Sat, aY.GUIColor.Value)
-    end)
-
-    ag.PublicConfigs = ai
-
-    return ai
+    ag.PublicConfigs = nil
+    d.ConfigsAPIRefresh = function() end
+    shared.BadWarsPublicConfigsEnabled = false
+    return nil
 end
+-- BADWARS_PUBLIC_CONFIGS_DISABLED_V1_END
 
 function d.CreateCategoryList(ag, ah)
     local ai = {
@@ -12880,7 +11135,10 @@ function d.CreateCategoryList(ag, ah)
     ar.Parent = aj
     if ah.Profiles then
         ak = ar
-        addTooltip(ar, "Opens the Public Configs Window")
+        ar.Visible = false
+        ar.Active = false
+        ar.Selectable = false
+        ar.Image = ""
     end
     local as = Instance.new("Frame")
     as.Name = "Divider"
@@ -13475,22 +11733,15 @@ function d.CreateCategoryList(ag, ah)
     end)
 
     if ah.Profiles then
-        ag:CreateProfilesGUI(ar)
+        ag.PublicConfigs = nil
+        d.ConfigsAPIRefresh = function() end
     end
 
     ar.Activated:Connect(function()
         if ah.Profiles then
-            aq.Visible = false
-            ag.PublicConfigs.Window.Visible = not ag.PublicConfigs.Window.Visible
-            af:Fire()
-            if d.TutorialAPI.isActive then
-                d.TutorialAPI.GlobeIconWait = false
-                d.TutorialAPI:tweenToSecondPosition()
-                d.TutorialAPI:setText("Pick a config of your choice :D")
-            end
-        else
-            aq.Visible = not aq.Visible
+            return
         end
+        aq.Visible = not aq.Visible
     end)
     at:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         if ag.ThreadFix then
@@ -14932,7 +13183,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         closeButton.BackgroundTransparency = 1
         closeButton.BorderSizePixel = 0
         closeButton.AutoButtonColor = false
-        closeButton.Text = "Γö£├╣"
+        closeButton.Text = "×"
         closeButton.TextColor3 = o.FaintText
         closeButton.TextSize = 20
         closeButton.FontFace = o.FontSemiBold
@@ -15583,7 +13834,9 @@ function d.Load(ah, ai, aj)
 
     if not ah.NewUser and ah.TutorialAPI.isActive then
         task.spawn(function()
-            x.Visible = false
+            if x then
+                x.Visible = false
+            end
             v.Visible = true
             ah.TutorialAPI:setText("Tutorial Complete!")
             task.wait(1)
@@ -15813,8 +14066,38 @@ function d.Save(ah, ai, aj)
         end
     end
 
-    writefile("badscript/profiles/" .. str(game.GameId) .. "_" .. str(ah.Place) .. ".gui.txt", l:JSONEncode(ak))
-    writefile("badscript/profiles/" .. ah.Profile .. ah.Place .. ".txt", l:JSONEncode(al))
+    local guiSaved, guiSaveError = safeWriteFile(
+        "badscript/profiles/" .. str(game.GameId) .. "_" .. str(ah.Place) .. ".gui.txt",
+        l:JSONEncode(ak),
+        "gui-profile"
+    )
+    local profileSaved, profileSaveError = safeWriteFile(
+        "badscript/profiles/" .. ah.Profile .. ah.Place .. ".txt",
+        l:JSONEncode(al),
+        "module-profile"
+    )
+
+    if not guiSaved or not profileSaved then
+        if not ah._saveFailureNotified then
+            ah._saveFailureNotified = true
+            task.delay(30, function()
+                ah._saveFailureNotified = false
+            end)
+            pcall(function()
+                ah:CreateNotification(
+                    "BadWars",
+                    "Profile saving is temporarily unavailable. BadWars will keep running without repeating the error.",
+                    6,
+                    "warning"
+                )
+            end)
+        end
+
+        return false, guiSaveError or profileSaveError
+    end
+
+    ah._saveFailureNotified = false
+    return true
 end
 
 function d.DisableSaving(ah)
@@ -15937,27 +14220,6 @@ function d.Uninject(ah, ai)
     end)
 
     table.clear(ah.Libraries)
-    table.clear(ah.Categories)
-    table.clear(ah.Modules)
-    if type(ah.Overlays) == "table" then
-        table.clear(ah.Overlays)
-    end
-    ah._SettingsPaneRegistry = nil
-    ah._SettingsPaneClosers = nil
-    ah._OpenSettingsPane = nil
-    ah._OverlayBarAPI = nil
-    ah._OverlayRegistry = nil
-    ah._CategoryRegistry = nil
-
-    local environment = getgenv and getgenv() or _G
-    if rawget(environment, "__BADWARS_GUI_API") == ah then
-        environment.__BADWARS_GUI_API = nil
-    end
-    local registeredRoot = rawget(environment, "__BADWARS_GUI_ROOT")
-    if typeof(registeredRoot) ~= "Instance" or not registeredRoot.Parent then
-        environment.__BADWARS_GUI_ROOT = nil
-    end
-
     shared.vape = nil
     shared.BadReload = nil
     shared.BadIndependent = nil
@@ -15976,31 +14238,6 @@ B.Parent = e(game:GetService("Players")).LocalPlayer.PlayerGui
 B.ResetOnSpawn = false
 
 d.gui = B
-pcall(function() B:SetAttribute("BadWarsGuiRoot", true) end)
-local badwarsEnvironment = getgenv and getgenv() or _G
-badwarsEnvironment.__BADWARS_GUI_API = d
-badwarsEnvironment.__BADWARS_GUI_ROOT = B
-
-tooltipLayer = Instance.new("Frame")
-tooltipLayer.Name = "TooltipLayer"
-tooltipLayer.Size = UDim2.fromScale(1, 1)
-tooltipLayer.Position = UDim2.fromOffset(0, 0)
-tooltipLayer.BackgroundTransparency = 1
-tooltipLayer.BorderSizePixel = 0
-tooltipLayer.Active = false
-tooltipLayer.Selectable = false
-tooltipLayer.ZIndex = 99990
-tooltipLayer.Parent = B
-B.Destroying:Once(function()
-    local environment = getgenv and getgenv() or _G
-    if rawget(environment, "__BADWARS_GUI_ROOT") == B then
-        environment.__BADWARS_GUI_ROOT = nil
-    end
-    if rawget(environment, "__BADWARS_GUI_API") == d then
-        environment.__BADWARS_GUI_API = nil
-    end
-end)
-
 w = Instance.new("Frame")
 w.Name = "ScaledGui"
 w.Size = UDim2.fromScale(1, 1)
@@ -16012,6 +14249,10 @@ v.Size = UDim2.fromScale(1, 1)
 v.BackgroundTransparency = 1
 v.Visible = false
 v.Parent = w
+LayoutIntelligence:Start()
+d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+    LayoutIntelligence:RequestResolve()
+end))
 d:Clean(v:GetPropertyChangedSignal("Visible"):Connect(function()
     d.VisibilityChanged:Fire(v.Visible)
 end))
@@ -16096,7 +14337,7 @@ d.TutorialAPI = {
     end,
 }
 d:Clean(d.VisibilityChanged:Connect(function()
-    if d.TutorialAPI.isActive and d.TutorialAPI.GlobeIconWait and not x.Visible then
+    if d.TutorialAPI.isActive and d.TutorialAPI.GlobeIconWait and (not x or not x.Visible) then
         d.TutorialAPI:setText("Tutorial Cancelled")
         task.delay(0.3, function()
             d.TutorialAPI:revertTutorialMode()
@@ -16174,9 +14415,7 @@ z.TextXAlignment = Enum.TextXAlignment.Left
 z.TextYAlignment = Enum.TextYAlignment.Center
 z.FontFace = o.FontSemiBold
 z.BackgroundTransparency = 1
-z.Active = false
-z.Selectable = false
-z.Parent = tooltipLayer
+z.Parent = w
 addCorner(z, o.Radius)
 tooltipStroke = addStroke(z, o.BorderStrong, 1, 1, "TooltipStroke")
 y = addShadow(z, true)
@@ -16400,7 +14639,7 @@ F(function()
                 if not isfolder("badwars_translations") then
                     makefolder("badwars_translations")
                 end
-                writefile("badwars_translations/lang.txt", tostring(shared.TargetLanguage))
+                safeWriteFile("badwars_translations/lang.txt", tostring(shared.TargetLanguage), "translation-language")
             end)
 
             local ar = aa[aq] or ""
@@ -16659,6 +14898,98 @@ d:Clean(aq.Update)
 d:CreateLegit()
 d:CreateSearch()
 d.Categories.Main:CreateDivider("overlays")
+local ar = d.Categories.World:CreateModuleCategory({
+    Name = "Overlays",
+    Icon = u("badscript/assets/new/overlaysicon.png"),
+    Size = UDim2.fromOffset(24, 18),
+    GuiColorSync = true,
+    UpExpand = true,
+})
+ar.ExpandEvent:Connect(function()
+    local as = d.Categories.Main.MainGui
+    for at, au in as:GetChildren() do
+        if au:IsA("TextButton") then
+            if not ar.Expanded then
+                au.Visible = true
+            end
+            local av = n:Tween(au, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = UDim2.fromOffset(220, ar.Expanded and 0 or 40),
+                TextTransparency = ar.Expanded and 1 or 0,
+            })
+            if ar.Expanded and av then
+                av.Completed:Once(function()
+                    au.Visible = false
+                end)
+            elseif ar.Expanded then
+                au.Visible = false
+            end
+        elseif au:IsA("TextLabel") and not au.Name:lower():find("overlays") then
+            n:Tween(au, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = UDim2.fromOffset(218, ar.Expanded and 0 or 27),
+                TextTransparency = ar.Expanded and 1 or 0,
+            })
+        end
+    end
+    for at, au in d.Categories do
+        if not (au.OriginalCategory or (au.Type ~= nil and au.Type == "CategoryList")) then
+            continue
+        end
+        if not au.Object then
+            continue
+        end
+        if au.Object.Parent == nil then
+            continue
+        end
+        if not au.Button then
+            continue
+        end
+        if not au.Button.Enabled then
+            continue
+        end
+        local av = au.Object:FindFirstChild("Title")
+        if av then
+            n:Tween(av, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                TextTransparency = ar.Expanded and 1 or 0,
+            })
+        end
+        local aw = au.Object:FindFirstChild("Icon")
+        if aw then
+            n:Tween(aw, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                ImageTransparency = ar.Expanded and 1 or 0,
+            })
+        end
+        if ar.Expanded and not au.OriginalCategorySize then
+            au.OriginalCategorySize = au.Object.Size.Y.Offset
+        end
+        if au.OriginalCategorySize then
+            if not ar.Expanded then
+                au.Object.Visible = true
+            end
+            local ax = n:Tween(au.Object, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = UDim2.fromOffset(220, (ar.Expanded and 0 or au.OriginalCategorySize)),
+            })
+            if ar.Expanded and ax then
+                ax.Completed:Once(function()
+                    au.Object.Visible = false
+                end)
+            elseif ar.Expanded then
+                au.Object.Visible = false
+            end
+        end
+    end
+end)
+d:Clean(d.MainGuiSettingsOpenedEvent:Connect(function()
+    if ar.Expanded then
+        ar:Toggle()
+    end
+end))
+d:Clean(d.VisibilityChanged:Connect(function()
+    if ar.Expanded then
+        ar:Toggle()
+    end
+end))
+ar.Object.Parent = d.Categories.Main.MainGui
+d.OverlaysModuleCategory = ar
 d.Categories.Main:CreateOverlayBar()
 
 local as = d.Categories.Main:CreateSettingsPane({ Name = "Modules" })

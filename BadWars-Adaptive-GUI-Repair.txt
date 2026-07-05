@@ -1,0 +1,34 @@
+BadWars adaptive GUI rewrite
+Applied: 2026-07-04T21:47:14
+Backup: C:\Users\evanm\OneDrive\Desktop\badwars\.badwars-ui-backup\20260704-214712\badscript\guis\new\gui.lua
+
+Changed:
+- Added a real-time local layout-intelligence engine.
+- Draggable windows and overlays cannot pass through another managed UI.
+- Uses nearest-free-position collision resolution while dragging.
+- Reflows visible windows after size, visibility, and viewport changes.
+- Treats active notifications and prompts as reserved screen regions.
+- Keeps managed windows inside the viewport.
+- Added AllowUIOverlap attribute as an explicit opt-out for special elements.
+
+File system:
+- Replaced direct writefile calls with safeWriteFile.
+- Creates missing folder trees before writing.
+- Adds a 30-second circuit breaker after repeated write failures.
+- Deduplicates and rate-limits file errors.
+- Keeps BadWars running if executor file APIs fail.
+- Prevents repeated writefile stack-trace spam.
+
+Public configs:
+- Removed the obsolete Voidware public-config browser.
+- Removed old upload, download, reinstall, delete, author, and sorting UI.
+- Removed all configs.vapevoidware.xyz calls.
+- Removed the public-config globe button from Profiles.
+- Local profiles remain available.
+- Public configs now remain disabled until a BadWars-native backend and schema exist.
+
+Other:
+- Fixed the garbled notification close character.
+- Preserved diagnostics bootstrap, local profiles, modules, categories, overlays, and settings APIs.
+
+Runtime validation is still required inside Roblox/executor.

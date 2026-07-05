@@ -1,3 +1,4 @@
+-- BADWARS_NOTIFICATIONS_DIRECT_FIX_V2
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
 do
     shared = type(shared) == "table" and shared or {}
@@ -14540,7 +14541,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         closeButton.BackgroundTransparency = 1
         closeButton.BorderSizePixel = 0
         closeButton.AutoButtonColor = false
-        closeButton.Text = "×"
+        closeButton.Text = "├ù"
         closeButton.TextColor3 = o.FaintText
         closeButton.TextSize = 20
         closeButton.FontFace = o.FontSemiBold

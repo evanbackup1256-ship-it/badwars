@@ -1,0 +1,12 @@
+BadWars Notifications direct fix
+Applied: 2026-07-04T20:45:49
+Backup: C:\Users\evanm\OneDrive\Desktop\badwars\.badwars-ui-backup\20260704-204545\badscript\guis\new\gui.lua
+
+Fixed:
+- Full-height black Notifications pane
+- Controls rendering underneath the pane background
+- General settings remaining visible and hoverable behind Notifications
+- Stuck General tooltips
+- Conflicting canvas-size behavior
+- Missing layout cleanup
+- Narrow viewport overflow

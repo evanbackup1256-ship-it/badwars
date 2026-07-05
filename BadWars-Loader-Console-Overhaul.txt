@@ -1,0 +1,27 @@
+BadWars loading UI and console overhaul
+Applied: 2026-07-04T21:31:42
+Backup: C:\Users\evanm\OneDrive\Desktop\badwars\.badwars-presentation-backup\20260704-213142
+
+Changed files:
+- badscript/NewMainScript.lua
+- badscript/loader.lua
+- badscript/libraries/diagnostics.lua
+- .gitignore
+
+Loading UI:
+- Replaced the temporary startup label.
+- Replaced the Nexus V9 loader.
+- Removed fake subsystem chips, orbit graphics, shimmer, glow, gradients, and marketing copy.
+- Added a compact application-style window with real status text, progress, elapsed time, and a console button on errors.
+- Fatal states remain visible.
+
+Console:
+- Replaced the card-heavy dashboard appearance.
+- Added a compact desktop-tool title bar and toolbar.
+- Added dense flat log rows with timestamp, source, message, severity dot, and expandable details.
+- Added search, source/module filters, severity filters, pause, clear, copy, and auto-scroll.
+- Preserved existing diagnostics storage, native output capture, duplicate suppression, history, and runtime APIs.
+
+Runtime note:
+- Source validation was completed.
+- Final visual testing must be performed inside Roblox/executor.

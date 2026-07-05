@@ -535,10 +535,12 @@ function Diagnostics:_getParent()
     return parent
 end
 
+-- BADWARS_CONSOLE_UI_V1_BEGIN
 function Diagnostics:EnsureUI()
     if self.Destroyed then
         return nil
     end
+
     if self._ui and self._ui.gui and self._ui.gui.Parent then
         return self._ui
     end
@@ -549,9 +551,9 @@ function Diagnostics:EnsureUI()
     end
 
     pcall(function()
-        local old = parent:FindFirstChild("BadWarsDiagnostics")
-        if old then
-            old:Destroy()
+        local previous = parent:FindFirstChild("BadWarsDiagnostics")
+        if previous then
+            previous:Destroy()
         end
     end)
 
@@ -563,32 +565,42 @@ function Diagnostics:EnsureUI()
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.Parent = parent
 
+    local viewport = workspace.CurrentCamera
+        and workspace.CurrentCamera.ViewportSize
+        or Vector2.new(1280, 720)
+
+    local initialWidth = math.clamp(viewport.X - 32, 480, 780)
+    local initialHeight = math.clamp(viewport.Y - 48, 320, 470)
+    local minSize = Vector2.new(440, 300)
+    local maxSize = Vector2.new(1180, 780)
+
     local opener = Instance.new("TextButton")
     opener.Name = "DiagnosticsButton"
     opener.AnchorPoint = Vector2.new(1, 0)
-    opener.Position = UDim2.new(1, -16, 0, 16)
-    opener.Size = UDim2.fromOffset(116, 34)
-    opener.BackgroundColor3 = Color3.fromRGB(13, 19, 24)
+    opener.Position = UDim2.new(1, -14, 0, 14)
+    opener.Size = UDim2.fromOffset(94, 28)
+    opener.BackgroundColor3 = Color3.fromRGB(17, 19, 23)
     opener.BorderSizePixel = 0
     opener.AutoButtonColor = false
-    opener.Font = Enum.Font.GothamBold
-    opener.Text = "CONSOLE"
-    opener.TextSize = 11
-    opener.TextColor3 = Color3.fromRGB(84, 204, 163)
+    opener.Font = Enum.Font.GothamMedium
+    opener.Text = ">_  Console"
+    opener.TextSize = 10
+    opener.TextColor3 = Color3.fromRGB(184, 188, 197)
     opener.Parent = gui
-    createCorner(opener, 9)
-    createStroke(opener, Color3.fromRGB(59, 171, 136), 0.45, 1)
+    createCorner(opener, 6)
+    createStroke(opener, Color3.fromRGB(55, 59, 68), 0.38, 1)
 
     local badge = Instance.new("TextLabel")
     badge.Name = "Unread"
-    badge.AnchorPoint = Vector2.new(1, 0.5)
-    badge.Position = UDim2.new(1, 8, 0.5, 0)
-    badge.Size = UDim2.fromOffset(22, 22)
-    badge.BackgroundColor3 = Color3.fromRGB(239, 91, 104)
+    badge.AnchorPoint = Vector2.new(1, 0)
+    badge.Position = UDim2.new(1, 6, 0, -6)
+    badge.Size = UDim2.fromOffset(18, 18)
+    badge.BackgroundColor3 = Color3.fromRGB(218, 83, 94)
     badge.BorderSizePixel = 0
-    badge.Font = Enum.Font.GothamBold
-    badge.TextSize = 10
-    badge.TextColor3 = Color3.fromRGB(255, 240, 242)
+    badge.Font = Enum.Font.GothamSemibold
+    badge.Text = "0"
+    badge.TextSize = 9
+    badge.TextColor3 = Color3.fromRGB(255, 245, 246)
     badge.Visible = false
     badge.Parent = opener
     createCorner(badge, 99)
@@ -597,188 +609,264 @@ function Diagnostics:EnsureUI()
     window.Name = "Window"
     window.AnchorPoint = Vector2.new(0.5, 0.5)
     window.Position = UDim2.fromScale(0.5, 0.5)
-    window.Size = UDim2.fromOffset(820, 540)
-    window.BackgroundColor3 = Color3.fromRGB(8, 12, 16)
+    window.Size = UDim2.fromOffset(initialWidth, initialHeight)
+    window.BackgroundColor3 = Color3.fromRGB(12, 14, 17)
     window.BorderSizePixel = 0
     window.ClipsDescendants = true
     window.Visible = false
     window.Parent = gui
-    createCorner(window, 12)
-    createStroke(window, Color3.fromRGB(68, 82, 97), 0.35, 1)
-
-    local minSize = Vector2.new(520, 340)
-    local maxSize = Vector2.new(1200, 820)
+    createCorner(window, 8)
+    createStroke(window, Color3.fromRGB(50, 54, 63), 0.24, 1)
 
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 54)
-    header.BackgroundColor3 = Color3.fromRGB(13, 18, 23)
+    header.Size = UDim2.new(1, 0, 0, 42)
+    header.BackgroundColor3 = Color3.fromRGB(17, 19, 23)
     header.BorderSizePixel = 0
     header.Parent = window
 
-    local accent = Instance.new("Frame")
-    accent.Size = UDim2.fromOffset(3, 24)
-    accent.Position = UDim2.fromOffset(16, 15)
-    accent.BackgroundColor3 = Color3.fromRGB(62, 205, 160)
-    accent.BorderSizePixel = 0
-    accent.Parent = header
-    createCorner(accent, 99)
+    local headerLine = Instance.new("Frame")
+    headerLine.AnchorPoint = Vector2.new(0, 1)
+    headerLine.Position = UDim2.new(0, 0, 1, 0)
+    headerLine.Size = UDim2.new(1, 0, 0, 1)
+    headerLine.BackgroundColor3 = Color3.fromRGB(47, 50, 58)
+    headerLine.BackgroundTransparency = 0.32
+    headerLine.BorderSizePixel = 0
+    headerLine.Parent = header
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(0, 260, 1, 0)
-    title.Position = UDim2.fromOffset(30, 0)
+    title.Position = UDim2.fromOffset(14, 0)
+    title.Size = UDim2.new(0, 220, 1, 0)
     title.BackgroundTransparency = 1
-    title.Font = Enum.Font.GothamBold
-    title.Text = "BADWARS  /  DIAGNOSTICS"
-    title.TextSize = 15
-    title.TextColor3 = Color3.fromRGB(235, 241, 246)
+    title.Font = Enum.Font.GothamSemibold
+    title.Text = "BadWars Console"
+    title.TextSize = 13
+    title.TextColor3 = Color3.fromRGB(232, 234, 239)
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
+
+    local liveDot = Instance.new("Frame")
+    liveDot.Position = UDim2.fromOffset(133, 18)
+    liveDot.Size = UDim2.fromOffset(6, 6)
+    liveDot.BackgroundColor3 = Color3.fromRGB(70, 196, 150)
+    liveDot.BorderSizePixel = 0
+    liveDot.Parent = header
+    createCorner(liveDot, 99)
 
     local counters = Instance.new("TextLabel")
     counters.Name = "Counters"
     counters.AnchorPoint = Vector2.new(1, 0.5)
-    counters.Position = UDim2.new(1, -94, 0.5, 0)
-    counters.Size = UDim2.fromOffset(250, 28)
+    counters.Position = UDim2.new(1, -46, 0.5, 0)
+    counters.Size = UDim2.fromOffset(260, 24)
     counters.BackgroundTransparency = 1
     counters.Font = Enum.Font.Code
-    counters.Text = "0 errors  •  0 warnings"
-    counters.TextSize = 11
-    counters.TextColor3 = Color3.fromRGB(126, 141, 156)
+    counters.Text = "0 errors  Â·  0 warnings"
+    counters.TextSize = 10
+    counters.TextColor3 = Color3.fromRGB(107, 112, 123)
     counters.TextXAlignment = Enum.TextXAlignment.Right
     counters.Parent = header
 
-    local close = makeButton(header, "Close", "×", UDim2.fromOffset(34, 30))
+    local close = Instance.new("TextButton")
+    close.Name = "Close"
     close.AnchorPoint = Vector2.new(1, 0.5)
-    close.Position = UDim2.new(1, -14, 0.5, 0)
-    close.TextSize = 18
+    close.Position = UDim2.new(1, -10, 0.5, 0)
+    close.Size = UDim2.fromOffset(26, 26)
+    close.BackgroundTransparency = 1
+    close.BorderSizePixel = 0
+    close.AutoButtonColor = false
+    close.Font = Enum.Font.GothamMedium
+    close.Text = "Ã—"
+    close.TextSize = 17
+    close.TextColor3 = Color3.fromRGB(139, 144, 154)
+    close.Parent = header
 
     local toolbar = Instance.new("Frame")
     toolbar.Name = "Toolbar"
-    toolbar.Position = UDim2.fromOffset(14, 64)
-    toolbar.Size = UDim2.new(1, -28, 0, 72)
+    toolbar.Position = UDim2.fromOffset(12, 52)
+    toolbar.Size = UDim2.new(1, -24, 0, 66)
     toolbar.BackgroundTransparency = 1
     toolbar.Parent = window
 
-    local search = Instance.new("TextBox")
-    search.Name = "Search"
-    search.Size = UDim2.new(0.36, -6, 0, 32)
-    search.BackgroundColor3 = Color3.fromRGB(16, 22, 28)
-    search.BorderSizePixel = 0
-    search.ClearTextOnFocus = false
-    search.PlaceholderText = "Search messages and tracebacks"
-    search.PlaceholderColor3 = Color3.fromRGB(91, 105, 119)
-    search.Font = Enum.Font.Gotham
-    search.Text = ""
-    search.TextSize = 11
-    search.TextColor3 = Color3.fromRGB(207, 217, 227)
-    search.TextXAlignment = Enum.TextXAlignment.Left
-    search.Parent = toolbar
-    createCorner(search, 8)
-    createStroke(search, Color3.fromRGB(60, 73, 87), 0.72, 1)
-    local searchPad = Instance.new("UIPadding")
-    searchPad.PaddingLeft = UDim.new(0, 10)
-    searchPad.PaddingRight = UDim.new(0, 10)
-    searchPad.Parent = search
+    local function makeInput(name, placeholder, position, size)
+        local box = Instance.new("TextBox")
+        box.Name = name
+        box.Position = position
+        box.Size = size
+        box.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
+        box.BorderSizePixel = 0
+        box.ClearTextOnFocus = false
+        box.PlaceholderText = placeholder
+        box.PlaceholderColor3 = Color3.fromRGB(89, 94, 104)
+        box.Font = Enum.Font.Gotham
+        box.Text = ""
+        box.TextSize = 10
+        box.TextColor3 = Color3.fromRGB(205, 208, 215)
+        box.TextXAlignment = Enum.TextXAlignment.Left
+        box.Parent = toolbar
+        createCorner(box, 5)
+        createStroke(box, Color3.fromRGB(50, 54, 63), 0.48, 1)
 
-    local sourceFilter = search:Clone()
-    sourceFilter.Name = "SourceFilter"
-    sourceFilter.Position = UDim2.new(0.36, 4, 0, 0)
-    sourceFilter.Size = UDim2.new(0.22, -4, 0, 32)
-    sourceFilter.PlaceholderText = "Source filter"
-    sourceFilter.Text = ""
-    sourceFilter.Parent = toolbar
+        local padding = Instance.new("UIPadding")
+        padding.PaddingLeft = UDim.new(0, 9)
+        padding.PaddingRight = UDim.new(0, 9)
+        padding.Parent = box
 
-    local moduleFilter = search:Clone()
-    moduleFilter.Name = "ModuleFilter"
-    moduleFilter.Position = UDim2.new(0.58, 8, 0, 0)
-    moduleFilter.Size = UDim2.new(0.22, -4, 0, 32)
-    moduleFilter.PlaceholderText = "Module filter"
-    moduleFilter.Text = ""
-    moduleFilter.Parent = toolbar
+        return box
+    end
 
-    local pause = makeButton(toolbar, "Pause", "PAUSE", UDim2.new(0.2, -8, 0, 32))
-    pause.Position = UDim2.new(0.8, 8, 0, 0)
+    local search = makeInput(
+        "Search",
+        "Search output",
+        UDim2.fromOffset(0, 0),
+        UDim2.new(0.42, -4, 0, 28)
+    )
+
+    local sourceFilter = makeInput(
+        "SourceFilter",
+        "Source",
+        UDim2.new(0.42, 4, 0, 0),
+        UDim2.new(0.2, -4, 0, 28)
+    )
+
+    local moduleFilter = makeInput(
+        "ModuleFilter",
+        "Module",
+        UDim2.new(0.62, 8, 0, 0),
+        UDim2.new(0.2, -4, 0, 28)
+    )
+
+    local function makeToolbarButton(name, text, xOffset, width)
+        local button = Instance.new("TextButton")
+        button.Name = name
+        button.AnchorPoint = Vector2.new(1, 0)
+        button.Position = UDim2.new(1, xOffset, 0, 0)
+        button.Size = UDim2.fromOffset(width, 28)
+        button.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
+        button.BorderSizePixel = 0
+        button.AutoButtonColor = false
+        button.Font = Enum.Font.GothamMedium
+        button.Text = text
+        button.TextSize = 10
+        button.TextColor3 = Color3.fromRGB(164, 168, 177)
+        button.Parent = toolbar
+        createCorner(button, 5)
+        createStroke(button, Color3.fromRGB(50, 54, 63), 0.48, 1)
+        return button
+    end
+
+    local pause = makeToolbarButton("Pause", "Pause", 0, 58)
 
     local filters = Instance.new("Frame")
     filters.Name = "Filters"
-    filters.Position = UDim2.fromOffset(0, 40)
-    filters.Size = UDim2.new(1, 0, 0, 30)
+    filters.Position = UDim2.fromOffset(0, 38)
+    filters.Size = UDim2.new(1, 0, 0, 28)
     filters.BackgroundTransparency = 1
     filters.Parent = toolbar
 
-    local filterLayout = Instance.new("UIListLayout")
-    filterLayout.FillDirection = Enum.FillDirection.Horizontal
-    filterLayout.Padding = UDim.new(0, 6)
-    filterLayout.Parent = filters
-
     local enabledLevels = {}
     local filterButtons = {}
-    for _, level in ipairs({ "DEBUG", "INFO", "SUCCESS", "WARN", "ERROR", "FATAL" }) do
+    local filterOrder = { "DEBUG", "INFO", "SUCCESS", "WARN", "ERROR", "FATAL" }
+
+    local filterLayout = Instance.new("UIListLayout")
+    filterLayout.FillDirection = Enum.FillDirection.Horizontal
+    filterLayout.Padding = UDim.new(0, 4)
+    filterLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    filterLayout.Parent = filters
+
+    for _, level in ipairs(filterOrder) do
         enabledLevels[level] = true
-        local button = makeButton(filters, level, level, UDim2.fromOffset(level == "SUCCESS" and 74 or 60, 28))
+
+        local button = Instance.new("TextButton")
+        button.Name = level
+        button.Size = UDim2.fromOffset(level == "SUCCESS" and 66 or 52, 24)
+        button.BackgroundColor3 = Color3.fromRGB(17, 19, 23)
+        button.BackgroundTransparency = 0
+        button.BorderSizePixel = 0
+        button.AutoButtonColor = false
+        button.Font = Enum.Font.Code
+        button.Text = string.lower(level)
+        button.TextSize = 9
         button.TextColor3 = LEVEL_COLORS[level]
+        button.Parent = filters
+        createCorner(button, 4)
+        createStroke(button, Color3.fromRGB(45, 49, 57), 0.58, 1)
+
         filterButtons[level] = button
-        button.MouseButton1Click:Connect(function()
+
+        button.Activated:Connect(function()
             enabledLevels[level] = not enabledLevels[level]
-            button.BackgroundTransparency = enabledLevels[level] and 0 or 0.55
-            button.TextTransparency = enabledLevels[level] and 0 or 0.45
+            button.TextTransparency = enabledLevels[level] and 0 or 0.58
+            button.BackgroundTransparency = enabledLevels[level] and 0 or 0.46
             self:_scheduleRender()
         end)
     end
 
-    local actions = Instance.new("Frame")
-    actions.Name = "Actions"
-    actions.AnchorPoint = Vector2.new(1, 0)
-    actions.Position = UDim2.new(1, 0, 0, 0)
-    actions.Size = UDim2.fromOffset(278, 30)
-    actions.BackgroundTransparency = 1
-    actions.Parent = filters
+    local actionHolder = Instance.new("Frame")
+    actionHolder.AnchorPoint = Vector2.new(1, 0)
+    actionHolder.Position = UDim2.new(1, 0, 0, 38)
+    actionHolder.Size = UDim2.fromOffset(250, 28)
+    actionHolder.BackgroundTransparency = 1
+    actionHolder.Parent = toolbar
 
     local actionLayout = Instance.new("UIListLayout")
     actionLayout.FillDirection = Enum.FillDirection.Horizontal
     actionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    actionLayout.Padding = UDim.new(0, 6)
-    actionLayout.Parent = actions
+    actionLayout.Padding = UDim.new(0, 4)
+    actionLayout.Parent = actionHolder
 
-    local clear = makeButton(actions, "Clear", "CLEAR", UDim2.fromOffset(60, 28))
-    local copySelected = makeButton(actions, "CopySelected", "COPY ENTRY", UDim2.fromOffset(92, 28))
-    local copyAll = makeButton(actions, "CopyAll", "COPY ALL", UDim2.fromOffset(76, 28))
+    local function makeAction(name, text, width)
+        local button = Instance.new("TextButton")
+        button.Name = name
+        button.Size = UDim2.fromOffset(width, 24)
+        button.BackgroundTransparency = 1
+        button.BorderSizePixel = 0
+        button.AutoButtonColor = false
+        button.Font = Enum.Font.GothamMedium
+        button.Text = text
+        button.TextSize = 9
+        button.TextColor3 = Color3.fromRGB(128, 133, 144)
+        button.Parent = actionHolder
+        return button
+    end
+
+    local autoScroll = makeAction("AutoScroll", "Auto-scroll: on", 92)
+    local copySelected = makeAction("CopySelected", "Copy entry", 64)
+    local copyAll = makeAction("CopyAll", "Copy all", 52)
+    local clear = makeAction("Clear", "Clear", 38)
 
     local list = Instance.new("ScrollingFrame")
     list.Name = "Entries"
-    list.Position = UDim2.fromOffset(14, 146)
-    list.Size = UDim2.new(1, -28, 1, -184)
-    list.BackgroundColor3 = Color3.fromRGB(10, 15, 19)
+    list.Position = UDim2.fromOffset(12, 126)
+    list.Size = UDim2.new(1, -24, 1, -156)
+    list.BackgroundColor3 = Color3.fromRGB(10, 12, 15)
     list.BorderSizePixel = 0
-    list.ScrollBarThickness = 4
-    list.ScrollBarImageColor3 = Color3.fromRGB(62, 205, 160)
+    list.ScrollBarThickness = 3
+    list.ScrollBarImageColor3 = Color3.fromRGB(77, 81, 91)
     list.CanvasSize = UDim2.fromOffset(0, 0)
     list.AutomaticCanvasSize = Enum.AutomaticSize.Y
     list.Parent = window
-    createCorner(list, 9)
-    createStroke(list, Color3.fromRGB(54, 67, 79), 0.75, 1)
+    createCorner(list, 5)
+    createStroke(list, Color3.fromRGB(43, 46, 54), 0.42, 1)
 
     local listPadding = Instance.new("UIPadding")
-    listPadding.PaddingTop = UDim.new(0, 7)
-    listPadding.PaddingBottom = UDim.new(0, 7)
-    listPadding.PaddingLeft = UDim.new(0, 7)
-    listPadding.PaddingRight = UDim.new(0, 7)
+    listPadding.PaddingTop = UDim.new(0, 4)
+    listPadding.PaddingBottom = UDim.new(0, 4)
     listPadding.Parent = list
 
     local listLayout = Instance.new("UIListLayout")
-    listLayout.Padding = UDim.new(0, 6)
+    listLayout.Padding = UDim.new(0, 0)
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
     listLayout.Parent = list
 
     local footer = Instance.new("TextLabel")
-    footer.Position = UDim2.new(0, 16, 1, -30)
-    footer.Size = UDim2.new(1, -62, 0, 20)
+    footer.Name = "Footer"
+    footer.Position = UDim2.new(0, 14, 1, -25)
+    footer.Size = UDim2.new(1, -52, 0, 18)
     footer.BackgroundTransparency = 1
     footer.Font = Enum.Font.Code
-    footer.Text = "F8 toggles diagnostics  •  entries persist until cleared"
-    footer.TextSize = 10
-    footer.TextColor3 = Color3.fromRGB(83, 97, 111)
+    footer.Text = "F8  Â·  0 entries"
+    footer.TextSize = 9
+    footer.TextColor3 = Color3.fromRGB(78, 83, 93)
     footer.TextXAlignment = Enum.TextXAlignment.Left
     footer.Parent = window
 
@@ -786,14 +874,14 @@ function Diagnostics:EnsureUI()
     resize.Name = "Resize"
     resize.AnchorPoint = Vector2.new(1, 1)
     resize.Position = UDim2.fromScale(1, 1)
-    resize.Size = UDim2.fromOffset(28, 28)
+    resize.Size = UDim2.fromOffset(24, 24)
     resize.BackgroundTransparency = 1
     resize.BorderSizePixel = 0
     resize.AutoButtonColor = false
     resize.Font = Enum.Font.Code
-    resize.Text = "◢"
-    resize.TextSize = 16
-    resize.TextColor3 = Color3.fromRGB(73, 190, 151)
+    resize.Text = "âŒŸ"
+    resize.TextSize = 14
+    resize.TextColor3 = Color3.fromRGB(88, 93, 103)
     resize.Parent = window
 
     self._ui = {
@@ -811,8 +899,11 @@ function Diagnostics:EnsureUI()
         clear = clear,
         copySelected = copySelected,
         copyAll = copyAll,
+        autoScroll = autoScroll,
+        autoScrollEnabled = true,
         list = list,
         listLayout = listLayout,
+        footer = footer,
         enabledLevels = enabledLevels,
         filterButtons = filterButtons,
         expanded = {},
@@ -820,37 +911,65 @@ function Diagnostics:EnsureUI()
         maxSize = maxSize,
     }
 
-    connectHover(opener, Color3.fromRGB(84, 204, 163), Color3.fromRGB(69, 177, 142))
-    connectHover(close, Color3.fromRGB(168, 181, 195), Color3.fromRGB(141, 156, 170))
+    opener.MouseEnter:Connect(function()
+        opener.TextColor3 = Color3.fromRGB(209, 212, 218)
+    end)
+    opener.MouseLeave:Connect(function()
+        opener.TextColor3 = Color3.fromRGB(184, 188, 197)
+    end)
+    close.MouseEnter:Connect(function()
+        close.TextColor3 = Color3.fromRGB(213, 216, 222)
+    end)
+    close.MouseLeave:Connect(function()
+        close.TextColor3 = Color3.fromRGB(139, 144, 154)
+    end)
 
-    opener.MouseButton1Click:Connect(function()
+    opener.Activated:Connect(function()
         self:Toggle()
     end)
-    close.MouseButton1Click:Connect(function()
+    close.Activated:Connect(function()
         self:Close()
     end)
-    clear.MouseButton1Click:Connect(function()
+    clear.Activated:Connect(function()
         self:Clear(false)
     end)
-    copySelected.MouseButton1Click:Connect(function()
+    copySelected.Activated:Connect(function()
         local ok, err = self:CopyEntry()
         if not ok then
-            self:Warn(err, { subsystem = "DiagnosticsUI", native = false })
+            self:Warn(err, {
+                subsystem = "DiagnosticsUI",
+                native = false,
+            })
         end
     end)
-    copyAll.MouseButton1Click:Connect(function()
+    copyAll.Activated:Connect(function()
         local ok, err = self:CopyAll()
         if not ok then
-            self:Warn(err, { subsystem = "DiagnosticsUI", native = false })
+            self:Warn(err, {
+                subsystem = "DiagnosticsUI",
+                native = false,
+            })
         end
     end)
-    pause.MouseButton1Click:Connect(function()
+    pause.Activated:Connect(function()
         self.Paused = not self.Paused
-        pause.Text = self.Paused and "RESUME" or "PAUSE"
-        pause.TextColor3 = self.Paused and LEVEL_COLORS.WARN or Color3.fromRGB(168, 181, 195)
+        pause.Text = self.Paused and "Resume" or "Pause"
+        pause.TextColor3 = self.Paused
+            and LEVEL_COLORS.WARN
+            or Color3.fromRGB(164, 168, 177)
+
         if not self.Paused then
             self:_scheduleRender()
         end
+    end)
+    autoScroll.Activated:Connect(function()
+        self._ui.autoScrollEnabled = not self._ui.autoScrollEnabled
+        autoScroll.Text = self._ui.autoScrollEnabled
+            and "Auto-scroll: on"
+            or "Auto-scroll: off"
+        autoScroll.TextColor3 = self._ui.autoScrollEnabled
+            and Color3.fromRGB(128, 133, 144)
+            or Color3.fromRGB(91, 96, 106)
     end)
 
     search:GetPropertyChangedSignal("Text"):Connect(function()
@@ -864,20 +983,40 @@ function Diagnostics:EnsureUI()
     end)
 
     local userInput = game:GetService("UserInputService")
+
     local dragging = false
     local dragStart
     local startPosition
+
     header.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
             dragging = true
             dragStart = input.Position
             startPosition = window.Position
         end
     end)
-    userInput.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch) then
+
+    local resizing = false
+    local resizeStart
+    local startSize
+
+    resize.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
+            resizing = true
+            resizeStart = input.Position
+            startSize = window.AbsoluteSize
+        end
+    end)
+
+    local changedConnection = userInput.InputChanged:Connect(function(input)
+        if dragging
+            and (input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch)
+        then
             local delta = input.Position - dragStart
             window.Position = UDim2.new(
                 startPosition.X.Scale,
@@ -886,38 +1025,34 @@ function Diagnostics:EnsureUI()
                 startPosition.Y.Offset + delta.Y
             )
         end
-    end)
-    userInput.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
 
-    local resizing = false
-    local resizeStart
-    local startSize
-    resize.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            resizing = true
-            resizeStart = input.Position
-            startSize = window.AbsoluteSize
-        end
-    end)
-    userInput.InputChanged:Connect(function(input)
-        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch) then
+        if resizing
+            and (input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch)
+        then
             local delta = input.Position - resizeStart
-            local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
-            local width = math.clamp(startSize.X + delta.X, minSize.X, math.min(maxSize.X, viewport.X - 24))
-            local height = math.clamp(startSize.Y + delta.Y, minSize.Y, math.min(maxSize.Y, viewport.Y - 24))
+            local currentViewport = workspace.CurrentCamera
+                and workspace.CurrentCamera.ViewportSize
+                or Vector2.new(1280, 720)
+            local width = math.clamp(
+                startSize.X + delta.X,
+                math.min(minSize.X, currentViewport.X - 16),
+                math.min(maxSize.X, currentViewport.X - 16)
+            )
+            local height = math.clamp(
+                startSize.Y + delta.Y,
+                math.min(minSize.Y, currentViewport.Y - 16),
+                math.min(maxSize.Y, currentViewport.Y - 16)
+            )
             window.Size = UDim2.fromOffset(width, height)
         end
     end)
-    userInput.InputEnded:Connect(function(input)
+
+    local endedConnection = userInput.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
+            dragging = false
             resizing = false
         end
     end)
@@ -926,16 +1061,20 @@ function Diagnostics:EnsureUI()
         if processed then
             return
         end
+
         if input.KeyCode == Enum.KeyCode.F8 then
             self:Toggle()
         end
     end)
+
+    table.insert(self.Connections, changedConnection)
+    table.insert(self.Connections, endedConnection)
     table.insert(self.Connections, keyConnection)
 
     self:_scheduleRender()
     return self._ui
 end
-
+-- BADWARS_CONSOLE_UI_V1_END
 function Diagnostics:_entryMatches(entry)
     local ui = self._ui
     if not ui then
@@ -969,6 +1108,7 @@ function Diagnostics:_entryMatches(entry)
     return true
 end
 
+-- BADWARS_CONSOLE_RENDER_V1_BEGIN
 function Diagnostics:_render()
     local ui = self._ui
     if not ui or not ui.gui.Parent then
@@ -977,12 +1117,23 @@ function Diagnostics:_render()
 
     ui.badge.Visible = self.Unread > 0
     ui.badge.Text = self.Unread > 99 and "99+" or tostring(self.Unread)
+
+    local errorCount = (self.Counts.ERROR or 0) + (self.Counts.FATAL or 0)
+    local warningCount = self.Counts.WARN or 0
+
     ui.counters.Text = string.format(
-        "%d errors  •  %d warnings  •  %d total",
-        (self.Counts.ERROR or 0) + (self.Counts.FATAL or 0),
-        self.Counts.WARN or 0,
-        #self.Entries
+        "%d errors  Â·  %d warnings",
+        errorCount,
+        warningCount
     )
+
+    if ui.footer then
+        ui.footer.Text = string.format(
+            "F8  Â·  %d entries  Â·  %s",
+            #self.Entries,
+            self.Paused and "paused" or "live"
+        )
+    end
 
     if self.Paused then
         return
@@ -995,10 +1146,13 @@ function Diagnostics:_render()
     end
 
     local visible = {}
+
     for index = #self.Entries, 1, -1 do
         local entry = self.Entries[index]
+
         if self:_entryMatches(entry) then
             table.insert(visible, 1, entry)
+
             if #visible >= self.MaxVisibleEntries then
                 break
             end
@@ -1008,107 +1162,132 @@ function Diagnostics:_render()
     for order, entry in ipairs(visible) do
         local expanded = ui.expanded[entry.id] == true
         local selected = self._selectedId == entry.id
-        local repeatSuffix = (entry.repeatCount or 1) > 1 and ("  ×" .. tostring(entry.repeatCount)) or ""
+        local rowHeight = expanded and 132 or 36
+        local severityColor = LEVEL_COLORS[entry.severity]
+            or Color3.fromRGB(120, 125, 135)
 
         local row = Instance.new("TextButton")
         row.Name = "Entry_" .. tostring(entry.id)
         row.LayoutOrder = order
-        row.Size = UDim2.new(1, 0, 0, expanded and 142 or 54)
-        row.AutomaticSize = expanded and Enum.AutomaticSize.Y or Enum.AutomaticSize.None
-        row.BackgroundColor3 = selected and Color3.fromRGB(24, 33, 41) or Color3.fromRGB(15, 21, 27)
+        row.Size = UDim2.new(1, 0, 0, rowHeight)
+        row.BackgroundColor3 = selected
+            and Color3.fromRGB(20, 22, 27)
+            or Color3.fromRGB(12, 14, 17)
         row.BorderSizePixel = 0
         row.AutoButtonColor = false
         row.Text = ""
         row.Parent = ui.list
-        createCorner(row, 8)
-        createStroke(
-            row,
-            selected and LEVEL_COLORS[entry.severity] or Color3.fromRGB(55, 68, 81),
-            selected and 0.38 or 0.76,
-            1
-        )
 
-        local rail = Instance.new("Frame")
-        rail.Size = UDim2.new(0, 3, 1, -14)
-        rail.Position = UDim2.fromOffset(0, 7)
-        rail.BackgroundColor3 = LEVEL_COLORS[entry.severity]
-        rail.BorderSizePixel = 0
-        rail.Parent = row
-        createCorner(rail, 99)
+        local separator = Instance.new("Frame")
+        separator.AnchorPoint = Vector2.new(0, 1)
+        separator.Position = UDim2.new(0, 0, 1, 0)
+        separator.Size = UDim2.new(1, 0, 0, 1)
+        separator.BackgroundColor3 = Color3.fromRGB(36, 39, 46)
+        separator.BackgroundTransparency = 0.36
+        separator.BorderSizePixel = 0
+        separator.Parent = row
 
-        local meta = Instance.new("TextLabel")
-        meta.Position = UDim2.fromOffset(13, 8)
-        meta.Size = UDim2.new(1, -24, 0, 16)
-        meta.BackgroundTransparency = 1
-        meta.Font = Enum.Font.Code
-        meta.Text = string.format(
-            "%s  %s%s  %s  %s",
-            entry.timestamp or "?",
-            entry.severity,
-            repeatSuffix,
-            entry.subsystem ~= "" and entry.subsystem or "Runtime",
-            entry.module ~= "" and entry.module or entry.file
-        )
-        meta.TextSize = 10
-        meta.TextColor3 = LEVEL_COLORS[entry.severity]
-        meta.TextXAlignment = Enum.TextXAlignment.Left
-        meta.TextTruncate = Enum.TextTruncate.AtEnd
-        meta.Parent = row
+        local dot = Instance.new("Frame")
+        dot.Position = UDim2.fromOffset(10, 15)
+        dot.Size = UDim2.fromOffset(6, 6)
+        dot.BackgroundColor3 = severityColor
+        dot.BorderSizePixel = 0
+        dot.Parent = row
+        createCorner(dot, 99)
+
+        local timestamp = Instance.new("TextLabel")
+        timestamp.Position = UDim2.fromOffset(25, 0)
+        timestamp.Size = UDim2.fromOffset(58, 36)
+        timestamp.BackgroundTransparency = 1
+        timestamp.Font = Enum.Font.Code
+        timestamp.Text = entry.timestamp or "--:--:--"
+        timestamp.TextSize = 9
+        timestamp.TextColor3 = Color3.fromRGB(90, 95, 105)
+        timestamp.TextXAlignment = Enum.TextXAlignment.Left
+        timestamp.Parent = row
+
+        local sourceText = entry.subsystem ~= "" and entry.subsystem or "runtime"
+        if entry.module and entry.module ~= "" then
+            sourceText = sourceText .. "/" .. entry.module
+        end
+
+        local source = Instance.new("TextLabel")
+        source.Position = UDim2.fromOffset(87, 0)
+        source.Size = UDim2.fromOffset(132, 36)
+        source.BackgroundTransparency = 1
+        source.Font = Enum.Font.Code
+        source.Text = sourceText
+        source.TextSize = 9
+        source.TextColor3 = Color3.fromRGB(114, 119, 129)
+        source.TextXAlignment = Enum.TextXAlignment.Left
+        source.TextTruncate = Enum.TextTruncate.AtEnd
+        source.Parent = row
+
+        local repeatSuffix = (entry.repeatCount or 1) > 1
+            and ("  Ã—" .. tostring(entry.repeatCount))
+            or ""
 
         local message = Instance.new("TextLabel")
-        message.Position = UDim2.fromOffset(13, 27)
-        message.Size = UDim2.new(1, -26, 0, expanded and 38 or 20)
+        message.Position = UDim2.fromOffset(225, 0)
+        message.Size = UDim2.new(1, -239, 0, 36)
         message.BackgroundTransparency = 1
         message.Font = Enum.Font.Gotham
-        message.Text = entry.message
-        message.TextSize = 11
-        message.TextColor3 = Color3.fromRGB(205, 215, 225)
+        message.Text = tostring(entry.message or "") .. repeatSuffix
+        message.TextSize = 10
+        message.TextColor3 = Color3.fromRGB(193, 197, 205)
         message.TextXAlignment = Enum.TextXAlignment.Left
-        message.TextYAlignment = Enum.TextYAlignment.Top
-        message.TextWrapped = expanded
-        message.TextTruncate = expanded and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd
+        message.TextTruncate = Enum.TextTruncate.AtEnd
         message.Parent = row
 
         if expanded then
-            local trace = Instance.new("TextLabel")
-            trace.Position = UDim2.fromOffset(13, 70)
-            trace.Size = UDim2.new(1, -26, 0, 62)
-            trace.AutomaticSize = Enum.AutomaticSize.Y
-            trace.BackgroundColor3 = Color3.fromRGB(9, 14, 18)
-            trace.BorderSizePixel = 0
-            trace.Font = Enum.Font.Code
-            trace.Text = self:FormatEntry(entry, true)
-            trace.TextSize = 10
-            trace.TextColor3 = Color3.fromRGB(145, 158, 171)
-            trace.TextXAlignment = Enum.TextXAlignment.Left
-            trace.TextYAlignment = Enum.TextYAlignment.Top
-            trace.TextWrapped = true
-            trace.Parent = row
-            createCorner(trace, 6)
+            message.TextColor3 = Color3.fromRGB(219, 222, 228)
+
+            local details = Instance.new("TextLabel")
+            details.Position = UDim2.fromOffset(25, 42)
+            details.Size = UDim2.new(1, -39, 0, 80)
+            details.BackgroundColor3 = Color3.fromRGB(9, 11, 14)
+            details.BorderSizePixel = 0
+            details.Font = Enum.Font.Code
+            details.Text = self:FormatEntry(entry, true)
+            details.TextSize = 9
+            details.TextColor3 = Color3.fromRGB(126, 131, 142)
+            details.TextXAlignment = Enum.TextXAlignment.Left
+            details.TextYAlignment = Enum.TextYAlignment.Top
+            details.TextWrapped = true
+            details.Parent = row
+            createCorner(details, 4)
+            createStroke(details, Color3.fromRGB(39, 42, 49), 0.46, 1)
+
             local padding = Instance.new("UIPadding")
             padding.PaddingTop = UDim.new(0, 7)
             padding.PaddingBottom = UDim.new(0, 7)
             padding.PaddingLeft = UDim.new(0, 8)
             padding.PaddingRight = UDim.new(0, 8)
-            padding.Parent = trace
+            padding.Parent = details
         end
 
-        row.MouseButton1Click:Connect(function()
+        row.Activated:Connect(function()
             self._selectedId = entry.id
             ui.expanded[entry.id] = not ui.expanded[entry.id]
             self:_scheduleRender()
         end)
     end
 
-    if ui.window.Visible and #visible > 0 then
+    if ui.window.Visible
+        and ui.autoScrollEnabled
+        and #visible > 0
+    then
         task.defer(function()
             if ui.list and ui.list.Parent then
-                ui.list.CanvasPosition = Vector2.new(0, math.max(0, ui.list.AbsoluteCanvasSize.Y))
+                ui.list.CanvasPosition = Vector2.new(
+                    0,
+                    math.max(0, ui.list.AbsoluteCanvasSize.Y)
+                )
             end
         end)
     end
 end
-
+-- BADWARS_CONSOLE_RENDER_V1_END
 function Diagnostics:_scheduleRender()
     if self._renderPending then
         return

@@ -1540,9 +1540,9 @@ local function showTooltip(ownerToken, target, tooltipText)
         and z.TextTransparency < 0.9
         and z.BackgroundTransparency < 0.9
 
-    z.Visible = true
     z.Text = tooltipText
     z.TextColor3 = o.TextStrong
+    z.Visible = true
 
     if alreadyVisible then
         n:Tween(
@@ -6312,16 +6312,16 @@ function d.CreateGUI(aa)
     local aj = Instance.new("TextButton")
     aj.Name = "DiscordInvite"
     aj.Size = UDim2.fromOffset(172, 28)
-    aj.AnchorPoint = Vector2.new(1, 0)
-    aj.Position = UDim2.new(1, -14, 0, 54)
+    aj.AnchorPoint = Vector2.new(0.5, 1)
+    aj.Position = UDim2.new(0.5, 0, 1, -14)
     aj.BackgroundColor3 = o.MainSoft
     aj.BackgroundTransparency = 0.03
     aj.BorderSizePixel = 0
     aj.AutoButtonColor = false
     aj.Text = ""
     aj.ClipsDescendants = false
-    aj.ZIndex = 100000
-    aj.Parent = v
+    aj.ZIndex = 1200
+    aj.Parent = w
     addCorner(aj, UDim.new(1, 0))
     addSurfaceGradient(aj)
     addShadow(aj)
@@ -7680,12 +7680,23 @@ aw.Destroying:Once(function()
         d._OpenSettingsPane = nil
     end
 end)
-layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            children.CanvasSize = UDim2.fromOffset(
-                0,
-                layout.AbsoluteContentSize.Y + 20
-            )
-        end)
+local function refreshSettingsCanvas()
+            task.defer(function()
+                if not children or not children.Parent then
+                    return
+                end
+                local contentHeight = layout.AbsoluteContentSize.Y
+                local padTop = padding.PaddingTop.Offset
+                local padBottom = padding.PaddingBottom.Offset
+                children.CanvasSize = UDim2.fromOffset(
+                    0,
+                    contentHeight + padTop + padBottom + 8
+                )
+            end)
+        end
+
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshSettingsCanvas)
+        task.defer(refreshSettingsCanvas)
 
         au.MouseEnter:Connect(function()
             local accent = Color3.fromHSV(
@@ -8423,6 +8434,9 @@ end))
     onlineDot.Visible = not visible
     af.Visible = not visible
     aj.Visible = not visible
+    if aj and aj.Parent then
+        aj.Visible = not visible
+    end
 
     if visible then
         restoreSettingsRows()
@@ -8756,13 +8770,14 @@ function d.CreateCategory(aa, ab)
             d.GUIColor.Value
         )
         local active = ac.Expanded or hovered
+        local textAccent = accent:Lerp(o.TextStrong, 0.35)
 
-        ae.ImageColor3 = active
+        ae.ImageColor3 = ac.Expanded
             and accent:Lerp(o.TextStrong, 0.18)
-            or o.MutedText
-        af.TextColor3 = active
+            or (hovered and textAccent or o.MutedText)
+        af.TextColor3 = ac.Expanded
             and o.TextStrong
-            or o.MutedText
+            or (hovered and textAccent or o.MutedText)
         categoryAccent.BackgroundTransparency =
             active and 0.1 or 0.5
         headerSurface.BackgroundColor3 =
@@ -12808,12 +12823,14 @@ function d.CreateLegit(ag)
                     child.ZIndex = aI.ZIndex + 3
 
                     if metricModules[aq.Name] then
-                        child.Position = UDim2.fromOffset(9, 13)
-                        child.Size = UDim2.new(1, -18, 1, -15)
+                        child.Position = UDim2.fromOffset(10, 12)
+                        child.Size = UDim2.new(1, -20, 1, -14)
                         child.TextXAlignment = Enum.TextXAlignment.Left
                         child.TextYAlignment = Enum.TextYAlignment.Center
-                        child.TextSize = math.min(math.max(child.TextSize, 14), 16)
+                        child.TextSize = math.min(math.max(child.TextSize, 13), 15)
                         child.FontFace = o.FontSemiBold
+                        child.RichText = false
+                        child.TextTruncate = Enum.TextTruncate.AtEnd
                     end
 
                     child:GetPropertyChangedSignal("BackgroundColor3"):Connect(syncBackground)
@@ -12831,8 +12848,8 @@ function d.CreateLegit(ag)
                 local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
                 n:Tween(aI, o.TweenFast, { BackgroundColor3 = o.Elevated })
                 n:Tween(widgetStroke, o.TweenFast, {
-                    Color = accent,
-                    Transparency = 0.44,
+                    Color = accent:Lerp(o.BorderStrong, 0.5),
+                    Transparency = 0.52,
                 })
             end)
 
@@ -12840,7 +12857,7 @@ function d.CreateLegit(ag)
                 n:Tween(aI, o.TweenFast, { BackgroundColor3 = o.MainSoft })
                 n:Tween(widgetStroke, o.TweenFast, {
                     Color = o.BorderStrong,
-                    Transparency = 0.58,
+                    Transparency = 0.62,
                 })
             end)
 
@@ -15422,7 +15439,8 @@ d:Clean(d.VisibilityChanged:Connect(function()
         ar:Toggle()
     end
 end))
-ar.Object.Parent = d.Categories.Main.MainGui
+-- Keep Overlays ModuleCategory parented inside World category only.
+-- Do NOT reparent to MainGui to avoid duplicate sidebar entries.
 d.OverlaysModuleCategory = ar
 d.Categories.Main:CreateOverlayBar({ Hidden = true })
 

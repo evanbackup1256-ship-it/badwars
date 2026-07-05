@@ -9,7 +9,7 @@ Health = Bad.Categories.Render:CreateModule({
 			label.Position = UDim2.new(0.5, 6, 0.5, 30)
 			label.AnchorPoint = Vector2.new(0.5, 0)
 			label.BackgroundTransparency = 1
-			label.Text = '100 ❤️'
+			label.Text = '100 ?'
 			label.TextSize = 18
 			label.Font = Enum.Font.Arial
 			label.Parent = Bad.gui
@@ -27,7 +27,7 @@ Health = Bad.Categories.Render:CreateModule({
 						label.Text = ''
 						return
 					end
-					label.Text = math.round(hp) .. ' ❤️'
+					label.Text = math.round(hp) .. ' ?'
 					local ratio = maxHp > 0 and hp / maxHp or 0
 					label.TextColor3 = Color3.fromHSV(ratio / 2.8, 0.86, 1)
 				end)

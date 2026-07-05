@@ -430,7 +430,7 @@ components = {
 			label.Name = 'DividerLabel'
 			label.Size = UDim2.fromOffset(218, 27)
 			label.BackgroundTransparency = 1
-			label.Text = '          '..text:upper()
+			label.Text = '??????????'..text:upper()
 			label.TextXAlignment = Enum.TextXAlignment.Left
 			label.TextColor3 = color.Dark(uipallet.Text, 0.43)
 			label.TextSize = 9
@@ -791,7 +791,7 @@ function mainapi:CreateCategory(categorysettings)
 
 		for i, v in components do
 			moduleapi['Create'..i] = function(self, optionsettings)
-				dotsbutton.Text = '·\n·\n·'
+				dotsbutton.Text = '?\n?\n?'
 				return v(optionsettings, modulechildren, moduleapi)
 			end
 		end
@@ -1112,7 +1112,7 @@ function mainapi:CreateLegit(categorysettings)
 
 		for i, v in components do
 			moduleapi['Create'..i] = function(self, optionsettings)
-				dotsbutton.Text = '·\n·\n·'
+				dotsbutton.Text = '?\n?\n?'
 				return v(optionsettings, settingschildren, moduleapi)
 			end
 		end

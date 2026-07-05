@@ -12,7 +12,7 @@ toggle.BackgroundColor3 = color.Dark(children.BackgroundColor3, optionsettings.D
 toggle.BorderSizePixel = 0
 toggle.AutoButtonColor = false
 toggle.Visible = optionsettings.Visible == nil or optionsettings.Visible
-toggle.Text = '          '..optionsettings.Name
+toggle.Text = '??????????'..optionsettings.Name
 toggle.TextXAlignment = Enum.TextXAlignment.Left
 toggle.TextColor3 = color.Dark(uipallet.Text, 0.16)
 toggle.TextSize = 14

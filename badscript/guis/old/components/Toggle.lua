@@ -12,7 +12,7 @@ toggle.BackgroundTransparency = api.Category and 0 or 1
 toggle.BorderSizePixel = 0
 toggle.AutoButtonColor = false
 toggle.Visible = optionsettings.Visible == nil or optionsettings.Visible
-toggle.Text = string.rep(' ', 32)..optionsettings.Name
+toggle.Text = string.rep('?', 32)..optionsettings.Name
 toggle.TextXAlignment = Enum.TextXAlignment.Left
 toggle.TextColor3 = uipallet.Text
 toggle.TextSize = 13

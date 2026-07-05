@@ -13183,7 +13183,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         closeButton.BackgroundTransparency = 1
         closeButton.BorderSizePixel = 0
         closeButton.AutoButtonColor = false
-        closeButton.Text = "×"
+        closeButton.Text = "x"
         closeButton.TextColor3 = o.FaintText
         closeButton.TextSize = 20
         closeButton.FontFace = o.FontSemiBold
@@ -14238,6 +14238,210 @@ B.Parent = e(game:GetService("Players")).LocalPlayer.PlayerGui
 B.ResetOnSpawn = false
 
 d.gui = B
+-- BADWARS_ASCII_TEXT_SANITIZER_V3_BEGIN
+local TextSanitizer = {
+    Connections = setmetatable({}, { __mode = "k" }),
+    Updating = setmetatable({}, { __mode = "k" }),
+}
+
+local function bytes(...)
+    return string.char(...)
+end
+
+local BYTE_REPLACEMENTS = {
+    { bytes(0xC3, 0x97), "x" },
+    { bytes(0xC3, 0x83, 0xE2, 0x80, 0x94), "x" },
+    { bytes(0xC3, 0x82, 0xC3, 0x97), "x" },
+
+    { bytes(0xC2, 0xB7), "-" },
+    { bytes(0xE2, 0x80, 0xA2), "-" },
+    { bytes(0xE2, 0x80, 0x93), "-" },
+    { bytes(0xE2, 0x80, 0x94), "-" },
+
+    { bytes(0xE2, 0x86, 0x90), "<-" },
+    { bytes(0xE2, 0x86, 0x92), "->" },
+    { bytes(0xE2, 0x86, 0x94), "<->" },
+
+    { bytes(0xE2, 0x9C, 0x93), "OK" },
+    { bytes(0xE2, 0x9C, 0x94), "OK" },
+    { bytes(0xE2, 0x9C, 0x95), "x" },
+    { bytes(0xE2, 0x9C, 0x96), "x" },
+
+    { bytes(0xE2, 0x80, 0xA6), "..." },
+    { bytes(0xE2, 0x80, 0x98), "'" },
+    { bytes(0xE2, 0x80, 0x99), "'" },
+    { bytes(0xE2, 0x80, 0x9C), "\"" },
+    { bytes(0xE2, 0x80, 0x9D), "\"" },
+    { bytes(0xC2, 0xA0), " " },
+}
+
+local CODEPOINT_REPLACEMENTS = {
+    [0x00A0] = " ",
+    [0x00A3] = "GBP",
+    [0x00D7] = "x",
+
+    [0x2013] = "-",
+    [0x2014] = "-",
+    [0x2018] = "'",
+    [0x2019] = "'",
+    [0x201C] = "\"",
+    [0x201D] = "\"",
+    [0x2022] = "-",
+    [0x2026] = "...",
+
+    [0x2190] = "<-",
+    [0x2192] = "->",
+    [0x2194] = "<->",
+
+    [0x231F] = "+",
+    [0x2713] = "OK",
+    [0x2714] = "OK",
+    [0x2715] = "x",
+    [0x2716] = "x",
+}
+
+local function sanitizeDisplayText(value)
+    local text = tostring(value or "")
+
+    for _, replacement in ipairs(BYTE_REPLACEMENTS) do
+        text = string.gsub(text, replacement[1], replacement[2])
+    end
+
+    local output = {}
+    local decoded = pcall(function()
+        for _, codepoint in utf8.codes(text) do
+            if
+                codepoint == 9
+                or codepoint == 10
+                or codepoint == 13
+            then
+                output[#output + 1] = utf8.char(codepoint)
+            elseif codepoint >= 32 and codepoint <= 126 then
+                output[#output + 1] = string.char(codepoint)
+            else
+                output[#output + 1] =
+                    CODEPOINT_REPLACEMENTS[codepoint]
+                    or "?"
+            end
+        end
+    end)
+
+    if decoded then
+        return table.concat(output)
+    end
+
+    output = {}
+
+    for index = 1, #text do
+        local byte = string.byte(text, index)
+
+        if
+            byte == 9
+            or byte == 10
+            or byte == 13
+            or (byte >= 32 and byte <= 126)
+        then
+            output[#output + 1] = string.char(byte)
+        elseif byte < 128 then
+            output[#output + 1] = "?"
+        end
+    end
+
+    return table.concat(output)
+end
+
+local function sanitizeProperty(object, property)
+    if TextSanitizer.Updating[object] then
+        return
+    end
+
+    local readable, current = pcall(function()
+        return object[property]
+    end)
+
+    if not readable or type(current) ~= "string" then
+        return
+    end
+
+    local cleaned = sanitizeDisplayText(current)
+
+    if cleaned == current then
+        return
+    end
+
+    TextSanitizer.Updating[object] = true
+
+    pcall(function()
+        object[property] = cleaned
+    end)
+
+    TextSanitizer.Updating[object] = nil
+end
+
+local function watchTextObject(object)
+    if TextSanitizer.Connections[object] then
+        return
+    end
+
+    local isTextLabel = object:IsA("TextLabel")
+    local isTextButton = object:IsA("TextButton")
+    local isTextBox = object:IsA("TextBox")
+
+    if not isTextLabel and not isTextButton and not isTextBox then
+        return
+    end
+
+    local connections = {}
+
+    if isTextBox then
+        sanitizeProperty(object, "PlaceholderText")
+
+        connections[#connections + 1] =
+            object:GetPropertyChangedSignal("PlaceholderText"):Connect(function()
+                sanitizeProperty(object, "PlaceholderText")
+            end)
+
+        connections[#connections + 1] =
+            object.FocusLost:Connect(function()
+                sanitizeProperty(object, "Text")
+            end)
+    else
+        sanitizeProperty(object, "Text")
+
+        connections[#connections + 1] =
+            object:GetPropertyChangedSignal("Text"):Connect(function()
+                sanitizeProperty(object, "Text")
+            end)
+    end
+
+    TextSanitizer.Connections[object] = connections
+
+    object.Destroying:Once(function()
+        local stored = TextSanitizer.Connections[object]
+
+        if stored then
+            for _, connection in ipairs(stored) do
+                pcall(function()
+                    connection:Disconnect()
+                end)
+            end
+        end
+
+        TextSanitizer.Connections[object] = nil
+        TextSanitizer.Updating[object] = nil
+    end)
+end
+
+d.SanitizeText = sanitizeDisplayText
+shared.BadSanitizeText = sanitizeDisplayText
+
+for _, descendant in ipairs(B:GetDescendants()) do
+    watchTextObject(descendant)
+end
+
+d:Clean(B.DescendantAdded:Connect(watchTextObject))
+-- BADWARS_ASCII_TEXT_SANITIZER_V3_END
+
 w = Instance.new("Frame")
 w.Name = "ScaledGui"
 w.Size = UDim2.fromScale(1, 1)

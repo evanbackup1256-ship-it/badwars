@@ -272,10 +272,10 @@ local function keyText(keyCode)
 	end
 
 	local arrows = {
-		[Enum.KeyCode.W] = "↑",
-		[Enum.KeyCode.A] = "←",
-		[Enum.KeyCode.S] = "↓",
-		[Enum.KeyCode.D] = "→",
+		[Enum.KeyCode.W] = "?",
+		[Enum.KeyCode.A] = "<-",
+		[Enum.KeyCode.S] = "?",
+		[Enum.KeyCode.D] = "->",
 	}
 
 	return arrows[keyCode] or keyCode.Name

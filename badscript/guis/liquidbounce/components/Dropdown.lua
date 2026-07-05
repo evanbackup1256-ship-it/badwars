@@ -31,7 +31,7 @@ title.Name = 'Title'
 title.Size = UDim2.new(1, -10, 0, 27)
 title.Position = UDim2.fromOffset(10, 0)
 title.BackgroundTransparency = 1
-title.Text = optionsettings.Name..' · '..optionapi.Value
+title.Text = optionsettings.Name..' ? '..optionapi.Value
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.TextColor3 = uipallet.Text
 title.TextSize = 14
@@ -67,7 +67,7 @@ end
 
 function optionapi:SetValue(val, mouse)
 	self.Value = table.find(optionsettings.List, val) and val or optionsettings.List[1] or 'None'
-	title.Text = optionsettings.Name..' · '..self.Value
+	title.Text = optionsettings.Name..' ? '..self.Value
 	if dropdownchildren then
 		dropdownchildren:Destroy()
 		dropdownchildren = nil

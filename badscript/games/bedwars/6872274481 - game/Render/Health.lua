@@ -25,7 +25,7 @@ Health = Bad.Categories.Render:CreateModule({
 					local hp = hum.Health
 					local maxHp = hum.MaxHealth
 					if type(hp) ~= 'number' or type(maxHp) ~= 'number' then label.Text = '' return end
-					label.Text = math.round(hp) .. ' ❤️'
+					label.Text = math.round(hp) .. ' ?'
 					local ratio = maxHp > 0 and hp / maxHp or 0
 					label.TextColor3 = Color3.fromHSV(ratio / 2.8, 0.86, 1)
 				end)

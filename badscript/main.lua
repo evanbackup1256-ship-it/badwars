@@ -228,7 +228,7 @@ local function safeOption(v)
     end
     return v
 end
--- Safe module reference: Bad.Modules.Fly.Enabled → check cascade
+-- Safe module reference: Bad.Modules.Fly.Enabled -> check cascade
 local function moduleEnabled(modName)
     if not shared.Bad or type(shared.Bad.Modules) ~= "table" then
         return false

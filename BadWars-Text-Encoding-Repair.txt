@@ -1,0 +1,28 @@
+BadWars text encoding repair v3
+Applied: 2026-07-04T21:54:03
+Backup: C:\Users\evanm\OneDrive\Desktop\badwars\.badwars-encoding-backup\20260704-215349
+
+Fixed:
+- Converted every badscript Lua source to ASCII-only text.
+- Replaced multiplication signs with x.
+- Replaced bullets, arrows, smart punctuation, checks, and ellipses.
+- Removed already-corrupted display sequences.
+- Added an ASCII-only runtime sanitizer to gui.lua.
+- Watches dynamically created TextLabels and TextButtons.
+- Sanitizes TextBox placeholders and text after focus loss.
+- Writes files as UTF-8 without BOM.
+
+Changed files:
+- badscript\main.lua
+- badscript\games\bedwars\6872274481 - game\Render\Health.lua
+- badscript\games\universal - base\Legit\Keystrokes.lua
+- badscript\games\universal - base\Render\Health.lua
+- badscript\guis\liquidbounce\components\Dropdown.lua
+- badscript\guis\new\gui.lua
+- badscript\guis\new\components\Dropdown.lua
+- badscript\guis\new\components\Toggle.lua
+- badscript\guis\old\gui.lua
+- badscript\guis\old\components\Toggle.lua
+- badscript\guis\rise\gui.lua
+- badscript\guis\wurst\gui.lua
+- badscript\libraries\diagnostics.lua

@@ -660,7 +660,7 @@ function Diagnostics:EnsureUI()
     counters.Size = UDim2.fromOffset(260, 24)
     counters.BackgroundTransparency = 1
     counters.Font = Enum.Font.Code
-    counters.Text = "0 errors  Â·  0 warnings"
+    counters.Text = "0 errors  -  0 warnings"
     counters.TextSize = 10
     counters.TextColor3 = Color3.fromRGB(107, 112, 123)
     counters.TextXAlignment = Enum.TextXAlignment.Right
@@ -675,7 +675,7 @@ function Diagnostics:EnsureUI()
     close.BorderSizePixel = 0
     close.AutoButtonColor = false
     close.Font = Enum.Font.GothamMedium
-    close.Text = "Ã—"
+    close.Text = "x"
     close.TextSize = 17
     close.TextColor3 = Color3.fromRGB(139, 144, 154)
     close.Parent = header
@@ -864,7 +864,7 @@ function Diagnostics:EnsureUI()
     footer.Size = UDim2.new(1, -52, 0, 18)
     footer.BackgroundTransparency = 1
     footer.Font = Enum.Font.Code
-    footer.Text = "F8  Â·  0 entries"
+    footer.Text = "F8  -  0 entries"
     footer.TextSize = 9
     footer.TextColor3 = Color3.fromRGB(78, 83, 93)
     footer.TextXAlignment = Enum.TextXAlignment.Left
@@ -879,7 +879,7 @@ function Diagnostics:EnsureUI()
     resize.BorderSizePixel = 0
     resize.AutoButtonColor = false
     resize.Font = Enum.Font.Code
-    resize.Text = "âŒŸ"
+    resize.Text = "a?Y"
     resize.TextSize = 14
     resize.TextColor3 = Color3.fromRGB(88, 93, 103)
     resize.Parent = window
@@ -1122,14 +1122,14 @@ function Diagnostics:_render()
     local warningCount = self.Counts.WARN or 0
 
     ui.counters.Text = string.format(
-        "%d errors  Â·  %d warnings",
+        "%d errors  -  %d warnings",
         errorCount,
         warningCount
     )
 
     if ui.footer then
         ui.footer.Text = string.format(
-            "F8  Â·  %d entries  Â·  %s",
+            "F8  -  %d entries  -  %s",
             #self.Entries,
             self.Paused and "paused" or "live"
         )
@@ -1224,7 +1224,7 @@ function Diagnostics:_render()
         source.Parent = row
 
         local repeatSuffix = (entry.repeatCount or 1) > 1
-            and ("  Ã—" .. tostring(entry.repeatCount))
+            and ("  x" .. tostring(entry.repeatCount))
             or ""
 
         local message = Instance.new("TextLabel")

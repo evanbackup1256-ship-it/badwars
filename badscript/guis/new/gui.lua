@@ -443,6 +443,50 @@ local function addMaid(p)
 end
 addMaid(d)
 
+local function connectDeferredPropertyChanged(instance, propertyName, callback, delaySeconds)
+    local queued = false
+    local running = false
+    delaySeconds = tonumber(delaySeconds) or 0.03
+
+    local function run()
+        if running then
+            queued = true
+            return
+        end
+        running = true
+        local ok, err = xpcall(callback, function(callbackError)
+            if debug and type(debug.traceback) == "function" then
+                return debug.traceback(tostring(callbackError), 2)
+            end
+            return tostring(callbackError)
+        end)
+        running = false
+        if not ok then
+            a:report({
+                type = "gui-deferred-property",
+                err = err,
+                args = { tostring(propertyName), tostring(instance) },
+                notifyBlacklisted = true,
+            })
+        end
+        if queued then
+            queued = false
+            task.delay(delaySeconds, run)
+        end
+    end
+
+    return instance:GetPropertyChangedSignal(propertyName):Connect(function()
+        if queued then
+            return
+        end
+        queued = true
+        task.delay(delaySeconds, function()
+            queued = false
+            run()
+        end)
+    end)
+end
+
 local function loadJson(p, q)
     local r, s = pcall(function()
         local r = q and p or readfile(p)
@@ -5035,12 +5079,15 @@ H = {
                 })
             end
         end)
-        ae:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+        connectDeferredPropertyChanged(ae, "AbsolutePosition", function()
             if d.ThreadFix then
                 setthreadidentity(8)
             end
             local N = (ae.AbsolutePosition + Vector2.new(0, 60)) / A.Scale
-            J.Position = UDim2.fromOffset(N.X + 220, N.Y)
+            local targetPosition = UDim2.fromOffset(N.X + 220, N.Y)
+            if J.Position ~= targetPosition then
+                J.Position = targetPosition
+            end
         end)
 
         ad.Object = ae
@@ -5812,7 +5859,6 @@ H = {
                 })
             end
         end)
-        local dropdownPositionQueued = false
         local function refreshDropdownPosition()
             if d.ThreadFix then
                 setthreadidentity(8)
@@ -5824,16 +5870,7 @@ H = {
                 N.Position = targetPosition
             end
         end
-        ae:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-            if dropdownPositionQueued then
-                return
-            end
-            dropdownPositionQueued = true
-            task.delay(0.03, function()
-                dropdownPositionQueued = false
-                refreshDropdownPosition()
-            end)
-        end)
+        connectDeferredPropertyChanged(ae, "AbsolutePosition", refreshDropdownPosition)
 
         if aa.Default then
             ad:ChangeValue()
@@ -7493,7 +7530,7 @@ end
             end)
         end
 
-        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshSettingsCanvas)
+        connectDeferredPropertyChanged(layout, "AbsoluteContentSize", refreshSettingsCanvas)
         task.defer(refreshSettingsCanvas)
 
         au.MouseEnter:Connect(function()
@@ -8429,9 +8466,7 @@ end)
         end)
     end
 
-    ag:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(
-        queueMainWindowSizeRefresh
-    )
+    connectDeferredPropertyChanged(ag, "AbsoluteContentSize", queueMainWindowSizeRefresh)
     B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
         queueMainWindowSizeRefresh()
     end)
@@ -9704,11 +9739,14 @@ function d.CreateCategory(aa, ab)
                 N = false
             end)
         end
-        J:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        connectDeferredPropertyChanged(J, "AbsoluteContentSize", function()
             if d.ThreadFix then
                 setthreadidentity(8)
             end
-            at.Size = UDim2.new(1, -12, 0, J.AbsoluteContentSize.Y / A.Scale)
+            local targetSize = UDim2.new(1, -12, 0, J.AbsoluteContentSize.Y / A.Scale)
+            if at.Size ~= targetSize then
+                at.Size = targetSize
+            end
         end)
 
         function ao.SetVisible(N, O)
@@ -9921,16 +9959,11 @@ function d.CreateCategory(aa, ab)
         end
         ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
     end)
-    al:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    connectDeferredPropertyChanged(al, "AbsoluteContentSize", function()
         if aa.ThreadFix then
             setthreadidentity(8)
         end
-
-        task.defer(function()
-            refreshCategoryLayout(
-                not d._InitialLayoutReady
-            )
-        end)
+        refreshCategoryLayout(not d._InitialLayoutReady)
     end)
 
     B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
@@ -10455,7 +10488,7 @@ function d.CreateCategory(aa, ab)
                     ao:Toggle()
                 end)
 
-                ay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                connectDeferredPropertyChanged(ay, "AbsoluteContentSize", function()
                     refreshModuleCategory()
                 end)
             end)
@@ -11863,17 +11896,20 @@ function d.CreateCategoryList(ag, ah)
         end
         aq.Visible = not aq.Visible
     end)
-    at:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    connectDeferredPropertyChanged(at, "AbsoluteContentSize", function()
         if ag.ThreadFix then
             setthreadidentity(8)
         end
         ai:RefreshScroll()
     end)
-    au:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    connectDeferredPropertyChanged(au, "AbsoluteContentSize", function()
         if ag.ThreadFix then
             setthreadidentity(8)
         end
-        aq.Size = UDim2.fromOffset(220, au.AbsoluteContentSize.Y)
+        local targetSize = UDim2.fromOffset(220, au.AbsoluteContentSize.Y)
+        if aq.Size ~= targetSize then
+            aq.Size = targetSize
+        end
     end)
 
     ai.Button = ag.Categories.Main:CreateButton({
@@ -12250,12 +12286,18 @@ function d.CreateSearch(ag)
         aj.ImageColor3 = o.FaintText
     end)
 
-    ap:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    connectDeferredPropertyChanged(ap, "AbsoluteContentSize", function()
         if ag.ThreadFix then
             setthreadidentity(8)
         end
-        an.CanvasSize = UDim2.fromOffset(0, ap.AbsoluteContentSize.Y / A.Scale)
-        ah.Size = UDim2.fromOffset(260, math.min(42 + ap.AbsoluteContentSize.Y / A.Scale, 462))
+        local targetCanvasSize = UDim2.fromOffset(0, ap.AbsoluteContentSize.Y / A.Scale)
+        if an.CanvasSize ~= targetCanvasSize then
+            an.CanvasSize = targetCanvasSize
+        end
+        local targetSize = UDim2.fromOffset(260, math.min(42 + ap.AbsoluteContentSize.Y / A.Scale, 462))
+        if ah.Size ~= targetSize then
+            ah.Size = targetSize
+        end
     end)
 
     d:Clean(d.PreloadEvent:Connect(function()
@@ -13003,11 +13045,14 @@ function d.CreateLegit(ag)
             closeLegitOptions(true)
         end)
 
-        aH:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        connectDeferredPropertyChanged(aH, "AbsoluteContentSize", function()
             if d.ThreadFix then
                 setthreadidentity(8)
             end
-            aF.CanvasSize = UDim2.fromOffset(0, aH.AbsoluteContentSize.Y / A.Scale)
+            local targetCanvasSize = UDim2.fromOffset(0, aH.AbsoluteContentSize.Y / A.Scale)
+            if aF.CanvasSize ~= targetCanvasSize then
+                aF.CanvasSize = targetCanvasSize
+            end
         end)
 
         ar.Object = av
@@ -13053,11 +13098,14 @@ function d.CreateLegit(ag)
         visibleCheck()
     end)
 
-    ao:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    connectDeferredPropertyChanged(ao, "AbsoluteContentSize", function()
         if ag.ThreadFix then
             setthreadidentity(8)
         end
-        an.CanvasSize = UDim2.fromOffset(0, ao.AbsoluteContentSize.Y / A.Scale)
+        local targetCanvasSize = UDim2.fromOffset(0, ao.AbsoluteContentSize.Y / A.Scale)
+        if an.CanvasSize ~= targetCanvasSize then
+            an.CanvasSize = targetCanvasSize
+        end
     end)
 
     ag.Legit = ah
@@ -15727,7 +15775,7 @@ aU.Image = u("badscript/assets/new/textvape.png")
 aU.Parent = aw.Children
 
 local aV = aw.Children.AbsolutePosition.X > (B.AbsoluteSize.X / 2)
-d:Clean(aw.Children:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+d:Clean(connectDeferredPropertyChanged(aw.Children, "AbsolutePosition", function()
     if d.ThreadFix then
         setthreadidentity(8)
     end
@@ -17740,8 +17788,8 @@ end
                 )
             end
             refresh()
-            d:Clean(layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refresh))
-            d:Clean(scroller:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(refresh))
+            d:Clean(connectDeferredPropertyChanged(layout, "AbsoluteContentSize", refresh))
+            d:Clean(connectDeferredPropertyChanged(scroller, "AbsoluteWindowSize", refresh))
             return refresh
         end
 

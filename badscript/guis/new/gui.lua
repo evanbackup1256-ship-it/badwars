@@ -16606,4 +16606,2602 @@ task.defer(function()
 end)
 -- BADWARS_FINAL_DESIGN_SCOPE_V15_END
 
+-- BADWARS_FUSION_DESIGN_RUNTIME_V21_BEGIN
+-- Fusion-inspired local runtime. It mirrors Fusion's declarative/reactive shape
+-- without adding a network/package dependency to this single-file executor GUI.
+do
+    d.Version = "21.0"
+    d.PremiumBuild = "2026.07.06-V21-FUSION-DESIGN-RUNTIME"
+
+    local Fusion = {}
+    local cleanupBucket = {}
+    local SPECIAL_CHILDREN = {}
+    local SPECIAL_ON_EVENT = {}
+    local SPECIAL_ON_CHANGE = {}
+    local SPECIAL_OUT = {}
+
+    Fusion.Children = SPECIAL_CHILDREN
+    Fusion.OnEvent = function(eventName)
+        return { SPECIAL_ON_EVENT, tostring(eventName or "") }
+    end
+    Fusion.OnChange = function(propertyName)
+        return { SPECIAL_ON_CHANGE, tostring(propertyName or "") }
+    end
+    Fusion.Out = function(propertyName)
+        return { SPECIAL_OUT, tostring(propertyName or "") }
+    end
+
+    local function addRuntimeCleanup(taskObject)
+        cleanupBucket[#cleanupBucket + 1] = taskObject
+        if d.Clean then
+            pcall(function()
+                d:Clean(taskObject)
+            end)
+        end
+        return taskObject
+    end
+
+    local function isState(value)
+        return type(value) == "table" and value.__BadWarsFusionState == true
+    end
+
+    local function readState(value)
+        if isState(value) then
+            return value:get()
+        end
+        if type(value) == "function" then
+            local ok, result = pcall(value)
+            if ok then
+                return result
+            end
+            bwarn("[Fusion runtime]: computed read failed", result)
+            return nil
+        end
+        return value
+    end
+
+    function Fusion.Value(initialValue)
+        local state = {
+            __BadWarsFusionState = true,
+            _value = initialValue,
+            _connections = {},
+        }
+
+        function state.get(self)
+            return self._value
+        end
+
+        function state.set(self, nextValue)
+            if self._value == nextValue then
+                return nextValue
+            end
+            self._value = nextValue
+            for callback in pairs(self._connections) do
+                task.defer(callback, nextValue)
+            end
+            return nextValue
+        end
+
+        function state.onChange(self, callback)
+            if type(callback) ~= "function" then
+                return nil
+            end
+            self._connections[callback] = true
+            callback(self._value)
+            return {
+                Disconnect = function()
+                    self._connections[callback] = nil
+                end,
+            }
+        end
+
+        return state
+    end
+
+    function Fusion.Computed(dependencies, processor)
+        dependencies = type(dependencies) == "table" and dependencies or {}
+        processor = type(processor) == "function" and processor or function()
+            return nil
+        end
+
+        local computed = Fusion.Value(nil)
+        local function refresh()
+            local values = {}
+            for index, dependency in ipairs(dependencies) do
+                values[index] = readState(dependency)
+            end
+            local ok, result = pcall(processor, unpack(values))
+            if ok then
+                computed:set(result)
+            else
+                bwarn("[Fusion runtime]: computed update failed", result)
+            end
+        end
+
+        for _, dependency in ipairs(dependencies) do
+            if isState(dependency) then
+                addRuntimeCleanup(dependency:onChange(refresh))
+            end
+        end
+        refresh()
+        return computed
+    end
+
+    local function bindProperty(instance, property, value)
+        if isState(value) then
+            local function assign(nextValue)
+                pcall(function()
+                    instance[property] = nextValue
+                end)
+            end
+            assign(value:get())
+            addRuntimeCleanup(value:onChange(assign))
+            return
+        end
+
+        pcall(function()
+            instance[property] = readState(value)
+        end)
+    end
+
+    local function parentChild(parent, child)
+        if child == nil then
+            return
+        end
+        if typeof(child) == "Instance" then
+            child.Parent = parent
+            return
+        end
+        if type(child) == "table" then
+            for _, nested in pairs(child) do
+                parentChild(parent, nested)
+            end
+        end
+    end
+
+    local function applySpecial(instance, key, value)
+        if key == SPECIAL_CHILDREN then
+            parentChild(instance, value)
+            return true
+        end
+
+        if type(key) == "table" and key[1] == SPECIAL_ON_EVENT then
+            local eventName = key[2]
+            local event = instance[eventName]
+            if event and type(value) == "function" then
+                addRuntimeCleanup(event:Connect(value))
+            end
+            return true
+        end
+
+        if type(key) == "table" and key[1] == SPECIAL_ON_CHANGE then
+            local propertyName = key[2]
+            if propertyName ~= "" and type(value) == "function" then
+                addRuntimeCleanup(instance:GetPropertyChangedSignal(propertyName):Connect(function()
+                    value(instance[propertyName])
+                end))
+            end
+            return true
+        end
+
+        if type(key) == "table" and key[1] == SPECIAL_OUT then
+            local propertyName = key[2]
+            if isState(value) and propertyName ~= "" then
+                value:set(instance[propertyName])
+                addRuntimeCleanup(instance:GetPropertyChangedSignal(propertyName):Connect(function()
+                    value:set(instance[propertyName])
+                end))
+            end
+            return true
+        end
+
+        return false
+    end
+
+    function Fusion.New(className)
+        return function(properties)
+            properties = type(properties) == "table" and properties or {}
+            local instance = Instance.new(className)
+
+            for key, value in pairs(properties) do
+                if not applySpecial(instance, key, value) then
+                    bindProperty(instance, key, value)
+                end
+            end
+
+            return instance
+        end
+    end
+
+    function Fusion.Hydrate(instance)
+        return function(properties)
+            if typeof(instance) ~= "Instance" then
+                return instance
+            end
+            properties = type(properties) == "table" and properties or {}
+            for key, value in pairs(properties) do
+                if not applySpecial(instance, key, value) then
+                    bindProperty(instance, key, value)
+                end
+            end
+            return instance
+        end
+    end
+
+    function Fusion.Spring(state, profile)
+        profile = type(profile) == "table" and profile or o.SpringSoft
+        local output = Fusion.Value(readState(state))
+        if not isState(state) then
+            return output
+        end
+        addRuntimeCleanup(state:onChange(function(value)
+            output:set(value)
+        end))
+        output.Profile = profile
+        return output
+    end
+
+    function Fusion.cleanup()
+        for _, taskObject in ipairs(cleanupBucket) do
+            pcall(function()
+                if type(taskObject) == "function" then
+                    taskObject()
+                elseif type(taskObject) == "table" and type(taskObject.Disconnect) == "function" then
+                    taskObject:Disconnect()
+                elseif typeof(taskObject) == "Instance" then
+                    taskObject:Destroy()
+                end
+            end)
+        end
+        table.clear(cleanupBucket)
+    end
+
+    d.Fusion = Fusion
+    d.Libraries.Fusion = Fusion
+    d.Libraries.fusion = Fusion
+end
+
+do
+    local Fusion = d.Fusion
+    local function addRuntimeCleanup(taskObject)
+        if d.Clean then
+            pcall(function()
+                d:Clean(taskObject)
+            end)
+        end
+        return taskObject
+    end
+
+    local function accentColor(alpha)
+        local color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+        if alpha then
+            return color:Lerp(o.TextStrong, alpha)
+        end
+        return color
+    end
+
+    local function ensureCorner(instance, radius)
+        local corner = instance:FindFirstChildOfClass("UICorner")
+        if not corner then
+            corner = Instance.new("UICorner")
+            corner.Parent = instance
+        end
+        corner.CornerRadius = radius or o.Radius
+        return corner
+    end
+
+    local function ensureStroke(instance, color, transparency, thickness, name)
+        local stroke = name and instance:FindFirstChild(name) or instance:FindFirstChildOfClass("UIStroke")
+        if not stroke then
+            stroke = Instance.new("UIStroke")
+            stroke.Name = name or "FusionStroke"
+            stroke.Parent = instance
+        end
+        stroke.Color = color or o.Border
+        stroke.Transparency = transparency or 0.75
+        stroke.Thickness = thickness or 1
+        stroke.LineJoinMode = Enum.LineJoinMode.Round
+        return stroke
+    end
+
+    local function attachScaleMotion(instance, amount)
+        if typeof(instance) ~= "Instance" or not instance:IsA("GuiObject") then
+            return nil
+        end
+        if instance:GetAttribute("BadWarsFusionMotion") then
+            return instance:FindFirstChild("FusionScale")
+        end
+
+        instance:SetAttribute("BadWarsFusionMotion", true)
+        local scale = instance:FindFirstChild("FusionScale") or Instance.new("UIScale")
+        scale.Name = "FusionScale"
+        scale.Scale = 1
+        scale.Parent = instance
+        amount = amount or 1.006
+
+        local baseTransparency = instance.BackgroundTransparency
+        addRuntimeCleanup(instance.MouseEnter:Connect(function()
+            if not instance.Parent then
+                return
+            end
+            n:Tween(scale, o.TweenFast, { Scale = amount })
+            if instance.BackgroundTransparency < 1 then
+                n:Tween(instance, o.TweenFast, {
+                    BackgroundTransparency = math.clamp(baseTransparency - 0.018, 0, 1),
+                })
+            end
+        end))
+
+        addRuntimeCleanup(instance.MouseLeave:Connect(function()
+            if not instance.Parent then
+                return
+            end
+            n:Tween(scale, o.TweenFast, { Scale = 1 })
+            if instance.BackgroundTransparency < 1 then
+                n:Tween(instance, o.TweenFast, { BackgroundTransparency = baseTransparency })
+            end
+        end))
+
+        return scale
+    end
+
+    local function stabilizeTextLabel(label)
+        if not label:IsA("TextLabel") and not label:IsA("TextButton") and not label:IsA("TextBox") then
+            return
+        end
+        if label:GetAttribute("BadWarsFusionTextStable") then
+            return
+        end
+        label:SetAttribute("BadWarsFusionTextStable", true)
+        label.TextWrapped = label.AbsoluteSize.X > 180 and label.TextWrapped or false
+        label.TextTruncate = Enum.TextTruncate.AtEnd
+        label.ClipsDescendants = true
+        if label.TextXAlignment == Enum.TextXAlignment.Center and label.AbsoluteSize.X > 120 then
+            local parentName = label.Parent and label.Parent.Name or ""
+            if parentName:find("Button") or parentName:find("Module") or parentName:find("Card") then
+                label.TextXAlignment = Enum.TextXAlignment.Left
+            end
+        end
+    end
+
+    local function stretchGuiObject(instance)
+        if typeof(instance) ~= "Instance" or not instance:IsA("GuiObject") then
+            return
+        end
+        local parent = instance.Parent
+        if not parent or not parent:IsA("GuiObject") then
+            return
+        end
+        local name = instance.Name
+        if name == "Title" or name == "Text" or name == "Label" or name == "Value" or name == "DisplayName" then
+            if instance.Size.X.Scale == 0 and instance.AbsoluteSize.X > 0 then
+                local left = instance.Position.X.Offset
+                local right = math.max(12, parent.AbsoluteSize.X - left - instance.AbsoluteSize.X)
+                if parent.AbsoluteSize.X > 80 and right > 0 then
+                    instance.Size = UDim2.new(1, -(left + right), instance.Size.Y.Scale, instance.Size.Y.Offset)
+                end
+            end
+        end
+    end
+
+    local function normalizeButton(instance)
+        if not (instance:IsA("TextButton") or instance:IsA("ImageButton")) then
+            return
+        end
+        instance.AutoButtonColor = false
+        instance.ClipsDescendants = true
+        ensureCorner(instance, instance.AbsoluteSize.Y <= 36 and o.RadiusSmall or o.Radius)
+        attachScaleMotion(instance, 1.004)
+    end
+
+    local metricNames = {
+        Clock = true,
+        FPS = true,
+        Memory = true,
+        Ping = true,
+        Speedmeter = true,
+    }
+
+    local function normalizeMetricWidget(widget)
+        if not widget:IsA("GuiObject") then
+            return
+        end
+        local title = widget:FindFirstChild("WidgetTitle")
+        local inferredName = title and title:IsA("TextLabel") and title.Text or widget.Name
+        inferredName = tostring(inferredName):gsub("%s+", "")
+        if not metricNames[inferredName] and not metricNames[widget.Name] then
+            return
+        end
+        if widget:GetAttribute("BadWarsFusionMetricFixed") then
+            return
+        end
+        widget:SetAttribute("BadWarsFusionMetricFixed", true)
+        widget.ClipsDescendants = false
+        widget.BackgroundTransparency = math.min(widget.BackgroundTransparency, 0.04)
+        widget.BackgroundColor3 = o.MainSoft
+        ensureCorner(widget, o.Radius)
+        local stroke = ensureStroke(widget, o.BorderStrong, 0.58, 1, "FusionMetricStroke")
+
+        for _, child in ipairs(widget:GetChildren()) do
+            if child:IsA("TextLabel") and not child:GetAttribute("PremiumWidgetInternal") then
+                child.Visible = true
+                child.BackgroundTransparency = 1
+                child.TextTransparency = 0
+                child.TextColor3 = o.TextStrong
+                child.TextStrokeTransparency = 1
+                child.Position = UDim2.fromOffset(10, 12)
+                child.Size = UDim2.new(1, -20, 1, -14)
+                child.TextXAlignment = Enum.TextXAlignment.Left
+                child.TextYAlignment = Enum.TextYAlignment.Center
+                child.TextWrapped = false
+                child.TextTruncate = Enum.TextTruncate.AtEnd
+                child.FontFace = o.FontSemiBold
+                child.ZIndex = widget.ZIndex + 8
+            end
+        end
+
+        addRuntimeCleanup(widget.MouseEnter:Connect(function()
+            widget.Visible = true
+            n:Tween(widget, o.TweenFast, {
+                BackgroundTransparency = 0,
+                BackgroundColor3 = o.Elevated,
+            })
+            n:Tween(stroke, o.TweenFast, {
+                Color = accentColor(0.1),
+                Transparency = 0.34,
+            })
+            for _, child in ipairs(widget:GetChildren()) do
+                if child:IsA("TextLabel") then
+                    child.Visible = true
+                    child.TextTransparency = 0
+                end
+            end
+        end))
+
+        addRuntimeCleanup(widget.MouseLeave:Connect(function()
+            n:Tween(widget, o.TweenFast, {
+                BackgroundTransparency = 0.03,
+                BackgroundColor3 = o.MainSoft,
+            })
+            n:Tween(stroke, o.TweenFast, {
+                Color = o.BorderStrong,
+                Transparency = 0.58,
+            })
+        end))
+    end
+
+    local function createFusionNotification(api, titleText, bodyText, lifetime, kind)
+        if not q or not q.Parent then
+            return nil
+        end
+
+        api._FusionNotificationDismissers = api._FusionNotificationDismissers or setmetatable({}, { __mode = "k" })
+        local accent = kind == "alert" and o.Danger
+            or kind == "warning" and o.Warning
+            or kind == "success" and o.Success
+            or accentColor()
+        local iconName = kind == "alert" and "alert"
+            or kind == "warning" and "warning"
+            or kind == "success" and "notification"
+            or "info"
+        local width = d.isMobile and 304 or 348
+        local textWidth = width - 72
+        local bounds = E(removeTags(bodyText), d.isMobile and 12 or 11, o.Font, textWidth) or Vector2.zero
+        local height = math.clamp(58 + bounds.Y, 68, d.isMobile and 112 or 104)
+        local transparency = Fusion.Value(1)
+        local progressSize = Fusion.Value(UDim2.fromScale(1, 1))
+        local scaleState = Fusion.Value(0.984)
+
+        local cardScale = Fusion.New("UIScale")({
+            Name = "FusionNotificationScale",
+            Scale = scaleState,
+        })
+
+        local card = Fusion.New("CanvasGroup")({
+            Name = "Notification",
+            Size = UDim2.fromOffset(width, height),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, width + 18, 1, -(height + 14)),
+            LayoutOrder = math.floor(os.clock() * 100000),
+            BackgroundColor3 = o.MainSoft,
+            BackgroundTransparency = 0,
+            GroupTransparency = transparency,
+            BorderSizePixel = 0,
+            Active = true,
+            ClipsDescendants = true,
+            ZIndex = 130,
+            [Fusion.Children] = {
+                cardScale,
+                Fusion.New("UICorner")({
+                    CornerRadius = o.Radius,
+                }),
+                Fusion.New("UIStroke")({
+                    Name = "NotificationStroke",
+                    Color = o.BorderStrong,
+                    Transparency = 0.62,
+                    Thickness = 1,
+                    LineJoinMode = Enum.LineJoinMode.Round,
+                }),
+                Fusion.New("Frame")({
+                    Name = "Accent",
+                    Size = UDim2.new(0, 3, 1, -18),
+                    Position = UDim2.fromOffset(10, 9),
+                    BackgroundColor3 = accent,
+                    BorderSizePixel = 0,
+                    ZIndex = 132,
+                    [Fusion.Children] = {
+                        Fusion.New("UICorner")({
+                            CornerRadius = UDim.new(1, 0),
+                        }),
+                    },
+                }),
+                Fusion.New("ImageLabel")({
+                    Name = "Icon",
+                    Size = UDim2.fromOffset(16, 16),
+                    Position = UDim2.fromOffset(22, 17),
+                    BackgroundTransparency = 1,
+                    Image = u("badscript/assets/new/" .. iconName .. ".png"),
+                    ImageColor3 = accent,
+                    ImageTransparency = 0,
+                    ZIndex = 133,
+                }),
+                Fusion.New("TextLabel")({
+                    Name = "Title",
+                    Size = UDim2.new(1, -84, 0, 18),
+                    Position = UDim2.fromOffset(48, 11),
+                    BackgroundTransparency = 1,
+                    Text = titleText,
+                    TextColor3 = o.TextStrong,
+                    TextSize = d.isMobile and 13 or 12,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextYAlignment = Enum.TextYAlignment.Center,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    RichText = true,
+                    FontFace = o.FontSemiBold,
+                    ZIndex = 133,
+                }),
+                Fusion.New("TextLabel")({
+                    Name = "Text",
+                    Size = UDim2.new(1, -66, 1, -38),
+                    Position = UDim2.fromOffset(48, 31),
+                    BackgroundTransparency = 1,
+                    Text = bodyText,
+                    TextColor3 = o.MutedText,
+                    TextSize = d.isMobile and 12 or 11,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextYAlignment = Enum.TextYAlignment.Top,
+                    TextWrapped = true,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    RichText = true,
+                    FontFace = o.Font,
+                    ZIndex = 133,
+                }),
+                Fusion.New("TextButton")({
+                    Name = "Dismiss",
+                    Size = UDim2.fromOffset(26, 26),
+                    Position = UDim2.new(1, -31, 0, 6),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutoButtonColor = false,
+                    Text = "x",
+                    TextColor3 = o.FaintText,
+                    TextSize = 16,
+                    FontFace = o.FontSemiBold,
+                    ZIndex = 136,
+                }),
+                Fusion.New("Frame")({
+                    Name = "ProgressTrack",
+                    Size = UDim2.new(1, -30, 0, 2),
+                    Position = UDim2.new(0, 15, 1, -7),
+                    BackgroundColor3 = o.Elevated,
+                    BackgroundTransparency = 0.15,
+                    BorderSizePixel = 0,
+                    ZIndex = 132,
+                    [Fusion.Children] = {
+                        Fusion.New("UICorner")({
+                            CornerRadius = UDim.new(1, 0),
+                        }),
+                        Fusion.New("Frame")({
+                            Name = "Progress",
+                            Size = progressSize,
+                            BackgroundColor3 = accent,
+                            BorderSizePixel = 0,
+                            ZIndex = 133,
+                            [Fusion.Children] = {
+                                Fusion.New("UICorner")({
+                                    CornerRadius = UDim.new(1, 0),
+                                }),
+                            },
+                        }),
+                    },
+                }),
+            },
+        })
+
+        card:SetAttribute("NotifHeight", height)
+        card:SetAttribute("NotifTitle", titleText)
+        card:SetAttribute("NotifText", bodyText)
+        card:SetAttribute("LifeGeneration", 1)
+        card:SetAttribute("DuplicateCount", 1)
+        card.Parent = q
+
+        local dismissButton = card:FindFirstChild("Dismiss")
+        local progress = card:FindFirstChild("Progress", true)
+        local stroke = card:FindFirstChild("NotificationStroke")
+        local dismissed = false
+
+        local function listCards()
+            local list = {}
+            for _, child in ipairs(q:GetChildren()) do
+                if child:IsA("GuiObject") and child.Name == "Notification" then
+                    list[#list + 1] = child
+                end
+            end
+            table.sort(list, function(left, right)
+                return (left.LayoutOrder or 0) > (right.LayoutOrder or 0)
+            end)
+            return list
+        end
+
+        local function relayout(animated)
+            local offset = d.isMobile and 12 or 16
+            for _, otherCard in ipairs(listCards()) do
+                local otherHeight = otherCard:GetAttribute("NotifHeight") or otherCard.AbsoluteSize.Y
+                local target = UDim2.new(1, d.isMobile and -10 or -18, 1, -(offset + otherHeight))
+                if animated then
+                    n:Tween(otherCard, o.Tween, { Position = target }, n.tweenstwo)
+                else
+                    otherCard.Position = target
+                end
+                offset += otherHeight + 8
+            end
+        end
+
+        local function dismiss()
+            if dismissed then
+                return
+            end
+            dismissed = true
+            api._FusionNotificationDismissers[card] = nil
+            n:Tween(card, TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+                Position = UDim2.new(1, width + 18, 1, card.Position.Y.Offset),
+                GroupTransparency = 1,
+            }, n.tweenstwo)
+            n:Tween(cardScale, TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+                Scale = 0.982,
+            })
+            task.delay(0.14, function()
+                if card.Parent then
+                    card:Destroy()
+                end
+                relayout(true)
+            end)
+        end
+
+        api._FusionNotificationDismissers[card] = dismiss
+        if dismissButton then
+            addRuntimeCleanup(dismissButton.Activated:Connect(dismiss))
+            addRuntimeCleanup(dismissButton.MouseEnter:Connect(function()
+                n:Tween(dismissButton, o.TweenFast, { TextColor3 = o.TextStrong })
+            end))
+            addRuntimeCleanup(dismissButton.MouseLeave:Connect(function()
+                n:Tween(dismissButton, o.TweenFast, { TextColor3 = o.FaintText })
+            end))
+        end
+
+        addRuntimeCleanup(card.MouseEnter:Connect(function()
+            n:Tween(cardScale, o.TweenFast, { Scale = 1.004 })
+            if stroke then
+                n:Tween(stroke, o.TweenFast, { Color = accent:Lerp(o.TextStrong, 0.16), Transparency = 0.38 })
+            end
+        end))
+        addRuntimeCleanup(card.MouseLeave:Connect(function()
+            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
+            if stroke then
+                n:Tween(stroke, o.TweenFast, { Color = o.BorderStrong, Transparency = 0.62 })
+            end
+        end))
+
+        relayout(true)
+        n:Tween(card, o.TweenSpring, { GroupTransparency = 0 }, n.tweenstwo)
+        n:Tween(cardScale, o.TweenSpring, { Scale = 1 })
+        if progress then
+            n:Tween(progress, TweenInfo.new(lifetime, Enum.EasingStyle.Linear), {
+                Size = UDim2.fromScale(0, 1),
+            }, n.tweenstwo)
+        end
+
+        local generation = card:GetAttribute("LifeGeneration")
+        task.delay(lifetime, function()
+            if card.Parent and not dismissed and card:GetAttribute("LifeGeneration") == generation then
+                dismiss()
+            end
+        end)
+
+        return card
+    end
+
+    local previousNotification = d.CreateNotification
+    function d.CreateNotification(api, titleText, bodyText, lifetime, kind)
+        if not api.Notifications or not api.Notifications.Enabled then
+            return
+        end
+
+        titleText = tostring(titleText or "BadWars")
+        bodyText = tostring(bodyText or "")
+        lifetime = math.clamp(tonumber(lifetime) or 5, 1.25, 30)
+        kind = string.lower(tostring(kind or "info"))
+
+        task.defer(function()
+            if api.ThreadFix then
+                pcall(setthreadidentity, 8)
+            end
+            local ok, result = pcall(createFusionNotification, api, titleText, bodyText, lifetime, kind)
+            if not ok then
+                bwarn("[Fusion notification]: fallback", result)
+                pcall(previousNotification, api, titleText, bodyText, lifetime, kind)
+            end
+        end)
+    end
+
+    local function applyFusionPolish(instance)
+        if typeof(instance) ~= "Instance" then
+            return
+        end
+        if instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox") then
+            stabilizeTextLabel(instance)
+            stretchGuiObject(instance)
+        end
+        if instance:IsA("TextButton") or instance:IsA("ImageButton") then
+            normalizeButton(instance)
+        end
+        if instance:IsA("GuiObject") then
+            normalizeMetricWidget(instance)
+        end
+    end
+
+    task.defer(function()
+        if not B or not B.Parent then
+            return
+        end
+        for _, descendant in ipairs(B:GetDescendants()) do
+            applyFusionPolish(descendant)
+        end
+        addRuntimeCleanup(B.DescendantAdded:Connect(function(descendant)
+            task.defer(applyFusionPolish, descendant)
+        end))
+    end)
+end
+-- BADWARS_FUSION_DESIGN_RUNTIME_V21_END
+
+-- BADWARS_FUSION_COMPONENT_KIT_V21_BEGIN
+;(function()
+    local Fusion = d.Fusion
+    if type(Fusion) == "table" then
+        local Kit = {}
+        local Layout = {}
+        local Motion = {}
+        local Registry = {
+            Components = {},
+            Rules = {},
+            Metrics = {
+                Applied = 0,
+                TextRepairs = 0,
+                HitboxRepairs = 0,
+                LayoutRepairs = 0,
+                MotionRepairs = 0,
+            },
+        }
+
+        local function isGuiObject(instance)
+            return typeof(instance) == "Instance" and instance:IsA("GuiObject")
+        end
+
+        local function safeTween(instance, tweenInfo, properties, registry)
+            if not isGuiObject(instance) and not (typeof(instance) == "Instance" and instance:IsA("UIScale")) then
+                return nil
+            end
+            if type(properties) ~= "table" then
+                return nil
+            end
+            return n:Tween(instance, tweenInfo or o.TweenFast, properties, registry)
+        end
+
+        local function makeState(value)
+            return Fusion.Value(value)
+        end
+
+        local function makeComputed(dependencies, callback)
+            return Fusion.Computed(dependencies, callback)
+        end
+
+        local function makeCorner(radius)
+            return Fusion.New("UICorner")({
+                CornerRadius = radius or o.Radius,
+            })
+        end
+
+        local function makeStroke(name, color, transparency, thickness)
+            return Fusion.New("UIStroke")({
+                Name = name or "Stroke",
+                Color = color or o.Border,
+                Transparency = transparency or 0.72,
+                Thickness = thickness or 1,
+                LineJoinMode = Enum.LineJoinMode.Round,
+            })
+        end
+
+        local function makePadding(left, right, top, bottom)
+            return Fusion.New("UIPadding")({
+                PaddingLeft = UDim.new(0, left or 0),
+                PaddingRight = UDim.new(0, right or left or 0),
+                PaddingTop = UDim.new(0, top or 0),
+                PaddingBottom = UDim.new(0, bottom or top or 0),
+            })
+        end
+
+        local function makeListLayout(direction, padding, alignment)
+            return Fusion.New("UIListLayout")({
+                FillDirection = direction or Enum.FillDirection.Vertical,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Padding = UDim.new(0, padding or 0),
+                HorizontalAlignment = alignment or Enum.HorizontalAlignment.Left,
+                VerticalAlignment = Enum.VerticalAlignment.Top,
+            })
+        end
+
+        local function readThemeColor(name, fallback)
+            local value = o[name]
+            if typeof(value) == "Color3" then
+                return value
+            end
+            return fallback or o.Text
+        end
+
+        local function currentAccent()
+            return Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+        end
+
+        local function ensureScale(instance, name)
+            local scale = instance:FindFirstChild(name or "FusionKitScale")
+            if not scale then
+                scale = Instance.new("UIScale")
+                scale.Name = name or "FusionKitScale"
+                scale.Scale = 1
+                scale.Parent = instance
+            end
+            return scale
+        end
+
+        local function setAttributes(instance, attributes)
+            if typeof(instance) ~= "Instance" or type(attributes) ~= "table" then
+                return instance
+            end
+            for key, value in pairs(attributes) do
+                pcall(function()
+                    instance:SetAttribute(tostring(key), value)
+                end)
+            end
+            return instance
+        end
+
+        function Motion.profile(name)
+            local profiles = {
+                instant = TweenInfo.new(0.001, Enum.EasingStyle.Linear),
+                press = o.TweenPress,
+                fast = o.TweenFast,
+                smooth = o.Tween,
+                slow = o.TweenSlow,
+                spring = o.TweenSpring,
+                back = o.TweenBack,
+                panel = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                dismiss = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+                meter = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                linear = TweenInfo.new(0.25, Enum.EasingStyle.Linear),
+            }
+            return profiles[name] or profiles.smooth
+        end
+
+        function Motion.hover(instance, options)
+            if not isGuiObject(instance) then
+                return nil
+            end
+            if instance:GetAttribute("FusionKitHover") then
+                return instance
+            end
+            instance:SetAttribute("FusionKitHover", true)
+            options = type(options) == "table" and options or {}
+            local scale = ensureScale(instance, "FusionKitHoverScale")
+            local baseColor = instance.BackgroundColor3
+            local baseTransparency = instance.BackgroundTransparency
+            local hoverColor = options.Color or readThemeColor("SurfaceHover", baseColor)
+            local hoverTransparency = options.Transparency or math.clamp(baseTransparency - 0.02, 0, 1)
+            local hoverScale = options.Scale or 1.004
+            local profile = options.Profile or Motion.profile("fast")
+
+            d:Clean(instance.MouseEnter:Connect(function()
+                if not instance.Parent then
+                    return
+                end
+                Registry.Metrics.MotionRepairs += 1
+                safeTween(scale, profile, { Scale = hoverScale })
+                if baseTransparency < 1 then
+                    safeTween(instance, profile, {
+                        BackgroundColor3 = hoverColor,
+                        BackgroundTransparency = hoverTransparency,
+                    })
+                end
+            end))
+
+            d:Clean(instance.MouseLeave:Connect(function()
+                if not instance.Parent then
+                    return
+                end
+                safeTween(scale, profile, { Scale = 1 })
+                if baseTransparency < 1 then
+                    safeTween(instance, profile, {
+                        BackgroundColor3 = baseColor,
+                        BackgroundTransparency = baseTransparency,
+                    })
+                end
+            end))
+
+            return instance
+        end
+
+        function Motion.press(instance, options)
+            if not isGuiObject(instance) then
+                return nil
+            end
+            if instance:GetAttribute("FusionKitPress") then
+                return instance
+            end
+            instance:SetAttribute("FusionKitPress", true)
+            options = type(options) == "table" and options or {}
+            local scale = ensureScale(instance, "FusionKitPressScale")
+            local downScale = options.DownScale or 0.992
+            local upScale = options.UpScale or 1
+
+            if instance:IsA("TextButton") or instance:IsA("ImageButton") then
+                d:Clean(instance.MouseButton1Down:Connect(function()
+                    safeTween(scale, Motion.profile("press"), { Scale = downScale })
+                end))
+                d:Clean(instance.MouseButton1Up:Connect(function()
+                    safeTween(scale, Motion.profile("fast"), { Scale = upScale })
+                end))
+                d:Clean(instance.MouseLeave:Connect(function()
+                    safeTween(scale, Motion.profile("fast"), { Scale = upScale })
+                end))
+            end
+
+            return instance
+        end
+
+        function Motion.reveal(instance, options)
+            if not isGuiObject(instance) then
+                return instance
+            end
+            options = type(options) == "table" and options or {}
+            local scale = ensureScale(instance, "FusionKitRevealScale")
+            scale.Scale = options.StartScale or 0.985
+            if instance:IsA("CanvasGroup") then
+                instance.GroupTransparency = options.StartTransparency or 1
+                safeTween(instance, options.TweenInfo or Motion.profile("spring"), {
+                    GroupTransparency = options.EndTransparency or 0,
+                }, n.tweenstwo)
+            elseif instance.BackgroundTransparency < 1 then
+                local targetTransparency = instance.BackgroundTransparency
+                instance.BackgroundTransparency = 1
+                safeTween(instance, options.TweenInfo or Motion.profile("spring"), {
+                    BackgroundTransparency = targetTransparency,
+                }, n.tweenstwo)
+            end
+            safeTween(scale, options.TweenInfo or Motion.profile("spring"), {
+                Scale = options.EndScale or 1,
+            }, n.tweenstwo)
+            return instance
+        end
+
+        function Layout.measureText(text, size, font, width)
+            return E(removeTags(tostring(text or "")), size or 12, font or o.Font, width or 1000) or Vector2.zero
+        end
+
+        function Layout.fitText(label, options)
+            if not (typeof(label) == "Instance" and (label:IsA("TextLabel") or label:IsA("TextButton") or label:IsA("TextBox"))) then
+                return label
+            end
+            options = type(options) == "table" and options or {}
+            local minSize = options.MinSize or 9
+            local maxSize = options.MaxSize or label.TextSize
+            local width = math.max(label.AbsoluteSize.X - (options.Padding or 0), 1)
+            local height = math.max(label.AbsoluteSize.Y, 1)
+            local selected = maxSize
+            for size = maxSize, minSize, -1 do
+                local bounds = Layout.measureText(label.Text, size, label.FontFace or o.Font, width)
+                if bounds.X <= width and bounds.Y <= height + 4 then
+                    selected = size
+                    break
+                end
+            end
+            if selected ~= label.TextSize then
+                label.TextSize = selected
+                Registry.Metrics.TextRepairs += 1
+            end
+            label.TextTruncate = Enum.TextTruncate.AtEnd
+            return label
+        end
+
+        function Layout.stretchBetween(label, left, right)
+            if not isGuiObject(label) then
+                return label
+            end
+            left = left or label.Position.X.Offset
+            right = right or 12
+            label.Position = UDim2.new(0, left, label.Position.Y.Scale, label.Position.Y.Offset)
+            label.Size = UDim2.new(1, -(left + right), label.Size.Y.Scale, label.Size.Y.Offset)
+            if label:IsA("TextLabel") or label:IsA("TextButton") or label:IsA("TextBox") then
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.TextTruncate = Enum.TextTruncate.AtEnd
+            end
+            Registry.Metrics.LayoutRepairs += 1
+            return label
+        end
+
+        function Layout.ensureHitbox(button, minWidth, minHeight)
+            if not isGuiObject(button) then
+                return button
+            end
+            minWidth = minWidth or (d.isMobile and 44 or 32)
+            minHeight = minHeight or (d.isMobile and 44 or 32)
+            local width = math.max(button.Size.X.Offset, minWidth)
+            local height = math.max(button.Size.Y.Offset, minHeight)
+            if button.Size.X.Scale == 0 or button.Size.Y.Scale == 0 then
+                button.Size = UDim2.new(button.Size.X.Scale, width, button.Size.Y.Scale, height)
+                Registry.Metrics.HitboxRepairs += 1
+            end
+            return button
+        end
+
+        function Layout.keepInsideViewport(instance, margin)
+            if not isGuiObject(instance) or not B then
+                return instance
+            end
+            margin = margin or 8
+            local viewport = B.AbsoluteSize
+            local size = instance.AbsoluteSize
+            local position = instance.AbsolutePosition
+            local x = instance.Position.X.Offset
+            local y = instance.Position.Y.Offset
+            if position.X < margin then
+                x += margin - position.X
+            elseif position.X + size.X > viewport.X - margin then
+                x -= (position.X + size.X) - (viewport.X - margin)
+            end
+            if position.Y < margin then
+                y += margin - position.Y
+            elseif position.Y + size.Y > viewport.Y - margin then
+                y -= (position.Y + size.Y) - (viewport.Y - margin)
+            end
+            instance.Position = UDim2.new(instance.Position.X.Scale, x, instance.Position.Y.Scale, y)
+            return instance
+        end
+
+        function Layout.installListAutoCanvas(scroller, layout, padding)
+            if not (typeof(scroller) == "Instance" and scroller:IsA("ScrollingFrame")) then
+                return nil
+            end
+            layout = layout or scroller:FindFirstChildOfClass("UIListLayout") or scroller:FindFirstChildOfClass("UIGridLayout")
+            if not layout then
+                return nil
+            end
+            padding = padding or 8
+            local function refresh()
+                if not scroller.Parent then
+                    return
+                end
+                local scale = A and A.Scale or 1
+                local content = layout.AbsoluteContentSize
+                scroller.CanvasSize = UDim2.fromOffset(
+                    math.max(0, content.X / math.max(scale, 0.01)),
+                    math.max(0, (content.Y + padding) / math.max(scale, 0.01))
+                )
+            end
+            refresh()
+            d:Clean(layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refresh))
+            d:Clean(scroller:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(refresh))
+            return refresh
+        end
+
+        function Kit.Text(props)
+            props = type(props) == "table" and props or {}
+            local label = Fusion.New("TextLabel")({
+                Name = props.Name or "Text",
+                Size = props.Size or UDim2.new(1, 0, 0, props.Height or 18),
+                Position = props.Position or UDim2.fromOffset(0, 0),
+                BackgroundTransparency = 1,
+                Text = props.Text or "",
+                TextColor3 = props.Color or o.Text,
+                TextSize = props.TextSize or 12,
+                TextXAlignment = props.XAlignment or Enum.TextXAlignment.Left,
+                TextYAlignment = props.YAlignment or Enum.TextYAlignment.Center,
+                TextWrapped = props.Wrapped == true,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                RichText = props.RichText == true,
+                FontFace = props.Font or o.Font,
+                ZIndex = props.ZIndex or 1,
+            })
+            setAttributes(label, props.Attributes)
+            return label
+        end
+
+        function Kit.Icon(props)
+            props = type(props) == "table" and props or {}
+            local icon = Fusion.New("ImageLabel")({
+                Name = props.Name or "Icon",
+                Size = props.Size or UDim2.fromOffset(16, 16),
+                Position = props.Position or UDim2.fromOffset(0, 0),
+                BackgroundTransparency = 1,
+                Image = props.Image or "",
+                ImageColor3 = props.Color or o.Text,
+                ImageTransparency = props.Transparency or 0,
+                ScaleType = props.ScaleType or Enum.ScaleType.Fit,
+                ZIndex = props.ZIndex or 1,
+            })
+            setAttributes(icon, props.Attributes)
+            return icon
+        end
+
+        function Kit.Surface(props)
+            props = type(props) == "table" and props or {}
+            local surface = Fusion.New("Frame")({
+                Name = props.Name or "Surface",
+                Size = props.Size or UDim2.fromScale(1, 1),
+                Position = props.Position or UDim2.fromOffset(0, 0),
+                AnchorPoint = props.AnchorPoint or Vector2.zero,
+                BackgroundColor3 = props.Color or o.Surface,
+                BackgroundTransparency = props.Transparency or 0,
+                BorderSizePixel = 0,
+                ClipsDescendants = props.ClipsDescendants ~= false,
+                ZIndex = props.ZIndex or 1,
+                [Fusion.Children] = {
+                    makeCorner(props.Radius or o.Radius),
+                    props.Stroke ~= false and makeStroke(props.StrokeName or "SurfaceStroke", props.StrokeColor or o.Border, props.StrokeTransparency or 0.78, props.StrokeThickness or 1) or nil,
+                    props.Padding and makePadding(props.Padding, props.Padding, props.PaddingY or props.Padding, props.PaddingY or props.Padding) or nil,
+                    props.Children,
+                },
+            })
+            setAttributes(surface, props.Attributes)
+            if props.Motion ~= false then
+                Motion.hover(surface, {
+                    Color = props.HoverColor or o.SurfaceHover,
+                    Transparency = props.HoverTransparency,
+                    Scale = props.HoverScale or 1.002,
+                })
+            end
+            return surface
+        end
+
+        function Kit.Button(props)
+            props = type(props) == "table" and props or {}
+            local hovered = makeState(false)
+            local accent = props.Accent or currentAccent()
+            local button = Fusion.New("TextButton")({
+                Name = props.Name or "Button",
+                Size = props.Size or UDim2.new(1, 0, 0, d.isMobile and 42 or 34),
+                Position = props.Position or UDim2.fromOffset(0, 0),
+                BackgroundColor3 = makeComputed({ hovered }, function(isHovered)
+                    return isHovered and (props.HoverColor or o.SurfaceHover) or (props.Color or o.Surface)
+                end),
+                BackgroundTransparency = props.Transparency or 0,
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Text = "",
+                ClipsDescendants = true,
+                ZIndex = props.ZIndex or 1,
+                [Fusion.OnEvent("MouseEnter")] = function()
+                    hovered:set(true)
+                end,
+                [Fusion.OnEvent("MouseLeave")] = function()
+                    hovered:set(false)
+                end,
+                [Fusion.OnEvent("Activated")] = function(...)
+                    if type(props.Activated) == "function" then
+                        props.Activated(...)
+                    end
+                end,
+                [Fusion.Children] = {
+                    makeCorner(props.Radius or o.RadiusSmall),
+                    makeStroke(props.StrokeName or "ButtonStroke", makeComputed({ hovered }, function(isHovered)
+                        return isHovered and accent or (props.StrokeColor or o.Border)
+                    end), props.StrokeTransparency or 0.76, 1),
+                    makePadding(props.PaddingLeft or 12, props.PaddingRight or 12, 0, 0),
+                    props.Icon and Kit.Icon({
+                        Name = "ButtonIcon",
+                        Image = props.Icon,
+                        Size = UDim2.fromOffset(16, 16),
+                        Position = UDim2.fromOffset(10, 9),
+                        Color = props.IconColor or o.MutedText,
+                        ZIndex = (props.ZIndex or 1) + 1,
+                    }) or nil,
+                    Kit.Text({
+                        Name = "ButtonLabel",
+                        Text = props.Text or "Button",
+                        Size = UDim2.new(1, props.Icon and -34 or -4, 1, 0),
+                        Position = UDim2.fromOffset(props.Icon and 34 or 2, 0),
+                        Color = props.TextColor or o.TextStrong,
+                        TextSize = props.TextSize or 12,
+                        Font = props.Font or o.FontSemiBold,
+                        ZIndex = (props.ZIndex or 1) + 1,
+                    }),
+                    props.Children,
+                },
+            })
+            Layout.ensureHitbox(button)
+            Motion.press(button)
+            setAttributes(button, props.Attributes)
+            return button
+        end
+
+        function Kit.ToggleShell(props)
+            props = type(props) == "table" and props or {}
+            local enabled = props.EnabledState or makeState(props.Enabled == true)
+            local hovered = makeState(false)
+            local accent = props.Accent or currentAccent()
+            local shell = Fusion.New("TextButton")({
+                Name = props.Name or "ToggleShell",
+                Size = props.Size or UDim2.new(1, 0, 0, d.isMobile and 48 or 40),
+                BackgroundColor3 = makeComputed({ enabled, hovered }, function(isEnabled, isHovered)
+                    if isEnabled then
+                        return o.Elevated:Lerp(accent, 0.16)
+                    end
+                    return isHovered and o.SurfaceHover or o.Surface
+                end),
+                BackgroundTransparency = 0,
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Text = "",
+                ClipsDescendants = true,
+                ZIndex = props.ZIndex or 1,
+                [Fusion.OnEvent("MouseEnter")] = function()
+                    hovered:set(true)
+                end,
+                [Fusion.OnEvent("MouseLeave")] = function()
+                    hovered:set(false)
+                end,
+                [Fusion.OnEvent("Activated")] = function()
+                    enabled:set(not enabled:get())
+                    if type(props.Changed) == "function" then
+                        props.Changed(enabled:get())
+                    end
+                end,
+                [Fusion.Children] = {
+                    makeCorner(props.Radius or o.RadiusSmall),
+                    makeStroke("ToggleShellStroke", makeComputed({ enabled, hovered }, function(isEnabled, isHovered)
+                        if isEnabled then
+                            return accent
+                        end
+                        return isHovered and o.BorderStrong or o.Border
+                    end), makeComputed({ enabled }, function(isEnabled)
+                        return isEnabled and 0.42 or 0.82
+                    end), 1),
+                    Kit.Text({
+                        Name = "ToggleLabel",
+                        Text = props.Text or "Toggle",
+                        Size = UDim2.new(1, -64, 1, 0),
+                        Position = UDim2.fromOffset(12, 0),
+                        Color = makeComputed({ enabled }, function(isEnabled)
+                            return isEnabled and o.TextStrong or o.MutedText
+                        end),
+                        Font = o.FontSemiBold,
+                        TextSize = props.TextSize or 12,
+                        ZIndex = (props.ZIndex or 1) + 2,
+                    }),
+                    Fusion.New("Frame")({
+                        Name = "SwitchTrack",
+                        Size = UDim2.fromOffset(34, 18),
+                        Position = UDim2.new(1, -46, 0.5, -9),
+                        BackgroundColor3 = makeComputed({ enabled }, function(isEnabled)
+                            return isEnabled and accent or o.Elevated
+                        end),
+                        BorderSizePixel = 0,
+                        ZIndex = (props.ZIndex or 1) + 2,
+                        [Fusion.Children] = {
+                            makeCorner(UDim.new(1, 0)),
+                            Fusion.New("Frame")({
+                                Name = "SwitchKnob",
+                                Size = UDim2.fromOffset(14, 14),
+                                Position = makeComputed({ enabled }, function(isEnabled)
+                                    return UDim2.fromOffset(isEnabled and 18 or 2, 2)
+                                end),
+                                BackgroundColor3 = makeComputed({ enabled }, function(isEnabled)
+                                    return isEnabled and o.TextStrong or o.MutedText
+                                end),
+                                BorderSizePixel = 0,
+                                ZIndex = (props.ZIndex or 1) + 3,
+                                [Fusion.Children] = {
+                                    makeCorner(UDim.new(1, 0)),
+                                },
+                            }),
+                        },
+                    }),
+                    props.Children,
+                },
+            })
+            Motion.press(shell)
+            return shell
+        end
+
+        function Kit.StatChip(props)
+            props = type(props) == "table" and props or {}
+            local valueState = props.ValueState or makeState(props.Value or "")
+            local labelText = props.Label or "Stat"
+            local chip = Kit.Surface({
+                Name = props.Name or "StatChip",
+                Size = props.Size or UDim2.fromOffset(props.Width or 132, props.Height or 44),
+                Color = props.Color or o.MainSoft,
+                StrokeColor = props.StrokeColor or o.BorderStrong,
+                StrokeTransparency = props.StrokeTransparency or 0.64,
+                Radius = props.Radius or o.RadiusSmall,
+                Motion = true,
+                Children = {
+                    Kit.Text({
+                        Name = "StatLabel",
+                        Text = string.upper(labelText),
+                        Size = UDim2.new(1, -18, 0, 13),
+                        Position = UDim2.fromOffset(9, 5),
+                        Color = props.LabelColor or o.FaintText,
+                        TextSize = 8,
+                        Font = o.FontBold,
+                        ZIndex = (props.ZIndex or 1) + 1,
+                    }),
+                    Kit.Text({
+                        Name = "StatValue",
+                        Text = valueState,
+                        Size = UDim2.new(1, -18, 0, 20),
+                        Position = UDim2.fromOffset(9, 20),
+                        Color = props.ValueColor or o.TextStrong,
+                        TextSize = props.ValueSize or 13,
+                        Font = o.FontSemiBold,
+                        ZIndex = (props.ZIndex or 1) + 1,
+                    }),
+                },
+            })
+            chip:SetAttribute("BadWarsFusionStatChip", true)
+            return chip
+        end
+
+        function Kit.Toolbar(props)
+            props = type(props) == "table" and props or {}
+            local toolbar = Fusion.New("Frame")({
+                Name = props.Name or "Toolbar",
+                Size = props.Size or UDim2.new(1, 0, 0, d.isMobile and 46 or 38),
+                Position = props.Position or UDim2.fromOffset(0, 0),
+                BackgroundTransparency = 1,
+                ZIndex = props.ZIndex or 1,
+                [Fusion.Children] = {
+                    makeListLayout(Enum.FillDirection.Horizontal, props.Gap or 8, props.Alignment or Enum.HorizontalAlignment.Left),
+                    props.Padding and makePadding(props.Padding, props.Padding, 0, 0) or nil,
+                    props.Children,
+                },
+            })
+            return toolbar
+        end
+
+        function Kit.SectionHeader(props)
+            props = type(props) == "table" and props or {}
+            return Fusion.New("Frame")({
+                Name = props.Name or "SectionHeader",
+                Size = props.Size or UDim2.new(1, 0, 0, 34),
+                BackgroundTransparency = 1,
+                ZIndex = props.ZIndex or 1,
+                [Fusion.Children] = {
+                    Kit.Text({
+                        Name = "SectionTitle",
+                        Text = props.Title or "Section",
+                        Size = UDim2.new(1, -80, 1, 0),
+                        Position = UDim2.fromOffset(0, 0),
+                        Color = props.Color or o.TextStrong,
+                        TextSize = props.TextSize or 14,
+                        Font = o.FontBold,
+                        ZIndex = (props.ZIndex or 1) + 1,
+                    }),
+                    props.Action and Kit.Button({
+                        Name = "SectionAction",
+                        Text = props.ActionText or "Action",
+                        Size = UDim2.fromOffset(props.ActionWidth or 76, 28),
+                        Position = UDim2.new(1, -(props.ActionWidth or 76), 0.5, -14),
+                        Activated = props.Action,
+                        ZIndex = (props.ZIndex or 1) + 1,
+                    }) or nil,
+                },
+            })
+        end
+
+        function Kit.EmptyState(props)
+            props = type(props) == "table" and props or {}
+            return Kit.Surface({
+                Name = props.Name or "EmptyState",
+                Size = props.Size or UDim2.new(1, 0, 0, 96),
+                Color = props.Color or o.MainSoft,
+                Transparency = props.Transparency or 0.12,
+                StrokeTransparency = 0.88,
+                Motion = false,
+                Children = {
+                    Kit.Text({
+                        Name = "EmptyTitle",
+                        Text = props.Title or "Nothing here",
+                        Size = UDim2.new(1, -24, 0, 22),
+                        Position = UDim2.fromOffset(12, 24),
+                        Color = o.TextStrong,
+                        TextSize = 13,
+                        Font = o.FontSemiBold,
+                        ZIndex = (props.ZIndex or 1) + 1,
+                    }),
+                    Kit.Text({
+                        Name = "EmptyText",
+                        Text = props.Text or "",
+                        Size = UDim2.new(1, -24, 0, 30),
+                        Position = UDim2.fromOffset(12, 48),
+                        Color = o.MutedText,
+                        TextSize = 11,
+                        Wrapped = true,
+                        ZIndex = (props.ZIndex or 1) + 1,
+                    }),
+                },
+            })
+        end
+
+        local ruleId = 0
+        function Registry.addRule(name, predicate, apply)
+            ruleId += 1
+            Registry.Rules[#Registry.Rules + 1] = {
+                Id = ruleId,
+                Name = tostring(name or ("Rule" .. ruleId)),
+                Predicate = predicate,
+                Apply = apply,
+            }
+            return ruleId
+        end
+
+        function Registry.apply(instance)
+            if typeof(instance) ~= "Instance" then
+                return
+            end
+            for _, rule in ipairs(Registry.Rules) do
+                local ok, matches = pcall(rule.Predicate, instance)
+                if ok and matches then
+                    local applied, err = pcall(rule.Apply, instance)
+                    if applied then
+                        Registry.Metrics.Applied += 1
+                    else
+                        bwarn("[Fusion Kit rule failed]", rule.Name, err)
+                    end
+                end
+            end
+        end
+
+        Registry.addRule("TextOverflowRepair", function(instance)
+            return instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox")
+        end, function(instance)
+            instance.ClipsDescendants = true
+            instance.TextTruncate = Enum.TextTruncate.AtEnd
+            if instance.AbsoluteSize.X > 0 and instance.AbsoluteSize.Y > 0 then
+                Layout.fitText(instance, {
+                    MinSize = d.isMobile and 10 or 9,
+                    MaxSize = math.max(instance.TextSize, d.isMobile and 12 or 11),
+                    Padding = 8,
+                })
+            end
+        end)
+
+        Registry.addRule("ButtonHitboxRepair", function(instance)
+            return instance:IsA("TextButton") or instance:IsA("ImageButton")
+        end, function(instance)
+            instance.AutoButtonColor = false
+            Layout.ensureHitbox(instance)
+            Motion.hover(instance)
+            Motion.press(instance)
+        end)
+
+        Registry.addRule("ScrollingCanvasRepair", function(instance)
+            return instance:IsA("ScrollingFrame")
+        end, function(instance)
+            local layout = instance:FindFirstChildOfClass("UIListLayout") or instance:FindFirstChildOfClass("UIGridLayout")
+            if layout then
+                Layout.installListAutoCanvas(instance, layout, d.isMobile and 18 or 12)
+            end
+            instance.ScrollBarThickness = math.clamp(instance.ScrollBarThickness, 2, d.isMobile and 5 or 4)
+            instance.ScrollingDirection = instance.ScrollingDirection == Enum.ScrollingDirection.X
+                and Enum.ScrollingDirection.X
+                or Enum.ScrollingDirection.Y
+        end)
+
+        Registry.addRule("MetricVisibilityRepair", function(instance)
+            if not isGuiObject(instance) then
+                return false
+            end
+            local name = instance.Name
+            if name == "FPS" or name == "Ping" or name == "Memory" or name == "Clock" or name == "Speedmeter" then
+                return true
+            end
+            local title = instance:FindFirstChild("WidgetTitle")
+            return title and title:IsA("TextLabel") and ({
+                FPS = true,
+                PING = true,
+                MEMORY = true,
+                CLOCK = true,
+                SPEEDMETER = true,
+            })[title.Text] == true
+        end, function(instance)
+            instance.Visible = true
+            instance.BackgroundTransparency = math.min(instance.BackgroundTransparency, 0.08)
+            instance.ClipsDescendants = false
+            local stroke = instance:FindFirstChild("FusionKitMetricStroke") or Instance.new("UIStroke")
+            stroke.Name = "FusionKitMetricStroke"
+            stroke.Color = o.BorderStrong
+            stroke.Transparency = 0.58
+            stroke.Thickness = 1
+            stroke.Parent = instance
+            for _, child in ipairs(instance:GetChildren()) do
+                if child:IsA("TextLabel") then
+                    child.Visible = true
+                    child.TextTransparency = 0
+                    child.TextColor3 = child:GetAttribute("PremiumWidgetInternal") and child.TextColor3 or o.TextStrong
+                end
+            end
+        end)
+
+        Registry.addRule("LeftRightStretchRepair", function(instance)
+            if not (instance:IsA("TextLabel") or instance:IsA("TextButton")) then
+                return false
+            end
+            local parent = instance.Parent
+            if not (parent and parent:IsA("GuiObject")) then
+                return false
+            end
+            local name = instance.Name
+            return name:find("Label") ~= nil
+                or name:find("Title") ~= nil
+                or name:find("Text") ~= nil
+                or name:find("Value") ~= nil
+        end, function(instance)
+            local parent = instance.Parent
+            if not parent then
+                return
+            end
+            local left = math.max(0, instance.Position.X.Offset)
+            local reservedRight = 12
+            for _, sibling in ipairs(parent:GetChildren()) do
+                if sibling ~= instance and sibling:IsA("GuiObject") and sibling.Visible then
+                    local siblingLeft = sibling.Position.X.Offset
+                    if siblingLeft > left and sibling.AbsoluteSize.X > 0 then
+                        reservedRight = math.max(reservedRight, parent.AbsoluteSize.X - siblingLeft + 8)
+                    end
+                end
+            end
+            if parent.AbsoluteSize.X > left + reservedRight + 24 then
+                Layout.stretchBetween(instance, left, reservedRight)
+            end
+        end)
+
+        d.FusionKit = Kit
+        d.FusionLayout = Layout
+        d.FusionMotion = Motion
+        d.FusionRegistry = Registry
+        d.Libraries.FusionKit = Kit
+        d.Libraries.FusionLayout = Layout
+        d.Libraries.FusionMotion = Motion
+        d.Libraries.FusionRegistry = Registry
+
+        task.defer(function()
+            if not B or not B.Parent then
+                return
+            end
+            for _, descendant in ipairs(B:GetDescendants()) do
+                Registry.apply(descendant)
+            end
+            d:Clean(B.DescendantAdded:Connect(function(descendant)
+                task.defer(Registry.apply, descendant)
+            end))
+        end)
+    end
+end)()
+-- BADWARS_FUSION_COMPONENT_KIT_V21_END
+
+-- BADWARS_FUSION_STYLE_RECIPES_V21_BEGIN
+;(function()
+    local Kit = d.FusionKit
+    local Layout = d.FusionLayout
+    local Motion = d.FusionMotion
+    local Registry = d.FusionRegistry
+    if type(Kit) == "table" and type(Layout) == "table" and type(Motion) == "table" and type(Registry) == "table" then
+        local Recipes = {}
+        local RoleMatchers = {}
+
+        local function color(name, fallback)
+            local value = o[name]
+            if typeof(value) == "Color3" then
+                return value
+            end
+            return fallback or o.Text
+        end
+
+        local function accent(alpha)
+            local value = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+            if alpha then
+                return value:Lerp(o.TextStrong, alpha)
+            end
+            return value
+        end
+
+        local function addRecipe(name, recipe)
+            recipe = type(recipe) == "table" and recipe or {}
+            recipe.Name = tostring(name)
+            Recipes[recipe.Name] = recipe
+            return recipe
+        end
+
+        local function addMatcher(name, predicate)
+            RoleMatchers[#RoleMatchers + 1] = {
+                Name = tostring(name),
+                Predicate = predicate,
+            }
+        end
+
+        addRecipe("window", {
+            Radius = o.RadiusLarge,
+            StrokeName = "FusionWindowStroke",
+            StrokeTransparency = 0.58,
+            Background = "MainSoft",
+            HoverBackground = "Surface",
+            Padding = 0,
+            MotionScale = 1,
+        })
+
+        addRecipe("category", {
+            Radius = o.Radius,
+            StrokeName = "FusionCategoryStroke",
+            StrokeTransparency = 0.68,
+            Background = "Surface",
+            HoverBackground = "SurfaceHover",
+            MotionScale = 1.001,
+        })
+
+        addRecipe("module", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionModuleStroke",
+            StrokeTransparency = 0.84,
+            Background = "Surface",
+            HoverBackground = "SurfaceHover",
+            MotionScale = 1.003,
+            MinHeight = d.isMobile and 46 or 36,
+            TextLeft = 12,
+            TextRight = 54,
+        })
+
+        addRecipe("moduleEnabled", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionModuleEnabledStroke",
+            StrokeTransparency = 0.46,
+            BackgroundColor = function()
+                return o.Elevated:Lerp(accent(), 0.16)
+            end,
+            HoverBackgroundColor = function()
+                return o.Elevated:Lerp(accent(), 0.23)
+            end,
+            MotionScale = 1.003,
+            MinHeight = d.isMobile and 46 or 36,
+            TextLeft = 12,
+            TextRight = 54,
+        })
+
+        addRecipe("settingRow", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionSettingStroke",
+            StrokeTransparency = 0.88,
+            Background = "Surface",
+            HoverBackground = "SurfaceHover",
+            MotionScale = 1.002,
+            MinHeight = d.isMobile and 44 or 34,
+            TextLeft = 10,
+            TextRight = 66,
+        })
+
+        addRecipe("dropdown", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionDropdownStroke",
+            StrokeTransparency = 0.72,
+            Background = "Elevated",
+            HoverBackground = "ElevatedHover",
+            MotionScale = 1.002,
+            MinHeight = d.isMobile and 42 or 34,
+            TextLeft = 12,
+            TextRight = 30,
+        })
+
+        addRecipe("input", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionInputStroke",
+            StrokeTransparency = 0.72,
+            Background = "MainSoft",
+            HoverBackground = "Elevated",
+            MotionScale = 1,
+            MinHeight = d.isMobile and 42 or 34,
+            TextLeft = 10,
+            TextRight = 10,
+        })
+
+        addRecipe("compactButton", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionCompactButtonStroke",
+            StrokeTransparency = 0.76,
+            Background = "Surface",
+            HoverBackground = "SurfaceHover",
+            MotionScale = 1.006,
+            MinWidth = d.isMobile and 44 or 30,
+            MinHeight = d.isMobile and 40 or 30,
+        })
+
+        addRecipe("primaryButton", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionPrimaryButtonStroke",
+            StrokeTransparency = 0.38,
+            BackgroundColor = function()
+                return accent():Lerp(o.Elevated, 0.16)
+            end,
+            HoverBackgroundColor = function()
+                return accent():Lerp(o.TextStrong, 0.08)
+            end,
+            MotionScale = 1.004,
+            MinHeight = d.isMobile and 44 or 34,
+            TextLeft = 12,
+            TextRight = 12,
+        })
+
+        addRecipe("dangerButton", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionDangerButtonStroke",
+            StrokeTransparency = 0.48,
+            BackgroundColor = function()
+                return o.Danger:Lerp(o.MainSoft, 0.64)
+            end,
+            HoverBackgroundColor = function()
+                return o.Danger:Lerp(o.MainSoft, 0.52)
+            end,
+            MotionScale = 1.004,
+            MinHeight = d.isMobile and 44 or 34,
+            TextLeft = 12,
+            TextRight = 12,
+        })
+
+        addRecipe("statWidget", {
+            Radius = o.Radius,
+            StrokeName = "FusionStatWidgetStroke",
+            StrokeTransparency = 0.56,
+            Background = "MainSoft",
+            HoverBackground = "Elevated",
+            MotionScale = 1.004,
+            MinWidth = d.isMobile and 120 or 112,
+            MinHeight = d.isMobile and 46 or 38,
+            TextLeft = 10,
+            TextRight = 10,
+        })
+
+        addRecipe("notification", {
+            Radius = o.Radius,
+            StrokeName = "NotificationStroke",
+            StrokeTransparency = 0.62,
+            Background = "MainSoft",
+            HoverBackground = "Elevated",
+            MotionScale = 1.004,
+            TextLeft = 48,
+            TextRight = 36,
+        })
+
+        addRecipe("tooltip", {
+            Radius = o.RadiusSmall,
+            StrokeName = "TooltipStroke",
+            StrokeTransparency = 0.48,
+            Background = "Elevated",
+            HoverBackground = "Elevated",
+            MotionScale = 1,
+            TextLeft = 12,
+            TextRight = 12,
+        })
+
+        addRecipe("navigation", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionNavigationStroke",
+            StrokeTransparency = 0.84,
+            Background = "MainSoft",
+            HoverBackground = "SurfaceHover",
+            MotionScale = 1.002,
+            MinHeight = d.isMobile and 46 or 36,
+            TextLeft = 36,
+            TextRight = 12,
+        })
+
+        addRecipe("search", {
+            Radius = o.RadiusSmall,
+            StrokeName = "FusionSearchStroke",
+            StrokeTransparency = 0.72,
+            Background = "MainSoft",
+            HoverBackground = "Elevated",
+            MotionScale = 1,
+            MinHeight = d.isMobile and 42 or 34,
+            TextLeft = 34,
+            TextRight = 12,
+        })
+
+        addRecipe("overlay", {
+            Radius = o.Radius,
+            StrokeName = "FusionOverlayStroke",
+            StrokeTransparency = 0.62,
+            Background = "MainSoft",
+            HoverBackground = "Elevated",
+            MotionScale = 1.002,
+            TextLeft = 12,
+            TextRight = 12,
+        })
+
+        addMatcher("notification", function(instance)
+            return instance.Name == "Notification"
+        end)
+
+        addMatcher("tooltip", function(instance)
+            return instance.Name == "Tooltip"
+        end)
+
+        addMatcher("search", function(instance)
+            local name = instance.Name:lower()
+            return name:find("search") ~= nil
+        end)
+
+        addMatcher("statWidget", function(instance)
+            if not instance:IsA("GuiObject") then
+                return false
+            end
+            if ({
+                FPS = true,
+                Ping = true,
+                Memory = true,
+                Clock = true,
+                Speedmeter = true,
+            })[instance.Name] then
+                return true
+            end
+            local widgetTitle = instance:FindFirstChild("WidgetTitle")
+            return widgetTitle and widgetTitle:IsA("TextLabel") and ({
+                FPS = true,
+                PING = true,
+                MEMORY = true,
+                CLOCK = true,
+                SPEEDMETER = true,
+            })[widgetTitle.Text] == true
+        end)
+
+        addMatcher("navigation", function(instance)
+            local name = instance.Name:lower()
+            return name:find("navigation") ~= nil
+                or name:find("nav") ~= nil
+                or name:find("tab") ~= nil
+        end)
+
+        addMatcher("dropdown", function(instance)
+            local name = instance.Name:lower()
+            return name:find("dropdown") ~= nil
+                or name:find("option") ~= nil
+        end)
+
+        addMatcher("input", function(instance)
+            return instance:IsA("TextBox")
+                or instance.Name:lower():find("input") ~= nil
+                or instance.Name:lower():find("textbox") ~= nil
+        end)
+
+        addMatcher("primaryButton", function(instance)
+            local name = instance.Name:lower()
+            return name:find("save") ~= nil
+                or name:find("confirm") ~= nil
+                or name:find("apply") ~= nil
+        end)
+
+        addMatcher("dangerButton", function(instance)
+            local name = instance.Name:lower()
+            return name:find("delete") ~= nil
+                or name:find("reset") ~= nil
+                or name:find("remove") ~= nil
+        end)
+
+        addMatcher("compactButton", function(instance)
+            if not (instance:IsA("TextButton") or instance:IsA("ImageButton")) then
+                return false
+            end
+            return instance.AbsoluteSize.X <= 54 or instance.AbsoluteSize.Y <= 32
+        end)
+
+        addMatcher("moduleEnabled", function(instance)
+            if not instance:IsA("GuiObject") then
+                return false
+            end
+            return instance:GetAttribute("Enabled") == true
+                or instance:GetAttribute("ModuleEnabled") == true
+        end)
+
+        addMatcher("module", function(instance)
+            local name = instance.Name:lower()
+            return name:find("module") ~= nil
+                or name:find("toggle") ~= nil
+        end)
+
+        addMatcher("settingRow", function(instance)
+            local name = instance.Name:lower()
+            return name:find("setting") ~= nil
+                or name:find("row") ~= nil
+                or name:find("slider") ~= nil
+                or name:find("bind") ~= nil
+        end)
+
+        addMatcher("category", function(instance)
+            local name = instance.Name:lower()
+            return name:find("category") ~= nil
+                or name:find("pane") ~= nil
+        end)
+
+        addMatcher("overlay", function(instance)
+            local name = instance.Name:lower()
+            return name:find("overlay") ~= nil
+                or name:find("prompt") ~= nil
+        end)
+
+        addMatcher("window", function(instance)
+            local name = instance.Name:lower()
+            return name:find("window") ~= nil
+                or name == "main"
+        end)
+
+        local function findRole(instance)
+            if not instance:IsA("GuiObject") then
+                return nil
+            end
+            for _, matcher in ipairs(RoleMatchers) do
+                local ok, matched = pcall(matcher.Predicate, instance)
+                if ok and matched then
+                    return matcher.Name
+                end
+            end
+            return nil
+        end
+
+        local function ensureCorner(instance, radius)
+            local corner = instance:FindFirstChildOfClass("UICorner")
+            if not corner then
+                corner = Instance.new("UICorner")
+                corner.Name = "FusionRecipeCorner"
+                corner.Parent = instance
+            end
+            corner.CornerRadius = radius or o.RadiusSmall
+            return corner
+        end
+
+        local function ensureStroke(instance, recipe)
+            if recipe.StrokeName == false then
+                return nil
+            end
+            local stroke = instance:FindFirstChild(recipe.StrokeName or "FusionRecipeStroke")
+                or instance:FindFirstChildOfClass("UIStroke")
+            if not stroke then
+                stroke = Instance.new("UIStroke")
+                stroke.Name = recipe.StrokeName or "FusionRecipeStroke"
+                stroke.Parent = instance
+            end
+            stroke.Color = recipe.StrokeColor or accent(0.08)
+            stroke.Transparency = recipe.StrokeTransparency or 0.78
+            stroke.Thickness = recipe.StrokeThickness or 1
+            stroke.LineJoinMode = Enum.LineJoinMode.Round
+            return stroke
+        end
+
+        local function resolveBackground(recipe, hovered)
+            local direct = hovered and recipe.HoverBackgroundColor or recipe.BackgroundColor
+            if type(direct) == "function" then
+                local ok, value = pcall(direct)
+                if ok and typeof(value) == "Color3" then
+                    return value
+                end
+            elseif typeof(direct) == "Color3" then
+                return direct
+            end
+            local named = hovered and recipe.HoverBackground or recipe.Background
+            return color(named, hovered and o.SurfaceHover or o.Surface)
+        end
+
+        local function repairTextChildren(instance, recipe)
+            local left = recipe.TextLeft
+            local right = recipe.TextRight
+            for _, child in ipairs(instance:GetChildren()) do
+                if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                    child.TextTruncate = Enum.TextTruncate.AtEnd
+                    child.ClipsDescendants = true
+                    if left and right and child.AbsoluteSize.X > 0 then
+                        Layout.stretchBetween(child, math.max(left, child.Position.X.Offset), right)
+                    end
+                    if child.TextXAlignment == Enum.TextXAlignment.Center and child.AbsoluteSize.X > 84 then
+                        child.TextXAlignment = Enum.TextXAlignment.Left
+                    end
+                    if child.AbsoluteSize.X > 0 and child.AbsoluteSize.Y > 0 then
+                        Layout.fitText(child, {
+                            MinSize = d.isMobile and 10 or 9,
+                            MaxSize = math.max(child.TextSize, d.isMobile and 12 or 11),
+                            Padding = 8,
+                        })
+                    end
+                end
+            end
+        end
+
+        local function applyRecipe(instance, role)
+            local recipe = Recipes[role]
+            if not recipe or not instance:IsA("GuiObject") then
+                return
+            end
+            if instance:GetAttribute("FusionRecipeApplied") == role then
+                repairTextChildren(instance, recipe)
+                return
+            end
+            instance:SetAttribute("FusionRecipeApplied", role)
+            instance.ClipsDescendants = role == "statWidget" and false or instance.ClipsDescendants
+            if recipe.MinWidth or recipe.MinHeight then
+                Layout.ensureHitbox(instance, recipe.MinWidth, recipe.MinHeight)
+            end
+            if instance.BackgroundTransparency < 1 then
+                instance.BackgroundColor3 = resolveBackground(recipe, false)
+            end
+            ensureCorner(instance, recipe.Radius)
+            local stroke = ensureStroke(instance, recipe)
+            repairTextChildren(instance, recipe)
+            if recipe.MotionScale and recipe.MotionScale ~= 1 then
+                Motion.hover(instance, {
+                    Color = resolveBackground(recipe, true),
+                    Scale = recipe.MotionScale,
+                })
+                if instance:IsA("TextButton") or instance:IsA("ImageButton") then
+                    Motion.press(instance)
+                end
+            end
+            if stroke and role == "statWidget" then
+                d:Clean(instance.MouseEnter:Connect(function()
+                    n:Tween(stroke, o.TweenFast, {
+                        Color = accent(0.12),
+                        Transparency = 0.34,
+                    })
+                end))
+                d:Clean(instance.MouseLeave:Connect(function()
+                    n:Tween(stroke, o.TweenFast, {
+                        Color = o.BorderStrong,
+                        Transparency = recipe.StrokeTransparency or 0.56,
+                    })
+                end))
+            end
+        end
+
+        function Recipes.Apply(instance)
+            if typeof(instance) ~= "Instance" or not instance:IsA("GuiObject") then
+                return nil
+            end
+            local role = findRole(instance)
+            if role then
+                applyRecipe(instance, role)
+            end
+            return role
+        end
+
+        function Recipes.Refresh(root)
+            root = root or B
+            if not root then
+                return 0
+            end
+            local count = 0
+            if root:IsA("GuiObject") then
+                if Recipes.Apply(root) then
+                    count += 1
+                end
+            end
+            for _, descendant in ipairs(root:GetDescendants()) do
+                if descendant:IsA("GuiObject") and Recipes.Apply(descendant) then
+                    count += 1
+                end
+            end
+            return count
+        end
+
+        function Recipes.Register(name, recipe, predicate)
+            addRecipe(name, recipe)
+            if type(predicate) == "function" then
+                addMatcher(name, predicate)
+            end
+            return Recipes[name]
+        end
+
+        d.FusionStyleRecipes = Recipes
+        d.Libraries.FusionStyleRecipes = Recipes
+
+        task.defer(function()
+            if not B or not B.Parent then
+                return
+            end
+            Recipes.Refresh(B)
+            d:Clean(B.DescendantAdded:Connect(function(descendant)
+                task.defer(function()
+                    if descendant and descendant.Parent then
+                        Recipes.Apply(descendant)
+                    end
+                end)
+            end))
+            d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                task.delay(0.05, function()
+                    if B and B.Parent then
+                        Recipes.Refresh(B)
+                    end
+                end)
+            end))
+        end)
+    end
+end)()
+-- BADWARS_FUSION_STYLE_RECIPES_V21_END
+
+-- BADWARS_FUSION_AUDIT_REPAIR_V21_BEGIN
+;(function()
+    local Layout = d.FusionLayout
+    local Motion = d.FusionMotion
+    local Recipes = d.FusionStyleRecipes
+    if type(Layout) == "table" and type(Motion) == "table" then
+        local Audit = {
+            Enabled = true,
+            LastRun = 0,
+            MinimumInterval = 0.2,
+            Reports = {},
+            Counters = {
+                Runs = 0,
+                OverlapFixes = 0,
+                ContrastFixes = 0,
+                ViewportFixes = 0,
+                TextFixes = 0,
+                MotionSkips = 0,
+            },
+        }
+
+        local function now()
+            return os.clock()
+        end
+
+        local function pushReport(kind, instance, message)
+            local report = {
+                Time = now(),
+                Kind = tostring(kind or "info"),
+                Name = typeof(instance) == "Instance" and instance:GetFullName() or tostring(instance),
+                Message = tostring(message or ""),
+            }
+            Audit.Reports[#Audit.Reports + 1] = report
+            if #Audit.Reports > 80 then
+                table.remove(Audit.Reports, 1)
+            end
+            return report
+        end
+
+        local function isVisibleGui(instance)
+            return typeof(instance) == "Instance"
+                and instance:IsA("GuiObject")
+                and instance.Visible
+                and instance.AbsoluteSize.X > 0
+                and instance.AbsoluteSize.Y > 0
+        end
+
+        local function rectOf(instance)
+            local position = instance.AbsolutePosition
+            local size = instance.AbsoluteSize
+            return {
+                Left = position.X,
+                Top = position.Y,
+                Right = position.X + size.X,
+                Bottom = position.Y + size.Y,
+                Width = size.X,
+                Height = size.Y,
+            }
+        end
+
+        local function intersects(aRect, bRect, padding)
+            padding = padding or 0
+            return aRect.Left < bRect.Right - padding
+                and aRect.Right > bRect.Left + padding
+                and aRect.Top < bRect.Bottom - padding
+                and aRect.Bottom > bRect.Top + padding
+        end
+
+        local function luminance(colorValue)
+            if typeof(colorValue) ~= "Color3" then
+                return 1
+            end
+            local function channel(value)
+                if value <= 0.03928 then
+                    return value / 12.92
+                end
+                return ((value + 0.055) / 1.055) ^ 2.4
+            end
+            return 0.2126 * channel(colorValue.R)
+                + 0.7152 * channel(colorValue.G)
+                + 0.0722 * channel(colorValue.B)
+        end
+
+        local function contrastRatio(aColor, bColor)
+            local aLum = luminance(aColor)
+            local bLum = luminance(bColor)
+            local lighter = math.max(aLum, bLum)
+            local darker = math.min(aLum, bLum)
+            return (lighter + 0.05) / (darker + 0.05)
+        end
+
+        local function nearestBackground(instance)
+            local cursor = instance.Parent
+            while cursor do
+                if cursor:IsA("GuiObject") and cursor.BackgroundTransparency < 0.96 then
+                    return cursor.BackgroundColor3
+                end
+                cursor = cursor.Parent
+            end
+            return o.Main
+        end
+
+        local function repairContrast(label)
+            if not (label:IsA("TextLabel") or label:IsA("TextButton") or label:IsA("TextBox")) then
+                return false
+            end
+            local background = nearestBackground(label)
+            local ratio = contrastRatio(label.TextColor3, background)
+            if ratio >= 3.8 then
+                return false
+            end
+            local lightRatio = contrastRatio(o.TextStrong, background)
+            local mutedRatio = contrastRatio(o.MutedText, background)
+            if lightRatio >= mutedRatio then
+                label.TextColor3 = o.TextStrong
+            else
+                label.TextColor3 = o.MutedText
+            end
+            label.TextStrokeTransparency = 1
+            Audit.Counters.ContrastFixes += 1
+            pushReport("contrast", label, "Raised text contrast for readability")
+            return true
+        end
+
+        local function repairText(label)
+            if not (label:IsA("TextLabel") or label:IsA("TextButton") or label:IsA("TextBox")) then
+                return false
+            end
+            local changed = false
+            if label.TextXAlignment == Enum.TextXAlignment.Center and label.AbsoluteSize.X > 96 then
+                local parentName = label.Parent and label.Parent.Name:lower() or ""
+                if parentName:find("module") or parentName:find("row") or parentName:find("setting") or parentName:find("button") then
+                    label.TextXAlignment = Enum.TextXAlignment.Left
+                    changed = true
+                end
+            end
+            if label.TextTruncate ~= Enum.TextTruncate.AtEnd then
+                label.TextTruncate = Enum.TextTruncate.AtEnd
+                changed = true
+            end
+            if label.AbsoluteSize.X > 0 and label.AbsoluteSize.Y > 0 then
+                Layout.fitText(label, {
+                    MinSize = d.isMobile and 10 or 9,
+                    MaxSize = math.max(label.TextSize, d.isMobile and 12 or 11),
+                    Padding = 8,
+                })
+            end
+            if changed then
+                Audit.Counters.TextFixes += 1
+                pushReport("text", label, "Repaired text alignment/truncation")
+            end
+            repairContrast(label)
+            return changed
+        end
+
+        local function repairViewport(instance)
+            if not isVisibleGui(instance) or not B then
+                return false
+            end
+            local before = instance.Position
+            Layout.keepInsideViewport(instance, d.isMobile and 6 or 8)
+            if instance.Position ~= before then
+                Audit.Counters.ViewportFixes += 1
+                pushReport("viewport", instance, "Clamped object into viewport")
+                return true
+            end
+            return false
+        end
+
+        local function canMove(instance)
+            if not isVisibleGui(instance) then
+                return false
+            end
+            if instance.AnchorPoint.X ~= 0 or instance.AnchorPoint.Y ~= 0 then
+                return false
+            end
+            if instance.Position.X.Scale ~= 0 or instance.Position.Y.Scale ~= 0 then
+                return false
+            end
+            local name = instance.Name:lower()
+            if name:find("drag") or name:find("resize") or name:find("shadow") then
+                return false
+            end
+            return true
+        end
+
+        local function repairSiblingOverlaps(parent)
+            if not (typeof(parent) == "Instance" and parent:IsA("GuiObject")) then
+                return 0
+            end
+            local children = {}
+            for _, child in ipairs(parent:GetChildren()) do
+                if canMove(child) then
+                    children[#children + 1] = child
+                end
+            end
+            table.sort(children, function(left, right)
+                if left.LayoutOrder == right.LayoutOrder then
+                    return left.AbsolutePosition.Y < right.AbsolutePosition.Y
+                end
+                return left.LayoutOrder < right.LayoutOrder
+            end)
+
+            local fixes = 0
+            for index = 2, #children do
+                local previous = children[index - 1]
+                local current = children[index]
+                local previousRect = rectOf(previous)
+                local currentRect = rectOf(current)
+                if intersects(previousRect, currentRect, 2) then
+                    local delta = (previousRect.Bottom - currentRect.Top) + 6
+                    current.Position = UDim2.fromOffset(current.Position.X.Offset, current.Position.Y.Offset + delta)
+                    fixes += 1
+                    Audit.Counters.OverlapFixes += 1
+                    pushReport("overlap", current, "Separated overlapping sibling controls")
+                end
+            end
+            return fixes
+        end
+
+        local function repairButton(button)
+            if not (button:IsA("TextButton") or button:IsA("ImageButton")) then
+                return false
+            end
+            button.AutoButtonColor = false
+            Layout.ensureHitbox(button, d.isMobile and 44 or 32, d.isMobile and 40 or 30)
+            if not button:GetAttribute("BadWarsAuditMotion") then
+                button:SetAttribute("BadWarsAuditMotion", true)
+                Motion.hover(button, {
+                    Scale = 1.003,
+                })
+                Motion.press(button, {
+                    DownScale = 0.992,
+                })
+            else
+                Audit.Counters.MotionSkips += 1
+            end
+            return true
+        end
+
+        local function repairMetric(instance)
+            if not (typeof(instance) == "Instance" and instance:IsA("GuiObject")) then
+                return false
+            end
+            local name = instance.Name
+            local title = instance:FindFirstChild("WidgetTitle")
+            local titleText = title and title:IsA("TextLabel") and title.Text or ""
+            local metric = ({
+                FPS = true,
+                Ping = true,
+                Memory = true,
+                Clock = true,
+                Speedmeter = true,
+            })[name] or ({
+                FPS = true,
+                PING = true,
+                MEMORY = true,
+                CLOCK = true,
+                SPEEDMETER = true,
+            })[titleText]
+            if not metric then
+                return false
+            end
+            instance.Visible = true
+            instance.Active = true
+            instance.BackgroundTransparency = math.min(instance.BackgroundTransparency, 0.06)
+            instance.ClipsDescendants = false
+            for _, child in ipairs(instance:GetChildren()) do
+                if child:IsA("TextLabel") and not child:GetAttribute("PremiumWidgetInternal") then
+                    child.Visible = true
+                    child.TextTransparency = 0
+                    child.BackgroundTransparency = 1
+                    child.TextColor3 = o.TextStrong
+                    child.TextStrokeTransparency = 1
+                    child.Position = UDim2.fromOffset(10, 12)
+                    child.Size = UDim2.new(1, -20, 1, -14)
+                    child.TextXAlignment = Enum.TextXAlignment.Left
+                    child.TextYAlignment = Enum.TextYAlignment.Center
+                    child.TextTruncate = Enum.TextTruncate.AtEnd
+                end
+            end
+            return true
+        end
+
+        function Audit.Scan(root)
+            if not Audit.Enabled then
+                return Audit.Counters
+            end
+            local stamp = now()
+            if stamp - Audit.LastRun < Audit.MinimumInterval then
+                return Audit.Counters
+            end
+            Audit.LastRun = stamp
+            Audit.Counters.Runs += 1
+            root = root or B
+            if not root then
+                return Audit.Counters
+            end
+            local parents = {}
+            for _, descendant in ipairs(root:GetDescendants()) do
+                if descendant:IsA("GuiObject") then
+                    if Recipes and type(Recipes.Apply) == "function" then
+                        pcall(Recipes.Apply, descendant)
+                    end
+                    if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+                        repairText(descendant)
+                    end
+                    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+                        repairButton(descendant)
+                    end
+                    repairMetric(descendant)
+                    local parent = descendant.Parent
+                    if parent and parent:IsA("GuiObject") then
+                        parents[parent] = true
+                    end
+                end
+            end
+            for parent in pairs(parents) do
+                repairSiblingOverlaps(parent)
+            end
+            for _, descendant in ipairs(root:GetDescendants()) do
+                if descendant:IsA("GuiObject") then
+                    local name = descendant.Name:lower()
+                    if name:find("window") or name:find("notification") or name:find("prompt") or name:find("tooltip") then
+                        repairViewport(descendant)
+                    end
+                end
+            end
+            return Audit.Counters
+        end
+
+        function Audit.Repair(instance)
+            if typeof(instance) ~= "Instance" then
+                return false
+            end
+            if instance:IsA("GuiObject") then
+                if Recipes and type(Recipes.Apply) == "function" then
+                    pcall(Recipes.Apply, instance)
+                end
+                repairMetric(instance)
+                repairViewport(instance)
+                if instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox") then
+                    repairText(instance)
+                end
+                if instance:IsA("TextButton") or instance:IsA("ImageButton") then
+                    repairButton(instance)
+                end
+            end
+            for _, descendant in ipairs(instance:GetDescendants()) do
+                Audit.Repair(descendant)
+            end
+            return true
+        end
+
+        function Audit.Snapshot(root)
+            root = root or B
+            local snapshot = {
+                Windows = 0,
+                Buttons = 0,
+                Labels = 0,
+                Scrollers = 0,
+                Notifications = 0,
+                Metrics = 0,
+                InvisibleText = 0,
+                TinyButtons = 0,
+            }
+            if not root then
+                return snapshot
+            end
+            for _, descendant in ipairs(root:GetDescendants()) do
+                if descendant:IsA("GuiObject") then
+                    local lowerName = descendant.Name:lower()
+                    if lowerName:find("window") then
+                        snapshot.Windows += 1
+                    end
+                    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+                        snapshot.Buttons += 1
+                        if descendant.AbsoluteSize.X < 28 or descendant.AbsoluteSize.Y < 28 then
+                            snapshot.TinyButtons += 1
+                        end
+                    end
+                    if descendant:IsA("TextLabel") or descendant:IsA("TextBox") then
+                        snapshot.Labels += 1
+                        if descendant.Visible and descendant.TextTransparency >= 0.98 then
+                            snapshot.InvisibleText += 1
+                        end
+                    end
+                    if descendant:IsA("ScrollingFrame") then
+                        snapshot.Scrollers += 1
+                    end
+                    if descendant.Name == "Notification" then
+                        snapshot.Notifications += 1
+                    end
+                    if ({
+                        FPS = true,
+                        Ping = true,
+                        Memory = true,
+                        Clock = true,
+                        Speedmeter = true,
+                    })[descendant.Name] then
+                        snapshot.Metrics += 1
+                    end
+                end
+            end
+            return snapshot
+        end
+
+        function Audit.Describe()
+            local snapshot = Audit.Snapshot(B)
+            return {
+                Snapshot = snapshot,
+                Counters = table.clone(Audit.Counters),
+                RecentReports = table.clone(Audit.Reports),
+            }
+        end
+
+        function Audit.SetEnabled(enabled)
+            Audit.Enabled = enabled == true
+            return Audit.Enabled
+        end
+
+        d.FusionAudit = Audit
+        d.Libraries.FusionAudit = Audit
+
+        task.defer(function()
+            if not B or not B.Parent then
+                return
+            end
+            Audit.Scan(B)
+            d:Clean(B.DescendantAdded:Connect(function(descendant)
+                task.defer(function()
+                    if descendant and descendant.Parent then
+                        Audit.Repair(descendant)
+                    end
+                end)
+            end))
+            local pending = false
+            d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                if pending then
+                    return
+                end
+                pending = true
+                task.delay(0.12, function()
+                    pending = false
+                    if B and B.Parent then
+                        Audit.Scan(B)
+                    end
+                end)
+            end))
+        end)
+    end
+end)()
+-- BADWARS_FUSION_AUDIT_REPAIR_V21_END
+
 return d

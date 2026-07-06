@@ -973,16 +973,7 @@ end
 
 d.SafeWriteFile = safeWriteFile
 
-local textMeasureBusy = false
 local E = function(E, F, G, H)
-    if textMeasureBusy then
-        return Vector2.zero
-    end
-    textMeasureBusy = true
-
-    local params = Instance.new("GetTextBoundsParams")
-    params.Text = tostring(E or "")
-
     local fontSize = F
     if typeof(fontSize) == "Vector2" then
         fontSize = fontSize.Y
@@ -991,7 +982,7 @@ local E = function(E, F, G, H)
     if fontSize ~= fontSize or fontSize == math.huge or fontSize == -math.huge then
         fontSize = 14
     end
-    params.Size = math.max(fontSize, 1)
+    fontSize = math.max(fontSize, 1)
 
     local maxWidth = H
     if typeof(maxWidth) == "Vector2" then
@@ -1001,40 +992,36 @@ local E = function(E, F, G, H)
     if maxWidth ~= maxWidth or maxWidth <= 0 then
         maxWidth = math.huge
     end
-    params.Width = maxWidth
 
-    if typeof(G) == "Font" then
-        params.Font = G
-    elseif typeof(G) == "EnumItem" and G.EnumType == Enum.Font then
-        if G == Enum.Font.Unknown then
-            params.Font = o.Font
-        else
-            local converted, font = pcall(Font.fromEnum, G)
-            params.Font = converted and typeof(font) == "Font" and font or o.Font
-        end
-    else
-        params.Font = o.Font
+    local text = removeTags(tostring(E or ""))
+    local longestLine = 0
+    local totalChars = 0
+    local lineCount = 1
+
+    for line in string.gmatch(text .. "\n", "([^\n]*)\n") do
+        local lineLength = #line
+        longestLine = math.max(longestLine, lineLength)
+        totalChars += lineLength
+        lineCount += 1
+    end
+    lineCount = math.max(1, lineCount - 1)
+
+    local averageGlyphWidth = fontSize * 0.56
+    if typeof(G) == "EnumItem" and (G == Enum.Font.GothamBold or G == Enum.Font.SourceSansBold) then
+        averageGlyphWidth = fontSize * 0.6
     end
 
-    local I, J = pcall(function()
-        return i:GetTextBoundsAsync(params)
-    end)
-    pcall(function()
-        params:Destroy()
-    end)
-    textMeasureBusy = false
-
-    if not I then
-        a:report({
-            type = "getfontsize-function",
-            err = J,
-            args = { E, F, G, H },
-            notifyBlacklisted = true,
-        })
-        return Vector2.zero
+    local unwrappedWidth = math.max(1, longestLine * averageGlyphWidth)
+    local width = maxWidth == math.huge and unwrappedWidth or math.min(maxWidth, math.max(1, unwrappedWidth))
+    local wrappedLines = lineCount
+    if maxWidth ~= math.huge and maxWidth > 0 then
+        local charsPerLine = math.max(1, math.floor(maxWidth / averageGlyphWidth))
+        wrappedLines = math.max(lineCount, math.ceil(math.max(totalChars, longestLine) / charsPerLine))
     end
 
-    return J
+    local height = math.max(fontSize, wrappedLines * fontSize * 1.22)
+
+    return Vector2.new(width, height)
 end
 local function addCorner(F, G)
     local H = F:FindFirstChildOfClass("UICorner")

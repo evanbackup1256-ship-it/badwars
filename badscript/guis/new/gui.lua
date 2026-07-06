@@ -1,3 +1,4 @@
+-- BADWARS_V19_UI_REPAIR_V4_4
 -- BADWARS_UI_V19_OBSIDIAN_OVERHAUL
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
@@ -2033,14 +2034,20 @@ local LayoutIntelligence = {
     objects = setmetatable({}, { __mode = "k" }),
     metadata = setmetatable({}, { __mode = "k" }),
     activeObject = nil,
+    pendingObject = nil,
     registrationCounter = 0,
-    dirty = false,
     resolveQueued = false,
     resolving = false,
     started = false,
-    margin = d.isMobile and 6 or 8,
-    stepInterval = 0.12,
-    lastStep = 0,
+    margin = d.isMobile and 4 or 6,
+    Config = {
+        Mode = "Clamp",
+        Margin = d.isMobile and 4 or 6,
+        ResolveOnDragEnd = false,
+        ResolveOnResize = false,
+        AvoidReservedAreas = true,
+        MaxSearchRadius = 280,
+    },
 }
 
 d.LayoutIntelligence = LayoutIntelligence
@@ -2056,11 +2063,42 @@ local function layoutRect(position, size)
 end
 
 local function layoutRectsOverlap(left, right, margin)
-    margin = margin or 0
+    margin = tonumber(margin) or 0
     return left.X < right.X + right.Width + margin
         and left.X + left.Width + margin > right.X
         and left.Y < right.Y + right.Height + margin
         and left.Y + left.Height + margin > right.Y
+end
+
+function LayoutIntelligence:SetMode(mode)
+    mode = tostring(mode or "Clamp")
+    if mode ~= "Off" and mode ~= "Clamp" and mode ~= "Smart" then
+        mode = "Clamp"
+    end
+    self.Config.Mode = mode
+    if mode == "Clamp" then
+        self:ResolveAll(true, true)
+    elseif mode == "Smart" then
+        self:RequestResolve("mode")
+    end
+end
+
+function LayoutIntelligence:SetMargin(value)
+    value = math.clamp(math.floor((tonumber(value) or self.Config.Margin) + 0.5), 0, 32)
+    self.Config.Margin = value
+    self.margin = value
+end
+
+function LayoutIntelligence:SetResolveOnDragEnd(enabled)
+    self.Config.ResolveOnDragEnd = enabled == true
+end
+
+function LayoutIntelligence:SetResolveOnResize(enabled)
+    self.Config.ResolveOnResize = enabled == true
+end
+
+function LayoutIntelligence:GetConfig()
+    return table.clone(self.Config)
 end
 
 function LayoutIntelligence:_isVisible(object)
@@ -2075,9 +2113,11 @@ end
 
 function LayoutIntelligence:_visibleObjects(exclude)
     local objects = {}
-
     for object in pairs(self.objects) do
-        if object ~= exclude and self:_isVisible(object) and object:GetAttribute("AllowUIOverlap") ~= true then
+        if object ~= exclude
+            and self:_isVisible(object)
+            and object:GetAttribute("AllowUIOverlap") ~= true
+        then
             objects[#objects + 1] = object
         end
     end
@@ -2085,23 +2125,33 @@ function LayoutIntelligence:_visibleObjects(exclude)
     table.sort(objects, function(left, right)
         local leftMeta = self.metadata[left]
         local rightMeta = self.metadata[right]
-        return (leftMeta and leftMeta.Order or 0) < (rightMeta and rightMeta.Order or 0)
+        return (leftMeta and leftMeta.Order or 0)
+            < (rightMeta and rightMeta.Order or 0)
     end)
 
     return objects
 end
 
 function LayoutIntelligence:_reservedRects()
-    local rects = {}
+    if not self.Config.AvoidReservedAreas then
+        return {}
+    end
 
+    local rects = {}
     local function collect(folder)
         if not folder or not folder.Parent then
             return
         end
-
         for _, child in ipairs(folder:GetChildren()) do
-            if child:IsA("GuiObject") and child.Visible and child.AbsoluteSize.X > 1 and child.AbsoluteSize.Y > 1 then
-                rects[#rects + 1] = layoutRect(child.AbsolutePosition, child.AbsoluteSize)
+            if child:IsA("GuiObject")
+                and child.Visible
+                and child.AbsoluteSize.X > 1
+                and child.AbsoluteSize.Y > 1
+            then
+                rects[#rects + 1] = layoutRect(
+                    child.AbsolutePosition,
+                    child.AbsoluteSize
+                )
             end
         end
     end
@@ -2113,131 +2163,83 @@ end
 
 function LayoutIntelligence:_blockerRects(exclude)
     local rects = self:_reservedRects()
-
     for _, object in ipairs(self:_visibleObjects(exclude)) do
-        rects[#rects + 1] = layoutRect(object.AbsolutePosition, object.AbsoluteSize)
+        rects[#rects + 1] = layoutRect(
+            object.AbsolutePosition,
+            object.AbsoluteSize
+        )
     end
-
     return rects
 end
 
 function LayoutIntelligence:_positionIsFree(object, position, blockers)
     local candidate = layoutRect(position, object.AbsoluteSize)
-
     for _, blocker in ipairs(blockers) do
-        if layoutRectsOverlap(candidate, blocker, self.margin) then
+        if layoutRectsOverlap(candidate, blocker, self.Config.Margin) then
             return false
         end
     end
-
     return true
 end
 
-function LayoutIntelligence:_addCandidate(candidates, seen, object, position)
-    local clamped = clampGuiObjectToViewport(object, position)
-    local key = tostring(math.floor(clamped.X + 0.5)) .. ":" .. tostring(math.floor(clamped.Y + 0.5))
-
-    if not seen[key] then
-        seen[key] = true
-        candidates[#candidates + 1] = clamped
-    end
-end
-
-function LayoutIntelligence:_findSafeAgainst(object, desired, blockers, maxRadius)
+function LayoutIntelligence:_findSafeAgainst(object, desired, blockers)
     desired = clampGuiObjectToViewport(object, desired)
     if self:_positionIsFree(object, desired, blockers) then
-        return desired, true
+        return desired
     end
 
     local size = object.AbsoluteSize
-    local candidates = {}
-    local seen = {}
+    local margin = self.Config.Margin
+    local best = desired
+    local bestDistance = math.huge
 
-    self:_addCandidate(candidates, seen, object, desired)
-
-    for _, blocker in ipairs(blockers) do
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X - size.X - self.margin, desired.Y)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X + blocker.Width + self.margin, desired.Y)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(desired.X, blocker.Y - size.Y - self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(desired.X, blocker.Y + blocker.Height + self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X - size.X - self.margin, blocker.Y - size.Y - self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X + blocker.Width + self.margin, blocker.Y - size.Y - self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X - size.X - self.margin, blocker.Y + blocker.Height + self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X + blocker.Width + self.margin, blocker.Y + blocker.Height + self.margin)
-        )
-    end
-
-    local radiusLimit = math.max(24, tonumber(maxRadius) or 320)
-    local radius = 20
-    while radius <= radiusLimit do
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, 0))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, 0))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(0, radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(0, -radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, -radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, -radius))
-        radius += 20
-    end
-
-    table.sort(candidates, function(left, right)
-        return (left - desired).Magnitude < (right - desired).Magnitude
-    end)
-
-    for _, candidate in ipairs(candidates) do
-        if self:_positionIsFree(object, candidate, blockers) then
-            return candidate, true
+    local function consider(position)
+        position = clampGuiObjectToViewport(object, position)
+        if not self:_positionIsFree(object, position, blockers) then
+            return
+        end
+        local distance = (position - desired).Magnitude
+        if distance < bestDistance then
+            best = position
+            bestDistance = distance
         end
     end
 
-    return desired, false
+    for _, blocker in ipairs(blockers) do
+        consider(Vector2.new(blocker.X - size.X - margin, desired.Y))
+        consider(Vector2.new(blocker.X + blocker.Width + margin, desired.Y))
+        consider(Vector2.new(desired.X, blocker.Y - size.Y - margin))
+        consider(Vector2.new(desired.X, blocker.Y + blocker.Height + margin))
+    end
+
+    if bestDistance < math.huge then
+        return best
+    end
+
+    local radius = 24
+    local radiusLimit = math.max(48, tonumber(self.Config.MaxSearchRadius) or 280)
+    while radius <= radiusLimit do
+        consider(desired + Vector2.new(radius, 0))
+        consider(desired + Vector2.new(-radius, 0))
+        consider(desired + Vector2.new(0, radius))
+        consider(desired + Vector2.new(0, -radius))
+        consider(desired + Vector2.new(radius, radius))
+        consider(desired + Vector2.new(-radius, radius))
+        consider(desired + Vector2.new(radius, -radius))
+        consider(desired + Vector2.new(-radius, -radius))
+        if bestDistance < math.huge then
+            return best
+        end
+        radius += 24
+    end
+
+    return desired
 end
 
 function LayoutIntelligence:Register(object, options)
     if typeof(object) ~= "Instance" or not object:IsA("GuiObject") then
         return object
     end
-
     if self.objects[object] then
         return object
     end
@@ -2252,11 +2254,14 @@ function LayoutIntelligence:Register(object, options)
     }
     object:SetAttribute("AdaptiveLayoutManaged", true)
 
-    local function request()
-        self:RequestResolve()
-    end
+    d:Clean(object:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if not self.Config.ResolveOnResize
+            or self.Config.Mode ~= "Smart"
+            or object:GetAttribute("LayoutAnimating") == true
+        then
+            return
+        end
 
-    local function requestAfterResize()
         local metadata = self.metadata[object]
         if not metadata then
             return
@@ -2264,22 +2269,18 @@ function LayoutIntelligence:Register(object, options)
         if metadata.ResizeThread then
             pcall(task.cancel, metadata.ResizeThread)
         end
-        metadata.ResizeThread = task.delay(0.08, function()
-            local current = self.metadata[object]
-            if current == metadata then
-                current.ResizeThread = nil
-                self:RequestResolve()
+        metadata.ResizeThread = task.delay(0.12, function()
+            if self.metadata[object] == metadata then
+                metadata.ResizeThread = nil
+                self:RequestResolve("resize", object)
             end
         end)
-    end
+    end))
 
-    d:Clean(object:GetPropertyChangedSignal("Visible"):Connect(request))
-    d:Clean(object:GetPropertyChangedSignal("AbsoluteSize"):Connect(requestAfterResize))
     object.Destroying:Once(function()
         self:Unregister(object)
     end)
 
-    task.defer(request)
     return object
 end
 
@@ -2287,42 +2288,58 @@ function LayoutIntelligence:Unregister(object)
     local metadata = self.metadata[object]
     if metadata and metadata.ResizeThread then
         pcall(task.cancel, metadata.ResizeThread)
-        metadata.ResizeThread = nil
     end
-
     self.objects[object] = nil
     self.metadata[object] = nil
-
     if self.activeObject == object then
         self.activeObject = nil
+    end
+    if self.pendingObject == object then
+        self.pendingObject = nil
     end
 end
 
 function LayoutIntelligence:BeginDrag(object)
     self:Register(object)
     self.activeObject = object
-
     local metadata = self.metadata[object]
     if metadata then
-        if metadata.ResizeThread then
-            pcall(task.cancel, metadata.ResizeThread)
-            metadata.ResizeThread = nil
-        end
         metadata.LastSafe = object.AbsolutePosition
     end
 end
 
 function LayoutIntelligence:UpdateDrag(object, desired)
     self:Register(object)
+    if self.Config.Mode == "Off" then
+        return desired
+    end
+    return clampGuiObjectToViewport(object, desired)
+end
 
-    -- Pointer movement stays direct. Collision resolution is deferred until
-    -- release so drag input never performs an O(n^2) layout search per frame.
-    local safe = clampGuiObjectToViewport(object, desired)
+function LayoutIntelligence:ResolveObject(object, forceSmart)
+    if not self:_isVisible(object)
+        or object:GetAttribute("LayoutAnimating") == true
+    then
+        return
+    end
+
+    local desired = clampGuiObjectToViewport(object, object.AbsolutePosition)
+    if forceSmart or self.Config.Mode == "Smart" then
+        desired = self:_findSafeAgainst(
+            object,
+            desired,
+            self:_blockerRects(object)
+        )
+    end
+
+    if (desired - object.AbsolutePosition).Magnitude > 0.5 then
+        setGuiAbsolutePosition(object, desired)
+    end
+
     local metadata = self.metadata[object]
     if metadata then
-        metadata.LastSafe = safe
+        metadata.LastSafe = desired
     end
-    return safe
 end
 
 function LayoutIntelligence:EndDrag(object)
@@ -2330,31 +2347,35 @@ function LayoutIntelligence:EndDrag(object)
         self.activeObject = nil
     end
 
-    local metadata = self.metadata[object]
-    if metadata and self:_isVisible(object) then
-        metadata.LastSafe = object.AbsolutePosition
+    if self.Config.Mode == "Off" then
+        return
     end
 
-    self:RequestResolve()
+    if self.Config.Mode == "Smart" and self.Config.ResolveOnDragEnd then
+        self:ResolveObject(object, true)
+    else
+        self:ResolveObject(object, false)
+    end
 end
 
 function LayoutIntelligence:HasOverlap()
     local objects = self:_visibleObjects()
-    local reserved = self:_reservedRects()
+    local blockers = self:_reservedRects()
 
     for index, object in ipairs(objects) do
         local rect = layoutRect(object.AbsolutePosition, object.AbsoluteSize)
-
-        for _, reservedRect in ipairs(reserved) do
-            if layoutRectsOverlap(rect, reservedRect, self.margin) then
+        for _, blocker in ipairs(blockers) do
+            if layoutRectsOverlap(rect, blocker, self.Config.Margin) then
                 return true
             end
         end
-
         for otherIndex = index + 1, #objects do
             local other = objects[otherIndex]
-            local otherRect = layoutRect(other.AbsolutePosition, other.AbsoluteSize)
-            if layoutRectsOverlap(rect, otherRect, self.margin) then
+            if layoutRectsOverlap(
+                rect,
+                layoutRect(other.AbsolutePosition, other.AbsoluteSize),
+                self.Config.Margin
+            ) then
                 return true
             end
         end
@@ -2363,41 +2384,51 @@ function LayoutIntelligence:HasOverlap()
     return false
 end
 
-function LayoutIntelligence:ResolveAll()
+function LayoutIntelligence:ResolveAll(force, clampOnly)
     if self.resolving or self.activeObject then
+        return
+    end
+    if not force and self.Config.Mode ~= "Smart" then
         return
     end
 
     self.resolving = true
     local blockers = self:_reservedRects()
-    local objects = self:_visibleObjects()
 
-    for _, object in ipairs(objects) do
-        local current = clampGuiObjectToViewport(object, object.AbsolutePosition)
-        local safe = current
-
-        if not self:_positionIsFree(object, current, blockers) then
-            safe = select(1, self:_findSafeAgainst(object, current, blockers, 520))
+    for _, object in ipairs(self:_visibleObjects()) do
+        if object:GetAttribute("LayoutAnimating") ~= true then
+            local desired = clampGuiObjectToViewport(
+                object,
+                object.AbsolutePosition
+            )
+            if not clampOnly then
+                desired = self:_findSafeAgainst(object, desired, blockers)
+            end
+            if (desired - object.AbsolutePosition).Magnitude > 0.5 then
+                setGuiAbsolutePosition(object, desired)
+            end
+            blockers[#blockers + 1] = layoutRect(
+                desired,
+                object.AbsoluteSize
+            )
         end
-
-        if (safe - object.AbsolutePosition).Magnitude > 0.5 then
-            setGuiAbsolutePosition(object, safe)
-        end
-
-        local metadata = self.metadata[object]
-        if metadata then
-            metadata.LastSafe = safe
-        end
-
-        blockers[#blockers + 1] = layoutRect(safe, object.AbsoluteSize)
     end
 
-    self.dirty = false
     self.resolving = false
 end
 
-function LayoutIntelligence:RequestResolve()
-    self.dirty = true
+function LayoutIntelligence:RequestResolve(reason, object)
+    if self.Config.Mode ~= "Smart" or self.activeObject then
+        return
+    end
+    if reason == "resize" and not self.Config.ResolveOnResize then
+        return
+    end
+    if object and object:GetAttribute("LayoutAnimating") == true then
+        return
+    end
+
+    self.pendingObject = object or self.pendingObject
     if self.resolveQueued then
         return
     end
@@ -2405,19 +2436,22 @@ function LayoutIntelligence:RequestResolve()
     self.resolveQueued = true
     task.defer(function()
         self.resolveQueued = false
-        if self.dirty then
+        local pending = self.pendingObject
+        self.pendingObject = nil
+
+        if self.activeObject then
+            return
+        end
+        if pending and pending.Parent then
+            self:ResolveObject(pending, true)
+        else
             self:ResolveAll()
         end
     end)
 end
 
 function LayoutIntelligence:Start()
-    if self.started then
-        return
-    end
     self.started = true
-    -- Layout work is event-driven through RequestResolve. A permanent
-    -- Heartbeat listener made idle UI pay a cost even when nothing moved.
 end
 -- BADWARS_ADAPTIVE_LAYOUT_ENGINE_V1_END
 
@@ -10192,7 +10226,7 @@ function d.CreateCategory(aa, ab)
                     Color = o.BorderStrong,
                     Transparency = 0.62,
                 })
-                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
+                moduleCategoryScale.Scale = 1
                 at.TextColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
                 aw.ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
             end)
@@ -10204,17 +10238,17 @@ function d.CreateCategory(aa, ab)
                     Color = o.Border,
                     Transparency = 0.84,
                 })
-                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
+                moduleCategoryScale.Scale = 1
                 at.TextColor3 = ao.Expanded and o.TextStrong or o.MutedText
                 aw.ImageColor3 = ao.Expanded
                     and Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
                     or o.MutedText
             end)
             aq.MouseButton1Down:Connect(function()
-                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 0.99 })
+                moduleCategoryScale.Scale = 1
             end)
             aq.MouseButton1Up:Connect(function()
-                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
+                moduleCategoryScale.Scale = 1
             end)
 
             success, err = pcall(function()
@@ -10285,105 +10319,147 @@ function d.CreateCategory(aa, ab)
                 end
             end
 
-            local function refreshModuleCategory()
-                success, err = pcall(function()
-                    local az = ay.AbsoluteContentSize.Y / A.Scale
-                    if ao.Expanded then
-                        ax.Visible = true
-                        ax.Size = UDim2.new(1, 0, 0, az)
-                        ap.Size = UDim2.fromOffset(220, 46 + az)
-                        if ao.UpExpand then
-                            ap.Position = UDim2.fromOffset(0, -az)
-                        end
-                    else
-                        ax.Size = UDim2.new(1, 0, 0, 0)
-                        ap.Size = UDim2.fromOffset(220, 46)
-                        if ao.UpExpand then
-                            ap.Position = UDim2.fromOffset(0, 0)
-                        end
-                    end
-                    aj.CanvasSize = UDim2.fromOffset(0, al.AbsoluteContentSize.Y / A.Scale)
-                    if ac.Expanded then
-                        ad.Size = UDim2.fromOffset(220, math.min(41 + al.AbsoluteContentSize.Y / A.Scale, 601))
-                    end
-                end)
-                if not success then
-                    bwarn("[ModuleCategory] refresh failed:", err)
-                end
-            end
-
-            ao.Refresh = refreshModuleCategory
-
             local moduleCategoryAnimationId = 0
+local moduleCategoryAnimating = false
 
-            function ao.Toggle(az, aA)
-                success, err = pcall(function()
-                    moduleCategoryAnimationId += 1
-                    local animationId = moduleCategoryAnimationId
-                    if aA ~= nil then
-                        if aA == az.Expanded then
-                            return
-                        end
-                        az.Expanded = aA
-                    else
-                        az.Expanded = not az.Expanded
-                    end
+local function refreshModuleCategory(force)
+    if moduleCategoryAnimating and not force then
+        return
+    end
 
-                    ao.ExpandEvent:Fire()
+    local scale = math.max(A.Scale, 0.05)
+    local contentHeight = math.max(
+        0,
+        math.ceil(ay.AbsoluteContentSize.Y / scale)
+    )
+    local targetHeight = ao.Expanded and contentHeight or 0
 
-                    local aB = az.Expanded and ay.AbsoluteContentSize.Y / A.Scale or 0
+    n:Cancel(ax)
+    n:Cancel(ap)
+    moduleCategoryScale.Scale = 1
+    ax.Visible = ao.Expanded
+    ax.Size = UDim2.new(1, 0, 0, targetHeight)
+    ap.Size = UDim2.fromOffset(220, 46 + targetHeight)
 
-                    local aC = az.UpExpand and 180 or 0
-                    local I = az.UpExpand and 0 or 180
+    if ao.UpExpand then
+        ap.Position = UDim2.fromOffset(0, -targetHeight)
+    end
 
-                    n:Tween(aw, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
-                        Rotation = az.Expanded and aC or I,
-                        ImageColor3 = az.Expanded
-                                and (an.AccentColor or an.StrokeColor or Color3.fromRGB(100, 150, 255))
-                            or o.Text,
-                    })
+    aj.CanvasSize = UDim2.fromOffset(
+        0,
+        math.max(0, math.ceil(al.AbsoluteContentSize.Y / scale))
+    )
 
-                    n:Tween(as, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                        ImageColor3 = az.Expanded
-                                and (an.AccentColor or an.StrokeColor or Color3.fromRGB(100, 150, 255))
-                            or o.Text,
-                    })
+    if ac.Expanded then
+        ad.Size = UDim2.fromOffset(
+            220,
+            math.min(
+                41 + math.ceil(al.AbsoluteContentSize.Y / scale),
+                601
+            )
+        )
+    end
+end
 
-                    n:Tween(ap, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                        BackgroundColor3 = az.Expanded and m.Dark(o.Main, 0.12)
-                            or (an.BackgroundColor or m.Dark(o.Main, 0.08)),
-                    })
+ao.Refresh = refreshModuleCategory
+ao.RefreshLayout = refreshModuleCategory
 
-                    ax.Visible = true
-                    n:Tween(ax, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(1, 0, 0, aB),
-                    })
+function ao.Toggle(az, desiredState, instant)
+    local nextState = desiredState
+    if nextState == nil then
+        nextState = not az.Expanded
+    else
+        nextState = nextState == true
+    end
 
-                    if az.UpExpand then
-                        n:Tween(ap, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                            Size = UDim2.fromOffset(220, 45 + aB),
-                            Position = UDim2.fromOffset(0, -(az.Expanded and aB or 0)),
-                        })
-                    else
-                        n:Tween(ap, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                            Size = UDim2.fromOffset(220, 45 + aB),
-                        })
-                    end
+    if nextState == az.Expanded and not instant then
+        return
+    end
 
-                    if not az.Expanded then
-                        task.delay(0.3, function()
-                            if animationId == moduleCategoryAnimationId and not az.Expanded then
-                                ax.Visible = false
-                            end
-                        end)
-                    end
-                end)
-                if not success then
-                    bwarn("[ModuleCategory] Toggle failed:", err)
-                end
-            end
+    az.Expanded = nextState
+    moduleCategoryAnimationId += 1
+    local animationId = moduleCategoryAnimationId
+    moduleCategoryAnimating = not instant
+    moduleCategoryScale.Scale = 1
+    ap:SetAttribute("LayoutAnimating", moduleCategoryAnimating)
+    ao.ExpandEvent:Fire()
 
-            function ao.Expand(az)
+    local scale = math.max(A.Scale, 0.05)
+    local contentHeight = math.max(
+        0,
+        math.ceil(ay.AbsoluteContentSize.Y / scale)
+    )
+    local targetHeight = az.Expanded and contentHeight or 0
+    local arrowRotation = az.Expanded
+        and (az.UpExpand and 180 or 0)
+        or (az.UpExpand and 0 or 180)
+    local accent = an.AccentColor
+        or an.StrokeColor
+        or Color3.fromRGB(100, 150, 255)
+    local background = az.Expanded
+        and m.Dark(o.Main, 0.12)
+        or (an.BackgroundColor or m.Dark(o.Main, 0.08))
+
+    n:Cancel(aw)
+    n:Cancel(as)
+    n:Cancel(ax)
+    n:Cancel(ap)
+    ax.Visible = true
+
+    local function finish()
+        if animationId ~= moduleCategoryAnimationId then
+            return
+        end
+        moduleCategoryAnimating = false
+        ap:SetAttribute("LayoutAnimating", false)
+        if not az.Expanded then
+            ax.Visible = false
+        end
+        refreshModuleCategory(true)
+    end
+
+    if instant then
+        aw.Rotation = arrowRotation
+        aw.ImageColor3 = az.Expanded and accent or o.Text
+        as.ImageColor3 = az.Expanded and accent or o.Text
+        ap.BackgroundColor3 = background
+        ax.Size = UDim2.new(1, 0, 0, targetHeight)
+        ap.Size = UDim2.fromOffset(220, 46 + targetHeight)
+        if az.UpExpand then
+            ap.Position = UDim2.fromOffset(0, -targetHeight)
+        end
+        finish()
+        return
+    end
+
+    local transition = TweenInfo.new(
+        0.1,
+        Enum.EasingStyle.Quart,
+        Enum.EasingDirection.Out
+    )
+
+    n:Tween(aw, transition, {
+        Rotation = arrowRotation,
+        ImageColor3 = az.Expanded and accent or o.Text,
+    })
+    n:Tween(as, transition, {
+        ImageColor3 = az.Expanded and accent or o.Text,
+    })
+    n:Tween(ap, transition, {
+        BackgroundColor3 = background,
+        Size = UDim2.fromOffset(220, 46 + targetHeight),
+        Position = az.UpExpand
+            and UDim2.fromOffset(0, -targetHeight)
+            or ap.Position,
+    })
+    n:Tween(ax, transition, {
+        Size = UDim2.new(1, 0, 0, targetHeight),
+    })
+
+    task.delay(0.11, finish)
+end
+
+function ao.Expand(az)
                 az:Toggle()
             end
 
@@ -14814,22 +14890,19 @@ addCorner(ak, o.Radius)
 A = Instance.new("UIScale")
 local function responsiveScale()
     local viewport = B.AbsoluteSize
-    local width = viewport.X > 0 and viewport.X or 1920
-    local height = viewport.Y > 0 and viewport.Y or 1080
+    local width = viewport.X > 0 and viewport.X or 1600
+    local height = viewport.Y > 0 and viewport.Y or 900
+    local scale
 
     if d.isMobile then
-        return math.clamp(
-            math.min(width / 820, height / 620),
-            0.58,
-            0.9
-        )
+        scale = math.clamp(math.min(width / 760, height / 540), 0.8, 1)
+    elseif width >= 1180 and height >= 650 then
+        scale = 1
+    else
+        scale = math.clamp(math.min(width / 1280, height / 720), 0.85, 1)
     end
 
-    return math.clamp(
-        math.min(width / 1920, height / 1080),
-        0.62,
-        1.05
-    )
+    return math.floor(scale * 20 + 0.5) / 20
 end
 A.Scale = responsiveScale()
 A.Parent = w
@@ -15361,6 +15434,48 @@ au = at:CreateSlider({
     Default = 1,
     Darker = true,
     Visible = false,
+})
+d.LayoutMode = at:CreateDropdown({
+    Name = "Layout intelligence",
+    List = { "Off", "Clamp", "Smart" },
+    Default = "Clamp",
+    Tooltip = "Off allows free placement. Clamp keeps windows on-screen. Smart can also resolve overlaps.",
+    Function = function(value)
+        LayoutIntelligence:SetMode(value)
+    end,
+})
+d.LayoutGap = at:CreateSlider({
+    Name = "Layout gap",
+    Min = 0,
+    Max = 24,
+    Default = LayoutIntelligence.Config.Margin,
+    Tooltip = "Space used by Smart overlap resolution.",
+    Function = function(value)
+        LayoutIntelligence:SetMargin(value)
+    end,
+})
+d.LayoutResolveDrag = at:CreateToggle({
+    Name = "Resolve overlaps after drag",
+    Default = false,
+    Tooltip = "Only applies while Layout intelligence is set to Smart.",
+    Function = function(enabled)
+        LayoutIntelligence:SetResolveOnDragEnd(enabled)
+    end,
+})
+d.LayoutResolveResize = at:CreateToggle({
+    Name = "Resolve after window resize",
+    Default = false,
+    Tooltip = "Disabled by default so expanding modules never moves unrelated windows.",
+    Function = function(enabled)
+        LayoutIntelligence:SetResolveOnResize(enabled)
+    end,
+})
+at:CreateButton({
+    Name = "Resolve layout now",
+    Tooltip = "Runs Smart overlap resolution once without enabling automatic movement.",
+    Function = function()
+        LayoutIntelligence:ResolveAll(true, false)
+    end,
 })
 d.RainbowMode = at:CreateDropdown({
     Name = "Rainbow Mode",
@@ -16596,4 +16711,292 @@ end
 
 
 -- Entire appended V21 presentation/runtime suffix disabled by BADWARS_V19_PERFORMANCE_HOTFIX_V2.
+
+-- BADWARS_UI_QUALITY_RUNTIME_V4_BEGIN
+(function()
+    local UserInputService = game:GetService("UserInputService")
+    local boundScrollers = setmetatable({}, { __mode = "k" })
+    local queuedCanvasUpdates = setmetatable({}, { __mode = "k" })
+
+    local function ancestorNamed(object, name)
+        local current = object
+        while current and current ~= B do
+            if current.Name == name then
+                return true
+            end
+            current = current.Parent
+        end
+        return false
+    end
+
+    local function isVirtualDropdownScroll(scroller)
+        return ancestorNamed(scroller, "DropdownPopup")
+    end
+
+    local function findLayout(scroller)
+        for _, child in ipairs(scroller:GetChildren()) do
+            if child:IsA("UIListLayout")
+                or child:IsA("UIGridLayout")
+            then
+                return child
+            end
+        end
+        return nil
+    end
+
+    local function canvasPadding(scroller)
+        local padding = scroller:FindFirstChildOfClass("UIPadding")
+        if not padding then
+            return 0
+        end
+        return padding.PaddingTop.Offset + padding.PaddingBottom.Offset
+    end
+
+    local function updateCanvas(scroller)
+        if not scroller.Parent or isVirtualDropdownScroll(scroller) then
+            return
+        end
+
+        local layout = findLayout(scroller)
+        if not layout then
+            return
+        end
+
+        local height = math.max(
+            0,
+            math.ceil(layout.AbsoluteContentSize.Y + canvasPadding(scroller) + 4)
+        )
+        scroller.CanvasSize = UDim2.fromOffset(0, height)
+
+        local windowHeight = scroller.AbsoluteWindowSize.Y
+        if windowHeight <= 0 then
+            windowHeight = scroller.AbsoluteSize.Y
+        end
+        local maxY = math.max(0, height - windowHeight)
+        if scroller.CanvasPosition.Y > maxY then
+            scroller.CanvasPosition = Vector2.new(
+                scroller.CanvasPosition.X,
+                maxY
+            )
+        end
+    end
+
+    local function queueCanvasUpdate(scroller)
+        if queuedCanvasUpdates[scroller] then
+            return
+        end
+        queuedCanvasUpdates[scroller] = true
+        task.defer(function()
+            queuedCanvasUpdates[scroller] = nil
+            if scroller.Parent then
+                updateCanvas(scroller)
+            end
+        end)
+    end
+
+    local function bindScroller(scroller)
+        if boundScrollers[scroller] then
+            return
+        end
+
+        boundScrollers[scroller] = true
+        scroller.Active = true
+        scroller.ScrollingEnabled = true
+        scroller.ScrollingDirection = Enum.ScrollingDirection.Y
+        scroller.ElasticBehavior = Enum.ElasticBehavior.Never
+        scroller.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+        scroller.ScrollBarThickness = d.isMobile and 6 or 4
+        scroller.ScrollBarImageTransparency = 0.18
+        scroller.ScrollBarImageColor3 = o.BorderStrong
+
+        if not isVirtualDropdownScroll(scroller) then
+            scroller.AutomaticCanvasSize = Enum.AutomaticSize.None
+            local layout = findLayout(scroller)
+            if layout then
+                d:Clean(layout:GetPropertyChangedSignal(
+                    "AbsoluteContentSize"
+                ):Connect(function()
+                    queueCanvasUpdate(scroller)
+                end))
+            end
+            d:Clean(scroller:GetPropertyChangedSignal(
+                "AbsoluteSize"
+            ):Connect(function()
+                queueCanvasUpdate(scroller)
+            end))
+            queueCanvasUpdate(scroller)
+        end
+    end
+
+    local function normalizeObject(object)
+        if object:IsA("ScrollingFrame") then
+            bindScroller(object)
+        elseif object:IsA("ImageLabel")
+            or object:IsA("ImageButton")
+        then
+            pcall(function()
+                object.ResampleMode = Enum.ResamplerMode.Default
+            end)
+        elseif object:IsA("UIScale") then
+            local parent = object.Parent
+            if parent
+                and parent:FindFirstChild("ModulesContainer")
+            then
+                object.Scale = 1
+            end
+        end
+    end
+
+    for _, descendant in ipairs(B:GetDescendants()) do
+        normalizeObject(descendant)
+    end
+
+    d:Clean(B.DescendantAdded:Connect(function(descendant)
+        normalizeObject(descendant)
+        if descendant:IsA("UIListLayout")
+            or descendant:IsA("UIGridLayout")
+        then
+            local parent = descendant.Parent
+            if parent and parent:IsA("ScrollingFrame") then
+                bindScroller(parent)
+                queueCanvasUpdate(parent)
+            end
+        end
+    end))
+
+    local function pointInside(point, object)
+        local position = object.AbsolutePosition
+        local size = object.AbsoluteSize
+        return point.X >= position.X
+            and point.X <= position.X + size.X
+            and point.Y >= position.Y
+            and point.Y <= position.Y + size.Y
+    end
+
+    local function visibleScrollerAt(point)
+        local best
+        local bestZ = -math.huge
+        local bestArea = math.huge
+
+        for scroller in pairs(boundScrollers) do
+            if scroller.Parent
+                and scroller.Visible
+                and scroller.ScrollingEnabled
+                and isEffectivelyVisible(scroller)
+                and pointInside(point, scroller)
+            then
+                local contentHeight = scroller.CanvasSize.Y.Offset
+                    + scroller.CanvasSize.Y.Scale * scroller.AbsoluteSize.Y
+                local windowHeight = scroller.AbsoluteWindowSize.Y
+                if windowHeight <= 0 then
+                    windowHeight = scroller.AbsoluteSize.Y
+                end
+
+                if contentHeight > windowHeight + 1 then
+                    local area = scroller.AbsoluteSize.X
+                        * scroller.AbsoluteSize.Y
+                    if scroller.ZIndex > bestZ
+                        or (
+                            scroller.ZIndex == bestZ
+                            and area < bestArea
+                        )
+                    then
+                        best = scroller
+                        bestZ = scroller.ZIndex
+                        bestArea = area
+                    end
+                end
+            end
+        end
+
+        return best
+    end
+
+    d:Clean(UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseWheel
+            or not v.Visible
+        then
+            return
+        end
+
+        local scroller = visibleScrollerAt(
+            UserInputService:GetMouseLocation()
+        )
+        if not scroller then
+            return
+        end
+
+        local contentHeight = scroller.CanvasSize.Y.Offset
+            + scroller.CanvasSize.Y.Scale * scroller.AbsoluteSize.Y
+        local windowHeight = scroller.AbsoluteWindowSize.Y
+        if windowHeight <= 0 then
+            windowHeight = scroller.AbsoluteSize.Y
+        end
+        local maxY = math.max(0, contentHeight - windowHeight)
+        local nextY = math.clamp(
+            scroller.CanvasPosition.Y - input.Position.Z * 52,
+            0,
+            maxY
+        )
+        scroller.CanvasPosition = Vector2.new(
+            scroller.CanvasPosition.X,
+            nextY
+        )
+    end))
+
+    local tooltipQueued = false
+    local function clampTooltip()
+        if tooltipQueued or not z or not z.Visible then
+            return
+        end
+
+        tooltipQueued = true
+        task.defer(function()
+            tooltipQueued = false
+            if not z or not z.Parent or not z.Visible then
+                return
+            end
+
+            local viewport = B.AbsoluteSize
+            local size = z.AbsoluteSize
+            local position = z.AbsolutePosition
+            local margin = 8
+            local x = math.clamp(
+                position.X,
+                margin,
+                math.max(margin, viewport.X - size.X - margin)
+            )
+            local yPosition = math.clamp(
+                position.Y,
+                margin,
+                math.max(margin, viewport.Y - size.Y - margin)
+            )
+
+            if math.abs(x - position.X) > 0.5
+                or math.abs(yPosition - position.Y) > 0.5
+            then
+                local scale = math.max(A.Scale, 0.05)
+                local parentPosition = z.Parent.AbsolutePosition
+                z.Position = UDim2.fromOffset(
+                    (x - parentPosition.X) / scale,
+                    (yPosition - parentPosition.Y) / scale
+                )
+            end
+        end)
+    end
+
+    d:Clean(z:GetPropertyChangedSignal("Position"):Connect(clampTooltip))
+    d:Clean(z:GetPropertyChangedSignal("Visible"):Connect(clampTooltip))
+    d:Clean(z:GetPropertyChangedSignal("AbsoluteSize"):Connect(clampTooltip))
+
+    d.RefreshScrollCanvases = function()
+        for scroller in pairs(boundScrollers) do
+            queueCanvasUpdate(scroller)
+        end
+    end
+
+    task.defer(d.RefreshScrollCanvases)
+end)()
+-- BADWARS_UI_QUALITY_RUNTIME_V4_END
+
 return d

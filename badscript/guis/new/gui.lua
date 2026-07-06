@@ -5832,13 +5832,27 @@ H = {
                 })
             end
         end)
-        ae:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+        local dropdownPositionQueued = false
+        local function refreshDropdownPosition()
             if d.ThreadFix then
                 setthreadidentity(8)
             end
             local al = (ae.AbsolutePosition - (ac.Legit and d.Legit.Window.AbsolutePosition or -j:GetGuiInset()))
                 / A.Scale
-            N.Position = UDim2.fromOffset(al.X + 220, al.Y)
+            local targetPosition = UDim2.fromOffset(al.X + 220, al.Y)
+            if N.Position ~= targetPosition then
+                N.Position = targetPosition
+            end
+        end
+        ae:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+            if dropdownPositionQueued then
+                return
+            end
+            dropdownPositionQueued = true
+            task.defer(function()
+                dropdownPositionQueued = false
+                refreshDropdownPosition()
+            end)
         end)
 
         if aa.Default then
@@ -8323,7 +8337,15 @@ end)
         d.MainGuiSettingsOpenedEvent:Fire()
         setSettingsVisible(true)
     end)
+    local refreshingMainWindowSize = false
+    local mainWindowRefreshQueued = false
     local function refreshMainWindowSize()
+        if refreshingMainWindowSize then
+            mainWindowRefreshQueued = true
+            return
+        end
+        refreshingMainWindowSize = true
+
         if aa.ThreadFix then
             setthreadidentity(8)
         end
@@ -8342,47 +8364,81 @@ end)
             viewportHeight
         )
 
-        af.CanvasSize = UDim2.fromOffset(
+        local targetCanvasSize = UDim2.fromOffset(
             0,
             contentHeight + 8
         )
-        af.Size = UDim2.fromOffset(
+        if af.CanvasSize ~= targetCanvasSize then
+            af.CanvasSize = targetCanvasSize
+        end
+
+        local targetScrollerSize = UDim2.fromOffset(
             UI_WINDOW_WIDTH,
             math.max(100, visibleHeight)
         )
-        ac.Size = UDim2.fromOffset(
+        if af.Size ~= targetScrollerSize then
+            af.Size = targetScrollerSize
+        end
+
+        local targetWindowSize = UDim2.fromOffset(
             UI_WINDOW_WIDTH,
             120 + math.max(100, visibleHeight)
         )
+        if ac.Size ~= targetWindowSize then
+            ac.Size = targetWindowSize
+        end
 
         local maxCanvasY = math.max(
             0,
             af.AbsoluteCanvasSize.Y - af.AbsoluteWindowSize.Y
         )
-        af.CanvasPosition = Vector2.new(
+        local targetCanvasPosition = Vector2.new(
             0,
             math.clamp(af.CanvasPosition.Y, 0, maxCanvasY)
         )
+        if af.CanvasPosition ~= targetCanvasPosition then
+            af.CanvasPosition = targetCanvasPosition
+        end
 
         for _, buttonApi in ab.Buttons do
             if buttonApi.Icon then
-                buttonApi.Object.Text =
+                local targetText =
                     string.rep(" ", 36 * A.Scale)
                     .. buttonApi.Name
+                if buttonApi.Object.Text ~= targetText then
+                    buttonApi.Object.Text = targetText
+                end
             end
+        end
+
+        refreshingMainWindowSize = false
+        if mainWindowRefreshQueued then
+            mainWindowRefreshQueued = false
+            task.defer(refreshMainWindowSize)
         end
     end
 
+    local function queueMainWindowSizeRefresh()
+        if mainWindowRefreshQueued then
+            return
+        end
+        mainWindowRefreshQueued = true
+        task.defer(function()
+            mainWindowRefreshQueued = false
+            refreshMainWindowSize()
+        end)
+    end
+
     ag:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(
-        refreshMainWindowSize
+        queueMainWindowSizeRefresh
     )
     B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        task.defer(refreshMainWindowSize)
+        queueMainWindowSizeRefresh()
     end)
     A:GetPropertyChangedSignal("Scale"):Connect(function()
-        task.defer(refreshMainWindowSize)
+        queueMainWindowSizeRefresh()
     end)
-    task.defer(refreshMainWindowSize)
+    task.defer(queueMainWindowSizeRefresh)
 
     ab.MainGui = af
 

@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Main v18.4 - runtime stability pipeline
+-- BadWars Main v19.0 - Obsidian UI pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -627,7 +627,7 @@ local function isStaleGuiCache(path, body)
     end
     return not (
         body:find('Version%s*=%s*"18%.4"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V18%.4%-RUNTIME%-STABILITY%-FIX"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%-OBSIDIAN%-OVERHAUL"') ~= nil
     )
 end
 

@@ -61,16 +61,16 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"18\.4"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V18\.4-RUNTIME-STABILITY-FIX"' -and
-    $newGui -match 'BADWARS_UI_V18_4_RUNTIME_STABILITY_FIX' -and
-    $main -match "BadWars Main v18\.4" -and
-    $loader -match "BadWars Loader v18\.4" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"18\.4"'
+    $newGui -match 'Version\s*=\s*"19\.0"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.06-V19-OBSIDIAN-OVERHAUL"' -and
+    $newGui -match 'BADWARS_UI_V19_OBSIDIAN_OVERHAUL' -and
+    $main -match "BadWars Main v19\.0" -and
+    $loader -match "BadWars Loader v19\.0" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"19\.0"'
 ) {
-    Pass "V18.4 runtime versions are synchronized"
+    Pass "V19 runtime versions are synchronized"
 } else {
-    Fail "V18.4 runtime versions are not synchronized"
+    Fail "V19 runtime versions are not synchronized"
 }
 
 
@@ -98,12 +98,12 @@ if (
     $newGui -match 'ResizeThread\s*=\s*nil' -and
     $newGui -match 'ScrollingEnabled\s*=\s*true' -and
     $newGui -match 'function ai\.RefreshScroll' -and
-    $diagnostics -match 'BADWARS_DIAGNOSTICS_V18_4_RUNTIME_STABILITY_FIX' -and
+    $diagnostics -match 'BADWARS_DIAGNOSTICS_V19_OBSIDIAN_OVERHAUL' -and
     $diagnostics -notmatch 'local openerDot'
 ) {
-    Pass "V18.4 drag, scroll, and diagnostics repairs are present"
+    Pass "V19 Obsidian overhaul and stability repairs are present"
 } else {
-    Fail "V18.4 drag, scroll, or diagnostics repairs are incomplete"
+    Fail "V19 Obsidian overhaul or stability repairs are incomplete"
 }
 
 

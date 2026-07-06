@@ -229,20 +229,20 @@ local function createStatusLabel()
 
     local backdrop = Instance.new("Frame")
     backdrop.Size = UDim2.fromScale(1, 1)
-    backdrop.BackgroundColor3 = Color3.fromRGB(3, 6, 9)
+    backdrop.BackgroundColor3 = Color3.fromRGB(2, 4, 7)
     backdrop.BackgroundTransparency = 0.38
     backdrop.BorderSizePixel = 0
     backdrop.Parent = gui
 
     local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local cardWidth = math.clamp(viewport.X - 28, 332, 456)
+    local cardWidth = math.clamp(viewport.X - 28, 344, 480)
 
     local card = Instance.new("CanvasGroup")
     card.Name = "Loader"
     card.AnchorPoint = Vector2.new(0.5, 0.5)
     card.Position = UDim2.fromScale(0.5, 0.5)
-    card.Size = UDim2.fromOffset(cardWidth, 176)
-    card.BackgroundColor3 = Color3.fromRGB(10, 14, 19)
+    card.Size = UDim2.fromOffset(cardWidth, 188)
+    card.BackgroundColor3 = Color3.fromRGB(6, 10, 14)
     card.BorderSizePixel = 0
     card.GroupTransparency = 1
     card.Parent = gui
@@ -252,8 +252,8 @@ local function createStatusLabel()
     corner.Parent = card
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(61, 83, 100)
-    stroke.Transparency = 0.46
+    stroke.Color = Color3.fromRGB(70, 93, 109)
+    stroke.Transparency = 0.36
     stroke.Thickness = 1
     stroke.Parent = card
 
@@ -264,7 +264,7 @@ local function createStatusLabel()
     local accent = Instance.new("Frame")
     accent.Position = UDim2.fromOffset(18, 18)
     accent.Size = UDim2.fromOffset(4, 34)
-    accent.BackgroundColor3 = Color3.fromRGB(66, 214, 153)
+    accent.BackgroundColor3 = Color3.fromRGB(75, 222, 168)
     accent.BorderSizePixel = 0
     accent.Parent = card
     local accentCorner = Instance.new("UICorner")
@@ -276,8 +276,8 @@ local function createStatusLabel()
     title.Size = UDim2.new(1, -52, 0, 22)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBold
-    title.Text = "BADWARS"
-    title.TextSize = 16
+    title.Text = "BadWars"
+    title.TextSize = 18
     title.TextColor3 = Color3.fromRGB(244, 247, 250)
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = card
@@ -287,7 +287,7 @@ local function createStatusLabel()
     subtitle.Size = UDim2.new(1, -52, 0, 16)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "Preparing a clean session"
+    subtitle.Text = "Preparing your control center"
     subtitle.TextSize = 10
     subtitle.TextColor3 = Color3.fromRGB(116, 130, 145)
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -321,7 +321,7 @@ local function createStatusLabel()
 
     local track = Instance.new("Frame")
     track.Name = "ProgressTrack"
-    track.Position = UDim2.fromOffset(18, 137)
+    track.Position = UDim2.fromOffset(18, 147)
     track.Size = UDim2.new(1, -36, 0, 6)
     track.BackgroundColor3 = Color3.fromRGB(28, 37, 46)
     track.BorderSizePixel = 0
@@ -333,7 +333,7 @@ local function createStatusLabel()
     local fill = Instance.new("Frame")
     fill.Name = "Fill"
     fill.Size = UDim2.fromScale(0.08, 1)
-    fill.BackgroundColor3 = Color3.fromRGB(66, 214, 153)
+    fill.BackgroundColor3 = Color3.fromRGB(75, 222, 168)
     fill.BorderSizePixel = 0
     fill.Parent = track
     local fillCorner = Instance.new("UICorner")
@@ -441,12 +441,12 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-v18-4-runtime-stability-fix-2026-07-05-01'
+local cacheVersion = 'badwars-v19-obsidian-overhaul-2026-07-06-01'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents) == 'string'
 		and contents:find('Version%s*=%s*"18%.4"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V18%.4%-RUNTIME%-STABILITY%-FIX"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%-OBSIDIAN%-OVERHAUL"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath = 'badscript/guis/new/gui.lua'

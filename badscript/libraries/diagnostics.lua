@@ -1,4 +1,4 @@
--- BADWARS_DIAGNOSTICS_V18_4_RUNTIME_STABILITY_FIX
+-- BADWARS_DIAGNOSTICS_V19_OBSIDIAN_OVERHAUL
 -- BadWars centralized runtime diagnostics
 -- Loaded before the normal loader whenever possible.
 
@@ -536,7 +536,7 @@ function Diagnostics:_getParent()
     return parent
 end
 
--- BADWARS_CONSOLE_UI_V3_BEGIN
+-- BADWARS_CONSOLE_UI_V4_OBSIDIAN_BEGIN
 function Diagnostics:EnsureUI()
     if self.Destroyed then
         return nil
@@ -633,8 +633,8 @@ function Diagnostics:EnsureUI()
     gui.Parent = parent
 
     local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local initialWidth = math.clamp(viewport.X - 24, 360, 960)
-    local initialHeight = math.clamp(viewport.Y - 44, 380, 620)
+    local initialWidth = math.clamp(viewport.X - 28, 380, 1040)
+    local initialHeight = math.clamp(viewport.Y - 52, 400, 680)
     local minSize = Vector2.new(math.min(340, viewport.X - 16), math.min(320, viewport.Y - 16))
     local maxSize = Vector2.new(1280, 820)
     local compact = viewport.X < 720
@@ -643,18 +643,18 @@ function Diagnostics:EnsureUI()
     opener.Name = "DiagnosticsButton"
     opener.AnchorPoint = Vector2.new(1, 0)
     opener.Position = UDim2.new(1, -16, 0, 14)
-    opener.Size = UDim2.fromOffset(112, 34)
-    opener.BackgroundColor3 = Color3.fromRGB(9, 14, 19)
+    opener.Size = UDim2.fromOffset(124, 36)
+    opener.BackgroundColor3 = Color3.fromRGB(7, 12, 17)
     opener.BackgroundTransparency = 0.03
     opener.BorderSizePixel = 0
     opener.AutoButtonColor = false
     opener.Font = Enum.Font.GothamSemibold
-    opener.Text = "Diagnostics"
+    opener.Text = "Open console"
     opener.TextSize = 10
     opener.TextColor3 = Color3.fromRGB(178, 191, 204)
     opener.TextXAlignment = Enum.TextXAlignment.Center
     opener.Parent = gui
-    createCorner(opener, 9)
+    createCorner(opener, 11)
     local openerStroke = createStroke(opener, Color3.fromRGB(62, 77, 91), 0.58, 1)
 
     local badge = Instance.new("TextLabel")
@@ -688,14 +688,14 @@ function Diagnostics:EnsureUI()
     window.AnchorPoint = Vector2.new(0.5, 0.5)
     window.Position = UDim2.fromScale(0.5, 0.5)
     window.Size = UDim2.fromOffset(initialWidth, initialHeight)
-    window.BackgroundColor3 = Color3.fromRGB(7, 11, 15)
+    window.BackgroundColor3 = Color3.fromRGB(5, 9, 13)
     window.BackgroundTransparency = 0.005
     window.BorderSizePixel = 0
     window.GroupTransparency = 1
     window.Visible = false
     window.Parent = gui
-    createCorner(window, 16)
-    createStroke(window, Color3.fromRGB(66, 82, 96), 0.42, 1)
+    createCorner(window, 18)
+    createStroke(window, Color3.fromRGB(73, 94, 110), 0.34, 1)
 
     local windowScale = Instance.new("UIScale")
     windowScale.Scale = 0.975
@@ -703,36 +703,36 @@ function Diagnostics:EnsureUI()
 
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 58)
-    header.BackgroundColor3 = Color3.fromRGB(10, 15, 20)
+    header.Size = UDim2.new(1, 0, 0, 64)
+    header.BackgroundColor3 = Color3.fromRGB(8, 13, 18)
     header.BorderSizePixel = 0
     header.Parent = window
 
     local accent = Instance.new("Frame")
-    accent.Position = UDim2.fromOffset(16, 14)
-    accent.Size = UDim2.fromOffset(4, 27)
+    accent.Position = UDim2.fromOffset(18, 16)
+    accent.Size = UDim2.fromOffset(4, 30)
     accent.BackgroundColor3 = Color3.fromRGB(66, 214, 153)
     accent.BorderSizePixel = 0
     accent.Parent = header
     createCorner(accent, 99)
 
     local title = Instance.new("TextLabel")
-    title.Position = UDim2.fromOffset(30, 8)
+    title.Position = UDim2.fromOffset(34, 10)
     title.Size = UDim2.fromOffset(220, 22)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBold
-    title.Text = "RUNTIME CONSOLE"
-    title.TextSize = 14
+    title.Text = "Runtime console"
+    title.TextSize = 16
     title.TextColor3 = Color3.fromRGB(241, 245, 248)
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
     local subtitle = Instance.new("TextLabel")
-    subtitle.Position = UDim2.fromOffset(30, 29)
+    subtitle.Position = UDim2.fromOffset(34, 34)
     subtitle.Size = UDim2.fromOffset(260, 16)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "Live events, warnings, errors, and execution context"
+    subtitle.Text = "Live execution events, filters, and error context"
     subtitle.TextSize = 9
     subtitle.TextColor3 = Color3.fromRGB(103, 117, 131)
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -769,8 +769,8 @@ function Diagnostics:EnsureUI()
 
     local toolbar = Instance.new("Frame")
     toolbar.Name = "Toolbar"
-    toolbar.Position = UDim2.fromOffset(16, 72)
-    toolbar.Size = UDim2.new(1, -32, 0, compact and 116 or 80)
+    toolbar.Position = UDim2.fromOffset(18, 80)
+    toolbar.Size = UDim2.new(1, -36, 0, compact and 118 or 82)
     toolbar.BackgroundTransparency = 1
     toolbar.Parent = window
 
@@ -779,7 +779,7 @@ function Diagnostics:EnsureUI()
         box.Name = name
         box.Position = position
         box.Size = size
-        box.BackgroundColor3 = Color3.fromRGB(12, 18, 24)
+        box.BackgroundColor3 = Color3.fromRGB(11, 17, 23)
         box.BorderSizePixel = 0
         box.ClearTextOnFocus = false
         box.PlaceholderText = placeholder
@@ -790,7 +790,7 @@ function Diagnostics:EnsureUI()
         box.TextColor3 = Color3.fromRGB(208, 216, 224)
         box.TextXAlignment = Enum.TextXAlignment.Left
         box.Parent = toolbar
-        createCorner(box, 8)
+        createCorner(box, 10)
         local boxStroke = createStroke(box, Color3.fromRGB(54, 68, 81), 0.62, 1)
         local padding = Instance.new("UIPadding")
         padding.PaddingLeft = UDim.new(0, 11)
@@ -901,16 +901,16 @@ function Diagnostics:EnsureUI()
 
     local list = Instance.new("ScrollingFrame")
     list.Name = "Entries"
-    list.Position = UDim2.fromOffset(14, compact and 190 or 154)
-    list.Size = UDim2.new(1, -28, 1, compact and -224 or -188)
-    list.BackgroundColor3 = Color3.fromRGB(7, 11, 15)
+    list.Position = UDim2.fromOffset(16, compact and 202 or 168)
+    list.Size = UDim2.new(1, -32, 1, compact and -238 or -204)
+    list.BackgroundColor3 = Color3.fromRGB(7, 12, 17)
     list.BorderSizePixel = 0
     list.ScrollBarThickness = 3
     list.ScrollBarImageColor3 = Color3.fromRGB(69, 84, 97)
     list.CanvasSize = UDim2.fromOffset(0, 0)
     list.AutomaticCanvasSize = Enum.AutomaticSize.Y
     list.Parent = window
-    createCorner(list, 10)
+    createCorner(list, 12)
     createStroke(list, Color3.fromRGB(45, 58, 70), 0.58, 1)
 
     local listPadding = Instance.new("UIPadding")
@@ -927,7 +927,7 @@ function Diagnostics:EnsureUI()
 
     local footer = Instance.new("TextLabel")
     footer.Name = "Footer"
-    footer.Position = UDim2.new(0, 16, 1, -28)
+    footer.Position = UDim2.new(0, 18, 1, -30)
     footer.Size = UDim2.new(1, -58, 0, 18)
     footer.BackgroundTransparency = 1
     footer.Font = Enum.Font.Gotham
@@ -1204,13 +1204,13 @@ function Diagnostics:_render()
         row.Name = "Entry_" .. tostring(entry.id)
         row.LayoutOrder = order
         row.Size = UDim2.new(1, 0, 0, rowHeight)
-        row.BackgroundColor3 = selected and Color3.fromRGB(17, 24, 31) or Color3.fromRGB(10, 15, 20)
+        row.BackgroundColor3 = selected and Color3.fromRGB(18, 28, 37) or Color3.fromRGB(9, 15, 20)
         row.BackgroundTransparency = selected and 0 or 0.08
         row.BorderSizePixel = 0
         row.AutoButtonColor = false
         row.Text = ""
         row.Parent = ui.list
-        createCorner(row, 8)
+        createCorner(row, 10)
         local rowStroke = createStroke(row, selected and severityColor or Color3.fromRGB(42, 55, 67), selected and 0.42 or 0.78, 1)
 
         local accent = Instance.new("Frame")
@@ -1265,7 +1265,7 @@ function Diagnostics:_render()
             local details = Instance.new("TextLabel")
             details.Position = UDim2.fromOffset(14, ui.compact and 64 or 50)
             details.Size = UDim2.new(1, -28, 0, ui.compact and 88 or 88)
-            details.BackgroundColor3 = Color3.fromRGB(6, 10, 14)
+            details.BackgroundColor3 = Color3.fromRGB(5, 9, 13)
             details.BorderSizePixel = 0
             details.Font = Enum.Font.Code
             details.Text = self:FormatEntry(entry, true)
@@ -1275,7 +1275,7 @@ function Diagnostics:_render()
             details.TextYAlignment = Enum.TextYAlignment.Top
             details.TextWrapped = true
             details.Parent = row
-            createCorner(details, 7)
+            createCorner(details, 9)
             createStroke(details, Color3.fromRGB(40, 53, 65), 0.58, 1)
             local padding = Instance.new("UIPadding")
             padding.PaddingTop = UDim.new(0, 8)
@@ -1286,11 +1286,11 @@ function Diagnostics:_render()
         end
 
         row.MouseEnter:Connect(function()
-            ui.animate(row, 0.075, { BackgroundColor3 = Color3.fromRGB(17, 24, 31), BackgroundTransparency = 0 })
+            ui.animate(row, 0.075, { BackgroundColor3 = Color3.fromRGB(19, 29, 38), BackgroundTransparency = 0 })
             ui.animate(rowStroke, 0.075, { Transparency = 0.48, Color = severityColor:Lerp(Color3.fromRGB(66, 82, 96), 0.55) })
         end)
         row.MouseLeave:Connect(function()
-            ui.animate(row, 0.075, { BackgroundColor3 = selected and Color3.fromRGB(17, 24, 31) or Color3.fromRGB(10, 15, 20), BackgroundTransparency = selected and 0 or 0.08 })
+            ui.animate(row, 0.075, { BackgroundColor3 = selected and Color3.fromRGB(18, 28, 37) or Color3.fromRGB(9, 15, 20), BackgroundTransparency = selected and 0 or 0.08 })
             ui.animate(rowStroke, 0.075, { Transparency = selected and 0.42 or 0.78, Color = selected and severityColor or Color3.fromRGB(42, 55, 67) })
         end)
         row.Activated:Connect(function()

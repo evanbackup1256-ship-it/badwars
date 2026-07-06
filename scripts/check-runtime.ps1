@@ -34,6 +34,7 @@ $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
 $sprLib = Read-ProjectFile "badscript\libraries\spr.lua"
 $sprLicense = Read-ProjectFile "badscript\libraries\spr.LICENSE.txt"
+$windowManager = Read-ProjectFile "badscript\libraries\windowmanager.lua"
 $diagnostics = Read-ProjectFile "badscript\libraries\diagnostics.lua"
 $phaseModule = Read-ProjectFile "badscript\games\universal - base\Blatant\Phase.lua"
 $swimModule = Read-ProjectFile "badscript\games\universal - base\Blatant\Swim.lua"
@@ -61,16 +62,16 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"19\.0"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.06-V19-OBSIDIAN-OVERHAUL"' -and
-    $newGui -match 'BADWARS_UI_V19_OBSIDIAN_OVERHAUL' -and
-    $main -match "BadWars Main v19\.0" -and
-    $loader -match "BadWars Loader v19\.0" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"19\.0"'
+    $newGui -match 'Version\s*=\s*"19\.1"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.06-V19\.1-ADAPTIVE-WORKSPACE"' -and
+    $newGui -match 'BADWARS_UI_V19_1_ADAPTIVE_WORKSPACE' -and
+    $main -match "BadWars Main v19\.1" -and
+    $loader -match "BadWars Loader v19\.1" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"19\.1"'
 ) {
-    Pass "V19 runtime versions are synchronized"
+    Pass "V19.1 runtime versions are synchronized"
 } else {
-    Fail "V19 runtime versions are not synchronized"
+    Fail "V19.1 runtime versions are not synchronized"
 }
 
 
@@ -93,17 +94,32 @@ if (
 
 
 if (
+    $windowManager -match 'BADWARS_WINDOW_MANAGER_V19_1' -and
+    $windowManager -match 'function WindowManager:Register' -and
+    $windowManager -match 'function WindowManager:ResetAll' -and
+    $main -match 'badscript/libraries/windowmanager\.lua' -and
+    $main -match 'shared\.BadWarsWindowManagerClass' -and
+    $newGui -match 'BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_1_BEGIN' -and
+    $newGui -match 'function d\.RegisterSmartWindow' -and
+    $newGui -match 'Name = "Reset UI workspace"'
+) {
+    Pass "Smart resize, persistence, and workspace recovery are integrated"
+} else {
+    Fail "Adaptive workspace manager integration is incomplete"
+}
+
+if (
     $newGui -match 'SpringInteractive.*Public\s*=\s*false' -and
     $newGui -match 'local function bindDirectDrag' -and
     $newGui -match 'ResizeThread\s*=\s*nil' -and
     $newGui -match 'ScrollingEnabled\s*=\s*true' -and
     $newGui -match 'function ai\.RefreshScroll' -and
-    $diagnostics -match 'BADWARS_DIAGNOSTICS_V19_OBSIDIAN_OVERHAUL' -and
+    $diagnostics -match 'BADWARS_DIAGNOSTICS_V19_1_ADAPTIVE_WORKSPACE' -and
     $diagnostics -notmatch 'local openerDot'
 ) {
-    Pass "V19 Obsidian overhaul and stability repairs are present"
+    Pass "V19.1 adaptive workspace and stability repairs are present"
 } else {
-    Fail "V19 Obsidian overhaul or stability repairs are incomplete"
+    Fail "V19.1 adaptive workspace or stability repairs are incomplete"
 }
 
 
@@ -318,8 +334,8 @@ if (
     $loader -match "invalidateStaleGuiCache" -and
     $newMain -match "invalidateStaleGuiCache" -and
     $main -match "isStaleGuiCache" -and
-    $loader -match 'V18%.4%-RUNTIME%-STABILITY%-FIX' -and
-    $newMain -match 'V18%.4%-RUNTIME%-STABILITY%-FIX'
+    $loader -match 'V19%.1%-ADAPTIVE%-WORKSPACE' -and
+    $newMain -match 'V19%.1%-ADAPTIVE%-WORKSPACE'
 ) {
     Pass "Loadstring rejects stale GUI cache automatically"
 } else {

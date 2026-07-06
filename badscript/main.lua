@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Main v19.0 - Obsidian UI pipeline
+-- BadWars Main v19.1 - Adaptive Workspace UI pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -626,8 +626,8 @@ local function isStaleGuiCache(path, body)
         return true
     end
     return not (
-        body:find('Version%s*=%s*"18%.4"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%-OBSIDIAN%-OVERHAUL"') ~= nil
+        body:find('Version%s*=%s*"19%.1"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%.1%-ADAPTIVE%-WORKSPACE"') ~= nil
     )
 end
 
@@ -645,12 +645,24 @@ local function isStaleMotionCache(path, body)
     )
 end
 
+local function isStaleWindowManagerCache(path, body)
+    if path ~= "badscript/libraries/windowmanager.lua" then
+        return false
+    end
+    if type(body) ~= "string" or body == "" then
+        return true
+    end
+    return body:find("BADWARS_WINDOW_MANAGER_V19_1", 1, true) == nil
+        or body:find("function WindowManager:Register", 1, true) == nil
+        or body:find("function WindowManager:ResetAll", 1, true) == nil
+end
+
 local function downloadFile(path)
     if not HttpGet then
         return nil, "HttpGet nil"
     end
     local cached = isfile(path) and readfile(path)
-    if isStaleGuiCache(path, cached) or isStaleMotionCache(path, cached) then
+    if isStaleGuiCache(path, cached) or isStaleMotionCache(path, cached) or isStaleWindowManagerCache(path, cached) then
         pcall(function()
             if isfile(path) then
                 delfile(path)
@@ -1578,6 +1590,32 @@ do
             end
         else
             mwarn("BadWars: spr motion library unavailable; using TweenService fallback: " .. safeStr(sourceErr))
+        end
+    end
+end
+
+
+do
+    local existing = shared.BadWarsWindowManagerClass
+    local valid = type(existing) == "table"
+        and type(existing.new) == "function"
+
+    if not valid then
+        local source, sourceErr = downloadFile("badscript/libraries/windowmanager.lua")
+        if type(source) == "string" and source ~= "" then
+            local managerFn, compileErr = _loadstring(source, "badwars-windowmanager")
+            if managerFn then
+                local ok, library = pcall(managerFn)
+                if ok and type(library) == "table" and type(library.new) == "function" then
+                    shared.BadWarsWindowManagerClass = library
+                else
+                    mwarn("BadWars: window manager runtime fallback: " .. safeStr(library))
+                end
+            else
+                mwarn("BadWars: window manager compile fallback: " .. safeStr(compileErr))
+            end
+        else
+            mwarn("BadWars: window manager unavailable; resize persistence disabled: " .. safeStr(sourceErr))
         end
     end
 end

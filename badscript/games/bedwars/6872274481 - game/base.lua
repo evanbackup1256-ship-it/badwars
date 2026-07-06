@@ -384,7 +384,7 @@ if type(Bad.Clean) == "function" then Bad:Clean(phaseConnection) end
 
 -- V14 shared compatibility, runtime guards, and module health.
 local compatibility = Bad.BedWarsCompatibility or {}
-compatibility.Version = "19.0"
+compatibility.Version = "19.1"
 compatibility.Missing = bedwars.Missing
 compatibility.Modules = compatibility.Modules or {}
 compatibility.Notified = compatibility.Notified or {}

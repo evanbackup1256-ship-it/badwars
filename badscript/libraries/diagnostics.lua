@@ -1,4 +1,4 @@
--- BADWARS_DIAGNOSTICS_V19_OBSIDIAN_OVERHAUL
+-- BADWARS_DIAGNOSTICS_V19_1_ADAPTIVE_WORKSPACE
 -- BadWars centralized runtime diagnostics
 -- Loaded before the normal loader whenever possible.
 
@@ -633,11 +633,23 @@ function Diagnostics:EnsureUI()
     gui.Parent = parent
 
     local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local initialWidth = math.clamp(viewport.X - 28, 380, 1040)
-    local initialHeight = math.clamp(viewport.Y - 52, 400, 680)
-    local minSize = Vector2.new(math.min(340, viewport.X - 16), math.min(320, viewport.Y - 16))
+    local layoutPath = "badscript/profiles/diagnostics-layout-v19.1.json"
+    local savedLayout
+    pcall(function()
+        if type(isfile) == "function" and type(readfile) == "function" and isfile(layoutPath) then
+            savedLayout = game:GetService("HttpService"):JSONDecode(readfile(layoutPath))
+        end
+    end)
+    savedLayout = type(savedLayout) == "table" and savedLayout or {}
+    local initialWidth = math.clamp(tonumber(savedLayout.Width) or (viewport.X - 28), 380, math.min(1280, viewport.X - 16))
+    local initialHeight = math.clamp(tonumber(savedLayout.Height) or (viewport.Y - 52), 360, math.min(820, viewport.Y - 16))
+    local minSize = Vector2.new(math.min(340, viewport.X - 16), math.min(300, viewport.Y - 16))
     local maxSize = Vector2.new(1280, 820)
     local compact = viewport.X < 720
+    local initialCenter = Vector2.new(
+        math.clamp(tonumber(savedLayout.CenterX) or (viewport.X / 2), initialWidth / 2 + 8, viewport.X - initialWidth / 2 - 8),
+        math.clamp(tonumber(savedLayout.CenterY) or (viewport.Y / 2), initialHeight / 2 + 8, viewport.Y - initialHeight / 2 - 8)
+    )
 
     local opener = Instance.new("TextButton")
     opener.Name = "DiagnosticsButton"
@@ -686,7 +698,7 @@ function Diagnostics:EnsureUI()
     local window = Instance.new("CanvasGroup")
     window.Name = "Window"
     window.AnchorPoint = Vector2.new(0.5, 0.5)
-    window.Position = UDim2.fromScale(0.5, 0.5)
+    window.Position = UDim2.fromOffset(initialCenter.X, initialCenter.Y)
     window.Size = UDim2.fromOffset(initialWidth, initialHeight)
     window.BackgroundColor3 = Color3.fromRGB(5, 9, 13)
     window.BackgroundTransparency = 0.005
@@ -941,15 +953,40 @@ function Diagnostics:EnsureUI()
     resize.Name = "Resize"
     resize.AnchorPoint = Vector2.new(1, 1)
     resize.Position = UDim2.fromScale(1, 1)
-    resize.Size = UDim2.fromOffset(30, 30)
-    resize.BackgroundTransparency = 1
+    resize.Size = UDim2.fromOffset(32, 32)
+    resize.BackgroundColor3 = Color3.fromRGB(15, 23, 30)
+    resize.BackgroundTransparency = 0.32
     resize.BorderSizePixel = 0
     resize.AutoButtonColor = false
     resize.Font = Enum.Font.Code
     resize.Text = "//"
     resize.TextSize = 13
-    resize.TextColor3 = Color3.fromRGB(82, 96, 109)
+    resize.TextColor3 = Color3.fromRGB(92, 112, 128)
     resize.Parent = window
+    createCorner(resize, 9)
+    createStroke(resize, Color3.fromRGB(64, 82, 96), 0.58, 1)
+
+    local resizeRight = Instance.new("TextButton")
+    resizeRight.Name = "ResizeRight"
+    resizeRight.AnchorPoint = Vector2.new(1, 0)
+    resizeRight.Position = UDim2.fromScale(1, 0)
+    resizeRight.Size = UDim2.new(0, 10, 1, -30)
+    resizeRight.BackgroundTransparency = 1
+    resizeRight.BorderSizePixel = 0
+    resizeRight.AutoButtonColor = false
+    resizeRight.Text = ""
+    resizeRight.Parent = window
+
+    local resizeBottom = Instance.new("TextButton")
+    resizeBottom.Name = "ResizeBottom"
+    resizeBottom.AnchorPoint = Vector2.new(0, 1)
+    resizeBottom.Position = UDim2.fromScale(0, 1)
+    resizeBottom.Size = UDim2.new(1, -30, 0, 10)
+    resizeBottom.BackgroundTransparency = 1
+    resizeBottom.BorderSizePixel = 0
+    resizeBottom.AutoButtonColor = false
+    resizeBottom.Text = ""
+    resizeBottom.Parent = window
 
     self._ui = {
         gui = gui,
@@ -1038,7 +1075,40 @@ function Diagnostics:EnsureUI()
     local changedConnection
     local endedConnection
 
-    local function stopInteraction()
+    local function saveLayout()
+        if type(writefile) ~= "function" then
+            return
+        end
+        pcall(function()
+            if type(isfolder) == "function" and type(makefolder) == "function" and not isfolder("badscript/profiles") then
+                makefolder("badscript/profiles")
+            end
+            local center = window.AbsolutePosition + window.AbsoluteSize / 2
+            writefile(layoutPath, game:GetService("HttpService"):JSONEncode({
+                CenterX = center.X,
+                CenterY = center.Y,
+                Width = window.AbsoluteSize.X,
+                Height = window.AbsoluteSize.Y,
+            }))
+        end)
+    end
+
+    local function clampWindow()
+        local currentViewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+        local size = Vector2.new(
+            math.clamp(window.AbsoluteSize.X, math.min(minSize.X, currentViewport.X - 16), math.min(maxSize.X, currentViewport.X - 16)),
+            math.clamp(window.AbsoluteSize.Y, math.min(minSize.Y, currentViewport.Y - 16), math.min(maxSize.Y, currentViewport.Y - 16))
+        )
+        window.Size = UDim2.fromOffset(size.X, size.Y)
+        local center = window.AbsolutePosition + size / 2
+        center = Vector2.new(
+            math.clamp(center.X, size.X / 2 + 8, currentViewport.X - size.X / 2 - 8),
+            math.clamp(center.Y, size.Y / 2 + 8, currentViewport.Y - size.Y / 2 - 8)
+        )
+        window.Position = UDim2.fromOffset(center.X, center.Y)
+    end
+
+    local function stopInteraction(save)
         activeInteraction = nil
         if changedConnection then
             changedConnection:Disconnect()
@@ -1048,21 +1118,19 @@ function Diagnostics:EnsureUI()
             endedConnection:Disconnect()
             endedConnection = nil
         end
+        if save then
+            clampWindow()
+            saveLayout()
+        end
     end
 
     local function beginInteraction(input, mode)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1
-            and input.UserInputType ~= Enum.UserInputType.Touch
-        then
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
             return
         end
-
-        stopInteraction()
-        local expectedMovement = input.UserInputType == Enum.UserInputType.MouseButton1
-                and Enum.UserInputType.MouseMovement
-            or Enum.UserInputType.Touch
+        stopInteraction(false)
+        local expectedMovement = input.UserInputType == Enum.UserInputType.MouseButton1 and Enum.UserInputType.MouseMovement or Enum.UserInputType.Touch
         local currentViewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-
         activeInteraction = {
             Mode = mode,
             StartPointer = input.Position,
@@ -1075,46 +1143,38 @@ function Diagnostics:EnsureUI()
             MinHeight = math.min(minSize.Y, currentViewport.Y - 16),
             MaxHeight = math.min(maxSize.Y, currentViewport.Y - 16),
         }
-
         changedConnection = userInput.InputChanged:Connect(function(changed)
             local state = activeInteraction
             if not state or changed.UserInputType ~= state.ExpectedMovement then
                 return
             end
-
             local delta = changed.Position - state.StartPointer
             if state.Mode == "drag" then
-                window.Position = UDim2.new(
-                    state.StartPosition.X.Scale,
-                    state.StartPosition.X.Offset + delta.X,
-                    state.StartPosition.Y.Scale,
-                    state.StartPosition.Y.Offset + delta.Y
-                )
-            else
-                window.Size = UDim2.fromOffset(
-                    math.clamp(state.StartSize.X + delta.X, state.MinWidth, state.MaxWidth),
-                    math.clamp(state.StartSize.Y + delta.Y, state.MinHeight, state.MaxHeight)
-                )
+                window.Position = UDim2.new(state.StartPosition.X.Scale, state.StartPosition.X.Offset + delta.X, state.StartPosition.Y.Scale, state.StartPosition.Y.Offset + delta.Y)
+                return
             end
+            local width = state.StartSize.X
+            local height = state.StartSize.Y
+            if state.Mode == "resize" or state.Mode == "resize-right" then
+                width = math.clamp(state.StartSize.X + delta.X, state.MinWidth, state.MaxWidth)
+            end
+            if state.Mode == "resize" or state.Mode == "resize-bottom" then
+                height = math.clamp(state.StartSize.Y + delta.Y, state.MinHeight, state.MaxHeight)
+            end
+            window.Size = UDim2.fromOffset(width, height)
         end)
-
         endedConnection = input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End
-                or input.UserInputState == Enum.UserInputState.Cancel
-            then
-                stopInteraction()
+            if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
+                stopInteraction(true)
             end
         end)
     end
 
-    header.InputBegan:Connect(function(input)
-        beginInteraction(input, "drag")
-    end)
-
-    resize.InputBegan:Connect(function(input)
-        beginInteraction(input, "resize")
-    end)
-    gui.Destroying:Once(stopInteraction)
+    header.InputBegan:Connect(function(input) beginInteraction(input, "drag") end)
+    resize.InputBegan:Connect(function(input) beginInteraction(input, "resize") end)
+    resizeRight.InputBegan:Connect(function(input) beginInteraction(input, "resize-right") end)
+    resizeBottom.InputBegan:Connect(function(input) beginInteraction(input, "resize-bottom") end)
+    gui.Destroying:Once(function() stopInteraction(false) end)
 
     local keyConnection = userInput.InputBegan:Connect(function(input, processed)
         if not processed and input.KeyCode == Enum.KeyCode.F8 then

@@ -1,4 +1,4 @@
--- BADWARS_UI_V19_OBSIDIAN_OVERHAUL
+-- BADWARS_UI_V19_1_ADAPTIVE_WORKSPACE
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -165,8 +165,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "19.0",
-    PremiumBuild = "2026.07.06-V19-OBSIDIAN-OVERHAUL",
+    Version = "19.1",
+    PremiumBuild = "2026.07.06-V19.1-ADAPTIVE-WORKSPACE",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -327,6 +327,20 @@ local UI_HEADER_HEIGHT = d.isMobile and 56 or 58
 local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 48
 local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 46
 local UI_WINDOW_GAP = 16
+
+
+d.LayoutTokens = {
+    MainMin = d.isMobile and Vector2.new(252, 310) or Vector2.new(264, 330),
+    MainMax = Vector2.new(620, 820),
+    CategoryMin = d.isMobile and Vector2.new(246, 210) or Vector2.new(260, 220),
+    CategoryMax = Vector2.new(620, 720),
+    ListMin = d.isMobile and Vector2.new(246, 230) or Vector2.new(260, 240),
+    ListMax = Vector2.new(650, 760),
+    LegitMin = d.isMobile and Vector2.new(330, 300) or Vector2.new(520, 330),
+    LegitMax = Vector2.new(1180, 820),
+    ContentInset = d.isMobile and 10 or 12,
+    ResizeMargin = d.isMobile and 5 or 8,
+}
 
 local function getTableSize(p)
     if type(p) ~= "table" then
@@ -2411,6 +2425,10 @@ local function bindDirectDrag(handle, target, visibleGuard, headerOnly)
             local safe = clampGuiObjectToViewport(target, target.AbsolutePosition)
             setGuiAbsolutePosition(target, safe)
             LayoutIntelligence:EndDrag(target)
+            local windowId = target:GetAttribute("BadWarsWindowId")
+            if windowId and d.WindowManager then
+                d.WindowManager:NotifyMoved(windowId)
+            end
         end
 
         activeInput = nil
@@ -2433,6 +2451,12 @@ local function bindDirectDrag(handle, target, visibleGuard, headerOnly)
 
         local inputType = input.UserInputType
         if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local smartWindowId = target:GetAttribute("BadWarsWindowId")
+        local smartEntry = smartWindowId and d.WindowManager and d.WindowManager.Entries[smartWindowId]
+        if smartEntry and smartEntry.LockPosition then
             return
         end
 
@@ -6505,6 +6529,7 @@ function d.CreateGUI(aa)
     local ac = Instance.new("TextButton")
     ac.Name = "GUICategory"
     ac.Position = UDim2.fromOffset(6, 60)
+    ac.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, 440)
     ac.BackgroundColor3 = o.Main
     ac.BackgroundTransparency = 0.005
     ac.AutoButtonColor = false
@@ -6560,7 +6585,7 @@ function d.CreateGUI(aa)
 
     local playerCard = Instance.new("Frame")
     playerCard.Name = "PlayerCard"
-    playerCard.Size = UDim2.fromOffset(UI_WINDOW_WIDTH - 24, 58)
+    playerCard.Size = UDim2.new(1, -24, 0, 58)
     playerCard.Position = UDim2.fromOffset(12, 50)
     playerCard.BackgroundColor3 = o.Surface
     playerCard.BackgroundTransparency = 0.05
@@ -6663,7 +6688,7 @@ function d.CreateGUI(aa)
 
     local af = Instance.new("ScrollingFrame")
     af.Name = "Children"
-    af.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, 320)
+    af.Size = UDim2.new(1, 0, 1, -120)
     af.Position = UDim2.fromOffset(0, 116)
     af.BackgroundTransparency = 1
     af.BorderSizePixel = 0
@@ -8323,52 +8348,30 @@ end)
         d.MainGuiSettingsOpenedEvent:Fire()
         setSettingsVisible(true)
     end)
-    local function refreshMainWindowSize()
+    local function refreshMainWindowSize(forceAuto)
         if aa.ThreadFix then
             setthreadidentity(8)
         end
 
         local scale = math.max(A.Scale, 0.01)
-        local contentHeight = math.max(
-            0,
-            ag.AbsoluteContentSize.Y / scale
-        )
-        local viewportHeight = math.max(
-            180,
-            (B.AbsoluteSize.Y / scale) - 148
-        )
-        local visibleHeight = math.min(
-            contentHeight + 8,
-            viewportHeight
-        )
+        local contentHeight = math.max(0, ag.AbsoluteContentSize.Y / scale)
+        local viewportHeight = math.max(180, (B.AbsoluteSize.Y / scale) - 148)
+        local visibleHeight = math.min(contentHeight + 8, viewportHeight)
+        local automaticHeight = 120 + math.max(100, visibleHeight)
+        local userResized = ac:GetAttribute("BadWarsUserResized") == true
 
-        af.CanvasSize = UDim2.fromOffset(
-            0,
-            contentHeight + 8
-        )
-        af.Size = UDim2.fromOffset(
-            UI_WINDOW_WIDTH,
-            math.max(100, visibleHeight)
-        )
-        ac.Size = UDim2.fromOffset(
-            UI_WINDOW_WIDTH,
-            120 + math.max(100, visibleHeight)
-        )
+        af.CanvasSize = UDim2.fromOffset(0, contentHeight + 8)
+        if not userResized or forceAuto == "reset" then
+            ac.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, automaticHeight)
+        end
+        af.Size = UDim2.new(1, 0, 1, -120)
 
-        local maxCanvasY = math.max(
-            0,
-            af.AbsoluteCanvasSize.Y - af.AbsoluteWindowSize.Y
-        )
-        af.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(af.CanvasPosition.Y, 0, maxCanvasY)
-        )
+        local maxCanvasY = math.max(0, af.AbsoluteCanvasSize.Y - af.AbsoluteWindowSize.Y)
+        af.CanvasPosition = Vector2.new(0, math.clamp(af.CanvasPosition.Y, 0, maxCanvasY))
 
         for _, buttonApi in ab.Buttons do
             if buttonApi.Icon then
-                buttonApi.Object.Text =
-                    string.rep(" ", 36 * A.Scale)
-                    .. buttonApi.Name
+                buttonApi.Object.Text = string.rep(" ", math.max(18, math.floor(36 * A.Scale))) .. buttonApi.Name
             end
         end
     end
@@ -8383,6 +8386,19 @@ end)
         task.defer(refreshMainWindowSize)
     end)
     task.defer(refreshMainWindowSize)
+
+    if aa.RegisterSmartWindow then
+        ab.ResizeEntry = aa:RegisterSmartWindow("main", ac, {
+            MinSize = aa.LayoutTokens.MainMin,
+            MaxSize = aa.LayoutTokens.MainMax,
+            DefaultSize = Vector2.new(UI_WINDOW_WIDTH, 440),
+            DefaultPosition = Vector2.new(6, 60),
+            Margin = aa.LayoutTokens.ResizeMargin,
+            OnResize = function()
+                refreshMainWindowSize()
+            end,
+        })
+    end
 
     ab.MainGui = af
 
@@ -9717,9 +9733,12 @@ function d.CreateCategory(aa, ab)
         local stateChanged = renderedExpanded ~= ac.Expanded
         renderedExpanded = ac.Expanded
 
+        local userWidth = tonumber(ad:GetAttribute("BadWarsUserWidth")) or UI_WINDOW_WIDTH
+        local userHeight = tonumber(ad:GetAttribute("BadWarsUserHeight"))
         local targetHeight = ac.Expanded
-            and getExpandedCategoryHeight()
+            and (ad:GetAttribute("BadWarsUserResized") == true and math.max(UI_HEADER_HEIGHT + 96, userHeight or getExpandedCategoryHeight()) or getExpandedCategoryHeight())
             or UI_HEADER_HEIGHT
+        local targetWidth = math.max(d.LayoutTokens.CategoryMin.X, userWidth)
 
         aj.CanvasSize = UDim2.fromOffset(
             0,
@@ -9742,7 +9761,7 @@ function d.CreateCategory(aa, ab)
 
         if instant or not d.Loaded or d._SuppressEntryAnimation then
             ad.ClipsDescendants = true
-            ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
+            ad.Size = UDim2.fromOffset(targetWidth, targetHeight)
             ai.Rotation = ac.Expanded and 0 or 180
             aj.Visible = ac.Expanded
         else
@@ -9763,10 +9782,10 @@ function d.CreateCategory(aa, ab)
             local sizeTween
             if needsResize then
                 sizeTween = n:Tween(ad, o.TweenSlow, {
-                    Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight),
+                    Size = UDim2.fromOffset(targetWidth, targetHeight),
                 })
             else
-                ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
+                ad.Size = UDim2.fromOffset(targetWidth, targetHeight)
             end
 
             local function finishCategoryTransition()
@@ -9817,6 +9836,12 @@ function d.CreateCategory(aa, ab)
         end
 
         refreshCategoryLayout(instant == true)
+        if am.ResizeEntry then
+            local visible = am.Expanded == true
+            if am.ResizeEntry.Grip then am.ResizeEntry.Grip.Visible = visible end
+            if am.ResizeEntry.Right then am.ResizeEntry.Right.Visible = visible end
+            if am.ResizeEntry.Bottom then am.ResizeEntry.Bottom.Visible = visible end
+        end
     end
 
     if ab.Visible then
@@ -10457,6 +10482,27 @@ function d.CreateCategory(aa, ab)
     ac.Scroll = aj
     ac.Layout = al
     ac.RefreshLayout = refreshCategoryLayout
+    if aa.RegisterSmartWindow then
+        ac.ResizeEntry = aa:RegisterSmartWindow("category:" .. tostring(ab.Name), ad, {
+            MinSize = aa.LayoutTokens.CategoryMin,
+            MaxSize = aa.LayoutTokens.CategoryMax,
+            DefaultSize = Vector2.new(UI_WINDOW_WIDTH, 420),
+            DefaultPosition = Vector2.new(250, 60),
+            Margin = aa.LayoutTokens.ResizeMargin,
+            CollapsedHeight = UI_HEADER_HEIGHT,
+            IsCollapsed = function()
+                return not ac.Expanded
+            end,
+            OnResize = function()
+                refreshCategoryLayout(true)
+            end,
+        })
+        if ac.ResizeEntry then
+            if ac.ResizeEntry.Grip then ac.ResizeEntry.Grip.Visible = ac.Expanded end
+            if ac.ResizeEntry.Right then ac.ResizeEntry.Right.Visible = ac.Expanded end
+            if ac.ResizeEntry.Bottom then ac.ResizeEntry.Bottom.Visible = ac.Expanded end
+        end
+    end
     aa.Categories[ab.Name] = ac
 
     return ac
@@ -11187,7 +11233,12 @@ function d.CreateCategoryList(ag, ah)
             or Vector2.new(1280, 720)
         local viewportHeight = viewport.Y / scale
         local maximumHeight = math.max(176, math.min(614, viewportHeight - 72))
-        local targetHeight = aC.Expanded and math.min(UI_HEADER_HEIGHT + contentHeight + 6, maximumHeight) or UI_HEADER_HEIGHT
+        local userWidth = tonumber(aj:GetAttribute("BadWarsUserWidth")) or UI_WINDOW_WIDTH
+        local userHeight = tonumber(aj:GetAttribute("BadWarsUserHeight"))
+        local targetHeight = aC.Expanded
+            and (aj:GetAttribute("BadWarsUserResized") == true and math.max(UI_HEADER_HEIGHT + 110, userHeight or maximumHeight) or math.min(UI_HEADER_HEIGHT + contentHeight + 6, maximumHeight))
+            or UI_HEADER_HEIGHT
+        local targetWidth = math.max(d.LayoutTokens.ListMin.X, userWidth)
 
         ap.CanvasSize = UDim2.fromOffset(0, contentHeight)
         local visibleCanvasHeight = math.max(0, targetHeight - UI_HEADER_HEIGHT)
@@ -11196,9 +11247,7 @@ function d.CreateCategoryList(ag, ah)
             ap.CanvasPosition = Vector2.new(0, maximumCanvasY)
         end
 
-        if aC.Expanded then
-            aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
-        end
+        aj.Size = UDim2.fromOffset(targetWidth, targetHeight)
         return targetHeight
     end
 
@@ -11679,10 +11728,17 @@ function d.CreateCategoryList(ag, ah)
         })
 
         local targetHeight = aC:RefreshScroll()
+        local targetWidth = math.max(d.LayoutTokens.ListMin.X, tonumber(aj:GetAttribute("BadWarsUserWidth")) or UI_WINDOW_WIDTH)
 
         local tween = n:Tween(aj, o.TweenSlow, {
-            Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight),
+            Size = UDim2.fromOffset(targetWidth, targetHeight),
         })
+        if aC.ResizeEntry then
+            local visible = aC.Expanded == true
+            if aC.ResizeEntry.Grip then aC.ResizeEntry.Grip.Visible = visible end
+            if aC.ResizeEntry.Right then aC.ResizeEntry.Right.Visible = visible end
+            if aC.ResizeEntry.Bottom then aC.ResizeEntry.Bottom.Visible = visible end
+        end
 
         if not aC.Expanded and tween then
             tween.Completed:Once(function(playbackState)
@@ -11829,6 +11885,27 @@ function d.CreateCategoryList(ag, ah)
     })
 
     ai.Object = aj
+    if ag.RegisterSmartWindow and not ah.Profiles then
+        ai.ResizeEntry = ag:RegisterSmartWindow("list:" .. tostring(ah.Name), aj, {
+            MinSize = ag.LayoutTokens.ListMin,
+            MaxSize = ag.LayoutTokens.ListMax,
+            DefaultSize = Vector2.new(UI_WINDOW_WIDTH, 420),
+            DefaultPosition = Vector2.new(240, 46),
+            Margin = ag.LayoutTokens.ResizeMargin,
+            CollapsedHeight = UI_HEADER_HEIGHT,
+            IsCollapsed = function()
+                return not ai.Expanded
+            end,
+            OnResize = function()
+                ai:RefreshScroll()
+            end,
+        })
+        if ai.ResizeEntry then
+            if ai.ResizeEntry.Grip then ai.ResizeEntry.Grip.Visible = ai.Expanded end
+            if ai.ResizeEntry.Right then ai.ResizeEntry.Right.Visible = ai.Expanded end
+            if ai.ResizeEntry.Bottom then ai.ResizeEntry.Bottom.Visible = ai.Expanded end
+        end
+    end
     ag.Categories[ah.Name] = ai
 
     if ah.Profiles and not ai.Expanded then
@@ -12262,7 +12339,7 @@ function d.CreateLegit(ag)
 
     local an = Instance.new("ScrollingFrame")
     an.Name = "Children"
-    an.Size = UDim2.fromOffset(684, 340)
+    an.Size = UDim2.new(1, -28, 1, -49)
     an.Position = UDim2.fromOffset(14, 41)
     an.BackgroundTransparency = 1
     an.BorderSizePixel = 0
@@ -12997,12 +13074,36 @@ function d.CreateLegit(ag)
         visibleCheck()
     end)
 
+    local function refreshLegitGrid()
+        local scale = math.max(A.Scale, 0.01)
+        local logicalWidth = math.max(300, an.AbsoluteSize.X / scale)
+        local columns = math.clamp(math.floor((logicalWidth + 6) / 169), 2, 6)
+        ao.FillDirectionMaxCells = columns
+        ao.CellSize = UDim2.new(1 / columns, -6, 0, 114)
+        an.CanvasSize = UDim2.fromOffset(0, ao.AbsoluteContentSize.Y / scale + 8)
+    end
+
     ao:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         if ag.ThreadFix then
             setthreadidentity(8)
         end
-        an.CanvasSize = UDim2.fromOffset(0, ao.AbsoluteContentSize.Y / A.Scale)
+        refreshLegitGrid()
     end)
+    an:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        task.defer(refreshLegitGrid)
+    end)
+
+    if ag.RegisterSmartWindow then
+        ah.ResizeEntry = ag:RegisterSmartWindow("legit", aj, {
+            MinSize = ag.LayoutTokens.LegitMin,
+            MaxSize = ag.LayoutTokens.LegitMax,
+            DefaultSize = Vector2.new(700, 389),
+            DefaultPosition = Vector2.new(290, 150),
+            Margin = ag.LayoutTokens.ResizeMargin,
+            OnResize = refreshLegitGrid,
+        })
+    end
+    task.defer(refreshLegitGrid)
 
     ag.Legit = ah
 
@@ -14771,8 +14872,72 @@ d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
                 end
             end
         end
+        if d.WindowManager then
+            for id in pairs(d.WindowManager.Entries) do
+                d.WindowManager:Clamp(id, false)
+            end
+        end
     end)
 end))
+
+-- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_1_BEGIN
+do
+    local managerClass = shared.BadWarsWindowManagerClass
+    if type(managerClass) == "table" and type(managerClass.new) == "function" then
+        local manager = managerClass.new({
+            UserInputService = h,
+            HttpService = l,
+            TouchEnabled = d.isMobile,
+            PersistencePath = "badscript/profiles/ui-layout-v19.1.json",
+            Accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
+            Surface = o.Elevated,
+            Border = o.BorderStrong,
+            GetScale = function()
+                return A and A.Scale or 1
+            end,
+            GetViewport = function()
+                return B and B.AbsoluteSize or Vector2.new(1280, 720)
+            end,
+        })
+        d.WindowManager = manager
+        manager:BindViewportSignal(B:GetPropertyChangedSignal("AbsoluteSize"))
+
+        function d.RegisterSmartWindow(self, id, object, options)
+            return manager:Register(id, object, options)
+        end
+
+        function d.ResetUILayout(self)
+            manager:ResetAll()
+            if self.CreateNotification then
+                self:CreateNotification("Layout reset", "All BadWars windows were restored to safe defaults.", 4, "success")
+            end
+        end
+
+        function d.LockWindowSize(self, id, locked)
+            return manager:SetLocked(id, "size", locked)
+        end
+
+        function d.LockWindowPosition(self, id, locked)
+            return manager:SetLocked(id, "position", locked)
+        end
+
+        d:Clean(function()
+            manager:Destroy()
+        end)
+    else
+        function d.RegisterSmartWindow()
+            return nil
+        end
+        function d.ResetUILayout() end
+        function d.LockWindowSize()
+            return false
+        end
+        function d.LockWindowPosition()
+            return false
+        end
+    end
+end
+-- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_1_END
 
 local cursorConnection
 local function stopCursorTracking()
@@ -14941,6 +15106,13 @@ am:CreateButton({
         end
     end,
     Tooltip = "This will set your profile to the default BadWars settings",
+})
+am:CreateButton({
+    Name = "Reset UI workspace",
+    Function = function()
+        d:ResetUILayout()
+    end,
+    Tooltip = "Restores all BadWars window positions and sizes to safe defaults",
 })
 am:CreateButton({
     Name = "Self destruct",
@@ -15258,6 +15430,20 @@ au = at:CreateSlider({
     Darker = true,
     Visible = false,
 })
+d.LayoutLock = at:CreateToggle({
+    Name = "Lock window layout",
+    Default = false,
+    Tooltip = "Locks the position and size of every BadWars window",
+    Function = function(enabled)
+        if not d.WindowManager then
+            return
+        end
+        for id in pairs(d.WindowManager.Entries) do
+            d.WindowManager:SetLocked(id, "position", enabled)
+            d.WindowManager:SetLocked(id, "size", enabled)
+        end
+    end,
+})
 d.RainbowMode = at:CreateDropdown({
     Name = "Rainbow Mode",
     List = { "Normal", "Gradient", "Retro" },
@@ -15298,7 +15484,7 @@ at:CreateButton({
     end,
     Tooltip = "This will reset your GUI back to default",
 })
-d.SortGuiCallback = function(av)
+d.SortGuiCallback = function(av, force)
     local aw = {
         GUICategory = 1,
         CombatCategory = 2,
@@ -15330,7 +15516,14 @@ d.SortGuiCallback = function(av)
     local ay = 0
     for az, aA in ax do
         if aA.Object.Visible then
-            aA.Object.Position = UDim2.fromOffset(6 + (ay % 8 * (UI_WINDOW_WIDTH + UI_WINDOW_GAP)), 60 + (ay > 7 and 360 or 0))
+            local windowId = aA.Object:GetAttribute("BadWarsWindowId")
+            local hasSavedLayout = windowId and d.WindowManager and d.WindowManager.Layout.Windows[windowId] ~= nil
+            if force or not hasSavedLayout then
+                aA.Object.Position = UDim2.fromOffset(6 + (ay % 8 * (UI_WINDOW_WIDTH + UI_WINDOW_GAP)), 60 + (ay > 7 and 360 or 0))
+                if force and windowId and d.WindowManager then
+                    d.WindowManager:NotifyMoved(windowId)
+                end
+            end
             ay += 1
         end
     end
@@ -15387,8 +15580,10 @@ function d.FinalizeInitialLayout(self, resizeOnly)
 end
 at:CreateButton({
     Name = "Sort GUI",
-    Function = d.SortGuiCallback,
-    Tooltip = "Sorts GUI",
+    Function = function()
+        d.SortGuiCallback(false, true)
+    end,
+    Tooltip = "Sorts visible windows into a clean grid and saves their new positions",
 })
 
 local av = d.Categories.Main:CreateSettingsPane({ Name = "Notifications" })

@@ -973,8 +973,15 @@ end
 
 d.SafeWriteFile = safeWriteFile
 
+local textMeasureBusy = false
 local E = function(E, F, G, H)
-    p.Text = tostring(E or "")
+    if textMeasureBusy then
+        return Vector2.zero
+    end
+    textMeasureBusy = true
+
+    local params = Instance.new("GetTextBoundsParams")
+    params.Text = tostring(E or "")
 
     local fontSize = F
     if typeof(fontSize) == "Vector2" then
@@ -984,7 +991,7 @@ local E = function(E, F, G, H)
     if fontSize ~= fontSize or fontSize == math.huge or fontSize == -math.huge then
         fontSize = 14
     end
-    p.Size = math.max(fontSize, 1)
+    params.Size = math.max(fontSize, 1)
 
     local maxWidth = H
     if typeof(maxWidth) == "Vector2" then
@@ -994,24 +1001,28 @@ local E = function(E, F, G, H)
     if maxWidth ~= maxWidth or maxWidth <= 0 then
         maxWidth = math.huge
     end
-    p.Width = maxWidth
+    params.Width = maxWidth
 
     if typeof(G) == "Font" then
-        p.Font = G
+        params.Font = G
     elseif typeof(G) == "EnumItem" and G.EnumType == Enum.Font then
         if G == Enum.Font.Unknown then
-            p.Font = o.Font
+            params.Font = o.Font
         else
             local converted, font = pcall(Font.fromEnum, G)
-            p.Font = converted and typeof(font) == "Font" and font or o.Font
+            params.Font = converted and typeof(font) == "Font" and font or o.Font
         end
     else
-        p.Font = o.Font
+        params.Font = o.Font
     end
 
     local I, J = pcall(function()
-        return i:GetTextBoundsAsync(p)
+        return i:GetTextBoundsAsync(params)
     end)
+    pcall(function()
+        params:Destroy()
+    end)
+    textMeasureBusy = false
 
     if not I then
         a:report({

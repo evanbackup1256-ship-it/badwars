@@ -1,4 +1,4 @@
--- BADWARS_UI_V18_2_PUBLIC_MOTION
+-- BADWARS_UI_V18_3_PERFORMANCE_FIX
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -165,8 +165,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "18.2",
-    PremiumBuild = "2026.07.05-V18.2-PUBLIC-MOTION",
+    Version = "18.3",
+    PremiumBuild = "2026.07.05-V18.3-PERFORMANCE-FIX",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -283,6 +283,7 @@ local n = {
     tweens = {},
     tweenstwo = {},
     completionConnections = setmetatable({}, { __mode = "k" }),
+    springProperties = setmetatable({}, { __mode = "k" }),
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
@@ -309,15 +310,15 @@ local o = {
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
-    TweenPress = TweenInfo.new(0.05, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    TweenFast = TweenInfo.new(0.07, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Tween = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSlow = TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSpring = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenBack = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    SpringInteractive = { Damping = 1, Frequency = 24 },
-    SpringPanel = { Damping = 1, Frequency = 18 },
-    SpringSoft = { Damping = 0.92, Frequency = 16 },
+    TweenPress = TweenInfo.new(0.035, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenFast = TweenInfo.new(0.05, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    Tween = TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSlow = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSpring = TweenInfo.new(0.095, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenBack = TweenInfo.new(0.105, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    SpringInteractive = { Damping = 1, Frequency = 24, Public = false, TweenInfo = TweenInfo.new(0.055, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) },
+    SpringPanel = { Damping = 1, Frequency = 20, Public = true },
+    SpringSoft = { Damping = 0.96, Frequency = 18, Public = true },
 }
 
 local UI_WINDOW_WIDTH = 252
@@ -2196,6 +2197,7 @@ function LayoutIntelligence:Register(object, options)
     self.metadata[object] = {
         Order = tonumber(options.Priority) or self.registrationCounter,
         LastSafe = object.AbsolutePosition,
+        ResizeThread = nil,
     }
     object:SetAttribute("AdaptiveLayoutManaged", true)
 
@@ -2203,8 +2205,25 @@ function LayoutIntelligence:Register(object, options)
         self:RequestResolve()
     end
 
+    local function requestAfterResize()
+        local metadata = self.metadata[object]
+        if not metadata then
+            return
+        end
+        if metadata.ResizeThread then
+            pcall(task.cancel, metadata.ResizeThread)
+        end
+        metadata.ResizeThread = task.delay(0.08, function()
+            local current = self.metadata[object]
+            if current == metadata then
+                current.ResizeThread = nil
+                self:RequestResolve()
+            end
+        end)
+    end
+
     d:Clean(object:GetPropertyChangedSignal("Visible"):Connect(request))
-    d:Clean(object:GetPropertyChangedSignal("AbsoluteSize"):Connect(request))
+    d:Clean(object:GetPropertyChangedSignal("AbsoluteSize"):Connect(requestAfterResize))
     object.Destroying:Once(function()
         self:Unregister(object)
     end)
@@ -2214,6 +2233,12 @@ function LayoutIntelligence:Register(object, options)
 end
 
 function LayoutIntelligence:Unregister(object)
+    local metadata = self.metadata[object]
+    if metadata and metadata.ResizeThread then
+        pcall(task.cancel, metadata.ResizeThread)
+        metadata.ResizeThread = nil
+    end
+
     self.objects[object] = nil
     self.metadata[object] = nil
 
@@ -2228,6 +2253,10 @@ function LayoutIntelligence:BeginDrag(object)
 
     local metadata = self.metadata[object]
     if metadata then
+        if metadata.ResizeThread then
+            pcall(task.cancel, metadata.ResizeThread)
+            metadata.ResizeThread = nil
+        end
         metadata.LastSafe = object.AbsolutePosition
     end
 end
@@ -2341,19 +2370,25 @@ function LayoutIntelligence:Start()
 end
 -- BADWARS_ADAPTIVE_LAYOUT_ENGINE_V1_END
 
-local function makeDraggable(H, I)
+local function bindDirectDrag(handle, target, visibleGuard, headerOnly)
     local activeInput
     local moveConnection
     local endConnection
     local beganConnection
+    local dragState
 
-    LayoutIntelligence:Register(H)
+    LayoutIntelligence:Register(target)
 
     local function stopDragging()
-        if activeInput then
-            LayoutIntelligence:EndDrag(H)
+        if activeInput and target.Parent then
+            local safe = clampGuiObjectToViewport(target, target.AbsolutePosition)
+            setGuiAbsolutePosition(target, safe)
+            LayoutIntelligence:EndDrag(target)
         end
+
         activeInput = nil
+        dragState = nil
+
         if moveConnection then
             moveConnection:Disconnect()
             moveConnection = nil
@@ -2364,8 +2399,8 @@ local function makeDraggable(H, I)
         end
     end
 
-    beganConnection = H.InputBegan:Connect(function(input)
-        if I and not I.Visible then
+    beganConnection = handle.InputBegan:Connect(function(input)
+        if visibleGuard and not visibleGuard.Visible then
             return
         end
 
@@ -2374,27 +2409,69 @@ local function makeDraggable(H, I)
             return
         end
 
-        if not I and input.Position.Y - H.AbsolutePosition.Y > 40 * getGuiScale() then
+        if headerOnly and input.Position.Y - target.AbsolutePosition.Y > 40 * getGuiScale() then
             return
         end
 
         stopDragging()
         activeInput = input
-        LayoutIntelligence:BeginDrag(H)
+        LayoutIntelligence:BeginDrag(target)
 
+        local scale = getGuiScale()
+        local parent = target.Parent
+        local parentAbsolute = parent and parent:IsA("GuiObject") and parent.AbsolutePosition or Vector2.zero
+        local targetSize = target.AbsoluteSize / scale
+        local targetAnchor = target.AnchorPoint
         local startPointer = input.Position
-        local startAbsolute = H.AbsolutePosition
-        local expectedMovement = inputType == Enum.UserInputType.MouseButton1
-                and Enum.UserInputType.MouseMovement
-            or Enum.UserInputType.Touch
+        local startAbsolute = target.AbsolutePosition
+        local viewport = (B and B.AbsoluteSize)
+            or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
+            or Vector2.new(1920, 1080)
+        local margin = d.isMobile and 4 or 8
+
+        local minX = target.AbsoluteSize.X <= viewport.X - (margin * 2)
+            and margin
+            or math.min(margin, viewport.X - target.AbsoluteSize.X - margin)
+        local maxX = target.AbsoluteSize.X <= viewport.X - (margin * 2)
+            and math.max(margin, viewport.X - target.AbsoluteSize.X - margin)
+            or margin
+        local minY = target.AbsoluteSize.Y <= viewport.Y - (margin * 2)
+            and margin
+            or math.min(margin, viewport.Y - target.AbsoluteSize.Y - margin)
+        local maxY = target.AbsoluteSize.Y <= viewport.Y - (margin * 2)
+            and math.max(margin, viewport.Y - target.AbsoluteSize.Y - margin)
+            or margin
+
+        dragState = {
+            Scale = scale,
+            ParentAbsolute = parentAbsolute,
+            Size = targetSize,
+            Anchor = targetAnchor,
+            StartPointer = startPointer,
+            StartAbsolute = startAbsolute,
+            MinX = minX,
+            MaxX = maxX,
+            MinY = minY,
+            MaxY = maxY,
+            Mouse = inputType == Enum.UserInputType.MouseButton1,
+            ExpectedMovement = inputType == Enum.UserInputType.MouseButton1
+                    and Enum.UserInputType.MouseMovement
+                or Enum.UserInputType.Touch,
+        }
 
         moveConnection = h.InputChanged:Connect(function(changed)
-            if not activeInput or changed.UserInputType ~= expectedMovement or not H.Parent then
+            local state = dragState
+            if not activeInput
+                or not state
+                or changed.UserInputType ~= state.ExpectedMovement
+                or (not state.Mouse and changed ~= activeInput)
+                or not target.Parent
+            then
                 return
             end
 
-            local delta = changed.Position - startPointer
-            if inputType == Enum.UserInputType.MouseButton1 and h:IsKeyDown(Enum.KeyCode.LeftShift) then
+            local delta = changed.Position - state.StartPointer
+            if state.Mouse and h:IsKeyDown(Enum.KeyCode.LeftShift) then
                 delta = Vector3.new(
                     math.round(delta.X / 3) * 3,
                     math.round(delta.Y / 3) * 3,
@@ -2402,12 +2479,13 @@ local function makeDraggable(H, I)
                 )
             end
 
-            local desired = Vector2.new(
-                startAbsolute.X + delta.X,
-                startAbsolute.Y + delta.Y
+            local absoluteX = math.clamp(state.StartAbsolute.X + delta.X, state.MinX, state.MaxX)
+            local absoluteY = math.clamp(state.StartAbsolute.Y + delta.Y, state.MinY, state.MaxY)
+
+            target.Position = UDim2.fromOffset(
+                (absoluteX - state.ParentAbsolute.X) / state.Scale + (state.Size.X * state.Anchor.X),
+                (absoluteY - state.ParentAbsolute.Y) / state.Scale + (state.Size.Y * state.Anchor.Y)
             )
-            local safe = LayoutIntelligence:UpdateDrag(H, desired)
-            setGuiAbsolutePosition(H, safe)
         end)
 
         endConnection = input.Changed:Connect(function()
@@ -2419,88 +2497,21 @@ local function makeDraggable(H, I)
         end)
     end)
 
-    H.Destroying:Once(function()
+    target.Destroying:Once(function()
         stopDragging()
-        LayoutIntelligence:Unregister(H)
+        LayoutIntelligence:Unregister(target)
         if beganConnection then
             beganConnection:Disconnect()
         end
     end)
 end
 
+local function makeDraggable(H, I)
+    bindDirectDrag(H, H, I, not I)
+end
+
 local function makeDraggable2(H, I)
-    local activeInput
-    local moveConnection
-    local endConnection
-    local beganConnection
-
-    LayoutIntelligence:Register(I)
-
-    local function stopDragging()
-        if activeInput then
-            LayoutIntelligence:EndDrag(I)
-        end
-        activeInput = nil
-        if moveConnection then
-            moveConnection:Disconnect()
-            moveConnection = nil
-        end
-        if endConnection then
-            endConnection:Disconnect()
-            endConnection = nil
-        end
-    end
-
-    beganConnection = H.InputBegan:Connect(function(input)
-        if not I.Visible then
-            return
-        end
-
-        local inputType = input.UserInputType
-        if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then
-            return
-        end
-
-        stopDragging()
-        activeInput = input
-        LayoutIntelligence:BeginDrag(I)
-
-        local startPointer = input.Position
-        local startAbsolute = I.AbsolutePosition
-        local expectedMovement = inputType == Enum.UserInputType.MouseButton1
-                and Enum.UserInputType.MouseMovement
-            or Enum.UserInputType.Touch
-
-        moveConnection = h.InputChanged:Connect(function(changed)
-            if not activeInput or changed.UserInputType ~= expectedMovement or not I.Parent then
-                return
-            end
-
-            local delta = changed.Position - startPointer
-            local desired = Vector2.new(
-                startAbsolute.X + delta.X,
-                startAbsolute.Y + delta.Y
-            )
-            local safe = LayoutIntelligence:UpdateDrag(I, desired)
-            setGuiAbsolutePosition(I, safe)
-        end)
-
-        endConnection = input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End
-                or input.UserInputState == Enum.UserInputState.Cancel
-            then
-                stopDragging()
-            end
-        end)
-    end)
-
-    I.Destroying:Once(function()
-        stopDragging()
-        LayoutIntelligence:Unregister(I)
-        if beganConnection then
-            beganConnection:Disconnect()
-        end
-    end)
+    bindDirectDrag(H, I, I, false)
 end
 
 local function setupMobileSwipeDismiss(H, I)
@@ -2691,9 +2702,16 @@ do
         end
 
         local motionLibrary = d.MotionLibrary
-        if type(motionLibrary) == "table" and type(motionLibrary.stop) == "function" then
+        local activeSprings = H.springProperties[I]
+        if activeSprings and type(motionLibrary) == "table" and type(motionLibrary.stop) == "function" then
             for property in pairs(K) do
-                pcall(motionLibrary.stop, I, property)
+                if activeSprings[property] then
+                    pcall(motionLibrary.stop, I, property)
+                    activeSprings[property] = nil
+                end
+            end
+            if next(activeSprings) == nil then
+                H.springProperties[I] = nil
             end
         end
 
@@ -2822,6 +2840,11 @@ do
         end
 
         local profile = type(J) == "table" and J or o.SpringInteractive
+        if profile.Public ~= true then
+            H:Tween(I, profile.TweenInfo or o.TweenFast, K)
+            return false
+        end
+
         local damping = tonumber(profile.Damping) or 1
         local frequency = tonumber(profile.Frequency) or 20
         local motionLibrary = d.MotionLibrary
@@ -2830,13 +2853,21 @@ do
             or type(motionLibrary.target) ~= "function"
             or type(motionLibrary.stop) ~= "function"
         then
-            H:Tween(I, o.TweenFast, K)
+            H:Tween(I, profile.TweenInfo or o.TweenFast, K)
             return false
         end
 
         for property in pairs(K) do
             H:Cancel(I, H.tweens, property)
-            pcall(motionLibrary.stop, I, property)
+        end
+
+        local activeSprings = H.springProperties[I]
+        if not activeSprings then
+            activeSprings = {}
+            H.springProperties[I] = activeSprings
+        end
+        for property in pairs(K) do
+            activeSprings[property] = true
         end
 
         local ok, err = pcall(
@@ -2853,7 +2884,8 @@ do
                 args = { I, profile, K },
                 notifyBlacklisted = true,
             })
-            H:Tween(I, o.TweenFast, K)
+            H.springProperties[I] = nil
+            H:Tween(I, profile.TweenInfo or o.TweenFast, K)
             return false
         end
 
@@ -2863,8 +2895,20 @@ do
 
     function n.Cancel(H, I, L, property)
         local motionLibrary = d.MotionLibrary
-        if type(motionLibrary) == "table" and type(motionLibrary.stop) == "function" then
-            pcall(motionLibrary.stop, I, property)
+        local activeSprings = H.springProperties[I]
+        if activeSprings and type(motionLibrary) == "table" and type(motionLibrary.stop) == "function" then
+            if property ~= nil then
+                if activeSprings[property] then
+                    pcall(motionLibrary.stop, I, property)
+                    activeSprings[property] = nil
+                end
+            else
+                pcall(motionLibrary.stop, I)
+                H.springProperties[I] = nil
+            end
+            if activeSprings and next(activeSprings) == nil then
+                H.springProperties[I] = nil
+            end
         end
 
         L = L or H.tweens
@@ -11053,9 +11097,18 @@ function d.CreateCategoryList(ag, ah)
     ap.BackgroundTransparency = 1
     ap.BorderSizePixel = 0
     ap.Visible = false
-    ap.ScrollBarThickness = 2
-    ap.ScrollBarImageTransparency = 0.75
+    ap.ScrollBarThickness = d.isMobile and 7 or 3
+    ap.ScrollBarImageTransparency = d.isMobile and 0.35 or 0.58
+    ap.ScrollBarImageColor3 = o.MutedText
     ap.CanvasSize = UDim2.new()
+    ap.AutomaticCanvasSize = Enum.AutomaticSize.None
+    ap.ScrollingDirection = Enum.ScrollingDirection.Y
+    ap.ScrollingEnabled = true
+    ap.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+    ap.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    ap.Active = true
+    ap.Selectable = true
+    ap.ClipsDescendants = true
     ap.Parent = aj
     local aq = Instance.new("Frame")
     aq.BackgroundTransparency = 1
@@ -11097,6 +11150,30 @@ function d.CreateCategoryList(ag, ah)
     au.SortOrder = Enum.SortOrder.LayoutOrder
     au.HorizontalAlignment = Enum.HorizontalAlignment.Center
     au.Parent = aq
+
+    function ai.RefreshScroll(aC)
+        local scale = getGuiScale()
+        local contentHeight = math.max(0, math.ceil(at.AbsoluteContentSize.Y / scale) + 8)
+        local viewport = (B and B.AbsoluteSize)
+            or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
+            or Vector2.new(1280, 720)
+        local viewportHeight = viewport.Y / scale
+        local maximumHeight = math.max(176, math.min(614, viewportHeight - 72))
+        local targetHeight = aC.Expanded and math.min(54 + contentHeight, maximumHeight) or 48
+
+        ap.CanvasSize = UDim2.fromOffset(0, contentHeight)
+        local visibleCanvasHeight = math.max(0, targetHeight - 48)
+        local maximumCanvasY = math.max(0, contentHeight - visibleCanvasHeight)
+        if ap.CanvasPosition.Y > maximumCanvasY then
+            ap.CanvasPosition = Vector2.new(0, maximumCanvasY)
+        end
+
+        if aC.Expanded then
+            aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
+        end
+        return targetHeight
+    end
+
     local av
     local aw
     if ah.Profiles then
@@ -11555,6 +11632,11 @@ function d.CreateCategoryList(ag, ah)
             end
         end
         d:UpdateGUI(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+        task.defer(function()
+            if ap.Parent then
+                ai:RefreshScroll()
+            end
+        end)
     end
 
     function ai.Expand(aC)
@@ -11568,7 +11650,7 @@ function d.CreateCategoryList(ag, ah)
             ImageColor3 = aC.Expanded and o.Text or o.FaintText,
         })
 
-        local targetHeight = aC.Expanded and math.min(54 + at.AbsoluteContentSize.Y / A.Scale, 614) or 48
+        local targetHeight = aC:RefreshScroll()
 
         local tween = n:Tween(aj, o.TweenSlow, {
             Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight),
@@ -11664,6 +11746,21 @@ function d.CreateCategoryList(ag, ah)
     ap:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
         as.Visible = ap.CanvasPosition.Y > 10 and ap.Visible
     end)
+    ap.InputChanged:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseWheel or not ai.Expanded then
+            return
+        end
+
+        local before = ap.CanvasPosition.Y
+        local wheelDelta = input.Position.Z
+        task.defer(function()
+            if not ap.Parent or ap.CanvasPosition.Y ~= before then
+                return
+            end
+            local maximum = math.max(0, ap.AbsoluteCanvasSize.Y - ap.AbsoluteWindowSize.Y)
+            ap.CanvasPosition = Vector2.new(0, math.clamp(before - (wheelDelta * 42), 0, maximum))
+        end)
+    end)
     ar.MouseEnter:Connect(function()
         ar.ImageColor3 = o.Text
     end)
@@ -11686,10 +11783,7 @@ function d.CreateCategoryList(ag, ah)
         if ag.ThreadFix then
             setthreadidentity(8)
         end
-        ap.CanvasSize = UDim2.fromOffset(0, at.AbsoluteContentSize.Y / A.Scale)
-        if ai.Expanded then
-            aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, math.min(54 + at.AbsoluteContentSize.Y / A.Scale, 614))
-        end
+        ai:RefreshScroll()
     end)
     au:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         if ag.ThreadFix then
@@ -11711,6 +11805,12 @@ function d.CreateCategoryList(ag, ah)
 
     if ah.Profiles and not ai.Expanded then
         ai:Expand()
+    else
+        task.defer(function()
+            if ap.Parent then
+                ai:RefreshScroll()
+            end
+        end)
     end
 
     return ai

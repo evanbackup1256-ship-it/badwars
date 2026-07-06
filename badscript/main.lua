@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Main v18.2 - public motion readiness pipeline
+-- BadWars Main v18.3 - performance-first motion pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -627,7 +627,7 @@ local function isStaleGuiCache(path, body)
     end
     return not (
         body:find('Version%s*=%s*"18%.2"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V18%.2%-PUBLIC%-MOTION"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V18%.3%-PERFORMANCE%-FIX"') ~= nil
     )
 end
 

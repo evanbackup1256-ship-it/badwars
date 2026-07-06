@@ -1,3 +1,4 @@
+-- BADWARS_DIAGNOSTICS_V18_3_PERFORMANCE_FIX
 -- BadWars centralized runtime diagnostics
 -- Loaded before the normal loader whenever possible.
 
@@ -648,21 +649,13 @@ function Diagnostics:EnsureUI()
     opener.BorderSizePixel = 0
     opener.AutoButtonColor = false
     opener.Font = Enum.Font.GothamSemibold
-    opener.Text = "  Diagnostics"
+    opener.Text = "Diagnostics"
     opener.TextSize = 10
     opener.TextColor3 = Color3.fromRGB(178, 191, 204)
-    opener.TextXAlignment = Enum.TextXAlignment.Left
+    opener.TextXAlignment = Enum.TextXAlignment.Center
     opener.Parent = gui
     createCorner(opener, 9)
     local openerStroke = createStroke(opener, Color3.fromRGB(62, 77, 91), 0.58, 1)
-
-    local openerDot = Instance.new("Frame")
-    openerDot.Size = UDim2.fromOffset(6, 6)
-    openerDot.Position = UDim2.fromOffset(13, 13)
-    openerDot.BackgroundColor3 = Color3.fromRGB(66, 214, 153)
-    openerDot.BorderSizePixel = 0
-    openerDot.Parent = opener
-    createCorner(openerDot, 99)
 
     local badge = Instance.new("TextLabel")
     badge.Name = "Unread"
@@ -1042,54 +1035,93 @@ function Diagnostics:EnsureUI()
     moduleFilter:GetPropertyChangedSignal("Text"):Connect(function() self:_scheduleRender() end)
 
     local userInput = game:GetService("UserInputService")
-    local dragging = false
-    local dragStart
-    local startPosition
+    local activeInteraction
+    local changedConnection
+    local endedConnection
+
+    local function stopInteraction()
+        activeInteraction = nil
+        if changedConnection then
+            changedConnection:Disconnect()
+            changedConnection = nil
+        end
+        if endedConnection then
+            endedConnection:Disconnect()
+            endedConnection = nil
+        end
+    end
+
+    local function beginInteraction(input, mode)
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+            and input.UserInputType ~= Enum.UserInputType.Touch
+        then
+            return
+        end
+
+        stopInteraction()
+        local expectedMovement = input.UserInputType == Enum.UserInputType.MouseButton1
+                and Enum.UserInputType.MouseMovement
+            or Enum.UserInputType.Touch
+        local currentViewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+
+        activeInteraction = {
+            Mode = mode,
+            StartPointer = input.Position,
+            StartPosition = window.Position,
+            StartSize = window.AbsoluteSize,
+            ExpectedMovement = expectedMovement,
+            Viewport = currentViewport,
+            MinWidth = math.min(minSize.X, currentViewport.X - 16),
+            MaxWidth = math.min(maxSize.X, currentViewport.X - 16),
+            MinHeight = math.min(minSize.Y, currentViewport.Y - 16),
+            MaxHeight = math.min(maxSize.Y, currentViewport.Y - 16),
+        }
+
+        changedConnection = userInput.InputChanged:Connect(function(changed)
+            local state = activeInteraction
+            if not state or changed.UserInputType ~= state.ExpectedMovement then
+                return
+            end
+
+            local delta = changed.Position - state.StartPointer
+            if state.Mode == "drag" then
+                window.Position = UDim2.new(
+                    state.StartPosition.X.Scale,
+                    state.StartPosition.X.Offset + delta.X,
+                    state.StartPosition.Y.Scale,
+                    state.StartPosition.Y.Offset + delta.Y
+                )
+            else
+                window.Size = UDim2.fromOffset(
+                    math.clamp(state.StartSize.X + delta.X, state.MinWidth, state.MaxWidth),
+                    math.clamp(state.StartSize.Y + delta.Y, state.MinHeight, state.MaxHeight)
+                )
+            end
+        end)
+
+        endedConnection = input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End
+                or input.UserInputState == Enum.UserInputState.Cancel
+            then
+                stopInteraction()
+            end
+        end)
+    end
+
     header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPosition = window.Position
-        end
+        beginInteraction(input, "drag")
     end)
 
-    local resizing = false
-    local resizeStart
-    local startSize
     resize.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            resizing = true
-            resizeStart = input.Position
-            startSize = window.AbsoluteSize
-        end
+        beginInteraction(input, "resize")
     end)
+    gui.Destroying:Once(stopInteraction)
 
-    local changedConnection = userInput.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            window.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
-        end
-        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - resizeStart
-            local currentViewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-            local width = math.clamp(startSize.X + delta.X, math.min(minSize.X, currentViewport.X - 16), math.min(maxSize.X, currentViewport.X - 16))
-            local height = math.clamp(startSize.Y + delta.Y, math.min(minSize.Y, currentViewport.Y - 16), math.min(maxSize.Y, currentViewport.Y - 16))
-            window.Size = UDim2.fromOffset(width, height)
-        end
-    end)
-    local endedConnection = userInput.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-            resizing = false
-        end
-    end)
     local keyConnection = userInput.InputBegan:Connect(function(input, processed)
         if not processed and input.KeyCode == Enum.KeyCode.F8 then
             self:Toggle()
         end
     end)
-    table.insert(self.Connections, changedConnection)
-    table.insert(self.Connections, endedConnection)
     table.insert(self.Connections, keyConnection)
 
     self:_scheduleRender()

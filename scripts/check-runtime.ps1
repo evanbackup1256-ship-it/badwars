@@ -57,16 +57,16 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"18\.2"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V18\.2-PUBLIC-MOTION"' -and
-    $newGui -match 'BADWARS_UI_V18_2_PUBLIC_MOTION' -and
-    $main -match "BadWars Main v18\.2" -and
-    $loader -match "BadWars Loader v18\.2" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"18\.2"'
+    $newGui -match 'Version\s*=\s*"18\.3"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V18\.3-PERFORMANCE-FIX"' -and
+    $newGui -match 'BADWARS_UI_V18_3_PERFORMANCE_FIX' -and
+    $main -match "BadWars Main v18\.3" -and
+    $loader -match "BadWars Loader v18\.3" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"18\.3"'
 ) {
-    Pass "V18.2 runtime versions are synchronized"
+    Pass "V18.3 runtime versions are synchronized"
 } else {
-    Fail "V18.2 runtime versions are not synchronized"
+    Fail "V18.3 runtime versions are not synchronized"
 }
 
 
@@ -85,6 +85,21 @@ if (
     Pass "Public spr motion library is vendored and integrated"
 } else {
     Fail "Public spr motion integration is incomplete"
+}
+
+
+if (
+    $newGui -match 'SpringInteractive.*Public\s*=\s*false' -and
+    $newGui -match 'local function bindDirectDrag' -and
+    $newGui -match 'ResizeThread\s*=\s*nil' -and
+    $newGui -match 'ScrollingEnabled\s*=\s*true' -and
+    $newGui -match 'function ai\.RefreshScroll' -and
+    $diagnostics -match 'BADWARS_DIAGNOSTICS_V18_3_PERFORMANCE_FIX' -and
+    $diagnostics -notmatch 'local openerDot'
+) {
+    Pass "V18.3 drag, scroll, and diagnostics performance repairs are present"
+} else {
+    Fail "V18.3 drag, scroll, or diagnostics repairs are incomplete"
 }
 
 $requiredComponentApis = @(
@@ -271,8 +286,8 @@ if (
     $loader -match "invalidateStaleGuiCache" -and
     $newMain -match "invalidateStaleGuiCache" -and
     $main -match "isStaleGuiCache" -and
-    $loader -match 'V18%.2%-PUBLIC%-MOTION' -and
-    $newMain -match 'V18%.2%-PUBLIC%-MOTION'
+    $loader -match 'V18%.3%-PERFORMANCE%-FIX' -and
+    $newMain -match 'V18%.3%-PERFORMANCE%-FIX'
 ) {
     Pass "Loadstring rejects stale GUI cache automatically"
 } else {

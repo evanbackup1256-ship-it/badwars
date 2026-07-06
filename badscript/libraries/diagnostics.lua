@@ -1,4 +1,4 @@
--- BADWARS_DIAGNOSTICS_V18_3_PERFORMANCE_FIX
+-- BADWARS_DIAGNOSTICS_V18_4_RUNTIME_STABILITY_FIX
 -- BadWars centralized runtime diagnostics
 -- Loaded before the normal loader whenever possible.
 
@@ -691,7 +691,6 @@ function Diagnostics:EnsureUI()
     window.BackgroundColor3 = Color3.fromRGB(7, 11, 15)
     window.BackgroundTransparency = 0.005
     window.BorderSizePixel = 0
-    window.ClipsDescendants = false
     window.GroupTransparency = 1
     window.Visible = false
     window.Parent = gui
@@ -1406,6 +1405,11 @@ function Diagnostics:InstallNativeCapture()
                 return
             end
 
+            local rawMessage = safeString(message)
+            if rawMessage == "ClipsDescendants is always true on CanvasGroup." then
+                return
+            end
+
             local typeText = safeString(messageType)
             local level = "INFO"
             if string.find(typeText, "Warning", 1, true) then
@@ -1416,7 +1420,33 @@ function Diagnostics:InstallNativeCapture()
                 level = "INFO"
             end
 
-            self:_push(level, message, level == "ERROR" and self:Traceback(message, 3) or nil, {
+            local animationId = rawMessage:match("sanitized ID rbxassetid://(%d+)")
+            if animationId and rawMessage:find("AnimationClip loaded is not valid", 1, true) then
+                self._nativeAnimationWarnings = self._nativeAnimationWarnings or {}
+                if self._nativeAnimationWarnings[animationId] then
+                    return
+                end
+                self._nativeAnimationWarnings[animationId] = true
+                self:_push("WARN", "Roblox rejected animation asset " .. animationId, nil, {
+                    subsystem = "RobloxAnimation",
+                    module = "Animation",
+                    stage = self.CurrentStage,
+                    caught = true,
+                    native = false,
+                    details = rawMessage,
+                })
+                return
+            end
+
+            local trace
+            if level == "ERROR" and (
+                rawMessage:find("Stack Begin", 1, true)
+                or rawMessage:find("\n", 1, true)
+            ) then
+                trace = rawMessage
+            end
+
+            self:_push(level, rawMessage, trace, {
                 subsystem = "RobloxLog",
                 stage = self.CurrentStage,
                 caught = false,

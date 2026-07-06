@@ -6,6 +6,7 @@ local overlapCheck = OverlapParams.new()
 overlapCheck.MaxParts = 9e9
 local modified, fflag = {}
 local teleported
+local phaseCharacter
 
 local function grabClosestNormal(ray)
 	local partCF, mag, closest = ray.Instance.CFrame, 0, Enum.NormalId.Top
@@ -52,6 +53,18 @@ local Functions = {
 			end
 		end
 	end,
+	Character = function()
+		local character = entitylib.character and entitylib.character.Character
+		if not character or character == phaseCharacter then return end
+		phaseCharacter = character
+
+		for _, part in character:GetDescendants() do
+			if part:IsA('BasePart') and part.CanCollide then
+				modified[part] = true
+				part.CanCollide = false
+			end
+		end
+	end,
 	CFrame = function()
 		if not entitylib.character or not entitylib.character.RootPart or not entitylib.character.Head or not entitylib.character.Humanoid then return end
 		local chars = {gameCamera, lplr and lplr.Character}
@@ -81,10 +94,11 @@ local Functions = {
 		end
 	end,
 	FFlag = function()
-		if teleported then return end
-		if setfflag then
-			setfflag('AssemblyExtentsExpansionStudHundredth', '-10000')
+		if teleported or type(setfflag) ~= 'function' then
+			fflag = nil
+			return
 		end
+		setfflag('AssemblyExtentsExpansionStudHundredth', '-10000')
 		fflag = true
 	end
 }
@@ -96,24 +110,30 @@ Phase = Bad.Categories.Blatant:CreateModule({
 		if callback then
 			Phase:Clean(runService.Stepped:Connect(function()
 				if entitylib.isAlive then
-					Functions[Mode.Value]()
+					local handler = Functions[Mode and Mode.Value]
+					if type(handler) == 'function' then
+						handler()
+					end
 				end
 			end))
 
 			if Mode.Value == 'FFlag' then
 				Phase:Clean(lplr.OnTeleport:Connect(function()
 					teleported = true
-					setfflag('AssemblyExtentsExpansionStudHundredth', '30')
+					if type(setfflag) == 'function' then
+						setfflag('AssemblyExtentsExpansionStudHundredth', '30')
+					end
 				end))
 			end
 		else
-			if fflag then
+			if fflag and type(setfflag) == 'function' then
 				setfflag('AssemblyExtentsExpansionStudHundredth', '30')
 			end
 			for part in modified do
 				part.CanCollide = true
 			end
 			table.clear(modified)
+			phaseCharacter = nil
 			fflag = nil
 		end
 	end,
@@ -124,13 +144,14 @@ Mode = Phase:CreateDropdown({
 	List = {'Part', 'Character', 'CFrame', 'Motor', 'FFlag'},
 	Function = function(val)
 		StudLimit.Object.Visible = val == 'CFrame' or val == 'Motor'
-		if fflag then
+		if fflag and type(setfflag) == 'function' then
 			setfflag('AssemblyExtentsExpansionStudHundredth', '30')
 		end
 		for part in modified do
 			part.CanCollide = true
 		end
 		table.clear(modified)
+		phaseCharacter = nil
 		fflag = nil
 	end,
 	Tooltip = 'Part - Modifies parts collision status around you\nCharacter - Modifies the local collision status of the character\nCFrame - Teleports you past parts\nMotor - Same as CFrame with a bypass\nFFlag - Directly adjusts all physics collisions'

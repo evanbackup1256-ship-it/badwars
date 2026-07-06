@@ -1,4 +1,4 @@
--- BADWARS_UI_V18_3_PERFORMANCE_FIX
+-- BADWARS_UI_V18_4_RUNTIME_STABILITY_FIX
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -165,8 +165,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "18.3",
-    PremiumBuild = "2026.07.05-V18.3-PERFORMANCE-FIX",
+    Version = "18.4",
+    PremiumBuild = "2026.07.05-V18.4-RUNTIME-STABILITY-FIX",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -3985,7 +3985,6 @@ H = {
             popup.BackgroundTransparency = 0.04
             popup.GroupTransparency = 1
             popup.BorderSizePixel = 0
-            popup.ClipsDescendants = true
             popup.ZIndex = 20000
             popup.Visible = false
             popup.Active = false
@@ -8858,7 +8857,6 @@ function d.CreateCategory(aa, ab)
         at.Visible = false
         at.GroupTransparency = 1
         at.Parent = aj
-        at.ClipsDescendants = true
         addCorner(at, o.Radius)
         local optionsStroke = addStroke(
             at,
@@ -13103,7 +13101,6 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         card.BorderSizePixel = 0
         card.GroupTransparency = 1
         card.Active = true
-        card.ClipsDescendants = false
         card.ZIndex = 130
         card:SetAttribute("NotifHeight", height)
         card:SetAttribute("NotifTitle", ah)

@@ -34,6 +34,10 @@ $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
 $sprLib = Read-ProjectFile "badscript\libraries\spr.lua"
 $sprLicense = Read-ProjectFile "badscript\libraries\spr.LICENSE.txt"
+$diagnostics = Read-ProjectFile "badscript\libraries\diagnostics.lua"
+$phaseModule = Read-ProjectFile "badscript\games\universal - base\Blatant\Phase.lua"
+$swimModule = Read-ProjectFile "badscript\games\universal - base\Blatant\Swim.lua"
+$animationModule = Read-ProjectFile "badscript\games\universal - base\Utility\AnimationPlayer.lua"
 $entityLib = Read-ProjectFile "badscript\libraries\entity.lua"
 $universalBase = Read-ProjectFile "badscript\games\universal - base\base.lua"
 $universalManifest = Read-ProjectFile "badscript\games\universal - base\files.txt"
@@ -57,16 +61,16 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"18\.3"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V18\.3-PERFORMANCE-FIX"' -and
-    $newGui -match 'BADWARS_UI_V18_3_PERFORMANCE_FIX' -and
-    $main -match "BadWars Main v18\.3" -and
-    $loader -match "BadWars Loader v18\.3" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"18\.3"'
+    $newGui -match 'Version\s*=\s*"18\.4"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V18\.4-RUNTIME-STABILITY-FIX"' -and
+    $newGui -match 'BADWARS_UI_V18_4_RUNTIME_STABILITY_FIX' -and
+    $main -match "BadWars Main v18\.4" -and
+    $loader -match "BadWars Loader v18\.4" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"18\.4"'
 ) {
-    Pass "V18.3 runtime versions are synchronized"
+    Pass "V18.4 runtime versions are synchronized"
 } else {
-    Fail "V18.3 runtime versions are not synchronized"
+    Fail "V18.4 runtime versions are not synchronized"
 }
 
 
@@ -94,12 +98,40 @@ if (
     $newGui -match 'ResizeThread\s*=\s*nil' -and
     $newGui -match 'ScrollingEnabled\s*=\s*true' -and
     $newGui -match 'function ai\.RefreshScroll' -and
-    $diagnostics -match 'BADWARS_DIAGNOSTICS_V18_3_PERFORMANCE_FIX' -and
+    $diagnostics -match 'BADWARS_DIAGNOSTICS_V18_4_RUNTIME_STABILITY_FIX' -and
     $diagnostics -notmatch 'local openerDot'
 ) {
-    Pass "V18.3 drag, scroll, and diagnostics performance repairs are present"
+    Pass "V18.4 drag, scroll, and diagnostics repairs are present"
 } else {
-    Fail "V18.3 drag, scroll, or diagnostics repairs are incomplete"
+    Fail "V18.4 drag, scroll, or diagnostics repairs are incomplete"
+}
+
+
+if (
+    $newGui -notmatch '(?m)^\s*popup\.ClipsDescendants\s*=' -and
+    $newGui -notmatch '(?m)^\s*card\.ClipsDescendants\s*=' -and
+    $loader -notmatch '(?m)^\s*statusCard\.ClipsDescendants\s*=' -and
+    $diagnostics -notmatch '(?m)^\s*window\.ClipsDescendants\s*=' -and
+    $diagnostics -match 'ClipsDescendants is always true on CanvasGroup' -and
+    $diagnostics -match 'Roblox rejected animation asset'
+) {
+    Pass "CanvasGroup warnings and native animation noise are handled"
+} else {
+    Fail "CanvasGroup or native animation diagnostics handling is incomplete"
+}
+
+if (
+    $phaseModule -match "local handler = Functions\[Mode and Mode\.Value\]" -and
+    $phaseModule -match "type\(setfflag\) ~= 'function'" -and
+    $phaseModule -match 'Character\s*=\s*function' -and
+    $swimModule -notmatch 'Region3\.new\(Vector3\.zero, Vector3\.zero\)' -and
+    $swimModule -match 'local function clearLastRegion' -and
+    $animationModule -match 'local rejectedIds = \{\}' -and
+    $animationModule -match 'disableAfterFailure'
+) {
+    Pass "Phase, Swim, and AnimationPlayer runtime faults are guarded"
+} else {
+    Fail "Universal module runtime guards are incomplete"
 }
 
 $requiredComponentApis = @(
@@ -286,8 +318,8 @@ if (
     $loader -match "invalidateStaleGuiCache" -and
     $newMain -match "invalidateStaleGuiCache" -and
     $main -match "isStaleGuiCache" -and
-    $loader -match 'V18%.3%-PERFORMANCE%-FIX' -and
-    $newMain -match 'V18%.3%-PERFORMANCE%-FIX'
+    $loader -match 'V18%.4%-RUNTIME%-STABILITY%-FIX' -and
+    $newMain -match 'V18%.4%-RUNTIME%-STABILITY%-FIX'
 ) {
     Pass "Loadstring rejects stale GUI cache automatically"
 } else {

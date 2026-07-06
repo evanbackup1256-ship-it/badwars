@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Loader v18.3 Performance Fix
+-- BadWars Loader v18.4 Runtime Stability Fix
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -372,7 +372,6 @@ local function createLoader()
     statusCard.BackgroundTransparency = 0.01
     statusCard.BorderSizePixel = 0
     statusCard.GroupTransparency = 1
-    statusCard.ClipsDescendants = false
     statusCard.Parent = statusGui
     loaderCorner(statusCard, 16)
     loaderStroke(statusCard, Color3.fromRGB(61, 83, 100), 0.46)
@@ -752,12 +751,12 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v18-3-performance-fix-2026-07-05-01'
+local cacheVersion = 'badwars-v18-4-runtime-stability-fix-2026-07-05-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents)=='string'
-		and contents:find('Version%s*=%s*"18%.2"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V18%.3%-PERFORMANCE%-FIX"') ~= nil
+		and contents:find('Version%s*=%s*"18%.4"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V18%.4%-RUNTIME%-STABILITY%-FIX"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath='badscript/guis/new/gui.lua'
@@ -783,26 +782,31 @@ writefile('badscript/profiles/commit.txt','main')
 -- ========== SELF-TEST ==========
 setStatus('pipeline: self-test')
 local urls=rawUrls(ORCH_PATH)
-warn('BadWars: [URL DIAGNOSTICS]')
-warn('  Repository:   '..CFG.repo..'/'..CFG.name)
-warn('  Branch:       '..CFG.branch)
-warn('  Folder:       '..CFG.folder)
-warn('  File:         '..CFG.file)
-warn('  Full path:    '..ORCH_PATH)
-warn('  URLs to try:')
-for i,u in ipairs(urls) do warn('    ['..i..'] '..u) end
+local function emitUrlDiagnostics()
+	warn('BadWars: [URL DIAGNOSTICS]')
+	warn('  Repository:   '..CFG.repo..'/'..CFG.name)
+	warn('  Branch:       '..CFG.branch)
+	warn('  Folder:       '..CFG.folder)
+	warn('  File:         '..CFG.file)
+	warn('  Full path:    '..ORCH_PATH)
+	warn('  URLs to try:')
+	for i,u in ipairs(urls) do warn('    ['..i..'] '..u) end
+end
 
 setStatus('validating orchestrator URL')
 local raw,usedUrl=httpGet(urls)
 if raw==nil then
+	emitUrlDiagnostics()
 	local m='All HTTP methods failed for '..ORCH_PATH
 	setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0)
 end
 if type(raw)~='string' or raw=='' then
+	emitUrlDiagnostics()
 	local m='ERROR empty file: Empty response for '..ORCH_PATH
 	setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0)
 end
 if isNotFoundBody(raw) then
+	emitUrlDiagnostics()
 	warn('BadWars: [404 RESPONSE BODY - first 500 chars]')
 	warn(raw:sub(1,500))
 	warn('BadWars: [END 404 BODY]')

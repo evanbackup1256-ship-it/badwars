@@ -1,4 +1,4 @@
--- BADWARS_UI_V18_4_RUNTIME_STABILITY_FIX
+-- BADWARS_UI_V19_OBSIDIAN_OVERHAUL
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -126,7 +126,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Studio UI | Build 2026.07.05 Adaptive
+-- BadWars Obsidian UI | adaptive, interruptible, low-overhead
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
 local __guiwarn = warn
@@ -165,8 +165,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "18.4",
-    PremiumBuild = "2026.07.05-V18.4-RUNTIME-STABILITY-FIX",
+    Version = "19.0",
+    PremiumBuild = "2026.07.06-V19-OBSIDIAN-OVERHAUL",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -287,45 +287,46 @@ local n = {
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
-    Main = Color3.fromRGB(7, 10, 14),
-    MainSoft = Color3.fromRGB(10, 14, 19),
-    Text = Color3.fromRGB(220, 228, 237),
-    TextStrong = Color3.fromRGB(249, 251, 253),
-    Surface = Color3.fromRGB(14, 19, 25),
-    SurfaceSoft = Color3.fromRGB(17, 23, 30),
-    SurfaceHover = Color3.fromRGB(22, 31, 40),
-    Elevated = Color3.fromRGB(19, 26, 34),
-    ElevatedHover = Color3.fromRGB(25, 35, 45),
-    Border = Color3.fromRGB(37, 48, 61),
-    BorderStrong = Color3.fromRGB(61, 83, 100),
-    MutedText = Color3.fromRGB(154, 169, 184),
-    FaintText = Color3.fromRGB(92, 107, 122),
-    Danger = Color3.fromRGB(244, 92, 115),
-    Warning = Color3.fromRGB(247, 186, 80),
-    Success = Color3.fromRGB(66, 214, 153),
-    Shadow = Color3.fromRGB(0, 2, 5),
-    RadiusSmall = UDim.new(0, 7),
-    Radius = UDim.new(0, 11),
-    RadiusLarge = UDim.new(0, 16),
+    -- Obsidian design system: neutral graphite surfaces with a single live accent.
+    Main = Color3.fromRGB(5, 8, 12),
+    MainSoft = Color3.fromRGB(8, 12, 17),
+    Text = Color3.fromRGB(218, 227, 235),
+    TextStrong = Color3.fromRGB(248, 251, 253),
+    Surface = Color3.fromRGB(13, 19, 25),
+    SurfaceSoft = Color3.fromRGB(16, 23, 30),
+    SurfaceHover = Color3.fromRGB(22, 32, 42),
+    Elevated = Color3.fromRGB(18, 27, 35),
+    ElevatedHover = Color3.fromRGB(27, 40, 51),
+    Border = Color3.fromRGB(34, 47, 59),
+    BorderStrong = Color3.fromRGB(67, 91, 108),
+    MutedText = Color3.fromRGB(157, 174, 189),
+    FaintText = Color3.fromRGB(92, 110, 126),
+    Danger = Color3.fromRGB(255, 102, 124),
+    Warning = Color3.fromRGB(255, 198, 92),
+    Success = Color3.fromRGB(75, 222, 168),
+    Shadow = Color3.fromRGB(0, 1, 3),
+    RadiusSmall = UDim.new(0, 8),
+    Radius = UDim.new(0, 12),
+    RadiusLarge = UDim.new(0, 18),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
-    TweenPress = TweenInfo.new(0.035, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    TweenFast = TweenInfo.new(0.05, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Tween = TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSlow = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSpring = TweenInfo.new(0.095, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenBack = TweenInfo.new(0.105, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    SpringInteractive = { Damping = 1, Frequency = 24, Public = false, TweenInfo = TweenInfo.new(0.055, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) },
-    SpringPanel = { Damping = 1, Frequency = 20, Public = true },
-    SpringSoft = { Damping = 0.96, Frequency = 18, Public = true },
+    TweenPress = TweenInfo.new(0.032, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenFast = TweenInfo.new(0.055, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    Tween = TweenInfo.new(0.085, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSlow = TweenInfo.new(0.125, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSpring = TweenInfo.new(0.105, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenBack = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    SpringInteractive = { Damping = 1, Frequency = 26, Public = false, TweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) },
+    SpringPanel = { Damping = 1, Frequency = 22, Public = true },
+    SpringSoft = { Damping = 0.98, Frequency = 19, Public = true },
 }
 
-local UI_WINDOW_WIDTH = 252
-local UI_HEADER_HEIGHT = 52
-local UI_MODULE_ROW_HEIGHT = d.isMobile and 52 or 44
-local UI_NAV_ROW_HEIGHT = d.isMobile and 50 or 44
-local UI_WINDOW_GAP = 14
+local UI_WINDOW_WIDTH = d.isMobile and 268 or 282
+local UI_HEADER_HEIGHT = d.isMobile and 56 or 58
+local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 48
+local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 46
+local UI_WINDOW_GAP = 16
 
 local function getTableSize(p)
     if type(p) ~= "table" then
@@ -1071,12 +1072,12 @@ local function addShadow(F, G)
 
     H = Instance.new("ImageLabel")
     H.Name = "SoftShadow"
-    H.Size = UDim2.new(1, G and 20 or 16, 1, G and 20 or 16)
-    H.Position = UDim2.fromOffset(G and -10 or -8, G and -10 or -8)
+    H.Size = UDim2.new(1, G and 26 or 20, 1, G and 26 or 20)
+    H.Position = UDim2.fromOffset(G and -13 or -10, G and -13 or -10)
     H.BackgroundTransparency = 1
     H.Image = u("badscript/assets/new/" .. (G and "blurnotif" or "blur") .. ".png")
     H.ImageColor3 = o.Shadow
-    H.ImageTransparency = G and 0.76 or 0.81
+    H.ImageTransparency = G and 0.72 or 0.78
     H.ScaleType = Enum.ScaleType.Slice
     H.SliceCenter = Rect.new(52, 31, 261, 502)
     H.ZIndex = math.max(F.ZIndex - 1, 0)
@@ -1109,15 +1110,15 @@ local function addSurfaceGradient(F, G)
     H.Color = G
         or ColorSequence.new({
             ColorSequenceKeypoint.new(0, o.SurfaceSoft),
-            ColorSequenceKeypoint.new(0.48, o.Surface),
+            ColorSequenceKeypoint.new(0.44, o.Surface),
             ColorSequenceKeypoint.new(1, o.MainSoft),
         })
     H.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.015),
-        NumberSequenceKeypoint.new(0.52, 0.055),
-        NumberSequenceKeypoint.new(1, 0.14),
+        NumberSequenceKeypoint.new(0, 0.01),
+        NumberSequenceKeypoint.new(0.5, 0.045),
+        NumberSequenceKeypoint.new(1, 0.18),
     })
-    H.Rotation = 105
+    H.Rotation = 112
     return H
 end
 
@@ -1142,8 +1143,8 @@ local function addAccentLine(F, G)
         end)
     end
 
-    H.Size = UDim2.fromOffset(34, G or 2)
-    H.Position = UDim2.fromOffset(12, 1)
+    H.Size = UDim2.fromOffset(46, G or 2)
+    H.Position = UDim2.fromOffset(16, 1)
     H.BackgroundColor3 = Color3.fromHSV(
         d.GUIColor.Hue,
         d.GUIColor.Sat,
@@ -1154,9 +1155,35 @@ local function addAccentLine(F, G)
 end
 
 local function addV9Chrome(F, label)
-    -- V17 intentionally removes the decorative corner ticks. The previous
-    -- chrome added visual noise to every panel without improving hierarchy.
-    return nil
+    -- Quiet inner chrome: one highlight and one depth edge, with no animated clutter.
+    local top = F:FindFirstChild("ObsidianTopEdge")
+    if not top then
+        top = Instance.new("Frame")
+        top.Name = "ObsidianTopEdge"
+        top.Size = UDim2.new(1, -24, 0, 1)
+        top.Position = UDim2.fromOffset(12, 1)
+        top.BackgroundColor3 = o.TextStrong
+        top.BackgroundTransparency = 0.91
+        top.BorderSizePixel = 0
+        top.ZIndex = F.ZIndex + 3
+        top.Parent = F
+    end
+
+    local bottom = F:FindFirstChild("ObsidianDepthEdge")
+    if not bottom then
+        bottom = Instance.new("Frame")
+        bottom.Name = "ObsidianDepthEdge"
+        bottom.AnchorPoint = Vector2.new(0, 1)
+        bottom.Position = UDim2.new(0, 12, 1, -1)
+        bottom.Size = UDim2.new(1, -24, 0, 1)
+        bottom.BackgroundColor3 = o.Shadow
+        bottom.BackgroundTransparency = 0.34
+        bottom.BorderSizePixel = 0
+        bottom.ZIndex = F.ZIndex + 3
+        bottom.Parent = F
+    end
+
+    return top
 end
 
 local function addV9Sweep(F)
@@ -3847,11 +3874,11 @@ H = {
             local viewportHeight = B.AbsoluteSize.Y / scale
             local popupWidth = math.clamp(
                 math.max(
-                    172,
-                    (rootSize.X / scale) - 16
+                    188,
+                    (rootSize.X / scale) - 12
                 ),
-                172,
-                math.max(172, viewportWidth - 16)
+                188,
+                math.max(188, viewportWidth - 16)
             )
             local x = (rootPosition.X - rootOrigin.X) / scale + 8
             local belowY =
@@ -3980,9 +4007,9 @@ H = {
 
             popup = Instance.new("CanvasGroup")
             popup.Name = tostring(settings.Name) .. "DropdownPopup"
-            popup.Size = UDim2.fromOffset(172, rowHeight + 10)
-            popup.BackgroundColor3 = o.Elevated
-            popup.BackgroundTransparency = 0.04
+            popup.Size = UDim2.fromOffset(188, rowHeight + 10)
+            popup.BackgroundColor3 = o.MainSoft
+            popup.BackgroundTransparency = 0.005
             popup.GroupTransparency = 1
             popup.BorderSizePixel = 0
             popup.ZIndex = 20000
@@ -3999,7 +4026,10 @@ H = {
                 "DropdownPopupStroke"
             )
             popupScale = addScale(popup)
-            popupScale.Scale = 0.985
+            popupScale.Scale = 0.975
+            addShadow(popup, true)
+            addSurfaceGradient(popup)
+            addV9Chrome(popup)
 
             local accentLine = Instance.new("Frame")
             accentLine.Name = "Accent"
@@ -4029,7 +4059,7 @@ H = {
             search.BackgroundColor3 = o.MainSoft
             search.BackgroundTransparency = 0.08
             search.BorderSizePixel = 0
-            search.PlaceholderText = "Search"
+            search.PlaceholderText = "Search options"
             search.PlaceholderColor3 = o.FaintText
             search.Text = ""
             search.TextColor3 = o.Text
@@ -4092,7 +4122,7 @@ H = {
                     rowHeight - 2
                 )
                 option.BackgroundColor3 = o.Surface
-                option.BackgroundTransparency = 0.34
+                option.BackgroundTransparency = 0.18
                 option.BorderSizePixel = 0
                 option.AutoButtonColor = false
                 option.Text = ""
@@ -6476,13 +6506,13 @@ function d.CreateGUI(aa)
     ac.Name = "GUICategory"
     ac.Position = UDim2.fromOffset(6, 60)
     ac.BackgroundColor3 = o.Main
-    ac.BackgroundTransparency = 0.02
+    ac.BackgroundTransparency = 0.005
     ac.AutoButtonColor = false
     ac.Text = ""
     ac.Parent = v
     addShadow(ac)
     addCorner(ac, o.RadiusLarge)
-    local mainStroke = addStroke(ac, o.BorderStrong, 0.62, 1, "MainStroke")
+    local mainStroke = addStroke(ac, o.BorderStrong, 0.46, 1, "MainStroke")
     addSurfaceGradient(ac)
     local mainAccent = addAccentLine(ac, 2)
     addV9Chrome(ac)
@@ -6505,24 +6535,24 @@ function d.CreateGUI(aa)
 
     local ad = Instance.new("TextLabel")
     ad.Name = "BrandLogo"
-    ad.Size = UDim2.fromOffset(118, 24)
-    ad.Position = UDim2.fromOffset(12, 8)
+    ad.Size = UDim2.fromOffset(148, 26)
+    ad.Position = UDim2.fromOffset(16, 9)
     ad.BackgroundTransparency = 1
-    ad.Text = "BADWARS"
+    ad.Text = "BadWars"
     ad.TextColor3 = o.TextStrong
-    ad.TextSize = 18
+    ad.TextSize = 19
     ad.TextXAlignment = Enum.TextXAlignment.Left
     ad.FontFace = o.FontBold
     ad.Parent = ac
 
     local brandSub = Instance.new("TextLabel")
     brandSub.Name = "BrandSub"
-    brandSub.Size = UDim2.fromOffset(120, 10)
-    brandSub.Position = UDim2.fromOffset(12, 28)
+    brandSub.Size = UDim2.fromOffset(156, 12)
+    brandSub.Position = UDim2.fromOffset(16, 32)
     brandSub.BackgroundTransparency = 1
-    brandSub.Text = "INTERFACE"
+    brandSub.Text = "CONTROL CENTER"
     brandSub.TextColor3 = o.FaintText
-    brandSub.TextSize = 7
+    brandSub.TextSize = 8
     brandSub.TextXAlignment = Enum.TextXAlignment.Left
     brandSub.FontFace = o.FontBold
     brandSub.Parent = ac
@@ -6530,10 +6560,10 @@ function d.CreateGUI(aa)
 
     local playerCard = Instance.new("Frame")
     playerCard.Name = "PlayerCard"
-    playerCard.Size = UDim2.fromOffset(UI_WINDOW_WIDTH - 24, 54)
-    playerCard.Position = UDim2.fromOffset(12, 43)
+    playerCard.Size = UDim2.fromOffset(UI_WINDOW_WIDTH - 24, 58)
+    playerCard.Position = UDim2.fromOffset(12, 50)
     playerCard.BackgroundColor3 = o.Surface
-    playerCard.BackgroundTransparency = 0.12
+    playerCard.BackgroundTransparency = 0.05
     playerCard.BorderSizePixel = 0
     playerCard.ClipsDescendants = true
     playerCard.Parent = ac
@@ -6541,15 +6571,15 @@ function d.CreateGUI(aa)
     local playerCardStroke = addStroke(
         playerCard,
         o.Border,
-        0.82,
+        0.68,
         1,
         "PlayerCardStroke"
     )
 
     local avatar = Instance.new("ImageLabel")
     avatar.Name = "Avatar"
-    avatar.Size = UDim2.fromOffset(34, 34)
-    avatar.Position = UDim2.fromOffset(7, 7)
+    avatar.Size = UDim2.fromOffset(38, 38)
+    avatar.Position = UDim2.fromOffset(10, 10)
     avatar.BackgroundColor3 = o.Elevated
     avatar.BorderSizePixel = 0
     avatar.Image = "rbxthumb://type=AvatarHeadShot&id="
@@ -6563,7 +6593,7 @@ function d.CreateGUI(aa)
     onlineDot.Name = "Online"
     onlineDot.Size = UDim2.fromOffset(7, 7)
     onlineDot.AnchorPoint = Vector2.new(0.5, 0.5)
-    onlineDot.Position = UDim2.new(0, 38, 1, -8)
+    onlineDot.Position = UDim2.new(0, 43, 1, -9)
     onlineDot.BackgroundColor3 = Color3.fromHSV(
         d.GUIColor.Hue,
         d.GUIColor.Sat,
@@ -6577,12 +6607,12 @@ function d.CreateGUI(aa)
 
     local displayName = Instance.new("TextLabel")
     displayName.Name = "DisplayName"
-    displayName.Size = UDim2.new(1, -54, 0, 20)
-    displayName.Position = UDim2.fromOffset(49, 6)
+    displayName.Size = UDim2.new(1, -68, 0, 20)
+    displayName.Position = UDim2.fromOffset(58, 9)
     displayName.BackgroundTransparency = 1
     displayName.Text = localPlayer.DisplayName
     displayName.TextColor3 = o.TextStrong
-    displayName.TextSize = 12
+    displayName.TextSize = 13
     displayName.TextTruncate = Enum.TextTruncate.AtEnd
     displayName.TextXAlignment = Enum.TextXAlignment.Left
     displayName.FontFace = o.FontSemiBold
@@ -6590,8 +6620,8 @@ function d.CreateGUI(aa)
 
     local userName = Instance.new("TextLabel")
     userName.Name = "Username"
-    userName.Size = UDim2.new(1, -54, 0, 16)
-    userName.Position = UDim2.fromOffset(49, 24)
+    userName.Size = UDim2.new(1, -68, 0, 16)
+    userName.Position = UDim2.fromOffset(58, 30)
     userName.BackgroundTransparency = 1
     userName.Text = "@" .. localPlayer.Name
     userName.TextColor3 = o.FaintText
@@ -6634,7 +6664,7 @@ function d.CreateGUI(aa)
     local af = Instance.new("ScrollingFrame")
     af.Name = "Children"
     af.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, 320)
-    af.Position = UDim2.fromOffset(0, 104)
+    af.Position = UDim2.fromOffset(0, 116)
     af.BackgroundTransparency = 1
     af.BorderSizePixel = 0
     af.CanvasSize = UDim2.new()
@@ -6654,8 +6684,8 @@ function d.CreateGUI(aa)
     ag.Parent = af
     local ah = Instance.new("TextButton")
     ah.Name = "Settings"
-    ah.Size = UDim2.fromOffset(38, 38)
-    ah.Position = UDim2.new(1, -41, 0, 2)
+    ah.Size = UDim2.fromOffset(40, 40)
+    ah.Position = UDim2.new(1, -46, 0, 7)
     ah.BackgroundTransparency = 1
     ah.Text = ""
     ah.Parent = ac
@@ -6677,9 +6707,9 @@ function d.CreateGUI(aa)
     ai.Parent = ah
     local aj = Instance.new("TextButton")
     aj.Name = "DiscordInvite"
-    aj.Size = UDim2.fromOffset(188, 32)
+    aj.Size = UDim2.fromOffset(206, 36)
     aj.AnchorPoint = Vector2.new(0.5, 1)
-    aj.Position = UDim2.new(0.5, 0, 1, -16)
+    aj.Position = UDim2.new(0.5, 0, 1, -18)
     aj.BackgroundColor3 = o.MainSoft
     aj.BackgroundTransparency = 0.03
     aj.BorderSizePixel = 0
@@ -6704,7 +6734,7 @@ function d.CreateGUI(aa)
     discordAccent.Name = "Accent"
     discordAccent.Size = UDim2.fromOffset(6, 6)
     discordAccent.AnchorPoint = Vector2.new(0.5, 0.5)
-    discordAccent.Position = UDim2.fromOffset(18, 16)
+    discordAccent.Position = UDim2.fromOffset(20, 18)
     discordAccent.BorderSizePixel = 0
     discordAccent.BackgroundColor3 =
         Color3.fromHSV(
@@ -6718,12 +6748,12 @@ function d.CreateGUI(aa)
 
     local discordLabel = Instance.new("TextLabel")
     discordLabel.Name = "Label"
-    discordLabel.Size = UDim2.new(1, -46, 1, 0)
-    discordLabel.Position = UDim2.fromOffset(34, 0)
+    discordLabel.Size = UDim2.new(1, -52, 1, 0)
+    discordLabel.Position = UDim2.fromOffset(38, 0)
     discordLabel.BackgroundTransparency = 1
-    discordLabel.Text = "COPY DISCORD LINK"
+    discordLabel.Text = "Copy Discord invite"
     discordLabel.TextColor3 = o.TextStrong
-    discordLabel.TextSize = 11
+    discordLabel.TextSize = 12
     discordLabel.TextXAlignment = Enum.TextXAlignment.Left
     discordLabel.FontFace = o.FontSemiBold
     discordLabel.ZIndex = aj.ZIndex + 3
@@ -6733,7 +6763,7 @@ function d.CreateGUI(aa)
     discordChevron.Name = "Chevron"
     discordChevron.Size = UDim2.fromOffset(5, 9)
     discordChevron.AnchorPoint = Vector2.new(1, 0.5)
-    discordChevron.Position = UDim2.new(1, -15, 0.5, 0)
+    discordChevron.Position = UDim2.new(1, -17, 0.5, 0)
     discordChevron.BackgroundTransparency = 1
     discordChevron.Image = u("badscript/assets/new/expandright.png")
     discordChevron.ImageColor3 = o.FaintText
@@ -8305,7 +8335,7 @@ end)
         )
         local viewportHeight = math.max(
             180,
-            (B.AbsoluteSize.Y / scale) - 132
+            (B.AbsoluteSize.Y / scale) - 148
         )
         local visibleHeight = math.min(
             contentHeight + 8,
@@ -8322,7 +8352,7 @@ end)
         )
         ac.Size = UDim2.fromOffset(
             UI_WINDOW_WIDTH,
-            108 + math.max(100, visibleHeight)
+            120 + math.max(100, visibleHeight)
         )
 
         local maxCanvasY = math.max(
@@ -8380,7 +8410,7 @@ function d.CreateCategory(aa, ab)
     ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, UI_HEADER_HEIGHT)
     ad.Position = UDim2.fromOffset(250, 60)
     ad.BackgroundColor3 = o.Main
-    ad.BackgroundTransparency = 0.02
+    ad.BackgroundTransparency = 0.005
     ad.AutoButtonColor = false
     ad.Visible = false
     ad.Text = ""
@@ -8388,7 +8418,7 @@ function d.CreateCategory(aa, ab)
     ad.Parent = v
     addShadow(ad)
     addCorner(ad, o.RadiusLarge)
-    local categoryStroke = addStroke(ad, o.BorderStrong, 0.58, 1, "CategoryStroke")
+    local categoryStroke = addStroke(ad, o.BorderStrong, 0.44, 1, "CategoryStroke")
     addSurfaceGradient(ad)
     local categoryAccent = addAccentLine(ad, 2)
     addV9Chrome(ad)
@@ -8400,7 +8430,7 @@ function d.CreateCategory(aa, ab)
     headerSurface.Size = UDim2.new(1, 0, 0, UI_HEADER_HEIGHT)
     headerSurface.Position = UDim2.fromOffset(0, 0)
     headerSurface.BackgroundColor3 = o.MainSoft
-    headerSurface.BackgroundTransparency = 0.03
+    headerSurface.BackgroundTransparency = 0.015
     headerSurface.BorderSizePixel = 0
     headerSurface.ZIndex = ad.ZIndex + 10
     headerSurface.Parent = ad
@@ -8409,7 +8439,7 @@ function d.CreateCategory(aa, ab)
     local ae = Instance.new("ImageLabel")
     ae.Name = "Icon"
     ae.Size = ab.Size
-    ae.Position = UDim2.fromOffset(14, (ae.Size.X.Offset > 20 and 16 or 15))
+    ae.Position = UDim2.fromOffset(16, (ae.Size.X.Offset > 20 and 17 or 16))
     ae.BackgroundTransparency = 1
     ae.Image = ab.Icon
     ae.ImageColor3 = o.MutedText
@@ -8423,7 +8453,7 @@ function d.CreateCategory(aa, ab)
     af.Text = ab.Name
     af.TextXAlignment = Enum.TextXAlignment.Left
     af.TextColor3 = o.MutedText
-    af.TextSize = 13
+    af.TextSize = 14
     af.FontFace = o.FontSemiBold
     af.ZIndex = headerSurface.ZIndex + 2
     af.Parent = headerSurface
@@ -8436,12 +8466,12 @@ function d.CreateCategory(aa, ab)
         27
     )
     categorySub.BackgroundTransparency = 1
-    categorySub.Text = ""
+    categorySub.Text = "MODULES"
     categorySub.TextColor3 = o.FaintText
-    categorySub.TextSize = 7
+    categorySub.TextSize = 8
     categorySub.TextXAlignment = Enum.TextXAlignment.Left
     categorySub.FontFace = o.FontBold
-    categorySub.Visible = false
+    categorySub.Visible = true
     categorySub.ZIndex = headerSurface.ZIndex + 2
     categorySub.Parent = headerSurface
 
@@ -8579,18 +8609,18 @@ function d.CreateCategory(aa, ab)
         ar.Name = an.Name
         ar.Size = UDim2.new(1, -14, 0, UI_MODULE_ROW_HEIGHT)
         ar.BackgroundColor3 = o.Surface
-        ar.BackgroundTransparency = 0.16
+        ar.BackgroundTransparency = 0.08
         ar.BorderSizePixel = 0
         ar.AutoButtonColor = false
         ar.ClipsDescendants = true
-        ar.Text = "    " .. ap
+        ar.Text = "     " .. ap
         ar.TextXAlignment = Enum.TextXAlignment.Left
         ar.TextColor3 = o.MutedText
         ar.TextSize = d.isMobile and 15 or 14
         ar.FontFace = o.FontSemiBold
         ar.Parent = aj
         addCorner(ar, o.Radius)
-        local moduleStroke = addStroke(ar, o.Border, 0.88, 1, "ModuleStroke")
+        local moduleStroke = addStroke(ar, o.Border, 0.76, 1, "ModuleStroke")
         local moduleScale = addScale(ar)
         local moduleSweep = addV9Sweep(ar)
 
@@ -8606,7 +8636,7 @@ function d.CreateCategory(aa, ab)
 
         local activeRail = Instance.new("Frame")
         activeRail.Name = "ActiveRail"
-        activeRail.Size = UDim2.fromOffset(3, 18)
+        activeRail.Size = UDim2.fromOffset(3, 22)
         activeRail.AnchorPoint = Vector2.new(0, 0.5)
         activeRail.Position = UDim2.new(0, 1, 0.5, 0)
         activeRail.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
@@ -10978,7 +11008,7 @@ function d.CreateCategoryList(ag, ah)
 
     local aj = Instance.new("TextButton")
     aj.Name = ah.Name .. "CategoryList"
-    aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, 48)
+    aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, UI_HEADER_HEIGHT)
     aj.Position = UDim2.fromOffset(240, 46)
     aj.BackgroundColor3 = o.MainSoft
     aj.AutoButtonColor = false
@@ -11064,18 +11094,18 @@ function d.CreateCategoryList(ag, ah)
     local am = Instance.new("TextLabel")
     am.Name = "Title"
     am.Size = UDim2.new(1, -(ah.Size.X.Offset > 20 and 44 or 36), 0, 20)
-    am.Position = UDim2.fromOffset(math.abs(am.Size.X.Offset) + 2, 14)
+    am.Position = UDim2.fromOffset(math.abs(am.Size.X.Offset) + 2, 12)
     am.BackgroundTransparency = 1
     am.Text = ah.Name
     am.TextXAlignment = Enum.TextXAlignment.Left
     am.TextColor3 = o.Text
-    am.TextSize = 13
+    am.TextSize = 14
     am.FontFace = o.FontSemiBold
     am.Parent = aj
     local an = Instance.new("TextButton")
     an.Name = "Arrow"
-    an.Size = UDim2.fromOffset(42, 42)
-    an.Position = UDim2.new(1, -44, 0, 3)
+    an.Size = UDim2.fromOffset(46, 46)
+    an.Position = UDim2.new(1, -48, 0, 5)
     an.BackgroundTransparency = 1
     an.Text = ""
     an.Parent = aj
@@ -11090,8 +11120,8 @@ function d.CreateCategoryList(ag, ah)
     ao.Parent = an
     local ap = Instance.new("ScrollingFrame")
     ap.Name = "Children"
-    ap.Size = UDim2.new(1, 0, 1, -48)
-    ap.Position = UDim2.fromOffset(0, 48)
+    ap.Size = UDim2.new(1, 0, 1, -UI_HEADER_HEIGHT)
+    ap.Position = UDim2.fromOffset(0, UI_HEADER_HEIGHT)
     ap.BackgroundTransparency = 1
     ap.BorderSizePixel = 0
     ap.Visible = false
@@ -11133,7 +11163,7 @@ function d.CreateCategoryList(ag, ah)
     local as = Instance.new("Frame")
     as.Name = "Divider"
     as.Size = UDim2.new(1, -20, 0, 1)
-    as.Position = UDim2.fromOffset(10, 46)
+    as.Position = UDim2.fromOffset(10, UI_HEADER_HEIGHT - 2)
     as.BorderSizePixel = 0
     as.Visible = false
     as.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -11157,10 +11187,10 @@ function d.CreateCategoryList(ag, ah)
             or Vector2.new(1280, 720)
         local viewportHeight = viewport.Y / scale
         local maximumHeight = math.max(176, math.min(614, viewportHeight - 72))
-        local targetHeight = aC.Expanded and math.min(54 + contentHeight, maximumHeight) or 48
+        local targetHeight = aC.Expanded and math.min(UI_HEADER_HEIGHT + contentHeight + 6, maximumHeight) or UI_HEADER_HEIGHT
 
         ap.CanvasSize = UDim2.fromOffset(0, contentHeight)
-        local visibleCanvasHeight = math.max(0, targetHeight - 48)
+        local visibleCanvasHeight = math.max(0, targetHeight - UI_HEADER_HEIGHT)
         local maximumCanvasY = math.max(0, contentHeight - visibleCanvasHeight)
         if ap.CanvasPosition.Y > maximumCanvasY then
             ap.CanvasPosition = Vector2.new(0, maximumCanvasY)
@@ -13082,13 +13112,13 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             or ak == "success" and o.Success
             or Color3.fromHSV(ag.GUIColor.Hue, ag.GUIColor.Sat, ag.GUIColor.Value)
         local iconName = ak == "alert" and "alert" or ak == "warning" and "warning" or ak == "success" and "success" or "info"
-        local maxWidth = d.isMobile and 316 or 360
-        local minWidth = d.isMobile and 286 or 304
+        local maxWidth = d.isMobile and 326 or 384
+        local minWidth = d.isMobile and 296 or 320
         local bodyBounds = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, maxWidth - 66) or Vector2.zero
         local titleBounds = E(removeTags(ah), d.isMobile and 13 or 12, o.FontSemiBold, maxWidth - 96) or Vector2.zero
         local width = math.clamp(math.max(minWidth, math.max(bodyBounds.X + 66, titleBounds.X + 96)), minWidth, maxWidth)
         local wrapped = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, width - 66) or Vector2.zero
-        local height = math.clamp(60 + math.max(0, wrapped.Y - 14), 68, d.isMobile and 118 or 112)
+        local height = math.clamp(66 + math.max(0, wrapped.Y - 14), 74, d.isMobile and 126 or 120)
 
         local card = Instance.new("CanvasGroup")
         card.Name = "Notification"
@@ -13096,8 +13126,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         card.AnchorPoint = Vector2.new(1, 0)
         card.Position = UDim2.new(1, width + 24, 1, -(height + 18))
         card.LayoutOrder = math.floor(os.clock() * 100000)
-        card.BackgroundColor3 = o.SurfaceSoft
-        card.BackgroundTransparency = 0.02
+        card.BackgroundColor3 = o.MainSoft
+        card.BackgroundTransparency = 0.005
         card.BorderSizePixel = 0
         card.GroupTransparency = 1
         card.Active = true
@@ -13111,14 +13141,14 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         addCorner(card, o.RadiusLarge)
         addSurfaceGradient(card)
         addShadow(card, true)
-        local stroke = addStroke(card, o.BorderStrong, 0.48, 1, "NotificationStroke")
+        local stroke = addStroke(card, o.BorderStrong, 0.38, 1, "NotificationStroke")
         local scale = addScale(card)
         scale.Scale = 0.975
 
         local accent = Instance.new("Frame")
         accent.Name = "Accent"
-        accent.Size = UDim2.new(1, -24, 0, 2)
-        accent.Position = UDim2.fromOffset(12, 0)
+        accent.Size = UDim2.new(1, -28, 0, 2)
+        accent.Position = UDim2.fromOffset(14, 0)
         accent.BackgroundColor3 = styleColor
         accent.BorderSizePixel = 0
         accent.ZIndex = 132
@@ -13127,8 +13157,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local iconShell = Instance.new("Frame")
         iconShell.Name = "IconShell"
-        iconShell.Size = UDim2.fromOffset(32, 32)
-        iconShell.Position = UDim2.fromOffset(14, 16)
+        iconShell.Size = UDim2.fromOffset(36, 36)
+        iconShell.Position = UDim2.fromOffset(16, 18)
         iconShell.BackgroundColor3 = styleColor
         iconShell.BackgroundTransparency = 0.88
         iconShell.BorderSizePixel = 0
@@ -13152,8 +13182,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
-        title.Size = UDim2.new(1, -88, 0, 18)
-        title.Position = UDim2.fromOffset(56, 14)
+        title.Size = UDim2.new(1, -100, 0, 20)
+        title.Position = UDim2.fromOffset(64, 15)
         title.BackgroundTransparency = 1
         title.Text = ah
         title.TextColor3 = o.TextStrong
@@ -13167,8 +13197,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local body = Instance.new("TextLabel")
         body.Name = "Text"
-        body.Size = UDim2.new(1, -68, 1, -38)
-        body.Position = UDim2.fromOffset(56, 33)
+        body.Size = UDim2.new(1, -80, 1, -44)
+        body.Position = UDim2.fromOffset(64, 37)
         body.BackgroundTransparency = 1
         body.Text = ai
         body.TextColor3 = o.MutedText
@@ -13214,8 +13244,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local track = Instance.new("Frame")
         track.Name = "ProgressTrack"
-        track.Size = UDim2.new(1, -28, 0, 3)
-        track.Position = UDim2.new(0, 14, 1, -8)
+        track.Size = UDim2.new(1, -32, 0, 2)
+        track.Position = UDim2.new(0, 16, 1, -8)
         track.BackgroundColor3 = o.Elevated
         track.BackgroundTransparency = 0.12
         track.BorderSizePixel = 0

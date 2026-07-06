@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Loader v18.4 Runtime Stability Fix
+-- BadWars Loader v19.0 Obsidian Overhaul
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -355,26 +355,26 @@ local function createLoader()
     statusBackdrop = Instance.new("Frame")
     statusBackdrop.Name = "Backdrop"
     statusBackdrop.Size = UDim2.fromScale(1, 1)
-    statusBackdrop.BackgroundColor3 = Color3.fromRGB(3, 6, 9)
+    statusBackdrop.BackgroundColor3 = Color3.fromRGB(2, 4, 7)
     statusBackdrop.BackgroundTransparency = 1
     statusBackdrop.BorderSizePixel = 0
     statusBackdrop.Parent = statusGui
 
     local loaderViewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local loaderWidth = math.clamp(loaderViewport.X - 28, 332, 484)
+    local loaderWidth = math.clamp(loaderViewport.X - 28, 344, 504)
 
     statusCard = Instance.new("CanvasGroup")
     statusCard.Name = "Loader"
     statusCard.AnchorPoint = Vector2.new(0.5, 0.5)
     statusCard.Position = UDim2.fromScale(0.5, 0.505)
-    statusCard.Size = UDim2.fromOffset(loaderWidth, 224)
-    statusCard.BackgroundColor3 = Color3.fromRGB(10, 14, 19)
+    statusCard.Size = UDim2.fromOffset(loaderWidth, 232)
+    statusCard.BackgroundColor3 = Color3.fromRGB(6, 10, 14)
     statusCard.BackgroundTransparency = 0.01
     statusCard.BorderSizePixel = 0
     statusCard.GroupTransparency = 1
     statusCard.Parent = statusGui
     loaderCorner(statusCard, 16)
-    loaderStroke(statusCard, Color3.fromRGB(61, 83, 100), 0.46)
+    loaderStroke(statusCard, Color3.fromRGB(70, 93, 109), 0.36)
 
     statusCardScale = Instance.new("UIScale")
     statusCardScale.Name = "MotionScale"
@@ -385,7 +385,7 @@ local function createLoader()
     accent.Name = "Accent"
     accent.Position = UDim2.fromOffset(18, 18)
     accent.Size = UDim2.fromOffset(4, 36)
-    accent.BackgroundColor3 = Color3.fromRGB(66, 214, 153)
+    accent.BackgroundColor3 = Color3.fromRGB(75, 222, 168)
     accent.BorderSizePixel = 0
     accent.Parent = statusCard
     loaderCorner(accent, 99)
@@ -395,8 +395,8 @@ local function createLoader()
     brand.Size = UDim2.new(1, -92, 0, 24)
     brand.BackgroundTransparency = 1
     brand.Font = Enum.Font.GothamBold
-    brand.Text = "BADWARS"
-    brand.TextSize = 16
+    brand.Text = "BadWars"
+    brand.TextSize = 18
     brand.TextColor3 = Color3.fromRGB(244, 247, 250)
     brand.TextXAlignment = Enum.TextXAlignment.Left
     brand.Parent = statusCard
@@ -406,7 +406,7 @@ local function createLoader()
     subtitle.Size = UDim2.new(1, -92, 0, 16)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "Preparing a clean session"
+    subtitle.Text = "Preparing your control center"
     subtitle.TextSize = 10
     subtitle.TextColor3 = Color3.fromRGB(116, 130, 145)
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -470,7 +470,7 @@ local function createLoader()
     progressFill = Instance.new("Frame")
     progressFill.Name = "Fill"
     progressFill.Size = UDim2.fromScale(statusProgress, 1)
-    progressFill.BackgroundColor3 = Color3.fromRGB(66, 214, 153)
+    progressFill.BackgroundColor3 = Color3.fromRGB(75, 222, 168)
     progressFill.BorderSizePixel = 0
     progressFill.Parent = track
     loaderCorner(progressFill, 99)
@@ -513,14 +513,14 @@ local function createLoader()
 
     openConsoleButton = Instance.new("TextButton")
     openConsoleButton.AnchorPoint = Vector2.new(1, 1)
-    openConsoleButton.Position = UDim2.new(1, -18, 1, -14)
+    openConsoleButton.Position = UDim2.new(1, -18, 1, -16)
     openConsoleButton.Size = UDim2.fromOffset(118, 30)
     openConsoleButton.BackgroundColor3 = Color3.fromRGB(22, 30, 38)
     openConsoleButton.BackgroundTransparency = 0.03
     openConsoleButton.BorderSizePixel = 0
     openConsoleButton.AutoButtonColor = false
     openConsoleButton.Font = Enum.Font.GothamSemibold
-    openConsoleButton.Text = "View diagnostics"
+    openConsoleButton.Text = "Open diagnostics"
     openConsoleButton.TextSize = 10
     openConsoleButton.TextColor3 = Color3.fromRGB(220, 226, 232)
     openConsoleButton.Visible = false
@@ -751,12 +751,12 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v18-4-runtime-stability-fix-2026-07-05-01'
+local cacheVersion = 'badwars-v19-obsidian-overhaul-2026-07-06-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents)=='string'
 		and contents:find('Version%s*=%s*"18%.4"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V18%.4%-RUNTIME%-STABILITY%-FIX"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%-OBSIDIAN%-OVERHAUL"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath='badscript/guis/new/gui.lua'

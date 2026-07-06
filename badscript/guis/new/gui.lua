@@ -16710,6 +16710,8 @@ task.defer(function()
 end)
 -- BADWARS_FINAL_DESIGN_SCOPE_V15_END
 
+-- BADWARS_LOCAL_REGISTER_SCOPE_FIX_V1
+return (function(...)
 -- BADWARS_FUSION_DESIGN_RUNTIME_V21_BEGIN
 -- Fusion-inspired local runtime. It mirrors Fusion's declarative/reactive shape
 -- without adding a network/package dependency to this single-file executor GUI.
@@ -19286,3 +19288,4 @@ end)()
 -- BADWARS_FUSION_AUDIT_REPAIR_V21_END
 
 return d
+end)(...)

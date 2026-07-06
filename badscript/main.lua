@@ -157,12 +157,12 @@ local CFG = { repo = "evanbackup1256-ship-it", name = "badwars", branch = "main"
 local function rawUrls(path)
     local repo = CFG.repo .. "/" .. CFG.name
     local p = path:gsub(" ", "%%20")
+    local query = "?bwcb=v21-register-scope-fix-1"
     return {
-        "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p,
-        "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p,
+        "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p .. query,
+        "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p .. query,
     }
 end
-
 -- Safe helpers
 local function typeName(v)
     return typeof(v)
@@ -625,12 +625,8 @@ local function isStaleGuiCache(path, body)
     if type(body) ~= "string" or body == "" then
         return true
     end
-    return not (
-        body:find('Version%s*=%s*"18%.4"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%-OBSIDIAN%-OVERHAUL"') ~= nil
-    )
+    return body:find("BADWARS_LOCAL_REGISTER_SCOPE_FIX_V1", 1, true) == nil
 end
-
 local function isStaleMotionCache(path, body)
     if path ~= "badscript/libraries/spr.lua" then
         return false

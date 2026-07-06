@@ -143,9 +143,13 @@ queue_on_teleport=queue_on_teleport or function()end
 -- Config
 local CFG={repo='evanbackup1256-ship-it',name='badwars',branch='main',folder='badscript',file='main.lua'}
 local function rawUrls(path)
-	local repo=CFG.repo..'/'..CFG.name
-	local p=path:gsub(' ','%%20')
-	return {'https://github.com/'..repo..'/raw/'..CFG.branch..'/'..p,'https://raw.githubusercontent.com/'..repo..'/'..CFG.branch..'/'..p}
+    local repo=CFG.repo..'/'..CFG.name
+    local p=path:gsub(' ','%%20')
+    local query='?bwcb=v21-register-scope-fix-1'
+    return {
+        'https://github.com/'..repo..'/raw/'..CFG.branch..'/'..p..query,
+        'https://raw.githubusercontent.com/'..repo..'/'..CFG.branch..'/'..p..query
+    }
 end
 local ORCH_PATH=CFG.folder..'/'..CFG.file
 
@@ -751,12 +755,11 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v19-obsidian-overhaul-2026-07-06-01'
+local cacheVersion = 'badwars-v21-register-scope-fix-2026-07-06-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
-	return type(contents)=='string'
-		and contents:find('Version%s*=%s*"18%.4"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%-OBSIDIAN%-OVERHAUL"') ~= nil
+    return type(contents) == "string"
+        and contents:find("BADWARS_LOCAL_REGISTER_SCOPE_FIX_V1", 1, true) ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath='badscript/guis/new/gui.lua'

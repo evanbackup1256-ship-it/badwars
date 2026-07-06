@@ -145,7 +145,7 @@ local CFG={repo='evanbackup1256-ship-it',name='badwars',branch='main',folder='ba
 local function rawUrls(path)
     local repo=CFG.repo..'/'..CFG.name
     local p=path:gsub(' ','%%20')
-    local query='?bwcb=v21-register-scope-fix-1'
+    local query='?bwperf=v19-performance-hotfix-2'
     return {
         'https://github.com/'..repo..'/raw/'..CFG.branch..'/'..p..query,
         'https://raw.githubusercontent.com/'..repo..'/'..CFG.branch..'/'..p..query
@@ -755,11 +755,13 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v21-register-scope-fix-2026-07-06-01'
+local cacheVersion = 'badwars-v19-performance-hotfix-2026-07-06-02'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"
-        and contents:find("BADWARS_LOCAL_REGISTER_SCOPE_FIX_V1", 1, true) ~= nil
+        and contents:find("BADWARS_V19_PERFORMANCE_HOTFIX_V2", 1, true) ~= nil
+        and contents:find("BADWARS_FUSION_DESIGN_RUNTIME_V21_BEGIN", 1, true) == nil
+        and contents:find("BADWARS_FUSION_COMPONENT_KIT_V21_BEGIN", 1, true) == nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath='badscript/guis/new/gui.lua'

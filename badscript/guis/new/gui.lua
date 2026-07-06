@@ -974,54 +974,36 @@ end
 d.SafeWriteFile = safeWriteFile
 
 local E = function(E, F, G, H)
-    local fontSize = F
-    if typeof(fontSize) == "Vector2" then
-        fontSize = fontSize.Y
-    end
-    fontSize = tonumber(fontSize) or 14
-    if fontSize ~= fontSize or fontSize == math.huge or fontSize == -math.huge then
+    local fontSize = tonumber(F) or 14
+    if fontSize ~= fontSize or fontSize <= 0 or fontSize == math.huge or fontSize == -math.huge then
         fontSize = 14
     end
-    fontSize = math.max(fontSize, 1)
 
-    local maxWidth = H
-    if typeof(maxWidth) == "Vector2" then
-        maxWidth = maxWidth.X
-    end
-    maxWidth = tonumber(maxWidth) or math.huge
+    local maxWidth = tonumber(H) or math.huge
     if maxWidth ~= maxWidth or maxWidth <= 0 then
         maxWidth = math.huge
     end
 
-    local text = tostring(E or ""):gsub("<[^>]->", "")
-    local longestLine = 0
-    local totalChars = 0
-    local lineCount = 1
-
-    for line in string.gmatch(text .. "\n", "([^\n]*)\n") do
-        local lineLength = #line
-        longestLine = math.max(longestLine, lineLength)
-        totalChars += lineLength
-        lineCount += 1
+    local ok, text = pcall(tostring, E or "")
+    if not ok or type(text) ~= "string" then
+        text = ""
     end
-    lineCount = math.max(1, lineCount - 1)
 
     local averageGlyphWidth = fontSize * 0.56
-    if typeof(G) == "EnumItem" and (G == Enum.Font.GothamBold or G == Enum.Font.SourceSansBold) then
-        averageGlyphWidth = fontSize * 0.6
-    end
-
-    local unwrappedWidth = math.max(1, longestLine * averageGlyphWidth)
+    local unwrappedWidth = math.max(1, #text * averageGlyphWidth)
     local width = maxWidth == math.huge and unwrappedWidth or math.min(maxWidth, math.max(1, unwrappedWidth))
-    local wrappedLines = lineCount
+    local wrappedLines = 1
     if maxWidth ~= math.huge and maxWidth > 0 then
         local charsPerLine = math.max(1, math.floor(maxWidth / averageGlyphWidth))
-        wrappedLines = math.max(lineCount, math.ceil(math.max(totalChars, longestLine) / charsPerLine))
+        wrappedLines = math.max(1, math.ceil(#text / charsPerLine))
     end
 
     local height = math.max(fontSize, wrappedLines * fontSize * 1.22)
 
-    return Vector2.new(width, height)
+    if type(Vector2) == "table" and type(Vector2.new) == "function" then
+        return Vector2.new(width, height)
+    end
+    return { X = width, Y = height }
 end
 local function addCorner(F, G)
     local H = F:FindFirstChildOfClass("UICorner")

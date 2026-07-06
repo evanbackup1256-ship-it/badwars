@@ -6407,21 +6407,6 @@ function d.CreateGUI(aa)
     ad.FontFace = o.FontBold
     ad.Parent = ac
 
-    local ae = Instance.new("TextLabel")
-    ae.Name = "V4Logo"
-    ae.Size = UDim2.fromOffset(34, 16)
-    ae.Position = UDim2.fromOffset(78, 4)
-    ae.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-    ae.BackgroundTransparency = 0.08
-    ae.BorderSizePixel = 0
-    ae.Text = tostring(d.Version):match("^(%d+)") or "14"
-    ae.TextColor3 = o.Main
-    ae.TextSize = 10
-    ae.FontFace = o.FontBold
-    ae.Parent = ad
-    addCorner(ae, UDim.new(1, 0))
-    addStroke(ae, o.TextStrong, 0.82, 1, "VersionStroke")
-
     local brandSub = Instance.new("TextLabel")
     brandSub.Name = "BrandSub"
     brandSub.Size = UDim2.fromOffset(120, 10)
@@ -6694,21 +6679,6 @@ function d.CreateGUI(aa)
     an.Image = u("badscript/assets/new/back.png")
     an.ImageColor3 = m.Light(o.Main, 0.37)
     an.Parent = ak
-    local ao = Instance.new("TextLabel")
-    ao.Name = "Version"
-    ao.Size = UDim2.new(1, 0, 0, 16)
-    ao.Position = UDim2.new(0, 0, 1, -16)
-    ao.BackgroundTransparency = 1
-    ao.Text = "BadWars "
-        .. d.Version
-        .. " "
-        .. (D("badscript/profiles/commit.txt") and readfile("badscript/profiles/commit.txt"):sub(1, 6) or "")
-        .. " "
-    ao.TextColor3 = m.Dark(o.Text, 0.43)
-    ao.TextXAlignment = Enum.TextXAlignment.Right
-    ao.TextSize = 10
-    ao.FontFace = o.Font
-    ao.Parent = ak
     addCorner(ak, o.RadiusLarge)
     addStroke(ak, o.Border, 0.32, 1)
     local ap = Instance.new("ScrollingFrame")
@@ -15693,6 +15663,8 @@ a2.VerticalAlignment = Enum.VerticalAlignment.Top
 a2.SortOrder = Enum.SortOrder.LayoutOrder
 a2.Parent = a1
 
+do
+local function createTargetInfo()
 local a3
 local a4
 local a5
@@ -15887,11 +15859,11 @@ a5 = a4:CreateColorSlider({
     Visible = false,
 })
 
+local bm = 0
+local bn = 0
 a3 = {
     Targets = {},
     Object = a6,
-    LastHealth = 0,
-    LastMaxHealth = 0,
     UpdateInfo = function(I)
         local J = d.Libraries
         if not J then
@@ -15924,7 +15896,7 @@ a3 = {
                 L.MaxHealth = L.MaxHealth or 100
             end
 
-            if L.Health ~= I.LastHealth or L.MaxHealth ~= I.LastMaxHealth then
+            if L.Health ~= bm or L.MaxHealth ~= bn then
                 local M = math.max(L.Health / L.MaxHealth, 0)
                 n:Tween(be, TweenInfo.new(0.3), {
                     Size = UDim2.fromScale(math.min(M, 1), 1),
@@ -15933,15 +15905,15 @@ a3 = {
                 n:Tween(bf, TweenInfo.new(0.3), {
                     Size = UDim2.fromScale(math.clamp(M - 1, 0, 0.8), 1),
                 })
-                if I.LastHealth > L.Health and I.LastTarget == L then
+                if bm > L.Health and I.LastTarget == L then
                     n:Cancel(a9)
                     a9.BackgroundTransparency = 0.3
                     n:Tween(a9, TweenInfo.new(0.5), {
                         BackgroundTransparency = 1,
                     })
                 end
-                I.LastHealth = L.Health
-                I.LastMaxHealth = L.MaxHealth
+                bm = L.Health
+                bn = L.MaxHealth
             end
 
             if not L.Character then
@@ -15953,6 +15925,9 @@ a3 = {
     end,
 }
 d.Libraries.targetinfo = a3
+end
+createTargetInfo()
+end
 
 function d.UpdateTextGUI(I, J)
     if not J and not d.Loaded then

@@ -17321,6 +17321,11 @@ do
         return card
     end
 
+    d._FusionCreateNotificationV21 = createFusionNotification
+end
+
+do
+    local createFusionNotification = d._FusionCreateNotificationV21
     local previousNotification = d.CreateNotification
     function d.CreateNotification(api, titleText, bodyText, lifetime, kind)
         if not api.Notifications or not api.Notifications.Enabled then
@@ -17343,34 +17348,6 @@ do
             end
         end)
     end
-
-    local function applyFusionPolish(instance)
-        if typeof(instance) ~= "Instance" then
-            return
-        end
-        if instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox") then
-            stabilizeTextLabel(instance)
-            stretchGuiObject(instance)
-        end
-        if instance:IsA("TextButton") or instance:IsA("ImageButton") then
-            normalizeButton(instance)
-        end
-        if instance:IsA("GuiObject") then
-            normalizeMetricWidget(instance)
-        end
-    end
-
-    task.defer(function()
-        if not B or not B.Parent then
-            return
-        end
-        for _, descendant in ipairs(B:GetDescendants()) do
-            applyFusionPolish(descendant)
-        end
-        addRuntimeCleanup(B.DescendantAdded:Connect(function(descendant)
-            task.defer(applyFusionPolish, descendant)
-        end))
-    end)
 end
 -- BADWARS_FUSION_DESIGN_RUNTIME_V21_END
 

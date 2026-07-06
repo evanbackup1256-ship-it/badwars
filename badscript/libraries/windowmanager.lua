@@ -1,10 +1,15 @@
--- BADWARS_WINDOW_MANAGER_V19_2
+-- BADWARS_WINDOW_MANAGER_V20_NEVERMORE
 -- Adaptive, low-overhead window manager for drag, resize, focus and persistence.
+
+shared = type(shared) == "table" and shared or {}
+local Nevermore = assert(shared.BadWarsNevermore, "Nevermore runtime is required")
+local Maid = assert(Nevermore.Maid, "Nevermore Maid is required")
+local Signal = assert(Nevermore.Signal, "Nevermore Signal is required")
 
 local WindowManager = {}
 WindowManager.__index = WindowManager
 
-local LAYOUT_VERSION = 2
+local LAYOUT_VERSION = 3
 
 local function disconnect(connection)
     if connection then
@@ -97,7 +102,7 @@ function WindowManager.new(config)
         local camera = workspace.CurrentCamera
         return camera and camera.ViewportSize or Vector2.new(1280, 720)
     end
-    self.PersistencePath = config.PersistencePath or "badscript/profiles/ui-layout-v19.2.json"
+    self.PersistencePath = config.PersistencePath or "badscript/profiles/ui-layout-v20.json"
     self.LegacyPersistencePaths = type(config.LegacyPersistencePaths) == "table" and config.LegacyPersistencePaths or {}
     self.TouchEnabled = config.TouchEnabled == true
     self.Accent = typeof(config.Accent) == "Color3" and config.Accent or Color3.fromRGB(72, 214, 170)
@@ -110,6 +115,17 @@ function WindowManager.new(config)
     self.ViewportConnection = nil
     self.FocusCounter = 0
     self.Destroyed = false
+    self.Maid = Maid.new()
+    self.WindowRegistered = Signal.new()
+    self.WindowResized = Signal.new()
+    self.WindowFocused = Signal.new()
+    self.WindowRemoved = Signal.new()
+    self.LayoutSaved = Signal.new()
+    self.Maid:GiveTask(self.WindowRegistered)
+    self.Maid:GiveTask(self.WindowResized)
+    self.Maid:GiveTask(self.WindowFocused)
+    self.Maid:GiveTask(self.WindowRemoved)
+    self.Maid:GiveTask(self.LayoutSaved)
 
     local loaded = readJson(self.PersistencePath, self.HttpService)
     if not loaded then
@@ -233,6 +249,7 @@ function WindowManager:_queueReflow(entry, final)
         if isFinal and type(entry.Options.OnResizeEnd) == "function" then
             pcall(entry.Options.OnResizeEnd, entry.Object, entry)
         end
+        self.WindowResized:Fire(entry.Id, entry.Object, isFinal, entry)
     end)
 end
 
@@ -322,6 +339,7 @@ function WindowManager:QueueSave()
                 makefolder("badscript/profiles")
             end
             writefile(self.PersistencePath, self.HttpService:JSONEncode(self.Layout))
+            self.LayoutSaved:Fire(self.PersistencePath, self.Layout)
         end)
     end)
 end
@@ -403,14 +421,14 @@ function WindowManager:_makeGrip(entry)
     entry.GripStroke = visualStroke
 
     if not self.TouchEnabled then
-        entry.Connections[#entry.Connections + 1] = button.MouseEnter:Connect(function()
+        entry.Maid:GiveTask(button.MouseEnter:Connect(function()
             entry.Hovered = true
             self:_setHandleState(entry, entry.Resizing)
-        end)
-        entry.Connections[#entry.Connections + 1] = button.MouseLeave:Connect(function()
+        end))
+        entry.Maid:GiveTask(button.MouseLeave:Connect(function()
             entry.Hovered = false
             self:_setHandleState(entry, entry.Resizing)
-        end)
+        end))
     end
     return button
 end
@@ -554,7 +572,7 @@ function WindowManager:Register(id, object, options)
         Options = options,
         LockSize = options.LockSize == true,
         LockPosition = options.LockPosition == true,
-        Connections = {},
+        Maid = Maid.new(),
         Destroyed = false,
         BaseZIndex = object.ZIndex,
     }
@@ -569,28 +587,28 @@ function WindowManager:Register(id, object, options)
     entry.Right = right
     entry.Bottom = bottom
 
-    entry.Connections[#entry.Connections + 1] = grip.InputBegan:Connect(function(input)
+    entry.Maid:GiveTask(grip.InputBegan:Connect(function(input)
         self:_beginResize(entry, input, "corner")
-    end)
+    end))
     if right then
-        entry.Connections[#entry.Connections + 1] = right.InputBegan:Connect(function(input)
+        entry.Maid:GiveTask(right.InputBegan:Connect(function(input)
             self:_beginResize(entry, input, "right")
-        end)
+        end))
     end
     if bottom then
-        entry.Connections[#entry.Connections + 1] = bottom.InputBegan:Connect(function(input)
+        entry.Maid:GiveTask(bottom.InputBegan:Connect(function(input)
             self:_beginResize(entry, input, "bottom")
-        end)
+        end))
     end
-    entry.Connections[#entry.Connections + 1] = object.InputBegan:Connect(function(input)
+    entry.Maid:GiveTask(object.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             self:BringToFront(id)
         end
-    end)
-    entry.Connections[#entry.Connections + 1] = object.Destroying:Once(function()
+    end))
+    entry.Maid:GiveTask(object.Destroying:Once(function()
         self:Unregister(id)
-    end)
-    entry.Connections[#entry.Connections + 1] = object:GetPropertyChangedSignal("Visible"):Connect(function()
+    end))
+    entry.Maid:GiveTask(object:GetPropertyChangedSignal("Visible"):Connect(function()
         if object.Visible then
             task.defer(function()
                 if not entry.Destroyed and object.Parent then
@@ -599,11 +617,12 @@ function WindowManager:Register(id, object, options)
                 end
             end)
         end
-    end)
+    end))
 
     task.defer(function()
         if not entry.Destroyed and object.Parent then
             self:_restore(entry)
+            self.WindowRegistered:Fire(id, object, entry)
         end
     end)
     return entry
@@ -622,6 +641,7 @@ function WindowManager:BringToFront(id)
             other.Object:SetAttribute("BadWarsFocused", false)
         end
     end
+    self.WindowFocused:Fire(id, entry.Object, entry)
 end
 
 function WindowManager:Clamp(id, shouldSave)
@@ -758,10 +778,9 @@ function WindowManager:Unregister(id)
     end
     entry.Destroyed = true
     self:_stop(entry, false)
-    for _, connection in ipairs(entry.Connections) do
-        disconnect(connection)
+    if entry.Maid then
+        entry.Maid:DoCleaning()
     end
-    table.clear(entry.Connections)
     for _, handle in ipairs({ entry.Grip, entry.Right, entry.Bottom }) do
         if handle and handle.Parent then
             handle:Destroy()
@@ -769,6 +788,7 @@ function WindowManager:Unregister(id)
     end
     self.Entries[id] = nil
     self.Windows[id] = nil
+    self.WindowRemoved:Fire(id)
 end
 
 function WindowManager:Destroy()
@@ -785,6 +805,9 @@ function WindowManager:Destroy()
     end
     for _, id in ipairs(ids) do
         self:Unregister(id)
+    end
+    if self.Maid then
+        self.Maid:DoCleaning()
     end
 end
 

@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Loader v19.2 Massive Overhaul
+-- BadWars Loader v20.0 Nevermore Foundation
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -710,6 +710,56 @@ local _loadstring
 pcall(function()local g=getgenv;if type(g)=='function'then g=g()end;_loadstring=(g and g.loadstring)or loadstring end)
 if type(_loadstring)~='function' then local m='loadstring unavailable';setStatus('ERROR: '..m,true);error(m,0) end
 
+
+-- BADWARS_NEVERMORE_BOOTSTRAP_BEGIN
+local function loadNevermoreRuntime()
+    if type(shared.BadWarsNevermore) == 'table' and shared.BadWarsNevermore.Ready == true then
+        return shared.BadWarsNevermore
+    end
+    local path = 'badscript/libraries/nevermore/NevermoreRuntime.lua'
+    local source
+    if type(isfile) == 'function' and type(readfile) == 'function' then
+        local ok, exists = pcall(isfile, path)
+        if ok and exists then
+            local readOk, body = pcall(readfile, path)
+            if readOk and type(body) == 'string' and body:find('BADWARS_NEVERMORE_RUNTIME_V20', 1, true) then source = body end
+        end
+    end
+    if not source then
+        for _, url in ipairs({
+            'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/'..path,
+            'https://github.com/evanbackup1256-ship-it/badwars/raw/main/'..path,
+        }) do
+            local ok, body = pcall(function()
+                local fn = game and game.HttpGet
+                if type(fn) == 'function' then return fn(game, url, true) end
+                return cloneref(game:GetService('HttpService')):GetAsync(url, true)
+            end)
+            if ok and type(body) == 'string' and body ~= '' and body ~= '404: Not Found' then
+                source = body
+                break
+            end
+        end
+    end
+    if type(source) ~= 'string' or source == '' then
+        error('Unable to load NevermoreRuntime.lua', 0)
+    end
+    local chunk, compileError = _loadstring(source, '@'..path)
+    if not chunk then error('NevermoreRuntime compile: '..tostring(compileError), 0) end
+    local ok, runtime = xpcall(chunk, function(err)
+        return debug and debug.traceback and debug.traceback(tostring(err), 2) or tostring(err)
+    end)
+    if not ok then error('NevermoreRuntime runtime: '..tostring(runtime), 0) end
+    assert(type(runtime) == 'table' and runtime.Ready == true, 'NevermoreRuntime returned an invalid API')
+    return runtime
+end
+local Nevermore = loadNevermoreRuntime()
+if type(shared.BadDiagnostics) == 'table' and type(shared.BadDiagnostics.AttachNevermore) == 'function' then
+    pcall(shared.BadDiagnostics.AttachNevermore, shared.BadDiagnostics, Nevermore)
+end
+setStatus('pipeline: Nevermore foundation ready')
+-- BADWARS_NEVERMORE_BOOTSTRAP_END
+
 -- Roblox update watch integration
 local function watchRobloxUpdates()
   local token={}
@@ -720,12 +770,12 @@ local function watchRobloxUpdates()
     while shared.__badwars_update_watch==token do
       task.wait(300)
       if shared.__badwars_update_watch~=token then return end
-      local ok,res=pcall(function()
+      local requestPromise=Nevermore.AsyncService:Try(function()
         local api='https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/profiles/roblox-version.txt'
         local httpService=cloneref(game:GetService('HttpService'))
-        local body=httpService:GetAsync(api,true)
-        return body
+        return httpService:GetAsync(api,true)
       end)
+      local ok,res=requestPromise:Yield()
       if ok and type(res)=='string' and #res>0 then
         local success,currentVersion=pcall(function()
           return cloneref(game:GetService('HttpService')):JSONDecode(res or '{}')
@@ -741,6 +791,9 @@ local function watchRobloxUpdates()
   end)
 end
 watchRobloxUpdates()
+Nevermore.Lifecycle.Maid.BadWarsUpdateWatch = function()
+  if shared.__badwars_update_watch then shared.__badwars_update_watch=nil end
+end
 shared.BadWarsStatusApi={status='ok'}
 
 -- Cache setup
@@ -751,12 +804,12 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v19.2-massive-overhaul-2026-07-06-01'
+local cacheVersion = 'badwars-v20-nevermore-foundation-2026-07-06-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents)=='string'
-		and contents:find('Version%s*=%s*"19%.2"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%.2%-MASSIVE%-OVERHAUL"') ~= nil
+		and contents:find('Version%s*=%s*"20%.0"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V20%-NEVERMORE%-FOUNDATION"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath='badscript/guis/new/gui.lua'
@@ -773,7 +826,7 @@ end
 if (isfile(cacheFile) and readfile(cacheFile) or '') ~= cacheVersion then
 	setStatus('cache cleared (version mismatch)')
 	for _,f in {'badscript/main.lua','badscript/NewMainScript.lua'} do if isfile(f) then delfile(f) end end
-	wipeAny('badscript/assets');wipeGen('badscript/games');wipeGen('badscript/guis');wipeGen('badscript/libraries')
+	wipeAny('badscript/assets');wipeGen('badscript/games');wipeGen('badscript/guis');for _,f in {'badscript/libraries/spr.lua','badscript/libraries/spr.LICENSE.txt'} do if isfile(f) and __nativeDelfile then pcall(delfile,f) end end
 	writefile(cacheFile,cacheVersion)
 end
 invalidateStaleGuiCache()

@@ -32,8 +32,14 @@ $newGui = Read-ProjectFile "badscript\guis\new\gui.lua"
 $bedwarsBase = Read-ProjectFile "badscript\games\bedwars\6872274481 - game\base.lua"
 $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
-$sprLib = Read-ProjectFile "badscript\libraries\spr.lua"
-$sprLicense = Read-ProjectFile "badscript\libraries\spr.LICENSE.txt"
+$nevermoreRuntime = Read-ProjectFile "badscript\libraries\nevermore\NevermoreRuntime.lua"
+$nevermoreMaid = Read-ProjectFile "badscript\libraries\nevermore\Maid.lua"
+$nevermoreSignal = Read-ProjectFile "badscript\libraries\nevermore\Signal.lua"
+$nevermorePromise = Read-ProjectFile "badscript\libraries\nevermore\Promise.lua"
+$nevermoreSpring = Read-ProjectFile "badscript\libraries\nevermore\Spring.lua"
+$nevermoreServiceBag = Read-ProjectFile "badscript\libraries\nevermore\ServiceBag.lua"
+$nevermoreMotion = Read-ProjectFile "badscript\libraries\nevermore\Motion.lua"
+$nevermoreLicense = Read-ProjectFile "badscript\libraries\nevermore\NEVERMORE_MIT_LICENSE.md"
 $windowManager = Read-ProjectFile "badscript\libraries\windowmanager.lua"
 $diagnostics = Read-ProjectFile "badscript\libraries\diagnostics.lua"
 $phaseModule = Read-ProjectFile "badscript\games\universal - base\Blatant\Phase.lua"
@@ -62,45 +68,52 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"19\.2"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.06-V19\.2-MASSIVE-OVERHAUL"' -and
-    $newGui -match 'BADWARS_UI_V19_2_MASSIVE_OVERHAUL' -and
-    $main -match "BadWars Main v19\.2" -and
-    $loader -match "BadWars Loader v19\.2" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"19\.2"'
+    $newGui -match 'Version\s*=\s*"20\.0"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.06-V20-NEVERMORE-FOUNDATION"' -and
+    $newGui -match 'BADWARS_UI_V20_NEVERMORE_FOUNDATION' -and
+    $main -match 'BadWars Main v20\.0' -and
+    $loader -match 'BadWars Loader v20\.0' -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"20\.0"'
 ) {
-    Pass "V19.2 runtime versions are synchronized"
+    Pass "V20 runtime versions are synchronized"
 } else {
-    Fail "V19.2 runtime versions are not synchronized"
+    Fail "V20 runtime versions are not synchronized"
+}
+
+if (
+    $nevermoreRuntime -match 'BADWARS_NEVERMORE_RUNTIME_V20' -and
+    $nevermoreRuntime -match 'ServiceBag\.new' -and
+    $nevermoreMaid -match 'Maid\.new' -and
+    $nevermoreSignal -match 'Signal\.new' -and
+    $nevermorePromise -match 'Promise\.spawn' -and
+    $nevermoreSpring -match 'Spring\.new' -and
+    $nevermoreServiceBag -match 'ServiceBag\.new' -and
+    $nevermoreMotion -match 'function Motion\.target' -and
+    $nevermoreMotion -match 'function Motion\.stop' -and
+    $nevermoreLicense -match 'MIT License' -and
+    $loader -match 'BADWARS_NEVERMORE_BOOTSTRAP_BEGIN' -and
+    $newMain -match 'BADWARS_NEVERMORE_BOOTSTRAP_BEGIN' -and
+    $main -match 'shared\.BadWarsNevermore' -and
+    $newGui -match 'MotionLibrary\s*=\s*Nevermore\.Motion' -and
+    $newGui -match 'local Maid = Nevermore\.Maid' -and
+    $diagnostics -match 'function Diagnostics:AttachNevermore' -and
+    $windowManager -match 'local Maid = assert\(Nevermore\.Maid' -and
+    $windowManager -match 'local Signal = assert\(Nevermore\.Signal'
+) {
+    Pass "Nevermore Maid, Signal, Promise, Spring, ServiceBag, and motion integration is active"
+} else {
+    Fail "Nevermore foundation integration is incomplete"
 }
 
 
-if (
-    $sprLib -match 'Spring-driven motion library' -and
-    $sprLib -match 'function spr\.target' -and
-    $sprLib -match 'function spr\.stop' -and
-    $sprLicense -match 'MIT License' -and
-    $sprLicense -match 'Copyright \(c\) 2023 Fractality' -and
-    $main -match 'badscript/libraries/spr\.lua' -and
-    $main -match 'shared\.BadWarsSpr' -and
-    $newGui -match 'MotionLibrary\s*=\s*shared\.BadWarsSpr' -and
-    $newGui -match 'function n\.Spring' -and
-    $newGui -match 'n:Spring\('
-) {
-    Pass "Public spr motion library is vendored and integrated"
-} else {
-    Fail "Public spr motion integration is incomplete"
-}
-
-
 
 if (
-    $windowManager -match 'BADWARS_WINDOW_MANAGER_V19_2' -and
+    $windowManager -match 'BADWARS_WINDOW_MANAGER_V20_NEVERMORE' -and
     $windowManager -match 'function WindowManager:Register' -and
     $windowManager -match 'function WindowManager:ResetAll' -and
     $main -match 'badscript/libraries/windowmanager\.lua' -and
     $main -match 'shared\.BadWarsWindowManagerClass' -and
-    $newGui -match 'BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_2_BEGIN' -and
+    $newGui -match 'BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V20_NEVERMORE_BEGIN' -and
     $newGui -match 'function d\.RegisterSmartWindow' -and
     $newGui -match 'Name = "Reset UI workspace"' -and
     $newGui -match 'Name = "Reset window sizes"' -and
@@ -118,12 +131,12 @@ if (
     $newGui -match 'ResizeThread\s*=\s*nil' -and
     $newGui -match 'ScrollingEnabled\s*=\s*true' -and
     $newGui -match 'function ai\.RefreshScroll' -and
-    $diagnostics -match 'BADWARS_DIAGNOSTICS_V19_2_MASSIVE_OVERHAUL' -and
+    $diagnostics -match 'BADWARS_DIAGNOSTICS_V20_NEVERMORE' -and
     $diagnostics -notmatch 'local openerDot'
 ) {
-    Pass "V19.2 adaptive workspace and stability repairs are present"
+    Pass "V20 Nevermore adaptive workspace and stability repairs are present"
 } else {
-    Fail "V19.2 adaptive workspace or stability repairs are incomplete"
+    Fail "V20 Nevermore adaptive workspace or stability repairs are incomplete"
 }
 
 

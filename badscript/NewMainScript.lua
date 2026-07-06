@@ -152,6 +152,49 @@ queue_on_teleport = queue_on_teleport or function() end
 
 local g = getgenv; if type(g) == 'function' then g = g() end; local _loadstring = (g and g.loadstring) or loadstring or function(s) error("loadstring not available in executor") end
 
+
+-- BADWARS_NEVERMORE_BOOTSTRAP_BEGIN
+local function loadNevermoreRuntime()
+    if type(shared.BadWarsNevermore) == 'table' and shared.BadWarsNevermore.Ready == true then
+        return shared.BadWarsNevermore
+    end
+    local path = 'badscript/libraries/nevermore/NevermoreRuntime.lua'
+    local source
+    if type(isfile) == 'function' and type(readfile) == 'function' then
+        local ok, exists = pcall(isfile, path)
+        if ok and exists then
+            local readOk, body = pcall(readfile, path)
+            if readOk and type(body) == 'string' and body:find('BADWARS_NEVERMORE_RUNTIME_V20', 1, true) then source = body end
+        end
+    end
+    if not source then
+        for _, url in ipairs({
+            'https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/'..path,
+            'https://github.com/evanbackup1256-ship-it/badwars/raw/main/'..path,
+        }) do
+            local ok, body = pcall(safeHttpGet, game, url, true)
+            if ok and type(body) == 'string' and body ~= '' and body ~= '404: Not Found' then
+                source = body
+                break
+            end
+        end
+    end
+    assert(type(source) == 'string' and source ~= '', 'Unable to load NevermoreRuntime.lua')
+    local chunk, compileError = _loadstring(source, '@'..path)
+    assert(chunk, compileError)
+    local ok, runtime = xpcall(chunk, function(err)
+        return debug and debug.traceback and debug.traceback(tostring(err), 2) or tostring(err)
+    end)
+    assert(ok, runtime)
+    assert(type(runtime) == 'table' and runtime.Ready == true, 'NevermoreRuntime returned invalid API')
+    return runtime
+end
+local Nevermore = loadNevermoreRuntime()
+if type(shared.BadDiagnostics) == 'table' and type(shared.BadDiagnostics.AttachNevermore) == 'function' then
+    pcall(shared.BadDiagnostics.AttachNevermore, shared.BadDiagnostics, Nevermore)
+end
+-- BADWARS_NEVERMORE_BOOTSTRAP_END
+
 -- BADWARS_EARLY_LOADER_PRESENTATION_V3_BEGIN
 local function createStatusLabel()
     local tweenService = cloneref(game:GetService("TweenService"))
@@ -441,12 +484,12 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-v19.2-massive-overhaul-2026-07-06-01'
+local cacheVersion = 'badwars-v20-nevermore-foundation-2026-07-06-01'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents) == 'string'
-		and contents:find('Version%s*=%s*"19%.2"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%.2%-MASSIVE%-OVERHAUL"') ~= nil
+		and contents:find('Version%s*=%s*"20%.0"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V20%-NEVERMORE%-FOUNDATION"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath = 'badscript/guis/new/gui.lua'
@@ -470,7 +513,7 @@ if (isfile(cacheVersionPath) and readfile(cacheVersionPath) or '') ~= cacheVersi
 	wipeAnyFolder('badscript/assets')
 	wipeFolder('badscript/games')
 	wipeFolder('badscript/guis')
-	wipeFolder('badscript/libraries')
+	for _,file in {'badscript/libraries/spr.lua','badscript/libraries/spr.LICENSE.txt'} do if isfile(file) then pcall(delfile,file) end end
 	writefile(cacheVersionPath, cacheVersion)
 end
 invalidateStaleGuiCache()
@@ -485,7 +528,7 @@ if not shared.BadDeveloper then
 	if commit == 'main' or (isfile('badscript/profiles/commit.txt') and readfile('badscript/profiles/commit.txt') or '') ~= commit then
 		wipeFolder('badscript/games')
 		wipeFolder('badscript/guis')
-		wipeFolder('badscript/libraries')
+		for _,file in {'badscript/libraries/spr.lua','badscript/libraries/spr.LICENSE.txt'} do if isfile(file) then pcall(delfile,file) end end
 	end
 	writefile('badscript/profiles/commit.txt', commit)
 end

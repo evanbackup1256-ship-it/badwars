@@ -122,10 +122,17 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Main v19.2 - Massive Overhaul UI pipeline
+-- BadWars Main v20.0 - Nevermore Foundation pipeline
 repeat
     task.wait()
 until game:IsLoaded()
+local Nevermore = shared.BadWarsNevermore
+assert(type(Nevermore) == "table" and Nevermore.Ready == true, "Nevermore foundation was not initialized by the loader")
+if type(shared.BadWarsMainMaid) == "table" and type(shared.BadWarsMainMaid.DoCleaning) == "function" then
+    pcall(shared.BadWarsMainMaid.DoCleaning, shared.BadWarsMainMaid)
+end
+local mainMaid = Nevermore.Maid.new()
+shared.BadWarsMainMaid = mainMaid
 if shared.Bad then
     pcall(function()
         shared.Bad:Uninject()
@@ -626,23 +633,18 @@ local function isStaleGuiCache(path, body)
         return true
     end
     return not (
-        body:find('Version%s*=%s*"19%.2"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%.2%-MASSIVE%-OVERHAUL"') ~= nil
+        body:find('Version%s*=%s*"20%.0"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V20%-NEVERMORE%-FOUNDATION"') ~= nil
     )
 end
 
-local function isStaleMotionCache(path, body)
-    if path ~= "badscript/libraries/spr.lua" then
+local function isStaleNevermoreCache(path, body)
+    if path ~= "badscript/libraries/nevermore/NevermoreRuntime.lua" then
         return false
     end
-    if type(body) ~= "string" or body == "" then
-        return true
-    end
-    return not (
-        body:find("Spring-driven motion library", 1, true) ~= nil
-        and body:find("function spr.target", 1, true) ~= nil
-        and body:find("function spr.stop", 1, true) ~= nil
-    )
+    return type(body) ~= "string"
+        or body == ""
+        or body:find("BADWARS_NEVERMORE_RUNTIME_V20", 1, true) == nil
 end
 
 local function isStaleWindowManagerCache(path, body)
@@ -652,7 +654,7 @@ local function isStaleWindowManagerCache(path, body)
     if type(body) ~= "string" or body == "" then
         return true
     end
-    return body:find("BADWARS_WINDOW_MANAGER_V19_2", 1, true) == nil
+    return body:find("BADWARS_WINDOW_MANAGER_V20_NEVERMORE", 1, true) == nil
         or body:find("function WindowManager:Register", 1, true) == nil
         or body:find("function WindowManager:ResetAll", 1, true) == nil
 end
@@ -662,7 +664,7 @@ local function downloadFile(path)
         return nil, "HttpGet nil"
     end
     local cached = isfile(path) and readfile(path)
-    if isStaleGuiCache(path, cached) or isStaleMotionCache(path, cached) or isStaleWindowManagerCache(path, cached) then
+    if isStaleGuiCache(path, cached) or isStaleNevermoreCache(path, cached) or isStaleWindowManagerCache(path, cached) then
         pcall(function()
             if isfile(path) then
                 delfile(path)
@@ -1565,35 +1567,11 @@ setStatus("loading interface")
 installBadWarsLoaderShim()
 
 do
-    local existing = shared.BadWarsSpr
-    local valid = type(existing) == "table"
-        and type(existing.target) == "function"
-        and type(existing.stop) == "function"
-
-    if not valid then
-        local source, sourceErr = downloadFile("badscript/libraries/spr.lua")
-        if type(source) == "string" and source ~= "" then
-            local motionFn, compileErr = _loadstring(source, "badwars-spr")
-            if motionFn then
-                local ok, library = pcall(motionFn)
-                if ok
-                    and type(library) == "table"
-                    and type(library.target) == "function"
-                    and type(library.stop) == "function"
-                then
-                    shared.BadWarsSpr = library
-                else
-                    mwarn("BadWars: spr motion library runtime fallback: " .. safeStr(library))
-                end
-            else
-                mwarn("BadWars: spr motion library compile fallback: " .. safeStr(compileErr))
-            end
-        else
-            mwarn("BadWars: spr motion library unavailable; using TweenService fallback: " .. safeStr(sourceErr))
-        end
-    end
+    local runtime = shared.BadWarsNevermore
+    assert(type(runtime) == "table" and runtime.Ready == true, "Nevermore runtime missing before GUI load")
+    assert(type(runtime.Motion) == "table" and type(runtime.Motion.target) == "function", "Nevermore motion service is invalid")
+    shared.BadWarsSpr = runtime.Motion -- compatibility for older internal call sites
 end
-
 
 do
     local existing = shared.BadWarsWindowManagerClass
@@ -1653,6 +1631,16 @@ if type(api.CreateNotification) ~= "function" then
 end
 shared.Bad = api
 local Bad = api
+if type(api.Uninject) == "function" then
+    local originalUninject = api.Uninject
+    api.Uninject = function(self, ...)
+        if shared.BadWarsMainMaid == mainMaid then
+            shared.BadWarsMainMaid = nil
+        end
+        mainMaid:DoCleaning()
+        return originalUninject(self, ...)
+    end
+end
 ensureRuntimeCategories(api)
 logMod("GUI", gui, os_clock() - guiStart, true)
 setStatus("interface ready")

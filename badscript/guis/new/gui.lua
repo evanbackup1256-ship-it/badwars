@@ -1,4 +1,4 @@
--- BADWARS_UI_V19_2_MASSIVE_OVERHAUL
+-- BADWARS_UI_V20_NEVERMORE_FOUNDATION
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -129,6 +129,11 @@ end
 -- BadWars Obsidian UI | adaptive, interruptible, low-overhead
 local a = shared.BadWarsLoader
 assert(a ~= nil and type(a) == "table", "[BadWars GUI]: BadWarsLoader is invalid :c")
+local Nevermore = shared.BadWarsNevermore
+assert(type(Nevermore) == "table" and Nevermore.Ready == true, "[BadWars GUI]: Nevermore runtime is unavailable")
+local Maid = Nevermore.Maid
+local Signal = Nevermore.Signal
+local Promise = Nevermore.Promise
 local __guiwarn = warn
 local GUI_VERBOSE_LOGS = false
 local function bwarn(...)
@@ -165,8 +170,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "19.2",
-    PremiumBuild = "2026.07.06-V19.2-MASSIVE-OVERHAUL",
+    Version = "20.0",
+    PremiumBuild = "2026.07.06-V20-NEVERMORE-FOUNDATION",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -174,7 +179,9 @@ local d = {
     _SuppressEntryAnimation = true,
     ProfilesEnabled = false,
     TutorialEnabled = false,
-    MotionLibrary = shared.BadWarsSpr,
+    MotionLibrary = Nevermore.Motion,
+    Nevermore = Nevermore,
+    Promise = Promise,
 }
 d.DefaultColor = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
 for e, f in
@@ -328,7 +335,7 @@ local UI_MODULE_ROW_HEIGHT = d.isMobile and 52 or 46
 local UI_NAV_ROW_HEIGHT = d.isMobile and 50 or 44
 local UI_WINDOW_GAP = d.isMobile and 10 or 14
 
--- V19.2 uses one responsive token model instead of scattered window constants.
+-- V20 keeps one responsive token model and routes lifecycle/motion through Nevermore.
 d.LayoutTokens = {
     MainMin = d.isMobile and Vector2.new(264, 332) or Vector2.new(286, 350),
     MainMax = Vector2.new(720, 880),
@@ -385,82 +392,20 @@ local function loopClean(p, q)
 end
 
 local function addMaid(p)
-    p.Connections = {}
-    p._maidSeen = setmetatable({}, { __mode = "k" })
-    p._maidCleaning = false
-
-    local function createCleanupHandle(resource)
-        local cleaned = false
-        return {
-            Disconnect = function()
-                if cleaned then
-                    return
-                end
-                cleaned = true
-
-                local resourceType = typeof(resource)
-                if resourceType == "RBXScriptConnection" then
-                    if resource.Connected then
-                        resource:Disconnect()
-                    end
-                elseif resourceType == "Instance" then
-                    resource:Destroy()
-                elseif resourceType == "thread" then
-                    pcall(task.cancel, resource)
-                elseif type(resource) == "function" then
-                    resource()
-                elseif type(resource) == "table" or type(resource) == "userdata" then
-                    local method = resource.Disconnect or resource.Destroy or resource.Cleanup or resource.Clean
-                    if type(method) == "function" then
-                        method(resource)
-                    end
-                end
-            end,
-        }
-    end
+    local maid = Maid.new()
+    p._NevermoreMaid = maid
+    p.Connections = maid._tasks
 
     function p.Clean(owner, resource)
         if resource == nil then
             return nil
         end
-
-        local resourceType = typeof(resource)
-        local supported = resourceType == "RBXScriptConnection"
-            or resourceType == "Instance"
-            or resourceType == "thread"
-            or type(resource) == "function"
-            or type(resource) == "table"
-            or type(resource) == "userdata"
-        if not supported then
-            return resource
-        end
-
-        if owner._maidSeen[resource] then
-            return resource
-        end
-        owner._maidSeen[resource] = true
-
-        table.insert(owner.Connections, createCleanupHandle(resource))
+        owner._NevermoreMaid:GiveTask(resource)
         return resource
     end
 
     function p.Cleanup(owner)
-        if owner._maidCleaning then
-            return
-        end
-        owner._maidCleaning = true
-
-        local handles = owner.Connections
-        owner.Connections = {}
-        for index = #handles, 1, -1 do
-            pcall(function()
-                handles[index]:Disconnect()
-            end)
-            handles[index] = nil
-        end
-
-        owner._maidSeen = setmetatable({}, { __mode = "k" })
-        owner._maidCleaning = false
+        owner._NevermoreMaid:DoCleaning()
     end
 end
 addMaid(d)
@@ -9286,60 +9231,42 @@ function d.CreateCategory(aa, ab)
                 )
             end
 
-            local callbackThread = coroutine.create(function()
+            local callbackPromise = Promise.spawn(function(resolve, reject)
                 local trace = debug and debug.traceback
                     or function(err)
                         return tostring(err)
                     end
-
                 local callbackOk, callbackError = xpcall(function()
                     an.Function(desiredState)
                 end, trace)
-
-                if not callbackOk then
-                    a:report({
-                        type = "module-toggle-callback",
-                        err = callbackError,
-                        args = { tostring(an.Name), desiredState },
-                    })
-
-                    if desiredState then
-                        pcall(function()
-                            d:CreateNotification(
-                                "Module Error",
-                                tostring(an.Name)
-                                    .. " failed to enable.",
-                                5,
-                                "alert"
-                            )
-                        end)
-
-                        task.defer(function()
-                            if
-                                N.Enabled == desiredState
-                                and N._ToggleSerial == toggleSerial
-                            then
-                                N:Toggle(true)
-                            end
-                        end)
-                    end
+                if callbackOk then
+                    resolve()
+                else
+                    reject(callbackError)
                 end
-
-                finishCallback()
             end)
+            d._NevermoreMaid:GivePromise(callbackPromise)
 
-            local started, startError =
-                coroutine.resume(callbackThread)
-
-            if not started then
+            callbackPromise:Then(function()
+                finishCallback()
+            end, function(callbackError)
                 finishCallback()
                 a:report({
-                    type = "module-toggle-start",
-                    err = startError,
+                    type = "module-toggle-callback",
+                    err = callbackError,
                     args = { tostring(an.Name), desiredState },
                 })
 
                 if desiredState then
+                    pcall(function()
+                        d:CreateNotification(
+                            "Module Error",
+                            tostring(an.Name) .. " failed to enable.",
+                            5,
+                            "alert"
+                        )
+                    end)
+
                     task.defer(function()
                         if
                             N.Enabled == desiredState
@@ -9349,7 +9276,7 @@ function d.CreateCategory(aa, ab)
                         end
                     end)
                 end
-            end
+            end)
         end
 
         for N, O in H do
@@ -14948,7 +14875,7 @@ d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
     end)
 end))
 
--- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_2_BEGIN
+-- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V20_NEVERMORE_BEGIN
 do
     local managerClass = shared.BadWarsWindowManagerClass
     if type(managerClass) == "table" and type(managerClass.new) == "function" then
@@ -14956,7 +14883,7 @@ do
             UserInputService = h,
             HttpService = l,
             TouchEnabled = d.isMobile,
-            PersistencePath = "badscript/profiles/ui-layout-v19.2.json",
+            PersistencePath = "badscript/profiles/ui-layout-v20.json",
             LegacyPersistencePaths = {
                 "badscript/profiles/ui-layout-v19.1.json",
                 "badscript/profiles/ui-layout.json",
@@ -15038,7 +14965,7 @@ do
         end
     end
 end
--- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_2_END
+-- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V20_NEVERMORE_END
 
 local cursorConnection
 local function stopCursorTracking()

@@ -1,4 +1,4 @@
--- BADWARS_DIAGNOSTICS_V19_2_MASSIVE_OVERHAUL
+-- BADWARS_DIAGNOSTICS_V20_NEVERMORE
 -- BadWars centralized runtime diagnostics
 -- Loaded before the normal loader whenever possible.
 
@@ -7,7 +7,7 @@ shared.__badwars_diagnostic_buffer = type(shared.__badwars_diagnostic_buffer) ==
     and shared.__badwars_diagnostic_buffer
     or {}
 
-local VERSION = "1.0.0"
+local VERSION = "2.0.0"
 local existing = shared.BadDiagnostics
 if type(existing) == "table" and existing.Version == VERSION and not existing.Destroyed then
     return existing
@@ -77,7 +77,37 @@ local Diagnostics = {
     _renderPending = false,
     _selectedId = nil,
     _ui = nil,
+    _maid = nil,
 }
+
+function Diagnostics:AttachNevermore(runtime)
+    if self._maid or type(runtime) ~= "table" or type(runtime.Maid) ~= "table" then
+        return self._maid
+    end
+    local maid = runtime.Maid.new()
+    for _, resource in ipairs(self.Connections) do
+        maid:GiveTask(resource)
+    end
+    table.clear(self.Connections)
+    self._maid = maid
+    return maid
+end
+
+function Diagnostics:_track(resource)
+    if resource == nil then
+        return nil
+    end
+    if self._maid then
+        self._maid:GiveTask(resource)
+    else
+        table.insert(self.Connections, resource)
+    end
+    return resource
+end
+
+if type(shared.BadWarsNevermore) == "table" then
+    Diagnostics:AttachNevermore(shared.BadWarsNevermore)
+end
 
 local LEVELS = {
     DEBUG = true,
@@ -598,7 +628,7 @@ function Diagnostics:EnsureUI()
             return false
         end
 
-        local motion = shared and shared.BadWarsSpr
+        local motion = shared and shared.BadWarsNevermore and shared.BadWarsNevermore.Motion or (shared and shared.BadWarsSpr)
         if type(motion) ~= "table"
             or type(motion.target) ~= "function"
             or type(motion.stop) ~= "function"
@@ -633,7 +663,7 @@ function Diagnostics:EnsureUI()
     gui.Parent = parent
 
     local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local layoutPath = "badscript/profiles/diagnostics-layout-v19.2.json"
+    local layoutPath = "badscript/profiles/diagnostics-layout-v20.json"
     local savedLayout
     pcall(function()
         if type(isfile) == "function" and type(readfile) == "function" then
@@ -1254,7 +1284,7 @@ function Diagnostics:EnsureUI()
             self:Toggle()
         end
     end)
-    table.insert(self.Connections, keyConnection)
+    self:_track(keyConnection)
 
     self:_scheduleRender()
     return self._ui
@@ -1590,7 +1620,7 @@ function Diagnostics:InstallNativeCapture()
 
     if connected then
         self._messageConnection = connection
-        table.insert(self.Connections, connection)
+        self:_track(connection)
         return true
     end
     return false
@@ -1646,12 +1676,17 @@ function Diagnostics:Destroy(reason)
         return
     end
     self.Destroyed = true
-    for _, connection in ipairs(self.Connections) do
-        pcall(function()
-            connection:Disconnect()
-        end)
+    if self._maid then
+        self._maid:DoCleaning()
+        self._maid = nil
+    else
+        for _, connection in ipairs(self.Connections) do
+            pcall(function()
+                connection:Disconnect()
+            end)
+        end
+        table.clear(self.Connections)
     end
-    table.clear(self.Connections)
     table.clear(self.Subscribers)
     if self._ui and self._ui.gui then
         pcall(function()

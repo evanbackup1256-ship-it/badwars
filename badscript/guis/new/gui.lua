@@ -5849,7 +5849,7 @@ H = {
                 return
             end
             dropdownPositionQueued = true
-            task.defer(function()
+            task.delay(0.03, function()
                 dropdownPositionQueued = false
                 refreshDropdownPosition()
             end)
@@ -8339,6 +8339,7 @@ end)
     end)
     local refreshingMainWindowSize = false
     local mainWindowRefreshQueued = false
+    local mainWindowRefreshPending = false
     local function refreshMainWindowSize()
         if refreshingMainWindowSize then
             mainWindowRefreshQueued = true
@@ -8346,84 +8347,103 @@ end)
         end
         refreshingMainWindowSize = true
 
-        if aa.ThreadFix then
-            setthreadidentity(8)
-        end
+        local ok, err = xpcall(function()
+            if aa.ThreadFix then
+                setthreadidentity(8)
+            end
 
-        local scale = math.max(A.Scale, 0.01)
-        local contentHeight = math.max(
-            0,
-            ag.AbsoluteContentSize.Y / scale
-        )
-        local viewportHeight = math.max(
-            180,
-            (B.AbsoluteSize.Y / scale) - 148
-        )
-        local visibleHeight = math.min(
-            contentHeight + 8,
-            viewportHeight
-        )
+            local scale = math.max(A.Scale, 0.01)
+            local contentHeight = math.max(
+                0,
+                ag.AbsoluteContentSize.Y / scale
+            )
+            local viewportHeight = math.max(
+                180,
+                (B.AbsoluteSize.Y / scale) - 148
+            )
+            local visibleHeight = math.min(
+                contentHeight + 8,
+                viewportHeight
+            )
 
-        local targetCanvasSize = UDim2.fromOffset(
-            0,
-            contentHeight + 8
-        )
-        if af.CanvasSize ~= targetCanvasSize then
-            af.CanvasSize = targetCanvasSize
-        end
+            local targetCanvasSize = UDim2.fromOffset(
+                0,
+                contentHeight + 8
+            )
+            if af.CanvasSize ~= targetCanvasSize then
+                af.CanvasSize = targetCanvasSize
+            end
 
-        local targetScrollerSize = UDim2.fromOffset(
-            UI_WINDOW_WIDTH,
-            math.max(100, visibleHeight)
-        )
-        if af.Size ~= targetScrollerSize then
-            af.Size = targetScrollerSize
-        end
+            local targetScrollerSize = UDim2.fromOffset(
+                UI_WINDOW_WIDTH,
+                math.max(100, visibleHeight)
+            )
+            if af.Size ~= targetScrollerSize then
+                af.Size = targetScrollerSize
+            end
 
-        local targetWindowSize = UDim2.fromOffset(
-            UI_WINDOW_WIDTH,
-            120 + math.max(100, visibleHeight)
-        )
-        if ac.Size ~= targetWindowSize then
-            ac.Size = targetWindowSize
-        end
+            local targetWindowSize = UDim2.fromOffset(
+                UI_WINDOW_WIDTH,
+                120 + math.max(100, visibleHeight)
+            )
+            if ac.Size ~= targetWindowSize then
+                ac.Size = targetWindowSize
+            end
 
-        local maxCanvasY = math.max(
-            0,
-            af.AbsoluteCanvasSize.Y - af.AbsoluteWindowSize.Y
-        )
-        local targetCanvasPosition = Vector2.new(
-            0,
-            math.clamp(af.CanvasPosition.Y, 0, maxCanvasY)
-        )
-        if af.CanvasPosition ~= targetCanvasPosition then
-            af.CanvasPosition = targetCanvasPosition
-        end
+            local maxCanvasY = math.max(
+                0,
+                af.AbsoluteCanvasSize.Y - af.AbsoluteWindowSize.Y
+            )
+            local targetCanvasPosition = Vector2.new(
+                0,
+                math.clamp(af.CanvasPosition.Y, 0, maxCanvasY)
+            )
+            if af.CanvasPosition ~= targetCanvasPosition then
+                af.CanvasPosition = targetCanvasPosition
+            end
 
-        for _, buttonApi in ab.Buttons do
-            if buttonApi.Icon then
-                local targetText =
-                    string.rep(" ", 36 * A.Scale)
-                    .. buttonApi.Name
-                if buttonApi.Object.Text ~= targetText then
-                    buttonApi.Object.Text = targetText
+            for _, buttonApi in ab.Buttons do
+                if buttonApi.Icon then
+                    local targetText =
+                        string.rep(" ", 36 * A.Scale)
+                        .. buttonApi.Name
+                    if buttonApi.Object.Text ~= targetText then
+                        buttonApi.Object.Text = targetText
+                    end
                 end
             end
-        end
+        end, function(refreshErr)
+            if debug and type(debug.traceback) == "function" then
+                return debug.traceback(tostring(refreshErr), 2)
+            end
+            return tostring(refreshErr)
+        end)
 
         refreshingMainWindowSize = false
+
+        if not ok then
+            a:report({
+                type = "gui-main-window-refresh",
+                err = err,
+                args = { tostring(ab and ab.Type or "Main") },
+                notifyBlacklisted = true,
+            })
+        end
+
         if mainWindowRefreshQueued then
             mainWindowRefreshQueued = false
-            task.defer(refreshMainWindowSize)
+            task.delay(0.03, refreshMainWindowSize)
         end
     end
 
     local function queueMainWindowSizeRefresh()
-        if mainWindowRefreshQueued then
+        mainWindowRefreshQueued = true
+        if mainWindowRefreshPending then
             return
         end
-        mainWindowRefreshQueued = true
-        task.defer(function()
+        mainWindowRefreshPending = true
+        task.delay(0.03, function()
+            mainWindowRefreshPending = false
             mainWindowRefreshQueued = false
             refreshMainWindowSize()
         end)

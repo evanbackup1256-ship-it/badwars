@@ -1,4 +1,4 @@
--- BADWARS_UI_V20_NEVERMORE_FOUNDATION
+-- BADWARS_UI_V19_3_NEVERMORE_STABILIZED
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -170,8 +170,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "20.0",
-    PremiumBuild = "2026.07.06-V20-NEVERMORE-FOUNDATION",
+    Version = "19.3",
+    PremiumBuild = "2026.07.06-V19.3-UI-STABILIZED",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -329,34 +329,35 @@ local o = {
     SpringSoft = { Damping = 0.98, Frequency = 19, Public = true },
 }
 
-local UI_WINDOW_WIDTH = d.isMobile and 276 or 304
-local UI_HEADER_HEIGHT = d.isMobile and 54 or 56
-local UI_MODULE_ROW_HEIGHT = d.isMobile and 52 or 46
-local UI_NAV_ROW_HEIGHT = d.isMobile and 50 or 44
-local UI_WINDOW_GAP = d.isMobile and 10 or 14
+-- BADWARS_COMPACT_DENSITY_TOKENS_V19_3_BEGIN
+local UI_WINDOW_WIDTH = d.isMobile and 268 or 286
+local CATEGORY_WINDOW_WIDTH = d.isMobile and 252 or 196
+local UI_HEADER_HEIGHT = d.isMobile and 46 or 40
+local UI_MODULE_ROW_HEIGHT = d.isMobile and 44 or 36
+local UI_NAV_ROW_HEIGHT = d.isMobile and 44 or 38
+local UI_WINDOW_GAP = d.isMobile and 8 or 8
 
--- V20 keeps one responsive token model and routes lifecycle/motion through Nevermore.
 d.LayoutTokens = {
-    MainMin = d.isMobile and Vector2.new(264, 332) or Vector2.new(286, 350),
-    MainMax = Vector2.new(720, 880),
-    CategoryMin = d.isMobile and Vector2.new(258, 216) or Vector2.new(282, 228),
-    CategoryMax = Vector2.new(760, 780),
-    ListMin = d.isMobile and Vector2.new(258, 244) or Vector2.new(284, 252),
-    ListMax = Vector2.new(760, 820),
-    LegitMin = d.isMobile and Vector2.new(340, 310) or Vector2.new(560, 350),
-    LegitMax = Vector2.new(1280, 880),
-    ContentInset = d.isMobile and 10 or 14,
-    ResizeMargin = d.isMobile and 5 or 9,
+    MainMin = d.isMobile and Vector2.new(252, 318) or Vector2.new(278, 330),
+    MainMax = d.isMobile and Vector2.new(360, 620) or Vector2.new(310, 470),
+    CategoryMin = d.isMobile and Vector2.new(238, 190) or Vector2.new(188, 180),
+    CategoryMax = d.isMobile and Vector2.new(340, 640) or Vector2.new(220, 660),
+    ListMin = d.isMobile and Vector2.new(238, 210) or Vector2.new(190, 210),
+    ListMax = d.isMobile and Vector2.new(360, 680) or Vector2.new(226, 690),
+    LegitMin = d.isMobile and Vector2.new(310, 286) or Vector2.new(350, 286),
+    LegitMax = d.isMobile and Vector2.new(720, 700) or Vector2.new(860, 700),
+    ContentInset = d.isMobile and 8 or 9,
+    ResizeMargin = d.isMobile and 5 or 6,
     HeaderHeight = UI_HEADER_HEIGHT,
     ModuleRowHeight = UI_MODULE_ROW_HEIGHT,
     NavRowHeight = UI_NAV_ROW_HEIGHT,
-    TouchTarget = d.isMobile and 44 or 34,
-    CompactBreakpoint = 330,
-    WideBreakpoint = 430,
-    DropdownMaxHeight = d.isMobile and 292 or 336,
-    ScrollBottomPadding = d.isMobile and 18 or 14,
+    TouchTarget = d.isMobile and 40 or 32,
+    CompactBreakpoint = 286,
+    WideBreakpoint = 370,
+    DropdownMaxHeight = d.isMobile and 260 or 280,
+    ScrollBottomPadding = d.isMobile and 12 or 9,
 }
-
+-- BADWARS_COMPACT_DENSITY_TOKENS_V19_3_END
 local function getTableSize(p)
     if type(p) ~= "table" then
         return 0
@@ -391,16 +392,71 @@ local function loopClean(p, q)
     end
 end
 
+-- BADWARS_MAID_CONTRACT_V19_3_BEGIN
 local function addMaid(p)
     local maid = Maid.new()
     p._NevermoreMaid = maid
     p.Connections = maid._tasks
 
+    local function cleanupMethod(resource)
+        if type(resource) ~= "table" and type(resource) ~= "userdata" then
+            return nil
+        end
+
+        return resource.Destroy
+            or resource.Disconnect
+            or resource.Cleanup
+            or resource.Clean
+    end
+
+    local function trackPlainWrapper(owner, resource)
+        local connection = resource.conn
+            or resource.Connection
+            or resource.connection
+
+        if typeof(connection) == "RBXScriptConnection" then
+            owner._NevermoreMaid:GiveTask(function()
+                if connection.Connected then
+                    connection:Disconnect()
+                end
+            end)
+            return
+        end
+
+        local thread = resource.thread or resource.Thread
+        if typeof(thread) == "thread" then
+            owner._NevermoreMaid:GiveTask(function()
+                pcall(task.cancel, thread)
+            end)
+        end
+    end
+
     function p.Clean(owner, resource)
         if resource == nil then
             return nil
         end
-        owner._NevermoreMaid:GiveTask(resource)
+
+        local resourceType = typeof(resource)
+        local luaType = type(resource)
+
+        if luaType == "table" or luaType == "userdata" then
+            local method = cleanupMethod(resource)
+            if type(method) == "function" then
+                owner._NevermoreMaid:GiveTask(resource)
+            else
+                trackPlainWrapper(owner, resource)
+            end
+            return resource
+        end
+
+        if resourceType == "RBXScriptConnection"
+            or resourceType == "Instance"
+            or resourceType == "thread"
+            or luaType == "function"
+        then
+            owner._NevermoreMaid:GiveTask(resource)
+        end
+
         return resource
     end
 
@@ -409,6 +465,7 @@ local function addMaid(p)
     end
 end
 addMaid(d)
+-- BADWARS_MAID_CONTRACT_V19_3_END
 
 local function loadJson(p, q)
     local r, s = pcall(function()
@@ -1328,7 +1385,7 @@ local function getTooltipPosition()
     local viewport =
         (B and B.AbsoluteSize or workspace.CurrentCamera.ViewportSize)
         / scale
-    local mouse = h:GetMouseLocation() / scale
+    local mouse = h:GetMouseLocation()
     local width = z.Size.X.Offset
     local height = z.Size.Y.Offset
     local padding = 10
@@ -1974,405 +2031,174 @@ setGuiAbsolutePosition = function(guiObject, absolutePosition)
 end
 
 
--- BADWARS_ADAPTIVE_LAYOUT_ENGINE_V1_BEGIN
+-- BADWARS_RESTRAINED_LAYOUT_ENGINE_V19_3_BEGIN
 local LayoutIntelligence = {
-    objects = setmetatable({}, { __mode = "k" }),
-    metadata = setmetatable({}, { __mode = "k" }),
-    activeObject = nil,
-    registrationCounter = 0,
-    dirty = false,
-    resolveQueued = false,
-    resolving = false,
-    started = false,
-    margin = d.isMobile and 6 or 8,
-    stepInterval = 0.12,
-    lastStep = 0,
+    Objects = setmetatable({}, { __mode = "k" }),
+    ActiveDragObject = nil,
+    Started = false,
+    ViewportGeneration = 0,
 }
-
-d.LayoutIntelligence = LayoutIntelligence
-d.LayoutAI = LayoutIntelligence
-
-local function layoutRect(position, size)
-    return {
-        X = position.X,
-        Y = position.Y,
-        Width = math.max(0, size.X),
-        Height = math.max(0, size.Y),
-    }
-end
-
-local function layoutRectsOverlap(left, right, margin)
-    margin = margin or 0
-    return left.X < right.X + right.Width + margin
-        and left.X + left.Width + margin > right.X
-        and left.Y < right.Y + right.Height + margin
-        and left.Y + left.Height + margin > right.Y
-end
 
 function LayoutIntelligence:_isVisible(object)
     return typeof(object) == "Instance"
         and object:IsA("GuiObject")
         and object.Parent ~= nil
         and object.Visible
-        and object.AbsoluteSize.X > 1
-        and object.AbsoluteSize.Y > 1
-        and isEffectivelyVisible(object)
 end
 
-function LayoutIntelligence:_visibleObjects(exclude)
-    local objects = {}
-
-    for object in pairs(self.objects) do
-        if object ~= exclude and self:_isVisible(object) and object:GetAttribute("AllowUIOverlap") ~= true then
-            objects[#objects + 1] = object
-        end
+function LayoutIntelligence:_clampObject(object)
+    if not self:_isVisible(object) then
+        return nil
     end
 
-    table.sort(objects, function(left, right)
-        local leftMeta = self.metadata[left]
-        local rightMeta = self.metadata[right]
-        return (leftMeta and leftMeta.Order or 0) < (rightMeta and rightMeta.Order or 0)
-    end)
+    local current = object.AbsolutePosition
+    local clamped = clampGuiObjectToViewport(object, current)
 
-    return objects
-end
-
-function LayoutIntelligence:_reservedRects()
-    local rects = {}
-
-    local function collect(folder)
-        if not folder or not folder.Parent then
-            return
-        end
-
-        for _, child in ipairs(folder:GetChildren()) do
-            if child:IsA("GuiObject") and child.Visible and child.AbsoluteSize.X > 1 and child.AbsoluteSize.Y > 1 then
-                rects[#rects + 1] = layoutRect(child.AbsolutePosition, child.AbsoluteSize)
-            end
-        end
+    if (clamped - current).Magnitude > 0.5 then
+        setGuiAbsolutePosition(object, clamped)
     end
 
-    collect(q)
-    collect(s)
-    return rects
-end
-
-function LayoutIntelligence:_blockerRects(exclude)
-    local rects = self:_reservedRects()
-
-    for _, object in ipairs(self:_visibleObjects(exclude)) do
-        rects[#rects + 1] = layoutRect(object.AbsolutePosition, object.AbsoluteSize)
-    end
-
-    return rects
-end
-
-function LayoutIntelligence:_positionIsFree(object, position, blockers)
-    local candidate = layoutRect(position, object.AbsoluteSize)
-
-    for _, blocker in ipairs(blockers) do
-        if layoutRectsOverlap(candidate, blocker, self.margin) then
-            return false
-        end
-    end
-
-    return true
-end
-
-function LayoutIntelligence:_addCandidate(candidates, seen, object, position)
-    local clamped = clampGuiObjectToViewport(object, position)
-    local key = tostring(math.floor(clamped.X + 0.5)) .. ":" .. tostring(math.floor(clamped.Y + 0.5))
-
-    if not seen[key] then
-        seen[key] = true
-        candidates[#candidates + 1] = clamped
-    end
-end
-
-function LayoutIntelligence:_findSafeAgainst(object, desired, blockers, maxRadius)
-    desired = clampGuiObjectToViewport(object, desired)
-    if self:_positionIsFree(object, desired, blockers) then
-        return desired, true
-    end
-
-    local size = object.AbsoluteSize
-    local candidates = {}
-    local seen = {}
-
-    self:_addCandidate(candidates, seen, object, desired)
-
-    for _, blocker in ipairs(blockers) do
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X - size.X - self.margin, desired.Y)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X + blocker.Width + self.margin, desired.Y)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(desired.X, blocker.Y - size.Y - self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(desired.X, blocker.Y + blocker.Height + self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X - size.X - self.margin, blocker.Y - size.Y - self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X + blocker.Width + self.margin, blocker.Y - size.Y - self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X - size.X - self.margin, blocker.Y + blocker.Height + self.margin)
-        )
-        self:_addCandidate(
-            candidates,
-            seen,
-            object,
-            Vector2.new(blocker.X + blocker.Width + self.margin, blocker.Y + blocker.Height + self.margin)
-        )
-    end
-
-    local radiusLimit = math.max(24, tonumber(maxRadius) or 320)
-    local radius = 20
-    while radius <= radiusLimit do
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, 0))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, 0))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(0, radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(0, -radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(radius, -radius))
-        self:_addCandidate(candidates, seen, object, desired + Vector2.new(-radius, -radius))
-        radius += 20
-    end
-
-    table.sort(candidates, function(left, right)
-        return (left - desired).Magnitude < (right - desired).Magnitude
-    end)
-
-    for _, candidate in ipairs(candidates) do
-        if self:_positionIsFree(object, candidate, blockers) then
-            return candidate, true
-        end
-    end
-
-    return desired, false
+    return clamped
 end
 
 function LayoutIntelligence:Register(object, options)
     if typeof(object) ~= "Instance" or not object:IsA("GuiObject") then
-        return object
+        return nil
     end
 
-    if self.objects[object] then
-        return object
+    local metadata = self.Objects[object]
+    if metadata then
+        return metadata
     end
 
-    options = type(options) == "table" and options or {}
-    self.registrationCounter += 1
-    self.objects[object] = true
-    self.metadata[object] = {
-        Order = tonumber(options.Priority) or self.registrationCounter,
-        LastSafe = object.AbsolutePosition,
-        ResizeThread = nil,
+    metadata = {
+        Options = type(options) == "table" and options or {},
+        UserMoved = false,
     }
-    object:SetAttribute("AdaptiveLayoutManaged", true)
+    self.Objects[object] = metadata
 
-    local function request()
-        self:RequestResolve()
-    end
-
-    local function requestAfterResize()
-        local metadata = self.metadata[object]
-        if not metadata then
-            return
-        end
-        if metadata.ResizeThread then
-            pcall(task.cancel, metadata.ResizeThread)
-        end
-        metadata.ResizeThread = task.delay(0.08, function()
-            local current = self.metadata[object]
-            if current == metadata then
-                current.ResizeThread = nil
-                self:RequestResolve()
-            end
-        end)
-    end
-
-    d:Clean(object:GetPropertyChangedSignal("Visible"):Connect(request))
-    d:Clean(object:GetPropertyChangedSignal("AbsoluteSize"):Connect(requestAfterResize))
-    object.Destroying:Once(function()
+    metadata.Destroying = object.Destroying:Once(function()
         self:Unregister(object)
     end)
 
-    task.defer(request)
-    return object
+    return metadata
 end
 
 function LayoutIntelligence:Unregister(object)
-    local metadata = self.metadata[object]
-    if metadata and metadata.ResizeThread then
-        pcall(task.cancel, metadata.ResizeThread)
-        metadata.ResizeThread = nil
+    local metadata = self.Objects[object]
+    if not metadata then
+        return
     end
 
-    self.objects[object] = nil
-    self.metadata[object] = nil
+    self.Objects[object] = nil
 
-    if self.activeObject == object then
-        self.activeObject = nil
+    if metadata.Destroying and metadata.Destroying.Connected then
+        metadata.Destroying:Disconnect()
+    end
+
+    if self.ActiveDragObject == object then
+        self.ActiveDragObject = nil
     end
 end
 
 function LayoutIntelligence:BeginDrag(object)
-    self:Register(object)
-    self.activeObject = object
+    if not self.Objects[object] then
+        self:Register(object)
+    end
 
-    local metadata = self.metadata[object]
+    self.ActiveDragObject = object
+
+    local metadata = self.Objects[object]
     if metadata then
-        if metadata.ResizeThread then
-            pcall(task.cancel, metadata.ResizeThread)
-            metadata.ResizeThread = nil
-        end
-        metadata.LastSafe = object.AbsolutePosition
+        metadata.UserMoved = true
+    end
+
+    pcall(function()
+        object:SetAttribute("BadWarsDragging", true)
+    end)
+
+    if z then
+        z.Visible = false
+    end
+
+    if v and v.Visible then
+        n:Cancel(v)
+        v.GroupTransparency = 0
+        v.Active = true
+        v.Interactable = true
+    end
+
+    if object:IsA("CanvasGroup") then
+        n:Cancel(object)
+        object.GroupTransparency = 0
     end
 end
 
-function LayoutIntelligence:UpdateDrag(object, desired)
-    self:Register(object)
-
-    -- Pointer movement stays direct. Collision resolution is deferred until
-    -- release so drag input never performs an O(n^2) layout search per frame.
-    local safe = clampGuiObjectToViewport(object, desired)
-    local metadata = self.metadata[object]
-    if metadata then
-        metadata.LastSafe = safe
+function LayoutIntelligence:UpdateDrag(object, proposedPosition)
+    if typeof(proposedPosition) ~= "Vector2" then
+        return proposedPosition
     end
-    return safe
+
+    return clampGuiObjectToViewport(object, proposedPosition)
 end
 
 function LayoutIntelligence:EndDrag(object)
-    if self.activeObject == object then
-        self.activeObject = nil
-    end
+    self:_clampObject(object)
 
-    local metadata = self.metadata[object]
-    if metadata and self:_isVisible(object) then
-        metadata.LastSafe = object.AbsolutePosition
-    end
+    pcall(function()
+        object:SetAttribute("BadWarsDragging", nil)
+    end)
 
-    self:RequestResolve()
+    if self.ActiveDragObject == object then
+        self.ActiveDragObject = nil
+    end
 end
 
 function LayoutIntelligence:HasOverlap()
-    local objects = self:_visibleObjects()
-    local reserved = self:_reservedRects()
-
-    for index, object in ipairs(objects) do
-        local rect = layoutRect(object.AbsolutePosition, object.AbsoluteSize)
-
-        for _, reservedRect in ipairs(reserved) do
-            if layoutRectsOverlap(rect, reservedRect, self.margin) then
-                return true
-            end
-        end
-
-        for otherIndex = index + 1, #objects do
-            local other = objects[otherIndex]
-            local otherRect = layoutRect(other.AbsolutePosition, other.AbsoluteSize)
-            if layoutRectsOverlap(rect, otherRect, self.margin) then
-                return true
-            end
-        end
-    end
-
     return false
 end
 
-function LayoutIntelligence:ResolveAll()
-    if self.resolving or self.activeObject then
-        return
-    end
-
-    for object in pairs(self.objects) do
-        if object and object.Parent and object:GetAttribute("BadWarsResizing") == true then
-            self.dirty = true
-            return
-        end
-    end
-
-    self.resolving = true
-    local blockers = self:_reservedRects()
-    local objects = self:_visibleObjects()
-
-    for _, object in ipairs(objects) do
-        local current = clampGuiObjectToViewport(object, object.AbsolutePosition)
-        local safe = current
-
-        if not self:_positionIsFree(object, current, blockers) then
-            safe = select(1, self:_findSafeAgainst(object, current, blockers, 520))
-        end
-
-        if (safe - object.AbsolutePosition).Magnitude > 0.5 then
-            setGuiAbsolutePosition(object, safe)
-        end
-
-        local metadata = self.metadata[object]
-        if metadata then
-            metadata.LastSafe = safe
-        end
-
-        blockers[#blockers + 1] = layoutRect(safe, object.AbsoluteSize)
-    end
-
-    self.dirty = false
-    self.resolving = false
+function LayoutIntelligence:_findSafeAgainst(object, proposedPosition)
+    return self:UpdateDrag(object, proposedPosition)
 end
 
-function LayoutIntelligence:RequestResolve()
-    self.dirty = true
-    if self.resolveQueued then
-        return
-    end
-
-    self.resolveQueued = true
-    task.defer(function()
-        self.resolveQueued = false
-        if self.dirty then
-            self:ResolveAll()
+function LayoutIntelligence:ResolveAll()
+    for object in pairs(self.Objects) do
+        if object ~= self.ActiveDragObject then
+            self:_clampObject(object)
         end
+    end
+end
+
+function LayoutIntelligence:RequestResolve(reason)
+    if reason == "viewport"
+        or reason == "restore"
+        or reason == "reset"
+    then
+        self:ViewportChanged()
+    end
+end
+
+function LayoutIntelligence:ViewportChanged()
+    self.ViewportGeneration += 1
+    local generation = self.ViewportGeneration
+
+    task.delay(0.25, function()
+        if generation ~= self.ViewportGeneration then
+            return
+        end
+
+        self:ResolveAll()
     end)
 end
 
 function LayoutIntelligence:Start()
-    if self.started then
+    if self.Started then
         return
     end
-    self.started = true
-    -- Layout work is event-driven through RequestResolve. A permanent
-    -- Heartbeat listener made idle UI pay a cost even when nothing moved.
+    self.Started = true
 end
--- BADWARS_ADAPTIVE_LAYOUT_ENGINE_V1_END
+-- BADWARS_RESTRAINED_LAYOUT_ENGINE_V19_3_END
 
 local function bindDirectDrag(handle, target, visibleGuard, headerOnly)
     local activeInput
@@ -8354,7 +8180,7 @@ end)
         end
 
         local scale = math.max(A.Scale, 0.01)
-        local viewport = B.AbsoluteSize / scale
+        local viewport = B.AbsoluteSize
         local contentHeight = math.max(0, ag.AbsoluteContentSize.Y / scale)
         local minimum = aa.LayoutTokens.MainMin
         local maximum = aa.LayoutTokens.MainMax
@@ -8423,6 +8249,7 @@ end)
     return ab
 end
 
+-- BADWARS_CATEGORY_WIDTH_V19_3
 function d.CreateCategory(aa, ab)
     local previousCategory = aa.Categories[ab.Name]
     if previousCategory and previousCategory.Object then
@@ -8439,7 +8266,7 @@ function d.CreateCategory(aa, ab)
 
     local ad = Instance.new("TextButton")
     ad.Name = ab.Name .. "Category"
-    ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, UI_HEADER_HEIGHT)
+    ad.Size = UDim2.fromOffset(CATEGORY_WINDOW_WIDTH, UI_HEADER_HEIGHT)
     ad.Position = UDim2.fromOffset(250, 60)
     ad.BackgroundColor3 = o.Main
     ad.BackgroundTransparency = 0.005
@@ -9718,7 +9545,7 @@ function d.CreateCategory(aa, ab)
         renderedExpanded = ac.Expanded
 
         local scale = math.max(A.Scale, 0.01)
-        local viewport = B.AbsoluteSize / scale
+        local viewport = B.AbsoluteSize
         local minimum = d.LayoutTokens.CategoryMin
         local maximum = d.LayoutTokens.CategoryMax
         local actualSize = ad.AbsoluteSize / scale
@@ -9726,7 +9553,7 @@ function d.CreateCategory(aa, ab)
         local storedHeight = tonumber(ad:GetAttribute("BadWarsUserHeight"))
         local userSized = ad:GetAttribute("BadWarsUserResized") == true
         local targetWidth = math.clamp(
-            activelyResizing and actualSize.X or (storedWidth or UI_WINDOW_WIDTH),
+            activelyResizing and actualSize.X or (storedWidth or CATEGORY_WINDOW_WIDTH),
             minimum.X,
             math.min(maximum.X, math.max(minimum.X, viewport.X - d.LayoutTokens.ResizeMargin * 2))
         )
@@ -9897,7 +9724,8 @@ function d.CreateCategory(aa, ab)
         end
     end
 
-    function ac.CreateModuleCategory(am, an)
+    -- BADWARS_MODULE_CATEGORY_STABILITY_V19_3
+function ac.CreateModuleCategory(am, an)
         local ao, ap = pcall(function()
             local ao = {
                 Type = "ModuleCategory",
@@ -9913,7 +9741,7 @@ function d.CreateCategory(aa, ab)
             success, err = pcall(function()
                 ap = Instance.new("Frame")
                 ap.Name = an.Name .. "ModuleCategory"
-                ap.Size = UDim2.fromOffset(220, 46)
+                ap.Size = UDim2.fromOffset(CATEGORY_WINDOW_WIDTH, 38)
                 ap.BackgroundColor3 = an.BackgroundColor or o.Surface
                 ap.BorderSizePixel = 0
                 if not (aj ~= nil and aj.Parent ~= nil) then
@@ -9967,7 +9795,7 @@ function d.CreateCategory(aa, ab)
             success, err = pcall(function()
                 aq = Instance.new("TextButton")
                 aq.Name = "Header"
-                aq.Size = UDim2.fromOffset(220, 46)
+                aq.Size = UDim2.fromOffset(CATEGORY_WINDOW_WIDTH, 38)
 
                 if ao.UpExpand then
                     aq.AnchorPoint = Vector2.new(0, 1)
@@ -10018,7 +9846,7 @@ function d.CreateCategory(aa, ab)
                 as = Instance.new("ImageLabel")
                 as.Name = "Icon"
                 as.Size = an.Size or UDim2.fromOffset(20, 20)
-                as.Position = UDim2.fromOffset(15, 13)
+                as.Position = UDim2.fromOffset(12, 9)
                 as.BackgroundTransparency = 1
                 as.Image = an.Icon or ""
                 as.ImageColor3 = o.Text
@@ -10038,7 +9866,7 @@ function d.CreateCategory(aa, ab)
                 at.Text = an.Name
                 at.TextXAlignment = Enum.TextXAlignment.Left
                 at.TextColor3 = o.Text
-                at.TextSize = 14
+                at.TextSize = 13
                 at.FontFace = Font.new(o.Font.Family, Enum.FontWeight.SemiBold)
                 at.Parent = aq
             end)
@@ -10068,7 +9896,7 @@ function d.CreateCategory(aa, ab)
             success, err = pcall(function()
                 av = Instance.new("TextButton")
                 av.Name = "Arrow"
-                av.Size = UDim2.fromOffset(45, 46)
+                av.Size = UDim2.fromOffset(38, 38)
                 av.Position = UDim2.new(1, -45, 0, 0)
                 av.BackgroundTransparency = 1
                 av.Text = ""
@@ -10077,7 +9905,7 @@ function d.CreateCategory(aa, ab)
                 aw = Instance.new("ImageLabel")
                 aw.Name = "Arrow"
                 aw.Size = UDim2.fromOffset(12, 7)
-                aw.Position = UDim2.fromOffset(17, 20)
+                aw.Position = UDim2.fromOffset(13, 16)
                 aw.BackgroundTransparency = 1
                 aw.Image = u("badscript/assets/new/expandup.png")
                 aw.ImageColor3 = o.MutedText
@@ -10098,7 +9926,7 @@ function d.CreateCategory(aa, ab)
                     Color = o.BorderStrong,
                     Transparency = 0.62,
                 })
-                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
+                moduleCategoryScale.Scale = 1
                 at.TextColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
                 aw.ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
             end)
@@ -10110,17 +9938,17 @@ function d.CreateCategory(aa, ab)
                     Color = o.Border,
                     Transparency = 0.84,
                 })
-                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
+                moduleCategoryScale.Scale = 1
                 at.TextColor3 = ao.Expanded and o.TextStrong or o.MutedText
                 aw.ImageColor3 = ao.Expanded
                     and Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
                     or o.MutedText
             end)
             aq.MouseButton1Down:Connect(function()
-                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 0.99 })
+                moduleCategoryScale.Scale = 1
             end)
             aq.MouseButton1Up:Connect(function()
-                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
+                moduleCategoryScale.Scale = 1
             end)
 
             success, err = pcall(function()
@@ -10149,9 +9977,9 @@ function d.CreateCategory(aa, ab)
 
                 if ao.UpExpand then
                     ax.AnchorPoint = Vector2.new(0, 1)
-                    ax.Position = UDim2.new(0, 0, 1, -46)
+                    ax.Position = UDim2.new(0, 0, 1, -38)
                 else
-                    ax.Position = UDim2.fromOffset(0, 46)
+                    ax.Position = UDim2.fromOffset(0, 38)
                 end
 
                 ax.BackgroundTransparency = 1
@@ -10197,13 +10025,13 @@ function d.CreateCategory(aa, ab)
                     if ao.Expanded then
                         ax.Visible = true
                         ax.Size = UDim2.new(1, 0, 0, az)
-                        ap.Size = UDim2.fromOffset(220, 46 + az)
+                        ap.Size = UDim2.fromOffset(CATEGORY_WINDOW_WIDTH, 38 + az)
                         if ao.UpExpand then
                             ap.Position = UDim2.fromOffset(0, -az)
                         end
                     else
                         ax.Size = UDim2.new(1, 0, 0, 0)
-                        ap.Size = UDim2.fromOffset(220, 46)
+                        ap.Size = UDim2.fromOffset(CATEGORY_WINDOW_WIDTH, 38)
                         if ao.UpExpand then
                             ap.Position = UDim2.fromOffset(0, 0)
                         end
@@ -10267,12 +10095,12 @@ function d.CreateCategory(aa, ab)
 
                     if az.UpExpand then
                         n:Tween(ap, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                            Size = UDim2.fromOffset(220, 45 + aB),
+                            Size = UDim2.fromOffset(CATEGORY_WINDOW_WIDTH, 38 + aB),
                             Position = UDim2.fromOffset(0, -(az.Expanded and aB or 0)),
                         })
                     else
                         n:Tween(ap, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                            Size = UDim2.fromOffset(220, 45 + aB),
+                            Size = UDim2.fromOffset(CATEGORY_WINDOW_WIDTH, 38 + aB),
                         })
                     end
 
@@ -10456,7 +10284,7 @@ function d.CreateCategory(aa, ab)
         ac.ResizeEntry = aa:RegisterSmartWindow("category:" .. tostring(ab.Name), ad, {
             MinSize = aa.LayoutTokens.CategoryMin,
             MaxSize = aa.LayoutTokens.CategoryMax,
-            DefaultSize = Vector2.new(UI_WINDOW_WIDTH, 420),
+            DefaultSize = Vector2.new(CATEGORY_WINDOW_WIDTH, 420),
             DefaultPosition = Vector2.new(250, 60),
             Margin = aa.LayoutTokens.ResizeMargin,
             CollapsedHeight = UI_HEADER_HEIGHT,
@@ -14568,26 +14396,40 @@ v.Active = true
 v.Visible = false
 v.Parent = w
 
+-- BADWARS_DETERMINISTIC_VISIBILITY_V19_3_BEGIN
 local clickGuiVisibilityGeneration = 0
+
 function d.SetClickGuiVisible(self, visible, instant)
     visible = visible == true
     clickGuiVisibilityGeneration += 1
     local generation = clickGuiVisibilityGeneration
 
+    n:Cancel(v)
+
     if visible then
         v.Visible = true
         v.Active = true
         v.Interactable = true
+        v.GroupTransparency = instant and 0 or math.min(v.GroupTransparency, 0.08)
 
         if instant then
-            n:Cancel(v)
             v.GroupTransparency = 0
         else
-            v.GroupTransparency = math.max(v.GroupTransparency, 0.08)
-            n:Tween(v, o.TweenFast, {
+            local tween = n:Tween(v, o.TweenFast, {
                 GroupTransparency = 0,
             })
+
+            if tween then
+                tween.Completed:Once(function()
+                    if generation == clickGuiVisibilityGeneration and v.Visible then
+                        v.GroupTransparency = 0
+                    end
+                end)
+            else
+                v.GroupTransparency = 0
+            end
         end
+
         return
     end
 
@@ -14595,31 +14437,31 @@ function d.SetClickGuiVisible(self, visible, instant)
     v.Interactable = false
 
     if instant or not v.Visible then
-        n:Cancel(v)
         v.GroupTransparency = 1
         v.Visible = false
         return
     end
 
-    local fade = n:Tween(v, o.TweenFast, {
+    local tween = n:Tween(v, o.TweenFast, {
         GroupTransparency = 1,
     })
 
     local function finish()
-        if generation == clickGuiVisibilityGeneration
-            and not v.Interactable
-        then
-            v.Visible = false
+        if generation ~= clickGuiVisibilityGeneration then
+            return
         end
+
+        v.GroupTransparency = 1
+        v.Visible = false
     end
 
-    if fade then
-        fade.Completed:Once(finish)
+    if tween then
+        tween.Completed:Once(finish)
     else
         finish()
     end
 end
-
+-- BADWARS_DETERMINISTIC_VISIBILITY_V19_3_END
 LayoutIntelligence:Start()
 d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
     LayoutIntelligence:RequestResolve()
@@ -14752,7 +14594,20 @@ z.TextXAlignment = Enum.TextXAlignment.Left
 z.TextYAlignment = Enum.TextYAlignment.Center
 z.FontFace = o.FontSemiBold
 z.BackgroundTransparency = 1
-z.Parent = w
+-- BADWARS_TOOLTIP_PORTAL_V19_3_BEGIN
+local tooltipPortal = B:FindFirstChild("BadWarsTooltipPortal")
+if not tooltipPortal then
+    tooltipPortal = Instance.new("Frame")
+    tooltipPortal.Name = "BadWarsTooltipPortal"
+    tooltipPortal.Size = UDim2.fromScale(1, 1)
+    tooltipPortal.BackgroundTransparency = 1
+    tooltipPortal.BorderSizePixel = 0
+    tooltipPortal.ClipsDescendants = false
+    tooltipPortal.ZIndex = 99990
+    tooltipPortal.Parent = B
+end
+z.Parent = tooltipPortal
+-- BADWARS_TOOLTIP_PORTAL_V19_3_END
 addCorner(z, o.Radius)
 tooltipStroke = addStroke(z, o.BorderStrong, 1, 1, "TooltipStroke")
 y = addShadow(z, true)
@@ -14803,92 +14658,110 @@ ak.ZIndex = 79
 ak.BackgroundTransparency = 1
 ak.Parent = z
 addCorner(ak, o.Radius)
+-- BADWARS_RESTRAINED_ROOT_SCALE_V19_3_BEGIN
 A = Instance.new("UIScale")
+
 local function responsiveScale()
     local viewport = B.AbsoluteSize
     local width = viewport.X > 0 and viewport.X or 1920
     local height = viewport.Y > 0 and viewport.Y or 1080
 
     if d.isMobile then
-        return math.clamp(
-            math.min(width / 820, height / 620),
-            0.58,
-            0.9
-        )
+        local landscape = width > height
+        local base = landscape and 0.78 or 0.72
+        if width >= 900 then
+            base = 0.82
+        elseif width < 600 then
+            base = 0.68
+        end
+        return math.clamp(base, 0.66, 0.84)
     end
 
-    return math.clamp(
-        math.min(width / 1920, height / 1080),
-        0.62,
-        1.05
-    )
+    local scale
+    if width >= 1600 then
+        scale = 0.86
+    elseif width >= 1280 then
+        scale = 0.82
+    elseif width >= 900 then
+        scale = 0.76
+    else
+        scale = 0.72
+    end
+
+    if height < 600 then
+        scale -= 0.07
+    elseif height < 720 then
+        scale -= 0.04
+    end
+
+    return math.clamp(scale, 0.68, 0.88)
 end
+
 A.Scale = responsiveScale()
 A.Parent = w
 d.guiscale = A
 w.Size = UDim2.fromScale(1 / A.Scale, 1 / A.Scale)
 
+local lastViewport = B.AbsoluteSize
 local resizeGeneration = 0
 
 d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+    local viewport = B.AbsoluteSize
+    if (viewport - lastViewport).Magnitude <= 1 then
+        return
+    end
+
+    lastViewport = viewport
     resizeGeneration += 1
     local generation = resizeGeneration
 
-    task.delay(0.08, function()
-        if generation ~= resizeGeneration then
+    task.delay(0.25, function()
+        if generation ~= resizeGeneration or not B.Parent then
             return
         end
 
-        if d.Scale.Enabled then
+        if d.Scale.Enabled ~= false then
             A.Scale = responsiveScale()
         end
 
-        if d._InitialLayoutReady and d.FinalizeInitialLayout then
-            d:FinalizeInitialLayout(true)
-        end
+        LayoutIntelligence:ViewportChanged()
     end)
 end))
 
 d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
-    A.Scale = math.clamp(A.Scale, 0.5, 2)
+    local clamped = math.clamp(A.Scale, 0.5, 1)
+    if math.abs(A.Scale - clamped) > 0.0001 then
+        A.Scale = clamped
+        return
+    end
+
     w.Size = UDim2.fromScale(1 / A.Scale, 1 / A.Scale)
+
     if z then
         z.Visible = false
     end
-    task.defer(function()
-        if not B or not B.Parent then
-            return
-        end
-        for _, window in d.Windows do
-            if typeof(window) == "Instance" and window:IsA("GuiObject") and window.Parent then
-                local clamped = clampGuiObjectToViewport(window, window.AbsolutePosition)
-                if (clamped - window.AbsolutePosition).Magnitude > 0.5 then
-                    setGuiAbsolutePosition(window, clamped)
-                end
-            end
-        end
-        if d.WindowManager then
-            for id in pairs(d.WindowManager.Entries) do
-                d.WindowManager:Clamp(id, false)
-            end
-        end
-    end)
 end))
-
--- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V20_NEVERMORE_BEGIN
+-- BADWARS_RESTRAINED_ROOT_SCALE_V19_3_END
+-- BADWARS_RESTRAINED_WORKSPACE_MANAGER_V19_3_BEGIN
 do
     local managerClass = shared.BadWarsWindowManagerClass
+
     if type(managerClass) == "table" and type(managerClass.new) == "function" then
         local manager = managerClass.new({
             UserInputService = h,
             HttpService = l,
             TouchEnabled = d.isMobile,
-            PersistencePath = "badscript/profiles/ui-layout-v20.json",
+            PersistencePath = "badscript/profiles/ui-layout-v19.3.json",
             LegacyPersistencePaths = {
+                "badscript/profiles/ui-layout-v19.3.json",
                 "badscript/profiles/ui-layout-v19.1.json",
                 "badscript/profiles/ui-layout.json",
             },
-            Accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
+            Accent = Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            ),
             Surface = o.Elevated,
             Border = o.BorderStrong,
             GetScale = function()
@@ -14898,32 +14771,43 @@ do
                 return B and B.AbsoluteSize or Vector2.new(1280, 720)
             end,
         })
+
         d.WindowManager = manager
-        manager:BindViewportSignal(B:GetPropertyChangedSignal("AbsoluteSize"))
 
         function d.RegisterSmartWindow(self, id, object, options)
             options = type(options) == "table" and options or {}
+
             local resizeStart = options.OnResizeStart
             local resizeEnd = options.OnResizeEnd
+
             options.OnResizeStart = function(target, entry)
                 LayoutIntelligence:BeginDrag(target)
                 if type(resizeStart) == "function" then
                     resizeStart(target, entry)
                 end
             end
+
             options.OnResizeEnd = function(target, entry)
                 if type(resizeEnd) == "function" then
                     resizeEnd(target, entry)
                 end
                 LayoutIntelligence:EndDrag(target)
             end
+
             return manager:Register(id, object, options)
         end
 
         function d.ResetUILayout(self)
             manager:ResetAll()
+            LayoutIntelligence:RequestResolve("reset")
+
             if self.CreateNotification then
-                self:CreateNotification("Layout reset", "All BadWars windows were restored to safe defaults.", 4, "success")
+                self:CreateNotification(
+                    "Layout reset",
+                    "BadWars windows were restored to their defaults.",
+                    4,
+                    "success"
+                )
             end
         end
 
@@ -14950,22 +14834,29 @@ do
         function d.RegisterSmartWindow()
             return nil
         end
-        function d.ResetUILayout() end
+
+        function d.ResetUILayout()
+            LayoutIntelligence:RequestResolve("reset")
+        end
+
         function d.LockWindowSize()
             return false
         end
+
         function d.LockWindowPosition()
             return false
         end
+
         function d.ResetWindowSize()
             return false
         end
+
         function d.ResetWindowPosition()
             return false
         end
     end
 end
--- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V20_NEVERMORE_END
+-- BADWARS_RESTRAINED_WORKSPACE_MANAGER_V19_3_END
 
 local cursorConnection
 local function stopCursorTracking()
@@ -15580,7 +15471,7 @@ d.SortGuiCallback = function(av, force)
     end)
 
     local scale = math.max(A.Scale, 0.01)
-    local viewport = B.AbsoluteSize / scale
+    local viewport = B.AbsoluteSize
     local margin = d.LayoutTokens.ResizeMargin
     local gap = UI_WINDOW_GAP
     local cursorX = margin
@@ -16769,123 +16660,19 @@ if d.Blur then
 end
 
 
--- BADWARS_FINAL_DESIGN_SCOPE_V15_BEGIN
+-- BADWARS_SINGLE_ANIMATION_OWNER_V19_3_BEGIN
 task.defer(function()
-    local quietStrokeNames = {
-        MainStroke = 0.7,
-        NavigationStroke = 0.88,
-        CategoryStroke = 0.78,
-        ModuleStroke = 0.9,
-        ModuleCategoryStroke = 0.88,
-        LegitStroke = 0.72,
-        LegitCardStroke = 0.82,
-        LegitWidgetStroke = 0.74,
-        OptionsStroke = 0.94,
-        TextBoxStroke = 0.86,
-        OverlayStroke = 0.74,
-        NotificationStroke = 0.68,
-        TooltipStroke = 0.58,
-    }
-
-    local function addCleanMotion(instance)
-        if instance:GetAttribute("BadWarsV15Motion") then
-            return
-        end
-
-        instance:SetAttribute("BadWarsV15Motion", true)
-
-        local scale = instance:FindFirstChild("V15Scale")
-        if not scale then
-            scale = Instance.new("UIScale")
-            scale.Name = "V15Scale"
-            scale.Scale = 1
-            scale.Parent = instance
-        end
-
-        local baseTransparency = instance.BackgroundTransparency
-
-        instance.MouseEnter:Connect(function()
-            if not instance.Parent then
-                return
-            end
-
-            pcall(function()
-                n:Tween(scale, o.TweenFast, { Scale = 1.004 })
-                if instance.BackgroundTransparency < 1 then
-                    n:Tween(
-                        instance,
-                        o.TweenFast,
-                        { BackgroundTransparency = math.max(baseTransparency - 0.012, 0) }
-                    )
-                end
-            end)
-        end)
-
-        instance.MouseLeave:Connect(function()
-            if not instance.Parent then
-                return
-            end
-
-            pcall(function()
-                n:Spring(scale, o.SpringInteractive, { Scale = 1 })
-                if instance.BackgroundTransparency < 1 then
-                    n:Tween(instance, o.TweenFast, { BackgroundTransparency = baseTransparency })
-                end
-            end)
-        end)
-    end
-
-    local function applyFrameDesign(instance)
-        if instance.Name == "V9Sweep" or instance.Name == "SignalNodes" then
-            instance:Destroy()
-            return
-        end
-
-        if instance:IsA("UIStroke") then
-            local minimum = quietStrokeNames[instance.Name]
-            if minimum then
-                instance.Thickness = 1
-                instance.LineJoinMode = Enum.LineJoinMode.Round
-                instance.Transparency = math.max(instance.Transparency, minimum)
-            end
-            return
-        end
-
-        if instance:IsA("UICorner") then
-            local parent = instance.Parent
-            if parent and parent:IsA("GuiObject") then
-                local height = parent.AbsoluteSize.Y
-                if height > 0 and height <= 46 then
-                    instance.CornerRadius = o.RadiusSmall
-                elseif height > 46 and height <= 120 then
-                    instance.CornerRadius = o.Radius
-                else
-                    instance.CornerRadius = o.RadiusLarge
-                end
-            end
-            return
-        end
-
-        if instance:IsA("UIGradient") and instance.Name == "SurfaceGradient" then
-            instance.Rotation = 90
-        end
-
-        if
-            instance:IsA("TextButton")
-            or instance:IsA("ImageButton")
-        then
-            addCleanMotion(instance)
-        end
+    if not B or not B.Parent then
+        return
     end
 
     for _, descendant in ipairs(B:GetDescendants()) do
-        applyFrameDesign(descendant)
+        if descendant:IsA("UIScale") and descendant.Name == "V15Scale" then
+            descendant.Scale = 1
+            descendant:Destroy()
+        end
     end
-
-    d:Clean(B.DescendantAdded:Connect(function(descendant)
-        task.defer(applyFrameDesign, descendant)
-    end))
 end)
--- BADWARS_FINAL_DESIGN_SCOPE_V15_END
+-- BADWARS_SINGLE_ANIMATION_OWNER_V19_3_END
 
 return d

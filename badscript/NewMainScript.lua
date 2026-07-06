@@ -164,7 +164,7 @@ local function loadNevermoreRuntime()
         local ok, exists = pcall(isfile, path)
         if ok and exists then
             local readOk, body = pcall(readfile, path)
-            if readOk and type(body) == 'string' and body:find('BADWARS_NEVERMORE_RUNTIME_V20', 1, true) then source = body end
+            if readOk and type(body) == 'string' and body:find('BADWARS_NEVERMORE_RUNTIME_V19_3', 1, true) then source = body end
         end
     end
     if not source then

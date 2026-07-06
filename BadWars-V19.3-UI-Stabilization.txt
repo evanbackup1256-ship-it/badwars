@@ -1,0 +1,35 @@
+BadWars V19.3 UI stabilization
+Generated: 2026-07-06T13:20:46
+Baseline ancestor: 17fe89e0925d122ccacc6a15260c8297a7131209
+Repair build: 2026.07.06-V19.3-UI-STABILIZED
+Safety branch: backup/pre-v19.3-ui-stabilization-20260706-132045
+File backup: C:\Users\evanm\source\repos\badwars\.badwars-ui-backup\20260706-132045
+
+Implemented:
+- Removed the continuous overlap/collision solver.
+- Clamps only the active window after drag and all windows after a real viewport change.
+- Removed global TextButton/ImageButton UIScale injection.
+- Added one restrained, debounced root scale.
+- Added compact category, module-row, navigation-row, and header density.
+- Added separate 196px desktop category-window width.
+- Made root ClickGui visibility deterministic.
+- Prevented dragging from inheriting a faded CanvasGroup state.
+- Moved tooltips to an unscaled top-level portal.
+- Removed nested category header scale motion.
+- Fixed Nevermore Maid cleanup contracts before GiveTask.
+- Reduced the runtime console default size and maximum footprint.
+- Lightened the runtime console backdrop.
+- Replaced destructive console-list rebuilds with keyed reusable rows.
+- Sanitized collapsed console summaries to one line.
+- Added measured, independently scrollable expanded details.
+- Preserved manual console scroll position while entries arrive.
+- Added deterministic console open/close final states.
+- Updated public identity and layout paths to V19.3.
+
+Not changed:
+- Feature callbacks
+- Remotes
+- Combat or movement behavior
+- Targeting or automation
+- Profile/configuration meanings
+- Module names, category names, aliases, or keybinds

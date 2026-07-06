@@ -644,7 +644,7 @@ local function isStaleNevermoreCache(path, body)
     end
     return type(body) ~= "string"
         or body == ""
-        or body:find("BADWARS_NEVERMORE_RUNTIME_V20", 1, true) == nil
+        or body:find("BADWARS_NEVERMORE_RUNTIME_V19_3", 1, true) == nil
 end
 
 local function isStaleWindowManagerCache(path, body)

@@ -1,4 +1,4 @@
--- BADWARS_DIAGNOSTICS_V20_NEVERMORE
+-- BADWARS_DIAGNOSTICS_V19_3_NEVERMORE_STABILIZED
 -- BadWars centralized runtime diagnostics
 -- Loaded before the normal loader whenever possible.
 
@@ -57,7 +57,7 @@ local Diagnostics = {
     Subscribers = {},
     Connections = {},
     MaxEntries = 750,
-    MaxVisibleEntries = 140,
+    MaxVisibleEntries = 100,
     DuplicateWindow = 3,
     CurrentStage = "bootstrap",
     Destroyed = false,
@@ -663,7 +663,7 @@ function Diagnostics:EnsureUI()
     gui.Parent = parent
 
     local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local layoutPath = "badscript/profiles/diagnostics-layout-v20.json"
+    local layoutPath = "badscript/profiles/diagnostics-layout-v19.3.json"
     local savedLayout
     pcall(function()
         if type(isfile) == "function" and type(readfile) == "function" then
@@ -674,10 +674,39 @@ function Diagnostics:EnsureUI()
         end
     end)
     savedLayout = type(savedLayout) == "table" and savedLayout or {}
-    local initialWidth = math.clamp(tonumber(savedLayout.Width) or (viewport.X - 28), 380, math.min(1280, viewport.X - 16))
-    local initialHeight = math.clamp(tonumber(savedLayout.Height) or (viewport.Y - 52), 360, math.min(820, viewport.Y - 16))
-    local minSize = Vector2.new(math.min(340, viewport.X - 16), math.min(300, viewport.Y - 16))
-    local maxSize = Vector2.new(1280, 820)
+    -- BADWARS_COMPACT_CONSOLE_SIZE_V19_3_BEGIN
+local viewportWidth = math.max(viewport.X, 360)
+local viewportHeight = math.max(viewport.Y, 320)
+local desktop = viewportWidth >= 900
+local defaultWidth = desktop
+    and math.min(920, viewportWidth * 0.72)
+    or math.min(720, viewportWidth - 24)
+local defaultHeight = desktop
+    and math.min(540, viewportHeight * 0.7)
+    or math.min(460, viewportHeight - 24)
+local minWidth = math.min(660, viewportWidth - 16)
+local minHeight = math.min(400, viewportHeight - 16)
+local maxWidth = math.max(
+    minWidth,
+    math.min(960, viewportWidth * 0.76, viewportWidth - 16)
+)
+local maxHeight = math.max(
+    minHeight,
+    math.min(570, viewportHeight * 0.74, viewportHeight - 16)
+)
+local initialWidth = math.clamp(
+    tonumber(savedLayout.Width) or defaultWidth,
+    minWidth,
+    maxWidth
+)
+local initialHeight = math.clamp(
+    tonumber(savedLayout.Height) or defaultHeight,
+    minHeight,
+    maxHeight
+)
+local minSize = Vector2.new(minWidth, minHeight)
+local maxSize = Vector2.new(maxWidth, maxHeight)
+-- BADWARS_COMPACT_CONSOLE_SIZE_V19_3_END
     local compact = initialWidth < 720
     local initialCenter = Vector2.new(
         math.clamp(tonumber(savedLayout.CenterX) or (viewport.X / 2), initialWidth / 2 + 8, viewport.X - initialWidth / 2 - 8),
@@ -1323,7 +1352,224 @@ function Diagnostics:_entryMatches(entry)
     return true
 end
 
--- BADWARS_CONSOLE_RENDER_V1_BEGIN
+-- BADWARS_CONSOLE_RENDER_V19_3_BEGIN
+local function consoleFirstLine(value)
+    local text = safeString(value)
+    text = string.gsub(text, "[\r\n]+", " ")
+    text = string.gsub(text, "%s+", " ")
+    return string.gsub(text, "^%s*(.-)%s*$", "%1")
+end
+
+local function ensureConsoleRow(self, ui, entry)
+    ui.rows = ui.rows or {}
+
+    local state = ui.rows[entry.id]
+    if state and state.root and state.root.Parent then
+        state.entry = entry
+        return state
+    end
+
+    local root = Instance.new("TextButton")
+    root.Name = "Entry_" .. tostring(entry.id)
+    root.Size = UDim2.new(1, 0, 0, 46)
+    root.BackgroundColor3 = Color3.fromRGB(9, 15, 20)
+    root.BackgroundTransparency = 0.08
+    root.BorderSizePixel = 0
+    root.AutoButtonColor = false
+    root.Text = ""
+    root.ClipsDescendants = true
+    root.Parent = ui.list
+
+    createCorner(root, 9)
+    local rowStroke = createStroke(
+        root,
+        Color3.fromRGB(42, 55, 67),
+        0.78,
+        1
+    )
+
+    local accent = Instance.new("Frame")
+    accent.Name = "Severity"
+    accent.Position = UDim2.fromOffset(0, 7)
+    accent.Size = UDim2.new(0, 3, 0, 32)
+    accent.BorderSizePixel = 0
+    accent.Parent = root
+    createCorner(accent, 99)
+
+    local timestamp = Instance.new("TextLabel")
+    timestamp.Name = "Timestamp"
+    timestamp.Position = UDim2.fromOffset(14, 7)
+    timestamp.Size = UDim2.fromOffset(58, 16)
+    timestamp.BackgroundTransparency = 1
+    timestamp.Font = Enum.Font.Code
+    timestamp.TextSize = 9
+    timestamp.TextColor3 = Color3.fromRGB(91, 105, 118)
+    timestamp.TextXAlignment = Enum.TextXAlignment.Left
+    timestamp.Parent = root
+
+    local source = Instance.new("TextLabel")
+    source.Name = "Source"
+    source.Position = UDim2.fromOffset(78, 7)
+    source.Size = UDim2.fromOffset(146, 16)
+    source.BackgroundTransparency = 1
+    source.Font = Enum.Font.GothamMedium
+    source.TextSize = 9
+    source.TextColor3 = Color3.fromRGB(137, 151, 164)
+    source.TextXAlignment = Enum.TextXAlignment.Left
+    source.TextTruncate = Enum.TextTruncate.AtEnd
+    source.Parent = root
+
+    local message = Instance.new("TextLabel")
+    message.Name = "Summary"
+    message.Position = UDim2.fromOffset(230, 6)
+    message.Size = UDim2.new(1, -244, 0, 32)
+    message.BackgroundTransparency = 1
+    message.Font = Enum.Font.Gotham
+    message.TextSize = 10
+    message.TextColor3 = Color3.fromRGB(198, 208, 217)
+    message.TextXAlignment = Enum.TextXAlignment.Left
+    message.TextYAlignment = Enum.TextYAlignment.Center
+    message.TextWrapped = false
+    message.TextTruncate = Enum.TextTruncate.AtEnd
+    message.Parent = root
+
+    local details = Instance.new("ScrollingFrame")
+    details.Name = "Details"
+    details.Position = UDim2.fromOffset(12, 48)
+    details.Size = UDim2.new(1, -24, 0, 0)
+    details.BackgroundColor3 = Color3.fromRGB(5, 9, 13)
+    details.BorderSizePixel = 0
+    details.ScrollBarThickness = 3
+    details.ScrollBarImageColor3 = Color3.fromRGB(69, 84, 97)
+    details.CanvasSize = UDim2.fromOffset(0, 0)
+    details.Visible = false
+    details.Parent = root
+    createCorner(details, 8)
+    createStroke(details, Color3.fromRGB(40, 53, 65), 0.58, 1)
+
+    local detailText = Instance.new("TextLabel")
+    detailText.Name = "Text"
+    detailText.Position = UDim2.fromOffset(9, 8)
+    detailText.Size = UDim2.new(1, -18, 0, 0)
+    detailText.BackgroundTransparency = 1
+    detailText.Font = Enum.Font.Code
+    detailText.TextSize = 9
+    detailText.TextColor3 = Color3.fromRGB(132, 149, 163)
+    detailText.TextXAlignment = Enum.TextXAlignment.Left
+    detailText.TextYAlignment = Enum.TextYAlignment.Top
+    detailText.TextWrapped = true
+    detailText.Parent = details
+
+    state = {
+        root = root,
+        stroke = rowStroke,
+        accent = accent,
+        timestamp = timestamp,
+        source = source,
+        message = message,
+        details = details,
+        detailText = detailText,
+        entry = entry,
+    }
+    ui.rows[entry.id] = state
+
+    root.MouseEnter:Connect(function()
+        if not root.Parent then
+            return
+        end
+
+        ui.animate(root, 0.075, {
+            BackgroundColor3 = Color3.fromRGB(19, 29, 38),
+            BackgroundTransparency = 0,
+        })
+    end)
+
+    root.MouseLeave:Connect(function()
+        if not root.Parent then
+            return
+        end
+
+        local selected = self._selectedId == state.entry.id
+        ui.animate(root, 0.075, {
+            BackgroundColor3 = selected
+                and Color3.fromRGB(18, 28, 37)
+                or Color3.fromRGB(9, 15, 20),
+            BackgroundTransparency = selected and 0 or 0.08,
+        })
+    end)
+
+    root.Activated:Connect(function()
+        local current = state.entry
+        if not current then
+            return
+        end
+
+        self._selectedId = current.id
+        ui.expanded[current.id] = not ui.expanded[current.id]
+        self:_scheduleRender()
+    end)
+
+    return state
+end
+
+local function updateConsoleRow(self, ui, state, entry, order)
+    local selected = self._selectedId == entry.id
+    local expanded = ui.expanded[entry.id] == true
+    local severityColor = LEVEL_COLORS[entry.severity]
+        or Color3.fromRGB(120, 135, 148)
+
+    state.entry = entry
+    state.root.LayoutOrder = order
+    state.root.Visible = true
+    state.root.BackgroundColor3 = selected
+        and Color3.fromRGB(18, 28, 37)
+        or Color3.fromRGB(9, 15, 20)
+    state.root.BackgroundTransparency = selected and 0 or 0.08
+    state.stroke.Color = selected
+        and severityColor
+        or Color3.fromRGB(42, 55, 67)
+    state.stroke.Transparency = selected and 0.42 or 0.78
+    state.accent.BackgroundColor3 = severityColor
+    state.timestamp.Text = entry.timestamp or "--:--:--"
+
+    local sourceText = entry.subsystem or "Runtime"
+    if entry.module and entry.module ~= "" then
+        sourceText = sourceText .. " / " .. entry.module
+    end
+    state.source.Text = sourceText
+
+    local repeatSuffix = (entry.repeatCount or 1) > 1
+        and ("  x" .. tostring(entry.repeatCount))
+        or ""
+    state.message.Text = consoleFirstLine(entry.message) .. repeatSuffix
+
+    if not expanded then
+        state.details.Visible = false
+        state.details.Size = UDim2.new(1, -24, 0, 0)
+        state.root.Size = UDim2.new(1, 0, 0, ui.compact and 50 or 46)
+        return
+    end
+
+    local fullText = self:FormatEntry(entry, true)
+    local availableWidth = math.max(240, ui.list.AbsoluteSize.X - 54)
+    local measured = game:GetService("TextService"):GetTextSize(
+        fullText,
+        9,
+        Enum.Font.Code,
+        Vector2.new(availableWidth, 10000)
+    )
+    local contentHeight = math.max(44, measured.Y + 18)
+    local viewportHeight = math.clamp(contentHeight, 72, 180)
+
+    state.detailText.Text = fullText
+    state.detailText.Size = UDim2.new(1, -18, 0, contentHeight)
+    state.details.CanvasSize = UDim2.fromOffset(0, contentHeight + 16)
+    state.details.CanvasPosition = Vector2.new(0, 0)
+    state.details.Size = UDim2.new(1, -24, 0, viewportHeight)
+    state.details.Visible = true
+    state.root.Size = UDim2.new(1, 0, 0, 60 + viewportHeight)
+end
+
 function Diagnostics:_render()
     local ui = self._ui
     if not ui or not ui.gui.Parent then
@@ -1332,146 +1578,101 @@ function Diagnostics:_render()
 
     ui.badge.Visible = self.Unread > 0
     ui.badge.Text = self.Unread > 99 and "99+" or tostring(self.Unread)
-    local errorCount = (self.Counts.ERROR or 0) + (self.Counts.FATAL or 0)
+
+    local errorCount = (self.Counts.ERROR or 0)
+        + (self.Counts.FATAL or 0)
     local warningCount = self.Counts.WARN or 0
-    ui.counters.Text = string.format("%d errors   %d warnings", errorCount, warningCount)
-    ui.footer.Text = string.format("F8  |  %d entries  |  %s", #self.Entries, self.Paused and "paused" or "live")
+
+    ui.counters.Text = string.format(
+        "%d errors %d warnings",
+        errorCount,
+        warningCount
+    )
+    ui.footer.Text = string.format(
+        "F8 | %d entries | %s",
+        #self.Entries,
+        self.Paused and "paused" or "live"
+    )
+
     if self.Paused then
         return
     end
 
-    for _, child in ipairs(ui.list:GetChildren()) do
-        if child:IsA("GuiObject") then
-            child:Destroy()
-        end
-    end
+    ui.rows = ui.rows or {}
+
+    local previousCanvasPosition = ui.list.CanvasPosition
+    local distanceFromBottom = math.max(
+        0,
+        ui.list.AbsoluteCanvasSize.Y
+            - ui.list.AbsoluteWindowSize.Y
+            - previousCanvasPosition.Y
+    )
+    local wasNearBottom = distanceFromBottom <= 28
 
     local visible = {}
+    local visibleIds = {}
+
     for index = #self.Entries, 1, -1 do
         local entry = self.Entries[index]
         if self:_entryMatches(entry) then
             table.insert(visible, 1, entry)
+            visibleIds[entry.id] = true
+
             if #visible >= self.MaxVisibleEntries then
                 break
             end
         end
     end
 
-    for order, entry in ipairs(visible) do
-        local expanded = ui.expanded[entry.id] == true
-        local selected = self._selectedId == entry.id
-        local rowHeight = ui.compact and (expanded and 164 or 58) or (expanded and 150 or 44)
-        local severityColor = LEVEL_COLORS[entry.severity] or Color3.fromRGB(120, 135, 148)
-
-        local row = Instance.new("TextButton")
-        row.Name = "Entry_" .. tostring(entry.id)
-        row.LayoutOrder = order
-        row.Size = UDim2.new(1, 0, 0, rowHeight)
-        row.BackgroundColor3 = selected and Color3.fromRGB(18, 28, 37) or Color3.fromRGB(9, 15, 20)
-        row.BackgroundTransparency = selected and 0 or 0.08
-        row.BorderSizePixel = 0
-        row.AutoButtonColor = false
-        row.Text = ""
-        row.Parent = ui.list
-        createCorner(row, 10)
-        local rowStroke = createStroke(row, selected and severityColor or Color3.fromRGB(42, 55, 67), selected and 0.42 or 0.78, 1)
-
-        local accent = Instance.new("Frame")
-        accent.Position = UDim2.fromOffset(0, 8)
-        accent.Size = UDim2.new(0, 3, 0, ui.compact and 42 or 28)
-        accent.BackgroundColor3 = severityColor
-        accent.BorderSizePixel = 0
-        accent.Parent = row
-        createCorner(accent, 99)
-
-        local timestamp = Instance.new("TextLabel")
-        timestamp.Position = UDim2.fromOffset(14, 0)
-        timestamp.Size = UDim2.fromOffset(58, ui.compact and 28 or 44)
-        timestamp.BackgroundTransparency = 1
-        timestamp.Font = Enum.Font.Code
-        timestamp.Text = entry.timestamp or "--:--:--"
-        timestamp.TextSize = 9
-        timestamp.TextColor3 = Color3.fromRGB(86, 101, 114)
-        timestamp.TextXAlignment = Enum.TextXAlignment.Left
-        timestamp.Parent = row
-
-        local sourceText = entry.subsystem ~= "" and entry.subsystem or "runtime"
-        if entry.module and entry.module ~= "" then
-            sourceText = sourceText .. "/" .. entry.module
-        end
-        local source = Instance.new("TextLabel")
-        source.Position = UDim2.fromOffset(76, 0)
-        source.Size = ui.compact and UDim2.new(1, -90, 0, 28) or UDim2.fromOffset(145, 44)
-        source.BackgroundTransparency = 1
-        source.Font = Enum.Font.GothamMedium
-        source.Text = sourceText
-        source.TextSize = 9
-        source.TextColor3 = severityColor:Lerp(Color3.fromRGB(165, 177, 188), 0.55)
-        source.TextXAlignment = Enum.TextXAlignment.Left
-        source.TextTruncate = Enum.TextTruncate.AtEnd
-        source.Parent = row
-
-        local repeatSuffix = (entry.repeatCount or 1) > 1 and ("  x" .. tostring(entry.repeatCount)) or ""
-        local message = Instance.new("TextLabel")
-        message.Position = ui.compact and UDim2.fromOffset(14, 27) or UDim2.fromOffset(226, 0)
-        message.Size = ui.compact and UDim2.new(1, -28, 0, 27) or UDim2.new(1, -240, 0, 44)
-        message.BackgroundTransparency = 1
-        message.Font = Enum.Font.Gotham
-        message.Text = tostring(entry.message or "") .. repeatSuffix
-        message.TextSize = 10
-        message.TextColor3 = Color3.fromRGB(198, 208, 217)
-        message.TextXAlignment = Enum.TextXAlignment.Left
-        message.TextTruncate = Enum.TextTruncate.AtEnd
-        message.Parent = row
-
-        if expanded then
-            local details = Instance.new("TextLabel")
-            details.Position = UDim2.fromOffset(14, ui.compact and 64 or 50)
-            details.Size = UDim2.new(1, -28, 0, ui.compact and 88 or 88)
-            details.BackgroundColor3 = Color3.fromRGB(5, 9, 13)
-            details.BorderSizePixel = 0
-            details.Font = Enum.Font.Code
-            details.Text = self:FormatEntry(entry, true)
-            details.TextSize = 9
-            details.TextColor3 = Color3.fromRGB(126, 143, 157)
-            details.TextXAlignment = Enum.TextXAlignment.Left
-            details.TextYAlignment = Enum.TextYAlignment.Top
-            details.TextWrapped = true
-            details.Parent = row
-            createCorner(details, 9)
-            createStroke(details, Color3.fromRGB(40, 53, 65), 0.58, 1)
-            local padding = Instance.new("UIPadding")
-            padding.PaddingTop = UDim.new(0, 8)
-            padding.PaddingBottom = UDim.new(0, 8)
-            padding.PaddingLeft = UDim.new(0, 9)
-            padding.PaddingRight = UDim.new(0, 9)
-            padding.Parent = details
-        end
-
-        row.MouseEnter:Connect(function()
-            ui.animate(row, 0.075, { BackgroundColor3 = Color3.fromRGB(19, 29, 38), BackgroundTransparency = 0 })
-            ui.animate(rowStroke, 0.075, { Transparency = 0.48, Color = severityColor:Lerp(Color3.fromRGB(66, 82, 96), 0.55) })
-        end)
-        row.MouseLeave:Connect(function()
-            ui.animate(row, 0.075, { BackgroundColor3 = selected and Color3.fromRGB(18, 28, 37) or Color3.fromRGB(9, 15, 20), BackgroundTransparency = selected and 0 or 0.08 })
-            ui.animate(rowStroke, 0.075, { Transparency = selected and 0.42 or 0.78, Color = selected and severityColor or Color3.fromRGB(42, 55, 67) })
-        end)
-        row.Activated:Connect(function()
-            self._selectedId = entry.id
-            ui.expanded[entry.id] = not ui.expanded[entry.id]
-            self:_scheduleRender()
-        end)
-    end
-
-    if ui.window.Visible and ui.autoScrollEnabled and #visible > 0 then
-        task.defer(function()
-            if ui.list and ui.list.Parent then
-                ui.list.CanvasPosition = Vector2.new(0, math.max(0, ui.list.AbsoluteCanvasSize.Y))
+    for id, state in pairs(ui.rows) do
+        if not visibleIds[id] then
+            ui.rows[id] = nil
+            if state.root then
+                state.root:Destroy()
             end
-        end)
+        end
     end
+
+    for order, entry in ipairs(visible) do
+        local state = ensureConsoleRow(self, ui, entry)
+        updateConsoleRow(self, ui, state, entry, order)
+    end
+
+    task.defer(function()
+        if not ui.list or not ui.list.Parent then
+            return
+        end
+
+        if ui.window.Visible
+            and ui.autoScrollEnabled
+            and wasNearBottom
+            and #visible > 0
+        then
+            ui.list.CanvasPosition = Vector2.new(
+                0,
+                math.max(
+                    0,
+                    ui.list.AbsoluteCanvasSize.Y
+                        - ui.list.AbsoluteWindowSize.Y
+                )
+            )
+        else
+            ui.list.CanvasPosition = Vector2.new(
+                previousCanvasPosition.X,
+                math.clamp(
+                    previousCanvasPosition.Y,
+                    0,
+                    math.max(
+                        0,
+                        ui.list.AbsoluteCanvasSize.Y
+                            - ui.list.AbsoluteWindowSize.Y
+                    )
+                )
+            )
+        end
+    end)
 end
--- BADWARS_CONSOLE_RENDER_V2_END
+-- BADWARS_CONSOLE_RENDER_V19_3_END
 function Diagnostics:_scheduleRender()
     if self._renderPending then
         return
@@ -1484,20 +1685,53 @@ function Diagnostics:_scheduleRender()
     end)
 end
 
+-- BADWARS_CONSOLE_VISIBILITY_V19_3_BEGIN
 function Diagnostics:Open()
     local ui = self:EnsureUI()
     if not ui then
         return
     end
+
     ui.openGeneration += 1
+    local generation = ui.openGeneration
     ui.isOpen = true
     ui.backdrop.Visible = true
     ui.window.Visible = true
     ui.window.GroupTransparency = 1
-    ui.windowScale.Scale = 0.975
-    ui.animate(ui.backdrop, 0.14, { BackgroundTransparency = 0.38 }, Enum.EasingStyle.Quart)
-    ui.animate(ui.window, 0.16, { GroupTransparency = 0 }, Enum.EasingStyle.Quint)
-    ui.spring(ui.windowScale, { Damping = 1, Frequency = 18 }, { Scale = 1 })
+    ui.windowScale.Scale = 0.985
+    ui.backdrop.BackgroundTransparency = 1
+
+    ui.animate(
+        ui.backdrop,
+        0.1,
+        { BackgroundTransparency = 0.82 },
+        Enum.EasingStyle.Quart
+    )
+    ui.animate(
+        ui.window,
+        0.12,
+        { GroupTransparency = 0 },
+        Enum.EasingStyle.Quint
+    )
+    ui.spring(
+        ui.windowScale,
+        { Damping = 1, Frequency = 20 },
+        { Scale = 1 }
+    )
+
+    task.delay(0.13, function()
+        if self._ui == ui
+            and ui.openGeneration == generation
+            and ui.isOpen
+        then
+            ui.window.Visible = true
+            ui.window.GroupTransparency = 0
+            ui.windowScale.Scale = 1
+            ui.backdrop.Visible = true
+            ui.backdrop.BackgroundTransparency = 0.82
+        end
+    end)
+
     self.Unread = 0
     self:_scheduleRender()
 end
@@ -1507,20 +1741,47 @@ function Diagnostics:Close()
     if not ui or not ui.window.Visible then
         return
     end
+
     ui.openGeneration += 1
-    ui.isOpen = false
     local generation = ui.openGeneration
-    ui.animate(ui.backdrop, 0.12, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-    ui.animate(ui.window, 0.13, { GroupTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
-    ui.spring(ui.windowScale, { Damping = 1, Frequency = 22 }, { Scale = 0.985 })
-    task.delay(0.14, function()
-        if self._ui == ui and ui.openGeneration == generation then
-            ui.window.Visible = false
-            ui.backdrop.Visible = false
+    ui.isOpen = false
+
+    ui.animate(
+        ui.backdrop,
+        0.09,
+        { BackgroundTransparency = 1 },
+        Enum.EasingStyle.Quart,
+        Enum.EasingDirection.In
+    )
+    ui.animate(
+        ui.window,
+        0.1,
+        { GroupTransparency = 1 },
+        Enum.EasingStyle.Quint,
+        Enum.EasingDirection.In
+    )
+    ui.spring(
+        ui.windowScale,
+        { Damping = 1, Frequency = 22 },
+        { Scale = 0.985 }
+    )
+
+    task.delay(0.11, function()
+        if self._ui ~= ui
+            or ui.openGeneration ~= generation
+            or ui.isOpen
+        then
+            return
         end
+
+        ui.window.GroupTransparency = 1
+        ui.windowScale.Scale = 0.985
+        ui.window.Visible = false
+        ui.backdrop.BackgroundTransparency = 1
+        ui.backdrop.Visible = false
     end)
 end
-
+-- BADWARS_CONSOLE_VISIBILITY_V19_3_END
 function Diagnostics:Toggle()
     local ui = self:EnsureUI()
     if not ui then

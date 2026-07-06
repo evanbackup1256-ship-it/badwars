@@ -157,7 +157,7 @@ local CFG = { repo = "evanbackup1256-ship-it", name = "badwars", branch = "main"
 local function rawUrls(path)
     local repo = CFG.repo .. "/" .. CFG.name
     local p = path:gsub(" ", "%%20")
-    local query = "?bwui=v20-3-executive-1"
+    local query = "?bwui=v20-4-unified-1"
     return {
         "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p .. query,
         "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p .. query,
@@ -627,9 +627,8 @@ local function isStaleGuiCache(path, body)
         return true
     end
 
-    return body:find("BADWARS_UI_V20_3_EXECUTIVE", 1, true) == nil
-        or body:find("BADWARS_UI_V20_3_EXECUTIVE_RUNTIME_BEGIN", 1, true) == nil
-        or body:find("Version = \"20.3\"", 1, true) == nil
+    return body:find("BADWARS_UI_V20_4_UNIFIED", 1, true) == nil
+        or body:find("Version = \"20.4\"", 1, true) == nil
 end
 local function isStaleMotionCache(path, body)
     if path ~= "badscript/libraries/spr.lua" then

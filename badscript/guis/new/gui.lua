@@ -1,3 +1,4 @@
+-- BADWARS_UI_V20_4_UNIFIED
 -- BADWARS_UI_V20_3_EXECUTIVE
 -- BADWARS_UI_V20_2_1_BENTO
 -- BADWARS_UI_V20_ATLAS
@@ -170,8 +171,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "20.3",
-    PremiumBuild = "2026.07.06-V20.3-EXECUTIVE",
+    Version = "20.4",
+    PremiumBuild = "2026.07.06-V20.4-UNIFIED",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -16723,36 +16724,35 @@ end
 
 
 
--- BADWARS_UI_V20_3_EXECUTIVE_RUNTIME_BEGIN
+-- V20.3 Executive runtime removed by V20.4 Unified
+
+
+
+-- BADWARS_UI_V20_4_UNIFIED_RUNTIME_BEGIN
 (function()
     local Players = game:GetService("Players")
     local TweenService = game:GetService("TweenService")
     local UserInputService = game:GetService("UserInputService")
 
     local App = {
-        Version = "20.3",
-        Name = "Executive",
+        Version = "20.4",
         Docked = false,
-        Open = false,
-        Compact = false,
-        ActivePage = nil,
+        Active = nil,
         Pages = {},
         PageByObject = setmetatable({}, { __mode = "k" }),
         Original = setmetatable({}, { __mode = "k" }),
-        Guards = setmetatable({}, { __mode = "k" }),
-        LockedScales = setmetatable({}, { __mode = "k" }),
-        ModuleRecords = {},
+        LockedScale = setmetatable({}, { __mode = "k" }),
+        Guard = setmetatable({}, { __mode = "k" }),
+        HiddenLegacy = setmetatable({}, { __mode = "k" }),
+        SearchGeneration = 0,
+        Modules = {},
         ModuleSeen = setmetatable({}, { __mode = "k" }),
         SavedScale = A.Scale,
-        SearchGeneration = 0,
-        TransitionGeneration = 0,
-        RefreshGeneration = 0,
-        UI = {},
     }
 
-    d.V20Executive = App
-    d.Version = "20.3"
-    d.PremiumBuild = "2026.07.06-V20.3-EXECUTIVE"
+    d.V20Unified = App
+    d.Version = "20.4"
+    d.PremiumBuild = "2026.07.06-V20.4-UNIFIED"
 
     local Theme = {
         Shell = Color3.fromRGB(25, 25, 24),
@@ -16769,12 +16769,9 @@ end
         TextMuted = Color3.fromRGB(154, 154, 148),
         TextFaint = Color3.fromRGB(102, 102, 97),
         Danger = Color3.fromRGB(214, 91, 103),
-        Shadow = Color3.fromRGB(0, 0, 0),
     }
 
-    local U = {}
-
-    function U.accent()
+    local function accent()
         return Color3.fromHSV(
             d.GUIColor.Hue,
             math.min(d.GUIColor.Sat, 0.72),
@@ -16782,11 +16779,7 @@ end
         )
     end
 
-    function U.clean(resource)
-        if resource == nil then
-            return nil
-        end
-
+    local function clean(resource)
         if type(d.Clean) == "function" then
             return d:Clean(resource)
         end
@@ -16794,33 +16787,33 @@ end
         return resource
     end
 
-    function U.safeSet(object, property, value)
+    local function safeSet(object, property, value)
         pcall(function()
             object[property] = value
         end)
     end
 
-    function U.make(className, properties, parent)
+    local function make(className, properties, parent)
         local object = Instance.new(className)
 
         for property, value in pairs(properties or {}) do
-            U.safeSet(object, property, value)
+            safeSet(object, property, value)
         end
 
         object.Parent = parent
         return object
     end
 
-    function U.corner(parent, radius)
-        local object = parent:FindFirstChild("ExecutiveCorner")
+    local function corner(parent, radius)
+        local object = parent:FindFirstChild("UnifiedCorner")
 
         if not object or not object:IsA("UICorner") then
             object = parent:FindFirstChildOfClass("UICorner")
         end
 
         if not object then
-            object = U.make("UICorner", {
-                Name = "ExecutiveCorner",
+            object = make("UICorner", {
+                Name = "UnifiedCorner",
             }, parent)
         end
 
@@ -16828,16 +16821,16 @@ end
         return object
     end
 
-    function U.stroke(parent, transparency, color)
-        local object = parent:FindFirstChild("ExecutiveStroke")
+    local function stroke(parent, transparency, color)
+        local object = parent:FindFirstChild("UnifiedStroke")
 
         if not object or not object:IsA("UIStroke") then
             object = parent:FindFirstChildOfClass("UIStroke")
         end
 
         if not object then
-            object = U.make("UIStroke", {
-                Name = "ExecutiveStroke",
+            object = make("UIStroke", {
+                Name = "UnifiedStroke",
             }, parent)
         end
 
@@ -16846,68 +16839,82 @@ end
         object.Thickness = 1
         object.Transparency = transparency or 0
         object.Color = color or Theme.Border
+
         return object
     end
 
-    function U.text(parent, properties)
+    local function text(parent, properties)
         properties = properties or {}
         properties.BackgroundTransparency = 1
         properties.BorderSizePixel = 0
         properties.FontFace = properties.FontFace
             or Font.fromEnum(Enum.Font.Gotham)
         properties.TextColor3 = properties.TextColor3 or Theme.Text
-        properties.TextSize = properties.TextSize or 11
+        properties.TextSize = properties.TextSize or 10
         properties.TextStrokeTransparency = 1
         properties.TextTruncate = properties.TextTruncate
             or Enum.TextTruncate.AtEnd
 
-        return U.make("TextLabel", properties, parent)
+        return make("TextLabel", properties, parent)
     end
 
-    function U.button(parent, properties)
+    local function button(parent, properties)
         properties = properties or {}
         properties.AutoButtonColor = false
         properties.BorderSizePixel = 0
         properties.FontFace = properties.FontFace
             or Font.fromEnum(Enum.Font.GothamMedium)
         properties.TextColor3 = properties.TextColor3 or Theme.Text
-        properties.TextSize = properties.TextSize or 11
+        properties.TextSize = properties.TextSize or 10
         properties.TextStrokeTransparency = 1
 
-        local object = U.make("TextButton", properties, parent)
-        U.corner(object, properties.CornerRadius or 9)
+        local object = make("TextButton", properties, parent)
+        corner(object, properties.CornerRadius or 9)
+
         return object
     end
 
-    function U.tween(object, properties, duration, style, direction)
+    local function tweenColor(object, properties)
         if not object or not object.Parent then
-            return nil
+            return
         end
 
-        local animation = TweenService:Create(
+        TweenService:Create(
             object,
             TweenInfo.new(
-                duration or 0.12,
-                style or Enum.EasingStyle.Quint,
-                direction or Enum.EasingDirection.Out
+                0.07,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
             ),
             properties
-        )
-
-        animation:Play()
-        return animation
+        ):Play()
     end
 
-    function U.normalize(value)
+    local function hover(object, normal, highlighted)
+        clean(object.MouseEnter:Connect(function()
+            tweenColor(object, {
+                BackgroundColor3 = highlighted,
+            })
+        end))
+
+        clean(object.MouseLeave:Connect(function()
+            tweenColor(object, {
+                BackgroundColor3 = normal,
+            })
+        end))
+    end
+
+    local function normalize(value)
         value = tostring(value or "")
         value = value:gsub("[%c\r\n\t]", " ")
         value = value:gsub("%s+", " ")
         value = value:gsub("^%s+", "")
         value = value:gsub("%s+$", "")
+
         return value
     end
 
-    function U.categoryObject(category)
+    local function categoryObject(category)
         if type(category) ~= "table" then
             return nil
         end
@@ -16923,387 +16930,9 @@ end
         return nil
     end
 
-    function U.titleFromObject(object)
-        local header = object and object:FindFirstChild("HeaderSurface")
-        local titleObject = header and header:FindFirstChild("Title")
-
-        if titleObject and titleObject:IsA("TextLabel") then
-            local title = U.normalize(titleObject.Text)
-
-            if title ~= "" then
-                return title
-            end
-        end
-
-        return object and U.normalize(object.Name) or "Window"
-    end
-
-    function U.iconFromObject(object)
-        local header = object and object:FindFirstChild("HeaderSurface")
-        local icon = header and header:FindFirstChild("Icon")
-
-        if icon and icon:IsA("ImageLabel") then
-            return icon.Image
-        end
-
-        return ""
-    end
-
-    function U.isMetricWindow(object)
-        if not object or not object:IsA("GuiObject") then
-            return false
-        end
-
-        local title = string.lower(U.titleFromObject(object))
-
-        return string.find(title, "fps", 1, true) ~= nil
-            or string.find(title, "memory", 1, true) ~= nil
-            or string.find(title, "clock", 1, true) ~= nil
-            or string.find(title, "speed", 1, true) ~= nil
-            or string.find(title, "ping", 1, true) ~= nil
-    end
-
-    function App:BuildShell()
-        local ui = self.UI
-
-        ui.Root = U.make("CanvasGroup", {
-            Name = "BadWarsV20Executive",
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(960, 610),
-            BackgroundColor3 = Theme.Shell,
-            BackgroundTransparency = 0,
-            BorderSizePixel = 0,
-            GroupTransparency = 1,
-            ClipsDescendants = true,
-            Visible = false,
-            ZIndex = 3600,
-        }, v)
-
-        U.corner(ui.Root, 18)
-        U.stroke(ui.Root, 0.08, Theme.BorderStrong)
-
-        ui.RootScale = U.make("UIScale", {
-            Name = "OpenScale",
-            Scale = 0.965,
-        }, ui.Root)
-
-        ui.Sidebar = U.make("Frame", {
-            Name = "Sidebar",
-            Size = UDim2.new(0, 172, 1, 0),
-            BackgroundColor3 = Theme.Sidebar,
-            BorderSizePixel = 0,
-            ZIndex = ui.Root.ZIndex + 2,
-        }, ui.Root)
-
-        U.make("Frame", {
-            Name = "SidebarDivider",
-            Position = UDim2.new(1, -1, 0, 0),
-            Size = UDim2.new(0, 1, 1, 0),
-            BackgroundColor3 = Theme.Border,
-            BackgroundTransparency = 0.26,
-            BorderSizePixel = 0,
-            ZIndex = ui.Sidebar.ZIndex + 1,
-        }, ui.Sidebar)
-
-        ui.WindowControls = U.make("Frame", {
-            Name = "WindowControls",
-            Position = UDim2.fromOffset(12, 12),
-            Size = UDim2.new(1, -24, 0, 28),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = ui.Sidebar.ZIndex + 2,
-        }, ui.Sidebar)
-
-        ui.Close = U.button(ui.WindowControls, {
-            Name = "Close",
-            Size = UDim2.fromOffset(28, 28),
-            BackgroundColor3 = Theme.Card,
-            Text = "×",
-            TextColor3 = Theme.TextMuted,
-            TextSize = 16,
-            ZIndex = ui.WindowControls.ZIndex + 1,
-        })
-
-        U.stroke(ui.Close, 0.62, Theme.Border)
-
-        ui.Float = U.button(ui.WindowControls, {
-            Name = "Float",
-            Position = UDim2.fromOffset(34, 0),
-            Size = UDim2.fromOffset(28, 28),
-            BackgroundColor3 = Theme.Card,
-            Text = "↗",
-            TextColor3 = Theme.TextMuted,
-            TextSize = 13,
-            ZIndex = ui.WindowControls.ZIndex + 1,
-        })
-
-        U.stroke(ui.Float, 0.62, Theme.Border)
-
-        ui.Collapse = U.button(ui.WindowControls, {
-            Name = "Collapse",
-            Position = UDim2.fromOffset(68, 0),
-            Size = UDim2.fromOffset(28, 28),
-            BackgroundColor3 = Theme.Card,
-            Text = "≡",
-            TextColor3 = Theme.TextMuted,
-            TextSize = 13,
-            ZIndex = ui.WindowControls.ZIndex + 1,
-        })
-
-        U.stroke(ui.Collapse, 0.62, Theme.Border)
-
-        ui.Brand = U.text(ui.WindowControls, {
-            Name = "Brand",
-            Position = UDim2.fromOffset(106, 0),
-            Size = UDim2.new(1, -106, 1, 0),
-            Text = "BADWARS",
-            TextColor3 = Theme.TextStrong,
-            FontFace = Font.fromEnum(Enum.Font.GothamBold),
-            TextSize = 10,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = ui.WindowControls.ZIndex + 1,
-        })
-
-        local player = Players.LocalPlayer
-
-        ui.Profile = U.make("Frame", {
-            Name = "Profile",
-            Position = UDim2.fromOffset(12, 52),
-            Size = UDim2.new(1, -24, 0, 56),
-            BackgroundColor3 = Theme.Card,
-            BorderSizePixel = 0,
-            ZIndex = ui.Sidebar.ZIndex + 2,
-        }, ui.Sidebar)
-
-        U.corner(ui.Profile, 11)
-        U.stroke(ui.Profile, 0.68, Theme.Border)
-
-        ui.Avatar = U.make("ImageLabel", {
-            Name = "Avatar",
-            Position = UDim2.fromOffset(8, 8),
-            Size = UDim2.fromOffset(40, 40),
-            BackgroundColor3 = Theme.Content,
-            BorderSizePixel = 0,
-            Image = player
-                and (
-                    "rbxthumb://type=AvatarHeadShot&id="
-                    .. tostring(player.UserId)
-                    .. "&w=150&h=150"
-                )
-                or "",
-            ZIndex = ui.Profile.ZIndex + 1,
-        }, ui.Profile)
-
-        U.corner(ui.Avatar, 9)
-
-        ui.ProfileName = U.text(ui.Profile, {
-            Name = "ProfileName",
-            Position = UDim2.fromOffset(58, 9),
-            Size = UDim2.new(1, -66, 0, 18),
-            Text = player and player.DisplayName or "Player",
-            TextColor3 = Theme.TextStrong,
-            FontFace = Font.fromEnum(Enum.Font.GothamMedium),
-            TextSize = 10,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = ui.Profile.ZIndex + 1,
-        })
-
-        ui.ProfileSub = U.text(ui.Profile, {
-            Name = "ProfileSub",
-            Position = UDim2.fromOffset(58, 29),
-            Size = UDim2.new(1, -66, 0, 15),
-            Text = player and ("@" .. player.Name) or "@player",
-            TextColor3 = Theme.TextMuted,
-            TextSize = 8,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = ui.Profile.ZIndex + 1,
-        })
-
-        ui.NavCaption = U.text(ui.Sidebar, {
-            Name = "NavCaption",
-            Position = UDim2.fromOffset(18, 120),
-            Size = UDim2.new(1, -36, 0, 14),
-            Text = "WORKSPACE",
-            TextColor3 = Theme.TextFaint,
-            FontFace = Font.fromEnum(Enum.Font.GothamBold),
-            TextSize = 8,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = ui.Sidebar.ZIndex + 2,
-        })
-
-        ui.Nav = U.make("ScrollingFrame", {
-            Name = "Navigation",
-            Position = UDim2.fromOffset(10, 140),
-            Size = UDim2.new(1, -20, 1, -194),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            CanvasSize = UDim2.new(),
-            ScrollBarThickness = 2,
-            ScrollBarImageColor3 = Theme.BorderStrong,
-            ScrollBarImageTransparency = 0.42,
-            ScrollingDirection = Enum.ScrollingDirection.Y,
-            ElasticBehavior = Enum.ElasticBehavior.Never,
-            ZIndex = ui.Sidebar.ZIndex + 2,
-        }, ui.Sidebar)
-
-        ui.NavLayout = U.make("UIListLayout", {
-            Padding = UDim.new(0, 4),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        }, ui.Nav)
-
-        ui.SidebarFooter = U.text(ui.Sidebar, {
-            Name = "SidebarFooter",
-            Position = UDim2.new(0, 16, 1, -42),
-            Size = UDim2.new(1, -32, 0, 24),
-            Text = "V20.3 Executive",
-            TextColor3 = Theme.TextFaint,
-            TextSize = 8,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = ui.Sidebar.ZIndex + 2,
-        })
-
-        ui.Main = U.make("Frame", {
-            Name = "Main",
-            Position = UDim2.fromOffset(172, 0),
-            Size = UDim2.new(1, -172, 1, 0),
-            BackgroundColor3 = Theme.Content,
-            BorderSizePixel = 0,
-            ZIndex = ui.Root.ZIndex + 1,
-        }, ui.Root)
-
-        ui.Header = U.make("Frame", {
-            Name = "Header",
-            Size = UDim2.new(1, 0, 0, 64),
-            BackgroundColor3 = Theme.Header,
-            BorderSizePixel = 0,
-            ZIndex = ui.Main.ZIndex + 2,
-        }, ui.Main)
-
-        U.make("Frame", {
-            Name = "HeaderDivider",
-            Position = UDim2.new(0, 0, 1, -1),
-            Size = UDim2.new(1, 0, 0, 1),
-            BackgroundColor3 = Theme.Border,
-            BackgroundTransparency = 0.34,
-            BorderSizePixel = 0,
-            ZIndex = ui.Header.ZIndex + 1,
-        }, ui.Header)
-
-        ui.PageTitle = U.text(ui.Header, {
-            Name = "PageTitle",
-            Position = UDim2.fromOffset(18, 10),
-            Size = UDim2.new(0, 260, 0, 22),
-            Text = "Home",
-            TextColor3 = Theme.TextStrong,
-            FontFace = Font.fromEnum(Enum.Font.GothamBold),
-            TextSize = 15,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = ui.Header.ZIndex + 2,
-        })
-
-        ui.PageSubtitle = U.text(ui.Header, {
-            Name = "PageSubtitle",
-            Position = UDim2.fromOffset(18, 34),
-            Size = UDim2.new(0, 320, 0, 14),
-            Text = "Fast access to every BadWars category",
-            TextColor3 = Theme.TextMuted,
-            TextSize = 8,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = ui.Header.ZIndex + 2,
-        })
-
-        ui.SearchFrame = U.make("Frame", {
-            Name = "SearchFrame",
-            AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -16, 0.5, 0),
-            Size = UDim2.fromOffset(238, 34),
-            BackgroundColor3 = Theme.Card,
-            BorderSizePixel = 0,
-            ZIndex = ui.Header.ZIndex + 2,
-        }, ui.Header)
-
-        U.corner(ui.SearchFrame, 9)
-        ui.SearchStroke = U.stroke(ui.SearchFrame, 0.62, Theme.Border)
-
-        ui.SearchIcon = U.text(ui.SearchFrame, {
-            Name = "SearchIcon",
-            Position = UDim2.fromOffset(10, 0),
-            Size = UDim2.fromOffset(18, 34),
-            Text = "⌕",
-            TextColor3 = Theme.TextFaint,
-            TextSize = 13,
-            TextXAlignment = Enum.TextXAlignment.Center,
-            ZIndex = ui.SearchFrame.ZIndex + 1,
-        })
-
-        ui.Search = U.make("TextBox", {
-            Name = "Search",
-            Position = UDim2.fromOffset(34, 0),
-            Size = UDim2.new(1, -42, 1, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ClearTextOnFocus = false,
-            FontFace = Font.fromEnum(Enum.Font.Gotham),
-            PlaceholderText = "Search modules  Ctrl+K",
-            PlaceholderColor3 = Theme.TextFaint,
-            Text = "",
-            TextColor3 = Theme.Text,
-            TextSize = 10,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextStrokeTransparency = 1,
-            ZIndex = ui.SearchFrame.ZIndex + 1,
-        }, ui.SearchFrame)
-
-        ui.Content = U.make("Frame", {
-            Name = "Content",
-            Position = UDim2.fromOffset(14, 78),
-            Size = UDim2.new(1, -28, 1, -94),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ClipsDescendants = true,
-            ZIndex = ui.Main.ZIndex + 1,
-        }, ui.Main)
-
-        ui.DockPill = U.button(v, {
-            Name = "BadWarsV20ExecutiveOpen",
-            AnchorPoint = Vector2.new(0.5, 0),
-            Position = UDim2.new(0.5, 0, 0, 12),
-            Size = UDim2.fromOffset(174, 34),
-            BackgroundColor3 = Theme.Shell,
-            Text = "OPEN BADWARS V20.3",
-            TextColor3 = Theme.TextStrong,
-            TextSize = 9,
-            Visible = false,
-            ZIndex = 5000,
-        })
-
-        U.stroke(ui.DockPill, 0.22, Theme.BorderStrong)
-
-        self:BindHover(ui.Close, Theme.Card, Color3.fromRGB(59, 31, 35))
-        self:BindHover(ui.Float, Theme.Card, Theme.CardHover)
-        self:BindHover(ui.Collapse, Theme.Card, Theme.CardHover)
-        self:BindHover(ui.DockPill, Theme.Shell, Theme.CardHover)
-    end
-
-    function App:BindHover(object, normal, highlighted)
-        U.clean(object.MouseEnter:Connect(function()
-            U.tween(object, {
-                BackgroundColor3 = highlighted,
-            }, 0.07)
-        end))
-
-        U.clean(object.MouseLeave:Connect(function()
-            U.tween(object, {
-                BackgroundColor3 = normal,
-            }, 0.07)
-        end))
-    end
-
-    function App:SaveObject(object)
-        if self.Original[object] then
-            return self.Original[object]
+    local function saveObject(object)
+        if App.Original[object] then
+            return App.Original[object]
         end
 
         local state = {
@@ -17314,8 +16943,8 @@ end
             Visible = object.Visible,
             ZIndex = object.ZIndex,
             ClipsDescendants = object.ClipsDescendants,
-            BackgroundColor3 = object.BackgroundColor3,
             BackgroundTransparency = object.BackgroundTransparency,
+            BackgroundColor3 = object.BackgroundColor3,
             AutomaticSize = object.AutomaticSize,
             Header = object:FindFirstChild("HeaderSurface"),
             Children = object:FindFirstChild("Children"),
@@ -17332,7 +16961,6 @@ end
             state.ChildrenPosition = state.Children.Position
             state.ChildrenSize = state.Children.Size
             state.ChildrenVisible = state.Children.Visible
-            state.ChildrenParent = state.Children.Parent
         end
 
         if state.Divider then
@@ -17347,497 +16975,580 @@ end
             state.ScaleValue = state.Scale.Scale
         end
 
-        self.Original[object] = state
+        App.Original[object] = state
+
         return state
     end
 
-    function App:LockScale(scale)
+    local Root = make("Frame", {
+        Name = "BadWarsV20Unified",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(920, 590),
+        BackgroundColor3 = Theme.Shell,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Visible = false,
+        ZIndex = 3600,
+    }, v)
+
+    corner(Root, 18)
+    stroke(Root, 0.08, Theme.BorderStrong)
+
+    local Sidebar = make("Frame", {
+        Name = "Sidebar",
+        Size = UDim2.new(0, 170, 1, 0),
+        BackgroundColor3 = Theme.Sidebar,
+        BorderSizePixel = 0,
+        ZIndex = Root.ZIndex + 2,
+    }, Root)
+
+    make("Frame", {
+        Position = UDim2.new(1, -1, 0, 0),
+        Size = UDim2.new(0, 1, 1, 0),
+        BackgroundColor3 = Theme.Border,
+        BackgroundTransparency = 0.25,
+        BorderSizePixel = 0,
+        ZIndex = Sidebar.ZIndex + 1,
+    }, Sidebar)
+
+    local Close = button(Sidebar, {
+        Name = "Close",
+        Position = UDim2.fromOffset(12, 12),
+        Size = UDim2.fromOffset(28, 28),
+        BackgroundColor3 = Theme.Card,
+        Text = "×",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 16,
+        ZIndex = Sidebar.ZIndex + 2,
+    })
+
+    stroke(Close, 0.62, Theme.Border)
+    hover(Close, Theme.Card, Color3.fromRGB(58, 31, 35))
+
+    local Float = button(Sidebar, {
+        Name = "Float",
+        Position = UDim2.fromOffset(46, 12),
+        Size = UDim2.fromOffset(28, 28),
+        BackgroundColor3 = Theme.Card,
+        Text = "↗",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 13,
+        ZIndex = Sidebar.ZIndex + 2,
+    })
+
+    stroke(Float, 0.62, Theme.Border)
+    hover(Float, Theme.Card, Theme.CardHover)
+
+    text(Sidebar, {
+        Position = UDim2.fromOffset(86, 12),
+        Size = UDim2.new(1, -98, 0, 28),
+        Text = "BADWARS",
+        TextColor3 = Theme.TextStrong,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Sidebar.ZIndex + 2,
+    })
+
+    local player = Players.LocalPlayer
+    local Profile = make("Frame", {
+        Position = UDim2.fromOffset(12, 52),
+        Size = UDim2.new(1, -24, 0, 56),
+        BackgroundColor3 = Theme.Card,
+        BorderSizePixel = 0,
+        ZIndex = Sidebar.ZIndex + 2,
+    }, Sidebar)
+
+    corner(Profile, 11)
+    stroke(Profile, 0.68, Theme.Border)
+
+    local avatar = make("ImageLabel", {
+        Position = UDim2.fromOffset(8, 8),
+        Size = UDim2.fromOffset(40, 40),
+        BackgroundColor3 = Theme.Content,
+        BorderSizePixel = 0,
+        Image = player
+            and (
+                "rbxthumb://type=AvatarHeadShot&id="
+                .. tostring(player.UserId)
+                .. "&w=150&h=150"
+            )
+            or "",
+        ZIndex = Profile.ZIndex + 1,
+    }, Profile)
+
+    corner(avatar, 9)
+
+    text(Profile, {
+        Position = UDim2.fromOffset(58, 8),
+        Size = UDim2.new(1, -66, 0, 18),
+        Text = player and player.DisplayName or "Player",
+        TextColor3 = Theme.TextStrong,
+        FontFace = Font.fromEnum(Enum.Font.GothamMedium),
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Profile.ZIndex + 1,
+    })
+
+    text(Profile, {
+        Position = UDim2.fromOffset(58, 28),
+        Size = UDim2.new(1, -66, 0, 16),
+        Text = player and ("@" .. player.Name) or "@player",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 8,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Profile.ZIndex + 1,
+    })
+
+    text(Sidebar, {
+        Position = UDim2.fromOffset(18, 120),
+        Size = UDim2.new(1, -36, 0, 14),
+        Text = "WORKSPACE",
+        TextColor3 = Theme.TextFaint,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 8,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Sidebar.ZIndex + 2,
+    })
+
+    local Nav = make("ScrollingFrame", {
+        Name = "Navigation",
+        Position = UDim2.fromOffset(10, 140),
+        Size = UDim2.new(1, -20, 1, -248),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = Theme.BorderStrong,
+        ScrollBarImageTransparency = 0.42,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ElasticBehavior = Enum.ElasticBehavior.Never,
+        ZIndex = Sidebar.ZIndex + 2,
+    }, Sidebar)
+
+    make("UIListLayout", {
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, Nav)
+
+    local Discord = button(Sidebar, {
+        Name = "Discord",
+        Position = UDim2.new(0, 12, 1, -92),
+        Size = UDim2.new(1, -24, 0, 36),
+        BackgroundColor3 = Theme.Card,
+        Text = "  Discord invite",
+        TextColor3 = Theme.Text,
+        TextSize = 9,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Sidebar.ZIndex + 2,
+    })
+
+    stroke(Discord, 0.62, Theme.Border)
+    hover(Discord, Theme.Card, Theme.CardHover)
+
+    local DiscordRail = make("Frame", {
+        Position = UDim2.fromOffset(10, 15),
+        Size = UDim2.fromOffset(6, 6),
+        BackgroundColor3 = accent(),
+        BorderSizePixel = 0,
+        ZIndex = Discord.ZIndex + 1,
+    }, Discord)
+
+    corner(DiscordRail, 99)
+
+    local Status = text(Sidebar, {
+        Position = UDim2.new(0, 16, 1, -44),
+        Size = UDim2.new(1, -32, 0, 20),
+        Text = "V20.4 Unified",
+        TextColor3 = Theme.TextFaint,
+        TextSize = 8,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Sidebar.ZIndex + 2,
+    })
+
+    local Main = make("Frame", {
+        Name = "Main",
+        Position = UDim2.fromOffset(170, 0),
+        Size = UDim2.new(1, -170, 1, 0),
+        BackgroundColor3 = Theme.Content,
+        BorderSizePixel = 0,
+        ZIndex = Root.ZIndex + 1,
+    }, Root)
+
+    local Header = make("Frame", {
+        Size = UDim2.new(1, 0, 0, 64),
+        BackgroundColor3 = Theme.Header,
+        BorderSizePixel = 0,
+        ZIndex = Main.ZIndex + 2,
+    }, Main)
+
+    make("Frame", {
+        Position = UDim2.new(0, 0, 1, -1),
+        Size = UDim2.new(1, 0, 0, 1),
+        BackgroundColor3 = Theme.Border,
+        BackgroundTransparency = 0.34,
+        BorderSizePixel = 0,
+        ZIndex = Header.ZIndex + 1,
+    }, Header)
+
+    local PageTitle = text(Header, {
+        Position = UDim2.fromOffset(18, 10),
+        Size = UDim2.new(0, 260, 0, 22),
+        Text = "Home",
+        TextColor3 = Theme.TextStrong,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 15,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Header.ZIndex + 2,
+    })
+
+    local PageSubtitle = text(Header, {
+        Position = UDim2.fromOffset(18, 34),
+        Size = UDim2.new(0, 320, 0, 14),
+        Text = "Stable unified workspace",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 8,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Header.ZIndex + 2,
+    })
+
+    local SearchFrame = make("Frame", {
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -16, 0.5, 0),
+        Size = UDim2.fromOffset(226, 34),
+        BackgroundColor3 = Theme.Card,
+        BorderSizePixel = 0,
+        ZIndex = Header.ZIndex + 2,
+    }, Header)
+
+    corner(SearchFrame, 9)
+    local SearchStroke = stroke(SearchFrame, 0.62, Theme.Border)
+
+    text(SearchFrame, {
+        Position = UDim2.fromOffset(10, 0),
+        Size = UDim2.fromOffset(18, 34),
+        Text = "⌕",
+        TextColor3 = Theme.TextFaint,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = SearchFrame.ZIndex + 1,
+    })
+
+    local Search = make("TextBox", {
+        Position = UDim2.fromOffset(34, 0),
+        Size = UDim2.new(1, -42, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+        FontFace = Font.fromEnum(Enum.Font.Gotham),
+        PlaceholderText = "Search modules  Ctrl+K",
+        PlaceholderColor3 = Theme.TextFaint,
+        Text = "",
+        TextColor3 = Theme.Text,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextStrokeTransparency = 1,
+        ZIndex = SearchFrame.ZIndex + 1,
+    }, SearchFrame)
+
+    local Content = make("Frame", {
+        Position = UDim2.fromOffset(14, 78),
+        Size = UDim2.new(1, -28, 1, -94),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = Main.ZIndex + 1,
+    }, Main)
+
+    local Home = make("ScrollingFrame", {
+        Name = "Home",
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Theme.BorderStrong,
+        ScrollBarImageTransparency = 0.3,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ElasticBehavior = Enum.ElasticBehavior.Never,
+        ZIndex = Content.ZIndex + 1,
+    }, Content)
+
+    make("UIPadding", {
+        PaddingRight = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 10),
+    }, Home)
+
+    make("UIListLayout", {
+        Padding = UDim.new(0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, Home)
+
+    local Hero = make("Frame", {
+        Size = UDim2.new(1, -5, 0, 116),
+        BackgroundColor3 = Theme.Card,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+        ZIndex = Home.ZIndex + 1,
+    }, Home)
+
+    corner(Hero, 13)
+    stroke(Hero, 0.56, Theme.Border)
+
+    make("ImageLabel", {
+        Position = UDim2.fromOffset(18, 18),
+        Size = UDim2.fromOffset(58, 58),
+        BackgroundColor3 = Theme.Content,
+        BorderSizePixel = 0,
+        Image = avatar.Image,
+        ZIndex = Hero.ZIndex + 1,
+    }, Hero)
+
+    text(Hero, {
+        Position = UDim2.fromOffset(94, 20),
+        Size = UDim2.new(1, -112, 0, 24),
+        Text = player and player.DisplayName or "Player",
+        TextColor3 = Theme.TextStrong,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 17,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Hero.ZIndex + 1,
+    })
+
+    text(Hero, {
+        Position = UDim2.fromOffset(94, 47),
+        Size = UDim2.new(1, -112, 0, 18),
+        Text = player and ("@" .. player.Name) or "@player",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 9,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Hero.ZIndex + 1,
+    })
+
+    text(Hero, {
+        Position = UDim2.fromOffset(18, 88),
+        Size = UDim2.new(1, -36, 0, 16),
+        Text = "Stable pages, matching system UI, and no layout animations.",
+        TextColor3 = Theme.TextFaint,
+        TextSize = 8,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Hero.ZIndex + 1,
+    })
+
+    local Quick = make("Frame", {
+        Size = UDim2.new(1, -5, 0, 264),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 2,
+        ZIndex = Home.ZIndex + 1,
+    }, Home)
+
+    make("UIGridLayout", {
+        CellPadding = UDim2.fromOffset(8, 8),
+        CellSize = UDim2.new(0.3333, -6, 0, 80),
+        FillDirectionMaxCells = 3,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, Quick)
+
+    local function pageObject(category)
+        return categoryObject(category)
+    end
+
+    local preferred = {
+        { "Home", nil },
+        { "Settings", "Main" },
+        { "Combat", "Combat" },
+        { "Blatant", "Blatant" },
+        { "Render", "Render" },
+        { "Utility", "Utility" },
+        { "World", "World" },
+        { "Legit", "Legit" },
+    }
+
+    for order, item in ipairs(preferred) do
+        local category = item[2] and d.Categories[item[2]] or nil
+        local object = category and pageObject(category) or nil
+        local page = {
+            Name = item[1],
+            Category = category,
+            Object = object,
+            Order = order,
+            Host = nil,
+            Button = nil,
+            Home = item[1] == "Home",
+        }
+
+        if not page.Home and object and object.Parent then
+            saveObject(object)
+            App.PageByObject[object] = page
+        elseif not page.Home then
+            continue
+        end
+
+        page.Host = make("Frame", {
+            Name = page.Name .. "Host",
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Visible = false,
+            ClipsDescendants = true,
+            ZIndex = Content.ZIndex + 1,
+        }, Content)
+
+        App.Pages[#App.Pages + 1] = page
+    end
+
+    local function pageByName(name)
+        for _, page in ipairs(App.Pages) do
+            if page.Name == name then
+                return page
+            end
+        end
+    end
+
+    local function navButton(page)
+        local object = button(Nav, {
+            Size = UDim2.new(1, 0, 0, 38),
+            BackgroundColor3 = Theme.Sidebar,
+            Text = "",
+            LayoutOrder = page.Order,
+            ZIndex = Nav.ZIndex + 1,
+        })
+
+        local rail = make("Frame", {
+            Name = "Rail",
+            Position = UDim2.fromOffset(0, 8),
+            Size = UDim2.fromOffset(3, 22),
+            BackgroundColor3 = accent(),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = object.ZIndex + 2,
+        }, object)
+
+        corner(rail, 99)
+
+        text(object, {
+            Name = "Icon",
+            Position = UDim2.fromOffset(12, 8),
+            Size = UDim2.fromOffset(20, 22),
+            Text = page.Home and "⌂" or string.sub(page.Name, 1, 1),
+            TextColor3 = Theme.TextMuted,
+            FontFace = Font.fromEnum(Enum.Font.GothamBold),
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = object.ZIndex + 1,
+        })
+
+        text(object, {
+            Name = "Name",
+            Position = UDim2.fromOffset(42, 0),
+            Size = UDim2.new(1, -50, 1, 0),
+            Text = page.Name,
+            TextColor3 = Theme.TextMuted,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = object.ZIndex + 1,
+        })
+
+        hover(object, Theme.Sidebar, Theme.Card)
+
+        clean(object.MouseButton1Click:Connect(function()
+            App:Activate(page)
+        end))
+
+        page.Button = object
+    end
+
+    for _, page in ipairs(App.Pages) do
+        navButton(page)
+    end
+
+    local quickOrder = 1
+
+    for _, page in ipairs(App.Pages) do
+        if not page.Home then
+            local card = button(Quick, {
+                BackgroundColor3 = Theme.Card,
+                Text = "",
+                LayoutOrder = quickOrder,
+                ZIndex = Quick.ZIndex + 1,
+            })
+
+            stroke(card, 0.68, Theme.Border)
+            hover(card, Theme.Card, Theme.CardHover)
+
+            text(card, {
+                Position = UDim2.fromOffset(13, 12),
+                Size = UDim2.fromOffset(24, 20),
+                Text = string.sub(page.Name, 1, 1),
+                TextColor3 = accent(),
+                FontFace = Font.fromEnum(Enum.Font.GothamBold),
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = card.ZIndex + 1,
+            })
+
+            text(card, {
+                Position = UDim2.fromOffset(13, 45),
+                Size = UDim2.new(1, -26, 0, 18),
+                Text = page.Name,
+                TextColor3 = Theme.TextStrong,
+                FontFace = Font.fromEnum(Enum.Font.GothamMedium),
+                TextSize = 9,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = card.ZIndex + 1,
+            })
+
+            clean(card.MouseButton1Click:Connect(function()
+                App:Activate(page)
+            end))
+
+            quickOrder += 1
+        end
+    end
+
+    local function lockScale(scale)
         if not scale
             or not scale:IsA("UIScale")
             or scale == A
-            or self.LockedScales[scale]
+            or App.LockedScale[scale]
         then
             return
         end
 
-        self.LockedScales[scale] = true
+        App.LockedScale[scale] = true
         scale.Scale = 1
 
-        U.clean(scale:GetPropertyChangedSignal("Scale"):Connect(function()
-            if self.Docked
-                and scale.Parent
-                and math.abs(scale.Scale - 1) > 0.001
-            then
+        clean(scale:GetPropertyChangedSignal("Scale"):Connect(function()
+            if App.Docked and scale.Parent and scale.Scale ~= 1 then
                 scale.Scale = 1
             end
         end))
     end
 
-    function App:AddPage(name, object, category, order, home)
-        if object and self.PageByObject[object] then
-            return self.PageByObject[object]
+    local function primaryScroller(object)
+        local direct = object and object:FindFirstChild("Children")
+
+        if direct and direct:IsA("ScrollingFrame") then
+            return direct
         end
-
-        local page = {
-            Name = U.normalize(name),
-            Object = object,
-            Category = category,
-            Order = order,
-            Home = home == true,
-            Icon = object and U.iconFromObject(object) or "",
-            Host = nil,
-            Button = nil,
-        }
-
-        page.Host = U.make("CanvasGroup", {
-            Name = page.Name .. "Page",
-            Position = UDim2.fromOffset(12, 0),
-            Size = UDim2.fromScale(1, 1),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            GroupTransparency = 1,
-            Visible = false,
-            ClipsDescendants = true,
-            ZIndex = self.UI.Content.ZIndex + 1,
-        }, self.UI.Content)
-
-        self.Pages[#self.Pages + 1] = page
-
-        if object then
-            self.PageByObject[object] = page
-            self:SaveObject(object)
-        end
-
-        return page
-    end
-
-    function App:DiscoverPages()
-        table.clear(self.Pages)
-
-        self:AddPage("Home", nil, nil, 0, true)
-
-        local preferred = {
-            { "Settings", "Main" },
-            { "Combat", "Combat" },
-            { "Blatant", "Blatant" },
-            { "Render", "Render" },
-            { "Utility", "Utility" },
-            { "World", "World" },
-            { "Legit", "Legit" },
-        }
-
-        local seen = setmetatable({}, { __mode = "k" })
-        local order = 1
-
-        for _, item in ipairs(preferred) do
-            local category = d.Categories[item[2]]
-            local object = U.categoryObject(category)
-
-            if object and object.Parent and not seen[object] then
-                seen[object] = true
-                self:AddPage(item[1], object, category, order, false)
-                order += 1
-            end
-        end
-
-        for name, category in d.Categories do
-            local object = U.categoryObject(category)
-
-            if object and object.Parent and not seen[object] then
-                seen[object] = true
-                self:AddPage(
-                    U.normalize(name),
-                    object,
-                    category,
-                    order,
-                    false
-                )
-                order += 1
-            end
-        end
-
-        for _, object in d.Windows do
-            if typeof(object) == "Instance"
-                and object:IsA("GuiObject")
-                and object.Parent
-                and not seen[object]
-                and not U.isMetricWindow(object)
-                and object.AbsoluteSize.X >= 150
-                and object.AbsoluteSize.Y >= 70
-            then
-                seen[object] = true
-                self:AddPage(
-                    U.titleFromObject(object),
-                    object,
-                    nil,
-                    order,
-                    false
-                )
-                order += 1
-            end
-        end
-
-        table.sort(self.Pages, function(left, right)
-            if left.Order == right.Order then
-                return left.Name < right.Name
-            end
-
-            return left.Order < right.Order
-        end)
-    end
-
-    function App:CreateNavigation()
-        for _, child in ipairs(self.UI.Nav:GetChildren()) do
-            if child:IsA("GuiButton") then
-                child:Destroy()
-            end
-        end
-
-        for _, page in ipairs(self.Pages) do
-            local buttonObject = U.button(self.UI.Nav, {
-                Name = page.Name,
-                Size = UDim2.new(1, 0, 0, 38),
-                BackgroundColor3 = Theme.Sidebar,
-                Text = "",
-                LayoutOrder = page.Order,
-                ZIndex = self.UI.Nav.ZIndex + 1,
-            })
-
-            local rail = U.make("Frame", {
-                Name = "Rail",
-                Position = UDim2.fromOffset(0, 8),
-                Size = UDim2.fromOffset(3, 22),
-                BackgroundColor3 = U.accent(),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                ZIndex = buttonObject.ZIndex + 2,
-            }, buttonObject)
-
-            U.corner(rail, 99)
-
-            if page.Icon ~= "" then
-                U.make("ImageLabel", {
-                    Name = "Icon",
-                    Position = UDim2.fromOffset(14, 11),
-                    Size = UDim2.fromOffset(16, 16),
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    Image = page.Icon,
-                    ImageColor3 = Theme.TextMuted,
-                    ZIndex = buttonObject.ZIndex + 1,
-                }, buttonObject)
-            else
-                U.text(buttonObject, {
-                    Name = "Icon",
-                    Position = UDim2.fromOffset(12, 8),
-                    Size = UDim2.fromOffset(20, 22),
-                    Text = page.Home and "⌂" or string.sub(page.Name, 1, 1),
-                    TextColor3 = Theme.TextMuted,
-                    FontFace = Font.fromEnum(Enum.Font.GothamBold),
-                    TextSize = 12,
-                    TextXAlignment = Enum.TextXAlignment.Center,
-                    ZIndex = buttonObject.ZIndex + 1,
-                })
-            end
-
-            U.text(buttonObject, {
-                Name = "NameLabel",
-                Position = UDim2.fromOffset(42, 0),
-                Size = UDim2.new(1, -50, 1, 0),
-                Text = page.Name,
-                TextColor3 = Theme.TextMuted,
-                TextSize = 10,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = buttonObject.ZIndex + 1,
-            })
-
-            page.Button = buttonObject
-
-            U.clean(buttonObject.MouseButton1Click:Connect(function()
-                self:Activate(page)
-            end))
-
-            U.clean(buttonObject.MouseEnter:Connect(function()
-                if self.ActivePage ~= page then
-                    U.tween(buttonObject, {
-                        BackgroundColor3 = Theme.Card,
-                    }, 0.07)
-                end
-            end))
-
-            U.clean(buttonObject.MouseLeave:Connect(function()
-                if self.ActivePage ~= page then
-                    U.tween(buttonObject, {
-                        BackgroundColor3 = Theme.Sidebar,
-                    }, 0.07)
-                end
-            end))
-        end
-    end
-
-    function App:BuildHome(page)
-        local scroll = U.make("ScrollingFrame", {
-            Name = "HomeScroll",
-            Size = UDim2.fromScale(1, 1),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            CanvasSize = UDim2.new(),
-            ScrollBarThickness = 3,
-            ScrollBarImageColor3 = Theme.BorderStrong,
-            ScrollBarImageTransparency = 0.3,
-            ScrollingDirection = Enum.ScrollingDirection.Y,
-            ElasticBehavior = Enum.ElasticBehavior.Never,
-            ZIndex = page.Host.ZIndex + 1,
-        }, page.Host)
-
-        U.make("UIPadding", {
-            PaddingRight = UDim.new(0, 5),
-            PaddingBottom = UDim.new(0, 10),
-        }, scroll)
-
-        U.make("UIListLayout", {
-            Padding = UDim.new(0, 10),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        }, scroll)
-
-        local profile = U.make("Frame", {
-            Name = "ProfileCard",
-            Size = UDim2.new(1, -5, 0, 118),
-            BackgroundColor3 = Theme.Card,
-            BorderSizePixel = 0,
-            LayoutOrder = 1,
-            ZIndex = scroll.ZIndex + 1,
-        }, scroll)
-
-        U.corner(profile, 13)
-        U.stroke(profile, 0.56, Theme.Border)
-
-        U.make("ImageLabel", {
-            Name = "Avatar",
-            Position = UDim2.fromOffset(18, 18),
-            Size = UDim2.fromOffset(58, 58),
-            BackgroundColor3 = Theme.Content,
-            BorderSizePixel = 0,
-            Image = self.UI.Avatar.Image,
-            ZIndex = profile.ZIndex + 1,
-        }, profile)
-
-        local player = Players.LocalPlayer
-
-        U.text(profile, {
-            Name = "DisplayName",
-            Position = UDim2.fromOffset(94, 20),
-            Size = UDim2.new(1, -112, 0, 24),
-            Text = player and player.DisplayName or "Player",
-            TextColor3 = Theme.TextStrong,
-            FontFace = Font.fromEnum(Enum.Font.GothamBold),
-            TextSize = 17,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = profile.ZIndex + 1,
-        })
-
-        U.text(profile, {
-            Name = "Username",
-            Position = UDim2.fromOffset(94, 47),
-            Size = UDim2.new(1, -112, 0, 18),
-            Text = player and ("@" .. player.Name) or "@player",
-            TextColor3 = Theme.TextMuted,
-            TextSize = 9,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = profile.ZIndex + 1,
-        })
-
-        U.make("Frame", {
-            Name = "Divider",
-            Position = UDim2.fromOffset(18, 88),
-            Size = UDim2.new(1, -36, 0, 1),
-            BackgroundColor3 = Theme.Border,
-            BackgroundTransparency = 0.3,
-            BorderSizePixel = 0,
-            ZIndex = profile.ZIndex + 1,
-        }, profile)
-
-        U.text(profile, {
-            Name = "Hint",
-            Position = UDim2.fromOffset(18, 94),
-            Size = UDim2.new(1, -36, 0, 16),
-            Text = "Choose a category or press Ctrl+K to search modules.",
-            TextColor3 = Theme.TextFaint,
-            TextSize = 8,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = profile.ZIndex + 1,
-        })
-
-        local stats = U.make("Frame", {
-            Name = "Stats",
-            Size = UDim2.new(1, -5, 0, 76),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            LayoutOrder = 2,
-            ZIndex = scroll.ZIndex + 1,
-        }, scroll)
-
-        U.make("UIGridLayout", {
-            CellPadding = UDim2.fromOffset(8, 0),
-            CellSize = UDim2.new(0.25, -6, 1, 0),
-            FillDirectionMaxCells = 4,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        }, stats)
-
-        local function stat(order, titleValue, valueValue)
-            local card = U.make("Frame", {
-                Name = titleValue,
-                BackgroundColor3 = Theme.Card,
-                BorderSizePixel = 0,
-                LayoutOrder = order,
-                ZIndex = stats.ZIndex + 1,
-            }, stats)
-
-            U.corner(card, 10)
-            U.stroke(card, 0.7, Theme.Border)
-
-            U.text(card, {
-                Position = UDim2.fromOffset(11, 10),
-                Size = UDim2.new(1, -22, 0, 14),
-                Text = titleValue,
-                TextColor3 = Theme.TextFaint,
-                FontFace = Font.fromEnum(Enum.Font.GothamBold),
-                TextSize = 8,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = card.ZIndex + 1,
-            })
-
-            return U.text(card, {
-                Name = "Value",
-                Position = UDim2.fromOffset(11, 31),
-                Size = UDim2.new(1, -22, 0, 28),
-                Text = tostring(valueValue),
-                TextColor3 = Theme.TextStrong,
-                FontFace = Font.fromEnum(Enum.Font.GothamBold),
-                TextSize = 15,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = card.ZIndex + 1,
-            })
-        end
-
-        self.UI.CategoryStat = stat(1, "CATEGORIES", "0")
-        self.UI.ModuleStat = stat(2, "MODULES", "0")
-        self.UI.ProfileStat = stat(3, "PROFILE", d.Profile or "default")
-        self.UI.PlaceStat = stat(4, "PLACE", tostring(d.Place or game.PlaceId))
-
-        U.text(scroll, {
-            Name = "QuickLabel",
-            Size = UDim2.new(1, -5, 0, 18),
-            Text = "QUICK ACCESS",
-            TextColor3 = Theme.TextFaint,
-            FontFace = Font.fromEnum(Enum.Font.GothamBold),
-            TextSize = 8,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            LayoutOrder = 3,
-            ZIndex = scroll.ZIndex + 1,
-        })
-
-        local quick = U.make("Frame", {
-            Name = "QuickGrid",
-            Size = UDim2.new(1, -5, 0, 170),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            LayoutOrder = 4,
-            ZIndex = scroll.ZIndex + 1,
-        }, scroll)
-
-        U.make("UIGridLayout", {
-            CellPadding = UDim2.fromOffset(8, 8),
-            CellSize = UDim2.new(0.3333, -6, 0, 80),
-            FillDirectionMaxCells = 3,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        }, quick)
-
-        local quickOrder = 1
-
-        for _, current in ipairs(self.Pages) do
-            if not current.Home and quickOrder <= 6 then
-                local card = U.button(quick, {
-                    Name = current.Name,
-                    BackgroundColor3 = Theme.Card,
-                    Text = "",
-                    LayoutOrder = quickOrder,
-                    ZIndex = quick.ZIndex + 1,
-                })
-
-                U.stroke(card, 0.68, Theme.Border)
-                self:BindHover(card, Theme.Card, Theme.CardHover)
-
-                U.text(card, {
-                    Position = UDim2.fromOffset(13, 12),
-                    Size = UDim2.fromOffset(24, 20),
-                    Text = string.sub(current.Name, 1, 1),
-                    TextColor3 = U.accent(),
-                    FontFace = Font.fromEnum(Enum.Font.GothamBold),
-                    TextSize = 14,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    ZIndex = card.ZIndex + 1,
-                })
-
-                U.text(card, {
-                    Position = UDim2.fromOffset(13, 45),
-                    Size = UDim2.new(1, -26, 0, 18),
-                    Text = current.Name,
-                    TextColor3 = Theme.TextStrong,
-                    FontFace = Font.fromEnum(Enum.Font.GothamMedium),
-                    TextSize = 9,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    ZIndex = card.ZIndex + 1,
-                })
-
-                U.clean(card.MouseButton1Click:Connect(function()
-                    self:Activate(current)
-                end))
-
-                quickOrder += 1
-            end
-        end
-    end
-
-    function App:PrimaryScroller(object)
-        local named = object and object:FindFirstChild("Children")
-
-        if named and named:IsA("ScrollingFrame") then
-            return named
-        end
-
-        local best = nil
-        local bestArea = -1
 
         for _, descendant in ipairs(object:GetDescendants()) do
             if descendant:IsA("ScrollingFrame") then
-                local lower = string.lower(descendant.Name)
-
-                if not string.find(lower, "dropdown", 1, true)
-                    and not string.find(lower, "popup", 1, true)
-                then
-                    local area =
-                        descendant.AbsoluteSize.X
-                        * descendant.AbsoluteSize.Y
-
-                    if area > bestArea then
-                        best = descendant
-                        bestArea = area
-                    end
-                end
+                return descendant
             end
         end
-
-        return best
     end
 
-    function App:UpdateCanvas(page)
+    local function updateCanvas(page)
         if not page.Object or not page.Object.Parent then
             return
         end
 
-        local scroller = self:PrimaryScroller(page.Object)
+        local scroller = primaryScroller(page.Object)
 
         if not scroller then
             return
@@ -17858,71 +17569,55 @@ end
                 0,
                 math.max(
                     0,
-                    math.ceil(
-                        layout.AbsoluteContentSize.Y
-                        + paddingHeight
-                        + 8
-                    )
+                    math.ceil(layout.AbsoluteContentSize.Y + paddingHeight + 8)
                 )
             )
         end
     end
 
-    function App:InstallGuard(page)
-        if page.Home or not page.Object then
+    local function installGuard(page)
+        if page.Home or not page.Object or App.Guard[page.Object] then
             return
         end
 
         local object = page.Object
-        local guard = self.Guards[object]
+        local guard = {
+            Applying = false,
+        }
 
-        if guard and guard.Installed then
-            return
-        end
-
-        guard = guard or {}
-        guard.Installed = true
-        guard.Applying = false
-        self.Guards[object] = guard
+        App.Guard[object] = guard
 
         local function repair()
-            if self.Docked and object.Parent == page.Host and not guard.Applying then
-                task.defer(function()
-                    if self.Docked and object.Parent == page.Host then
-                        self:DockObject(page)
-                    end
-                end)
+            if not App.Docked
+                or App.Active ~= page
+                or guard.Applying
+                or object.Parent ~= page.Host
+            then
+                return
             end
-        end
 
-        U.clean(object:GetPropertyChangedSignal("Size"):Connect(repair))
-        U.clean(object:GetPropertyChangedSignal("Position"):Connect(repair))
-
-        local scroller = self:PrimaryScroller(object)
-        local layout = scroller and scroller:FindFirstChildOfClass("UIListLayout")
-
-        if layout then
-            U.clean(layout:GetPropertyChangedSignal(
-                "AbsoluteContentSize"
-            ):Connect(function()
-                if self.Docked then
-                    task.defer(function()
-                        self:UpdateCanvas(page)
-                    end)
+            task.defer(function()
+                if App.Docked and App.Active == page then
+                    App:DockPage(page)
                 end
-            end))
+            end)
         end
+
+        clean(object:GetPropertyChangedSignal("Size"):Connect(repair))
+        clean(object:GetPropertyChangedSignal("Position"):Connect(repair))
+        clean(object:GetPropertyChangedSignal("Visible"):Connect(repair))
     end
 
-    function App:DockObject(page)
+    function App:DockPage(page)
         if page.Home or not page.Object then
             return
         end
 
         local object = page.Object
-        local state = self:SaveObject(object)
-        local guard = self.Guards[object] or {}
-        self.Guards[object] = guard
+        local state = saveObject(object)
+        local guard = App.Guard[object] or { Applying = false }
+
+        App.Guard[object] = guard
         guard.Applying = true
 
         object.Parent = page.Host
@@ -17932,12 +17627,8 @@ end
         object.Visible = true
         object.ZIndex = page.Host.ZIndex + 1
         object.ClipsDescendants = true
-        object.BackgroundColor3 = Theme.Content
-        object.BackgroundTransparency = 0
-        U.safeSet(object, "AutomaticSize", Enum.AutomaticSize.None)
-
-        U.corner(object, 12)
-        U.stroke(object, 0.55, Theme.Border)
+        object.BackgroundTransparency = 1
+        safeSet(object, "AutomaticSize", Enum.AutomaticSize.None)
 
         if state.Header then
             state.Header.Visible = false
@@ -17955,7 +17646,6 @@ end
             state.Children.Visible = true
             state.Children.Position = UDim2.fromOffset(0, 0)
             state.Children.Size = UDim2.fromScale(1, 1)
-            state.Children.BackgroundTransparency = 1
             state.Children.Active = true
             state.Children.ScrollingEnabled = true
             state.Children.ElasticBehavior = Enum.ElasticBehavior.Never
@@ -17966,57 +17656,62 @@ end
 
         for _, descendant in ipairs(object:GetDescendants()) do
             if descendant:IsA("UIScale") then
-                self:LockScale(descendant)
+                lockScale(descendant)
             elseif descendant:IsA("UIGradient") then
                 descendant.Enabled = false
-            elseif descendant:IsA("ImageLabel")
-                or descendant:IsA("ImageButton")
-            then
-                U.safeSet(
-                    descendant,
-                    "ResampleMode",
-                    Enum.ResamplerMode.Default
-                )
             end
         end
 
-        self:UpdateCanvas(page)
+        if page.Name == "Settings" then
+            pcall(function()
+                d.MainGuiSettingsOpenedEvent:Fire()
+            end)
+        elseif page.Category then
+            pcall(function()
+                if type(page.Category.Expand) == "function" then
+                    page.Category:Expand(true)
+                elseif type(page.Category.Toggle) == "function" then
+                    page.Category:Toggle(true, true)
+                end
+            end)
+        end
+
+        updateCanvas(page)
         guard.Applying = false
     end
 
-    function App:RestoreObject(page)
+    function App:RestorePage(page)
         if page.Home or not page.Object then
             return
         end
 
         local object = page.Object
-        local state = self.Original[object]
+        local state = App.Original[object]
 
         if not state then
             return
         end
 
-        local guard = self.Guards[object] or {}
-        self.Guards[object] = guard
+        local guard = App.Guard[object] or { Applying = false }
+        App.Guard[object] = guard
         guard.Applying = true
 
         object.Parent = state.Parent
-        object.AnchorPoint = state.AnchorPoint
         object.Position = state.Position
         object.Size = state.Size
+        object.AnchorPoint = state.AnchorPoint
         object.Visible = state.Visible
         object.ZIndex = state.ZIndex
         object.ClipsDescendants = state.ClipsDescendants
-        object.BackgroundColor3 = state.BackgroundColor3
         object.BackgroundTransparency = state.BackgroundTransparency
-        U.safeSet(object, "AutomaticSize", state.AutomaticSize)
+        object.BackgroundColor3 = state.BackgroundColor3
+        safeSet(object, "AutomaticSize", state.AutomaticSize)
 
         if state.Header then
             state.Header.Visible = state.HeaderVisible
         end
 
         if state.Children then
-            state.Children.Parent = state.ChildrenParent or object
             state.Children.Position = state.ChildrenPosition
             state.Children.Size = state.ChildrenSize
             state.Children.Visible = state.ChildrenVisible
@@ -18037,67 +17732,49 @@ end
         guard.Applying = false
     end
 
-    function App:AddModule(module)
-        if type(module) ~= "table"
-            or typeof(module.Object) ~= "Instance"
-            or not module.Object.Parent
-            or self.ModuleSeen[module.Object]
-        then
-            return
+    local function collectModules()
+        table.clear(App.Modules)
+        table.clear(App.ModuleSeen)
+
+        local function add(module)
+            if type(module) ~= "table"
+                or typeof(module.Object) ~= "Instance"
+                or not module.Object.Parent
+                or App.ModuleSeen[module.Object]
+            then
+                return
+            end
+
+            App.ModuleSeen[module.Object] = true
+
+            local record = {
+                Module = module,
+                Object = module.Object,
+                Name = string.lower(normalize(
+                    module.Name
+                    or module.DisplayName
+                    or module.Object.Name
+                )),
+                Page = nil,
+            }
+
+            for _, page in ipairs(App.Pages) do
+                if page.Object and module.Object:IsDescendantOf(page.Object) then
+                    record.Page = page
+                    break
+                end
+            end
+
+            App.Modules[#App.Modules + 1] = record
         end
-
-        self.ModuleSeen[module.Object] = true
-
-        local object = module.Object
-        object.BackgroundColor3 = module.Enabled
-            and Theme.CardActive
-            or Theme.Card
-        object.BackgroundTransparency = 0.01
-        object.BorderSizePixel = 0
-        object.Size = UDim2.new(
-            object.Size.X.Scale,
-            object.Size.X.Offset,
-            0,
-            d.isMobile and 50 or 42
-        )
-
-        U.corner(object, 9)
-        U.stroke(
-            object,
-            module.Enabled and 0.42 or 0.76,
-            module.Enabled and Theme.BorderStrong or Theme.Border
-        )
-
-        local scale = object:FindFirstChildOfClass("UIScale")
-
-        if scale then
-            self:LockScale(scale)
-        end
-
-        self.ModuleRecords[#self.ModuleRecords + 1] = {
-            Module = module,
-            Object = object,
-            Name = string.lower(U.normalize(
-                module.Name
-                or module.DisplayName
-                or U.titleFromObject(object)
-                or object.Name
-            )),
-            Page = nil,
-        }
-    end
-
-    function App:CollectModules()
-        table.clear(self.ModuleRecords)
-        table.clear(self.ModuleSeen)
 
         for _, module in d.Modules do
-            self:AddModule(module)
+            add(module)
         end
 
         if d.Legit and type(d.Legit.Modules) == "table" then
             for _, module in d.Legit.Modules do
-                self:AddModule(module)
+                add(module)
             end
         end
 
@@ -18106,336 +17783,179 @@ end
                 and type(category.Modules) == "table"
             then
                 for _, module in category.Modules do
-                    self:AddModule(module)
+                    add(module)
                 end
             end
         end
 
-        for _, record in ipairs(self.ModuleRecords) do
-            record.Page = nil
-
-            for _, page in ipairs(self.Pages) do
-                if page.Object
-                    and record.Object:IsDescendantOf(page.Object)
-                then
-                    record.Page = page
-                    break
-                end
-            end
-        end
-    end
-
-    function App:UpdateStats()
-        if not self.UI.CategoryStat then
-            return
-        end
-
-        self.UI.CategoryStat.Text = tostring(math.max(0, #self.Pages - 1))
-        self.UI.ModuleStat.Text = tostring(#self.ModuleRecords)
-        self.UI.ProfileStat.Text = tostring(d.Profile or "default")
-        self.UI.PlaceStat.Text = tostring(d.Place or game.PlaceId)
-        self.UI.SidebarFooter.Text =
-            tostring(#self.ModuleRecords)
-            .. " modules  •  V20.3"
-    end
-
-    function App:NavVisual(page, active)
-        if not page.Button then
-            return
-        end
-
-        local rail = page.Button:FindFirstChild("Rail")
-        local label = page.Button:FindFirstChild("NameLabel")
-        local icon = page.Button:FindFirstChild("Icon")
-
-        U.tween(page.Button, {
-            BackgroundColor3 = active
-                and Theme.CardActive
-                or Theme.Sidebar,
-        }, 0.09)
-
-        if rail then
-            U.tween(rail, {
-                BackgroundTransparency = active and 0 or 1,
-                BackgroundColor3 = U.accent(),
-            }, 0.1)
-        end
-
-        if label then
-            U.tween(label, {
-                TextColor3 = active
-                    and Theme.TextStrong
-                    or Theme.TextMuted,
-            }, 0.09)
-        end
-
-        if icon then
-            if icon:IsA("ImageLabel") then
-                U.tween(icon, {
-                    ImageColor3 = active
-                        and U.accent()
-                        or Theme.TextMuted,
-                }, 0.09)
-            elseif icon:IsA("TextLabel") then
-                U.tween(icon, {
-                    TextColor3 = active
-                        and U.accent()
-                        or Theme.TextMuted,
-                }, 0.09)
-            end
-        end
-    end
-
-    function App:Activate(page)
-        if not page or self.ActivePage == page then
-            return
-        end
-
-        self.TransitionGeneration += 1
-        local generation = self.TransitionGeneration
-        local previous = self.ActivePage
-        self.ActivePage = page
-
-        for _, current in ipairs(self.Pages) do
-            self:NavVisual(current, current == page)
-        end
-
-        self.UI.PageTitle.Text = page.Name
-        self.UI.PageSubtitle.Text = page.Home
-            and "Fast access to every BadWars category"
-            or "Modules, controls, and advanced options"
-        self.UI.SearchFrame.Visible = not page.Home
-        self.UI.Search.Text = ""
-
-        if page.Object then
-            self:DockObject(page)
-        end
-
-        if previous and previous.Host and previous.Host.Visible then
-            U.tween(previous.Host, {
-                GroupTransparency = 1,
-                Position = UDim2.fromOffset(-10, 0),
-            }, 0.1)
-
-            task.delay(0.105, function()
-                if generation ~= self.TransitionGeneration then
-                    return
-                end
-
-                previous.Host.Visible = false
-            end)
-        end
-
-        page.Host.Visible = true
-        page.Host.GroupTransparency = 1
-        page.Host.Position = UDim2.fromOffset(12, 0)
-
-        U.tween(page.Host, {
-            GroupTransparency = 0,
-            Position = UDim2.fromOffset(0, 0),
-        }, 0.14, Enum.EasingStyle.Quint)
-
-        self:Filter()
+        Status.Text =
+            tostring(#App.Modules)
+            .. " modules  •  V20.4"
     end
 
     function App:Filter()
-        self.SearchGeneration += 1
-        local generation = self.SearchGeneration
-        local query = string.lower(U.normalize(self.UI.Search.Text))
+        App.SearchGeneration += 1
+        local generation = App.SearchGeneration
+        local query = string.lower(normalize(Search.Text))
 
-        task.delay(0.035, function()
-            if generation ~= self.SearchGeneration then
+        task.delay(0.04, function()
+            if generation ~= App.SearchGeneration then
                 return
             end
 
             local visible = 0
 
-            for _, record in ipairs(self.ModuleRecords) do
-                if record.Object.Parent then
-                    local belongs = record.Page == self.ActivePage
+            for _, record in ipairs(App.Modules) do
+                if record.Page == App.Active and record.Object.Parent then
                     local match = query == ""
-                        or string.find(
-                            record.Name,
-                            query,
-                            1,
-                            true
-                        ) ~= nil
+                        or string.find(record.Name, query, 1, true) ~= nil
 
-                    if belongs then
-                        record.Object.Visible = match
+                    record.Object.Visible = match
 
-                        if match then
-                            visible += 1
-                        end
+                    if match then
+                        visible += 1
                     end
                 end
             end
 
-            if self.ActivePage then
-                self:UpdateCanvas(self.ActivePage)
+            if App.Active then
+                updateCanvas(App.Active)
             end
 
-            self.UI.SidebarFooter.Text =
+            Status.Text =
                 tostring(visible)
                 .. " visible  •  "
-                .. tostring(#self.ModuleRecords)
+                .. tostring(#App.Modules)
                 .. " total"
         end)
     end
 
-    function App:UpdateResponsive()
-        local viewport = B.AbsoluteSize
-        local width = math.clamp(viewport.X - 72, 760, 980)
-        local height = math.clamp(viewport.Y - 72, 520, 640)
-        local compact = width < 840
-
-        self.UI.Root.Size = UDim2.fromOffset(width, height)
-        self.Compact = compact
-
-        local sidebarWidth = compact and 62 or 172
-
-        U.tween(self.UI.Sidebar, {
-            Size = UDim2.new(0, sidebarWidth, 1, 0),
-        }, 0.13)
-
-        U.tween(self.UI.Main, {
-            Position = UDim2.fromOffset(sidebarWidth, 0),
-            Size = UDim2.new(1, -sidebarWidth, 1, 0),
-        }, 0.13)
-
-        self.UI.Brand.Visible = not compact
-        self.UI.ProfileName.Visible = not compact
-        self.UI.ProfileSub.Visible = not compact
-        self.UI.NavCaption.Visible = not compact
-        self.UI.SidebarFooter.Visible = not compact
-        self.UI.Float.Visible = not compact
-
-        self.UI.Avatar.AnchorPoint = compact
-            and Vector2.new(0.5, 0)
-            or Vector2.new(0, 0)
-
-        self.UI.Avatar.Position = compact
-            and UDim2.new(0.5, 0, 0, 8)
-            or UDim2.fromOffset(8, 8)
-
-        for _, page in ipairs(self.Pages) do
-            if page.Button then
-                local label = page.Button:FindFirstChild("NameLabel")
-                local icon = page.Button:FindFirstChild("Icon")
-
-                if label then
-                    label.Visible = not compact
-                end
-
-                if icon then
-                    icon.Position = compact
-                        and UDim2.new(0.5, -8, 0, 11)
-                        or UDim2.fromOffset(14, 11)
-                end
-            end
-        end
-
-        self.UI.SearchFrame.Size = UDim2.fromOffset(
-            compact and 188 or 238,
-            34
-        )
-
-        self.UI.PageSubtitle.Visible = not compact
-    end
-
-    function App:SetCompact(compact)
-        self.Compact = compact == true
-        local width = self.Compact and 62 or 172
-
-        U.tween(self.UI.Sidebar, {
-            Size = UDim2.new(0, width, 1, 0),
-        }, 0.16)
-
-        U.tween(self.UI.Main, {
-            Position = UDim2.fromOffset(width, 0),
-            Size = UDim2.new(1, -width, 1, 0),
-        }, 0.16)
-
-        self.UI.Brand.Visible = not self.Compact
-        self.UI.ProfileName.Visible = not self.Compact
-        self.UI.ProfileSub.Visible = not self.Compact
-        self.UI.NavCaption.Visible = not self.Compact
-        self.UI.SidebarFooter.Visible = not self.Compact
-        self.UI.Float.Visible = not self.Compact
-
-        for _, page in ipairs(self.Pages) do
-            if page.Button then
-                local label = page.Button:FindFirstChild("NameLabel")
-
-                if label then
-                    label.Visible = not self.Compact
-                end
-            end
-        end
-    end
-
-    function App:Refresh()
-        self.RefreshGeneration += 1
-        local generation = self.RefreshGeneration
-
-        task.defer(function()
-            if generation ~= self.RefreshGeneration then
-                return
-            end
-
-            self:CollectModules()
-            self:UpdateStats()
-            self:Filter()
-        end)
-    end
-
-    function App:Show()
-        self.Open = true
-        self.UI.Root.Visible = true
-        self.UI.Root.GroupTransparency = 1
-        self.UI.RootScale.Scale = 0.965
-
-        U.tween(self.UI.Root, {
-            GroupTransparency = 0,
-        }, 0.14)
-
-        U.tween(
-            self.UI.RootScale,
-            { Scale = 1 },
-            0.18,
-            Enum.EasingStyle.Back
-        )
-    end
-
-    function App:Hide()
-        self.Open = false
-
-        U.tween(self.UI.Root, {
-            GroupTransparency = 1,
-        }, 0.11)
-
-        U.tween(self.UI.RootScale, {
-            Scale = 0.98,
-        }, 0.11)
-
-        task.delay(0.115, function()
-            if not self.Open then
-                self.UI.Root.Visible = false
-            end
-        end)
-    end
-
-    function App:Dock()
-        if self.Docked then
-            self:Show()
-            self.UI.DockPill.Visible = false
+    function App:Activate(page)
+        if not page then
             return
         end
 
-        self.SavedScale = A.Scale
+        App.Active = page
+
+        for _, current in ipairs(App.Pages) do
+            current.Host.Visible = current == page
+
+            if current.Button then
+                local rail = current.Button:FindFirstChild("Rail")
+                local label = current.Button:FindFirstChild("Name")
+                local icon = current.Button:FindFirstChild("Icon")
+                local active = current == page
+
+                current.Button.BackgroundColor3 = active
+                    and Theme.CardActive
+                    or Theme.Sidebar
+
+                if rail then
+                    rail.BackgroundTransparency = active and 0 or 1
+                    rail.BackgroundColor3 = accent()
+                end
+
+                if label then
+                    label.TextColor3 = active
+                        and Theme.TextStrong
+                        or Theme.TextMuted
+                end
+
+                if icon then
+                    icon.TextColor3 = active
+                        and accent()
+                        or Theme.TextMuted
+                end
+            end
+
+            if current.Object then
+                current.Object.Visible = current == page
+            end
+        end
+
+        PageTitle.Text = page.Name
+        PageSubtitle.Text = page.Home
+            and "Stable unified workspace"
+            or "Modules, controls, and advanced options"
+        SearchFrame.Visible = not page.Home
+        Search.Text = ""
+
+        if page.Home then
+            Home.Parent = page.Host
+            Home.Visible = true
+        else
+            App:DockPage(page)
+        end
+
+        App:Filter()
+    end
+
+    local DockPill = button(v, {
+        Name = "BadWarsV20UnifiedOpen",
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, 12),
+        Size = UDim2.fromOffset(170, 34),
+        BackgroundColor3 = Theme.Shell,
+        Text = "OPEN BADWARS V20.4",
+        TextColor3 = Theme.TextStrong,
+        TextSize = 9,
+        Visible = false,
+        ZIndex = 5000,
+    })
+
+    stroke(DockPill, 0.22, Theme.BorderStrong)
+    hover(DockPill, Theme.Shell, Theme.CardHover)
+
+    local function hideLegacy()
+        for _, descendant in ipairs(v:GetDescendants()) do
+            if descendant ~= Root
+                and descendant ~= DockPill
+                and not descendant:IsDescendantOf(Root)
+                and descendant:IsA("GuiObject")
+            then
+                if descendant.Name == "DiscordInvite"
+                    or descendant.Name == "Targets"
+                    or descendant.Name == "Friends"
+                    or descendant.Name == "Target Info"
+                then
+                    App.HiddenLegacy[descendant] = descendant.Visible
+                    descendant.Visible = false
+                end
+            end
+        end
+    end
+
+    local function restoreLegacy()
+        for object, wasVisible in pairs(App.HiddenLegacy) do
+            if object.Parent then
+                object.Visible = wasVisible
+            end
+        end
+
+        table.clear(App.HiddenLegacy)
+    end
+
+    local function responsive()
+        local viewport = B.AbsoluteSize
+        local width = math.clamp(viewport.X - 72, 760, 920)
+        local height = math.clamp(viewport.Y - 72, 520, 590)
+
+        Root.Size = UDim2.fromOffset(width, height)
+    end
+
+    function App:Dock()
+        if App.Docked then
+            Root.Visible = true
+            DockPill.Visible = false
+            return
+        end
+
+        App.SavedScale = A.Scale
         A.Scale = d.isMobile and 0.96 or 1
-        self.Docked = true
-        self.UI.DockPill.Visible = false
+        App.Docked = true
+
+        responsive()
+        hideLegacy()
 
         pcall(function()
             if d.LayoutIntelligence
@@ -18447,171 +17967,146 @@ end
             end
         end)
 
-        for _, page in ipairs(self.Pages) do
+        for _, page in ipairs(App.Pages) do
             if page.Object then
-                self:InstallGuard(page)
-                self:DockObject(page)
+                installGuard(page)
+                App:DockPage(page)
                 page.Host.Visible = false
             end
         end
 
-        self:UpdateResponsive()
-        self:Refresh()
-        self:Show()
-        self:Activate(self.Pages[1])
-
-        task.delay(0.5, function()
-            self:Refresh()
-        end)
-
-        task.delay(1.5, function()
-            self:Refresh()
-        end)
+        collectModules()
+        Root.Visible = true
+        DockPill.Visible = false
+        App:Activate(pageByName("Home") or App.Pages[1])
     end
 
     function App:Float()
-        if not self.Docked then
+        if not App.Docked then
             return
         end
 
-        self.Docked = false
-        self:Hide()
+        App.Docked = false
 
-        task.delay(0.12, function()
-            for _, page in ipairs(self.Pages) do
-                self:RestoreObject(page)
-                page.Host.Visible = false
+        for _, page in ipairs(App.Pages) do
+            App:RestorePage(page)
+            page.Host.Visible = false
+        end
+
+        restoreLegacy()
+        A.Scale = App.SavedScale
+        Root.Visible = false
+        DockPill.Visible = true
+
+        pcall(function()
+            if d.LayoutIntelligence
+                and type(d.LayoutIntelligence.SetMode) == "function"
+            then
+                d.LayoutIntelligence:SetMode("Clamp")
             end
-
-            A.Scale = self.SavedScale
-            self.UI.DockPill.Visible = true
-
-            pcall(function()
-                if d.LayoutIntelligence
-                    and type(d.LayoutIntelligence.SetMode) == "function"
-                then
-                    d.LayoutIntelligence:SetMode("Clamp")
-                end
-            end)
         end)
     end
 
-    function App:Bind()
-        U.clean(self.UI.Close.MouseButton1Click:Connect(function()
-            pcall(function()
-                d:SetClickGuiVisible(false)
-            end)
-        end))
+    clean(Close.MouseButton1Click:Connect(function()
+        pcall(function()
+            d:SetClickGuiVisible(false)
+        end)
+    end))
 
-        U.clean(self.UI.Float.MouseButton1Click:Connect(function()
-            self:Float()
-        end))
+    clean(Float.MouseButton1Click:Connect(function()
+        App:Float()
+    end))
 
-        U.clean(self.UI.Collapse.MouseButton1Click:Connect(function()
-            self:SetCompact(not self.Compact)
-        end))
+    clean(DockPill.MouseButton1Click:Connect(function()
+        App:Dock()
+    end))
 
-        U.clean(self.UI.DockPill.MouseButton1Click:Connect(function()
-            self:Dock()
-        end))
+    clean(Discord.MouseButton1Click:Connect(function()
+        local invite = "https://discord.gg/K2TQx4vyR7"
+        local clipboard = setclipboard or toclipboard
 
-        U.clean(self.UI.Search:GetPropertyChangedSignal("Text"):Connect(function()
-            self:Filter()
-        end))
+        if type(clipboard) == "function" then
+            pcall(clipboard, invite)
+            Discord.Text = "  Invite copied"
 
-        U.clean(self.UI.Search.Focused:Connect(function()
-            U.tween(self.UI.SearchStroke, {
-                Color = U.accent(),
-                Transparency = 0.18,
-            }, 0.09)
-        end))
-
-        U.clean(self.UI.Search.FocusLost:Connect(function()
-            U.tween(self.UI.SearchStroke, {
-                Color = Theme.Border,
-                Transparency = 0.62,
-            }, 0.09)
-        end))
-
-        U.clean(UserInputService.InputBegan:Connect(function(input, processed)
-            if processed then
-                return
-            end
-
-            if input.KeyCode == Enum.KeyCode.K
-                and (
-                    UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
-                    or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
-                )
-            then
-                self.UI.Search:CaptureFocus()
-            elseif input.KeyCode == Enum.KeyCode.Escape
-                and self.UI.Search:IsFocused()
-            then
-                self.UI.Search.Text = ""
-                self.UI.Search:ReleaseFocus()
-            end
-        end))
-
-        U.clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            if self.Docked then
-                self:UpdateResponsive()
-            end
-        end))
-
-        U.clean(d.GUIColorChanged.Event:Connect(function()
-            for _, page in ipairs(self.Pages) do
-                if page.Button then
-                    local rail = page.Button:FindFirstChild("Rail")
-
-                    if rail then
-                        rail.BackgroundColor3 = U.accent()
-                    end
+            task.delay(1, function()
+                if Discord.Parent then
+                    Discord.Text = "  Discord invite"
                 end
-            end
-        end))
+            end)
+        end
+    end))
 
-        U.clean(d.VisibilityChanged.Event:Connect(function(visible)
-            if not self.Docked then
-                return
-            end
+    clean(Search:GetPropertyChangedSignal("Text"):Connect(function()
+        App:Filter()
+    end))
 
-            if visible then
-                self:Show()
-            else
-                self:Hide()
-            end
-        end))
+    clean(Search.Focused:Connect(function()
+        SearchStroke.Color = accent()
+        SearchStroke.Transparency = 0.18
+    end))
 
-        U.clean(d.PreloadEvent:Connect(function()
-            self:Refresh()
-        end))
+    clean(Search.FocusLost:Connect(function()
+        SearchStroke.Color = Theme.Border
+        SearchStroke.Transparency = 0.62
+    end))
 
-        U.clean(d.OnLoadEvent:Connect(function()
-            self:Refresh()
-        end))
-    end
-
-    function App:Start()
-        self:BuildShell()
-        self:DiscoverPages()
-        self:CreateNavigation()
-
-        for _, page in ipairs(self.Pages) do
-            if page.Home then
-                self:BuildHome(page)
-                break
-            end
+    clean(UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then
+            return
         end
 
-        self:Bind()
-        self:Dock()
-    end
+        if input.KeyCode == Enum.KeyCode.K
+            and (
+                UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
+                or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
+            )
+        then
+            Search:CaptureFocus()
+        elseif input.KeyCode == Enum.KeyCode.Escape
+            and Search:IsFocused()
+        then
+            Search.Text = ""
+            Search:ReleaseFocus()
+        end
+    end))
+
+    clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if App.Docked then
+            responsive()
+
+            if App.Active and not App.Active.Home then
+                App:DockPage(App.Active)
+            end
+        end
+    end))
+
+    clean(d.GUIColorChanged.Event:Connect(function()
+        DiscordRail.BackgroundColor3 = accent()
+
+        for _, page in ipairs(App.Pages) do
+            if page.Button then
+                local rail = page.Button:FindFirstChild("Rail")
+
+                if rail then
+                    rail.BackgroundColor3 = accent()
+                end
+            end
+        end
+    end))
+
+    clean(d.PreloadEvent:Connect(function()
+        collectModules()
+    end))
+
+    clean(d.OnLoadEvent:Connect(function()
+        collectModules()
+    end))
 
     task.defer(function()
-        App:Start()
+        App:Dock()
     end)
 end)()
--- BADWARS_UI_V20_3_EXECUTIVE_RUNTIME_END
+-- BADWARS_UI_V20_4_UNIFIED_RUNTIME_END
 
 return d

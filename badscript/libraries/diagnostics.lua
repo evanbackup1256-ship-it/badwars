@@ -536,92 +536,59 @@ function Diagnostics:_getParent()
     return parent
 end
 
--- BADWARS_CONSOLE_UI_V4_OBSIDIAN_BEGIN
+-- BADWARS_CONSOLE_UI_V20_4_BEGIN
 function Diagnostics:EnsureUI()
     if self.Destroyed then
         return nil
     end
+
     if self._ui and self._ui.gui and self._ui.gui.Parent then
         return self._ui
     end
 
     local parent = self:_getParent()
+
     if not parent then
         return nil
     end
 
     pcall(function()
         local previous = parent:FindFirstChild("BadWarsDiagnostics")
+
         if previous then
             previous:Destroy()
         end
     end)
 
     local tweenService = game:GetService("TweenService")
-    local activeTweens = setmetatable({}, { __mode = "k" })
-    local function animate(object, duration, properties, style, direction)
+
+    local function animate(object, duration, properties)
         if not object or not object.Parent then
             return nil
         end
-        local old = activeTweens[object]
-        if old then
-            pcall(function()
-                old:Cancel()
-            end)
-        end
-        local ok, tween = pcall(function()
-            return tweenService:Create(
-                object,
-                TweenInfo.new(duration or 0.1, style or Enum.EasingStyle.Quart, direction or Enum.EasingDirection.Out),
-                properties
-            )
-        end)
-        if ok and tween then
-            activeTweens[object] = tween
-            tween.Completed:Once(function()
-                if activeTweens[object] == tween then
-                    activeTweens[object] = nil
-                end
-            end)
-            tween:Play()
-            return tween
-        end
+
+        local animation = tweenService:Create(
+            object,
+            TweenInfo.new(
+                math.min(duration or 0.07, 0.08),
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            properties
+        )
+
+        animation:Play()
+        return animation
+    end
+
+    local function spring(object, profile, properties)
         for property, value in pairs(properties) do
             pcall(function()
                 object[property] = value
             end)
         end
-    end
 
-    local function spring(object, profile, properties)
-        if not object or not object.Parent then
-            return false
-        end
-
-        local motion = shared and shared.BadWarsSpr
-        if type(motion) ~= "table"
-            or type(motion.target) ~= "function"
-            or type(motion.stop) ~= "function"
-        then
-            animate(object, 0.12, properties, Enum.EasingStyle.Quint)
-            return false
-        end
-
-        for property in pairs(properties) do
-            pcall(motion.stop, object, property)
-        end
-
-        local ok = pcall(
-            motion.target,
-            object,
-            profile and profile.Damping or 1,
-            profile and profile.Frequency or 18,
-            properties
-        )
-        if not ok then
-            animate(object, 0.12, properties, Enum.EasingStyle.Quint)
-        end
-        return ok
+        return true
     end
 
     local gui = Instance.new("ScreenGui")
@@ -632,37 +599,34 @@ function Diagnostics:EnsureUI()
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.Parent = parent
 
-    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local initialWidth = math.clamp(viewport.X - 28, 380, 1040)
-    local initialHeight = math.clamp(viewport.Y - 52, 400, 680)
-    local minSize = Vector2.new(math.min(340, viewport.X - 16), math.min(320, viewport.Y - 16))
-    local maxSize = Vector2.new(1280, 820)
-    local compact = viewport.X < 720
+    local viewport = workspace.CurrentCamera
+        and workspace.CurrentCamera.ViewportSize
+        or Vector2.new(1280, 720)
+    local compact = viewport.X < 760
+    local initialWidth = math.clamp(viewport.X - 80, 560, 900)
+    local initialHeight = math.clamp(viewport.Y - 100, 420, 580)
+    local minSize = Vector2.new(520, 380)
+    local maxSize = Vector2.new(980, 680)
 
-    local opener = Instance.new("TextButton")
-    opener.Name = "DiagnosticsButton"
+    local opener = makeButton(
+        gui,
+        "DiagnosticsButton",
+        "Console",
+        UDim2.fromOffset(104, 32)
+    )
     opener.AnchorPoint = Vector2.new(1, 0)
     opener.Position = UDim2.new(1, -16, 0, 14)
-    opener.Size = UDim2.fromOffset(124, 36)
-    opener.BackgroundColor3 = Color3.fromRGB(7, 12, 17)
-    opener.BackgroundTransparency = 0.03
-    opener.BorderSizePixel = 0
-    opener.AutoButtonColor = false
-    opener.Font = Enum.Font.GothamSemibold
-    opener.Text = "Open console"
-    opener.TextSize = 10
-    opener.TextColor3 = Color3.fromRGB(178, 191, 204)
-    opener.TextXAlignment = Enum.TextXAlignment.Center
-    opener.Parent = gui
-    createCorner(opener, 11)
-    local openerStroke = createStroke(opener, Color3.fromRGB(62, 77, 91), 0.58, 1)
+    opener.BackgroundColor3 = Color3.fromRGB(25, 25, 24)
+    opener.TextColor3 = Color3.fromRGB(222, 222, 218)
+    createCorner(opener, 10)
+    createStroke(opener, Color3.fromRGB(79, 79, 75), 0.28, 1)
 
     local badge = Instance.new("TextLabel")
     badge.Name = "Unread"
     badge.AnchorPoint = Vector2.new(1, 0)
     badge.Position = UDim2.new(1, 6, 0, -6)
     badge.Size = UDim2.fromOffset(20, 20)
-    badge.BackgroundColor3 = Color3.fromRGB(244, 92, 115)
+    badge.BackgroundColor3 = Color3.fromRGB(214, 91, 103)
     badge.BorderSizePixel = 0
     badge.Font = Enum.Font.GothamBold
     badge.Text = "0"
@@ -675,8 +639,8 @@ function Diagnostics:EnsureUI()
     local backdrop = Instance.new("TextButton")
     backdrop.Name = "Backdrop"
     backdrop.Size = UDim2.fromScale(1, 1)
-    backdrop.BackgroundColor3 = Color3.fromRGB(2, 4, 7)
-    backdrop.BackgroundTransparency = 1
+    backdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    backdrop.BackgroundTransparency = 0.48
     backdrop.BorderSizePixel = 0
     backdrop.AutoButtonColor = false
     backdrop.Text = ""
@@ -688,230 +652,232 @@ function Diagnostics:EnsureUI()
     window.AnchorPoint = Vector2.new(0.5, 0.5)
     window.Position = UDim2.fromScale(0.5, 0.5)
     window.Size = UDim2.fromOffset(initialWidth, initialHeight)
-    window.BackgroundColor3 = Color3.fromRGB(5, 9, 13)
-    window.BackgroundTransparency = 0.005
+    window.BackgroundColor3 = Color3.fromRGB(25, 25, 24)
     window.BorderSizePixel = 0
-    window.GroupTransparency = 1
+    window.GroupTransparency = 0
     window.Visible = false
     window.Parent = gui
-    createCorner(window, 18)
-    createStroke(window, Color3.fromRGB(73, 94, 110), 0.34, 1)
+    createCorner(window, 16)
+    createStroke(window, Color3.fromRGB(79, 79, 75), 0.18, 1)
 
     local windowScale = Instance.new("UIScale")
-    windowScale.Scale = 0.975
+    windowScale.Scale = 1
     windowScale.Parent = window
 
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 64)
-    header.BackgroundColor3 = Color3.fromRGB(8, 13, 18)
+    header.Size = UDim2.new(1, 0, 0, 62)
+    header.BackgroundColor3 = Color3.fromRGB(27, 27, 26)
     header.BorderSizePixel = 0
     header.Parent = window
 
-    local accent = Instance.new("Frame")
-    accent.Position = UDim2.fromOffset(18, 16)
-    accent.Size = UDim2.fromOffset(4, 30)
-    accent.BackgroundColor3 = Color3.fromRGB(66, 214, 153)
-    accent.BorderSizePixel = 0
-    accent.Parent = header
-    createCorner(accent, 99)
+    local accentBar = Instance.new("Frame")
+    accentBar.Position = UDim2.fromOffset(18, 16)
+    accentBar.Size = UDim2.fromOffset(3, 30)
+    accentBar.BackgroundColor3 = Color3.fromRGB(70, 196, 150)
+    accentBar.BorderSizePixel = 0
+    accentBar.Parent = header
+    createCorner(accentBar, 99)
 
     local title = Instance.new("TextLabel")
-    title.Position = UDim2.fromOffset(34, 10)
+    title.Position = UDim2.fromOffset(32, 10)
     title.Size = UDim2.fromOffset(220, 22)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBold
     title.Text = "Runtime console"
-    title.TextSize = 16
-    title.TextColor3 = Color3.fromRGB(241, 245, 248)
+    title.TextSize = 15
+    title.TextColor3 = Color3.fromRGB(250, 250, 247)
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
     local subtitle = Instance.new("TextLabel")
-    subtitle.Position = UDim2.fromOffset(34, 34)
-    subtitle.Size = UDim2.fromOffset(260, 16)
+    subtitle.Position = UDim2.fromOffset(32, 34)
+    subtitle.Size = UDim2.fromOffset(300, 15)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "Live execution events, filters, and error context"
-    subtitle.TextSize = 9
-    subtitle.TextColor3 = Color3.fromRGB(103, 117, 131)
+    subtitle.Text = "BadWars V20.4 diagnostics"
+    subtitle.TextSize = 8
+    subtitle.TextColor3 = Color3.fromRGB(154, 154, 148)
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = header
 
     local counters = Instance.new("TextLabel")
     counters.Name = "Counters"
     counters.AnchorPoint = Vector2.new(1, 0.5)
-    counters.Position = UDim2.new(1, -52, 0.5, 0)
-    counters.Size = UDim2.fromOffset(250, 24)
+    counters.Position = UDim2.new(1, -50, 0.5, 0)
+    counters.Size = UDim2.fromOffset(220, 22)
     counters.BackgroundTransparency = 1
     counters.Font = Enum.Font.GothamMedium
-    counters.Text = "0 errors   0 warnings"
-    counters.TextSize = 9
-    counters.TextColor3 = Color3.fromRGB(116, 130, 143)
+    counters.Text = "0 errors 0 warnings"
+    counters.TextSize = 8
+    counters.TextColor3 = Color3.fromRGB(154, 154, 148)
     counters.TextXAlignment = Enum.TextXAlignment.Right
     counters.Parent = header
 
-    local close = Instance.new("TextButton")
-    close.Name = "Close"
+    local close = makeButton(
+        header,
+        "Close",
+        "×",
+        UDim2.fromOffset(28, 28)
+    )
     close.AnchorPoint = Vector2.new(1, 0.5)
     close.Position = UDim2.new(1, -12, 0.5, 0)
-    close.Size = UDim2.fromOffset(28, 28)
-    close.BackgroundColor3 = Color3.fromRGB(244, 92, 115)
-    close.BackgroundTransparency = 0.9
-    close.BorderSizePixel = 0
-    close.AutoButtonColor = false
-    close.Font = Enum.Font.GothamSemibold
-    close.Text = "X"
-    close.TextSize = 14
-    close.TextColor3 = Color3.fromRGB(169, 177, 186)
-    close.Parent = header
-    createCorner(close, 7)
+    close.BackgroundColor3 = Color3.fromRGB(34, 34, 33)
+    close.TextColor3 = Color3.fromRGB(154, 154, 148)
+    close.TextSize = 15
 
     local toolbar = Instance.new("Frame")
     toolbar.Name = "Toolbar"
-    toolbar.Position = UDim2.fromOffset(18, 80)
-    toolbar.Size = UDim2.new(1, -36, 0, compact and 118 or 82)
+    toolbar.Position = UDim2.fromOffset(16, 76)
+    toolbar.Size = UDim2.new(1, -32, 0, compact and 108 or 72)
     toolbar.BackgroundTransparency = 1
     toolbar.Parent = window
 
-    local function makeInput(name, placeholder, position, size)
+    local function input(name, placeholder, position, size)
         local box = Instance.new("TextBox")
         box.Name = name
         box.Position = position
         box.Size = size
-        box.BackgroundColor3 = Color3.fromRGB(11, 17, 23)
+        box.BackgroundColor3 = Color3.fromRGB(34, 34, 33)
         box.BorderSizePixel = 0
         box.ClearTextOnFocus = false
         box.PlaceholderText = placeholder
-        box.PlaceholderColor3 = Color3.fromRGB(82, 96, 109)
+        box.PlaceholderColor3 = Color3.fromRGB(102, 102, 97)
         box.Font = Enum.Font.Gotham
         box.Text = ""
-        box.TextSize = 10
-        box.TextColor3 = Color3.fromRGB(208, 216, 224)
+        box.TextSize = 9
+        box.TextColor3 = Color3.fromRGB(222, 222, 218)
         box.TextXAlignment = Enum.TextXAlignment.Left
         box.Parent = toolbar
-        createCorner(box, 10)
-        local boxStroke = createStroke(box, Color3.fromRGB(54, 68, 81), 0.62, 1)
+        createCorner(box, 9)
+        createStroke(box, Color3.fromRGB(52, 52, 49), 0.42, 1)
+
         local padding = Instance.new("UIPadding")
-        padding.PaddingLeft = UDim.new(0, 11)
-        padding.PaddingRight = UDim.new(0, 11)
+        padding.PaddingLeft = UDim.new(0, 10)
+        padding.PaddingRight = UDim.new(0, 10)
         padding.Parent = box
-        box.Focused:Connect(function()
-            animate(boxStroke, 0.08, { Transparency = 0.2, Color = Color3.fromRGB(66, 214, 153) })
-        end)
-        box.FocusLost:Connect(function()
-            animate(boxStroke, 0.08, { Transparency = 0.62, Color = Color3.fromRGB(54, 68, 81) })
-        end)
+
         return box
     end
 
-    local search = makeInput(
+    local search = input(
         "Search",
         "Search logs",
         UDim2.fromOffset(0, 0),
-        compact and UDim2.new(1, -74, 0, 32) or UDim2.new(0.46, -4, 0, 32)
+        compact and UDim2.new(1, -72, 0, 30)
+            or UDim2.new(0.48, -4, 0, 30)
     )
-    local sourceFilter = makeInput("SourceFilter", "Subsystem", UDim2.new(0.46, 4, 0, 0), UDim2.new(0.22, -4, 0, 32))
-    local moduleFilter = makeInput("ModuleFilter", "Module or file", UDim2.new(0.68, 8, 0, 0), UDim2.new(0.2, -4, 0, 32))
+    local sourceFilter = input(
+        "SourceFilter",
+        "Subsystem",
+        UDim2.new(0.48, 4, 0, 0),
+        UDim2.new(0.22, -4, 0, 30)
+    )
+    local moduleFilter = input(
+        "ModuleFilter",
+        "Module or file",
+        UDim2.new(0.7, 8, 0, 0),
+        UDim2.new(0.18, -4, 0, 30)
+    )
+
     sourceFilter.Visible = not compact
     moduleFilter.Visible = not compact
 
-    local pause = makeButton(toolbar, "Pause", "Pause", UDim2.fromOffset(66, 32))
+    local pause = makeButton(
+        toolbar,
+        "Pause",
+        "Pause",
+        UDim2.fromOffset(64, 30)
+    )
     pause.AnchorPoint = Vector2.new(1, 0)
     pause.Position = UDim2.new(1, 0, 0, 0)
+    pause.BackgroundColor3 = Color3.fromRGB(34, 34, 33)
 
     local filters = Instance.new("Frame")
-    filters.Name = "Filters"
-    filters.Position = UDim2.fromOffset(0, 42)
-    filters.Size = compact and UDim2.new(1, 0, 0, 26) or UDim2.new(1, -278, 0, 26)
+    filters.Position = UDim2.fromOffset(0, 40)
+    filters.Size = UDim2.new(1, -250, 0, 24)
     filters.BackgroundTransparency = 1
     filters.Parent = toolbar
 
     local filterLayout = Instance.new("UIListLayout")
     filterLayout.FillDirection = Enum.FillDirection.Horizontal
-    filterLayout.Padding = UDim.new(0, 5)
-    filterLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    filterLayout.Padding = UDim.new(0, 4)
     filterLayout.Parent = filters
 
     local enabledLevels = {}
     local filterButtons = {}
-    local filterOrder = { "DEBUG", "INFO", "SUCCESS", "WARN", "ERROR", "FATAL" }
-    for _, level in ipairs(filterOrder) do
+
+    for _, level in ipairs({
+        "DEBUG",
+        "INFO",
+        "SUCCESS",
+        "WARN",
+        "ERROR",
+        "FATAL",
+    }) do
         enabledLevels[level] = true
-        local button = Instance.new("TextButton")
-        button.Name = level
-        button.Size = UDim2.fromOffset(
-            compact and (level == "SUCCESS" and 54 or 39) or (level == "SUCCESS" and 66 or 52),
-            24
+
+        local levelButton = makeButton(
+            filters,
+            level,
+            string.lower(level),
+            UDim2.fromOffset(level == "SUCCESS" and 62 or 48, 22)
         )
-        button.BackgroundColor3 = Color3.fromRGB(12, 18, 24)
-        button.BackgroundTransparency = 0.02
-        button.BorderSizePixel = 0
-        button.AutoButtonColor = false
-        button.Font = Enum.Font.GothamSemibold
-        button.Text = string.lower(level)
-        button.TextSize = 9
-        button.TextColor3 = LEVEL_COLORS[level]
-        button.Parent = filters
-        createCorner(button, 7)
-        local levelStroke = createStroke(button, LEVEL_COLORS[level], 0.76, 1)
-        filterButtons[level] = button
-        button.MouseEnter:Connect(function()
-            animate(button, 0.075, { BackgroundTransparency = 0 })
-            animate(levelStroke, 0.075, { Transparency = 0.44 })
-        end)
-        button.MouseLeave:Connect(function()
-            animate(button, 0.075, { BackgroundTransparency = enabledLevels[level] and 0.02 or 0.5 })
-            animate(levelStroke, 0.075, { Transparency = enabledLevels[level] and 0.76 or 0.92 })
-        end)
-        button.Activated:Connect(function()
+        levelButton.BackgroundColor3 = Color3.fromRGB(34, 34, 33)
+        levelButton.TextColor3 = LEVEL_COLORS[level]
+        levelButton.TextSize = 8
+        filterButtons[level] = levelButton
+
+        levelButton.Activated:Connect(function()
             enabledLevels[level] = not enabledLevels[level]
-            animate(button, 0.075, {
-                BackgroundTransparency = enabledLevels[level] and 0.02 or 0.5,
-                TextTransparency = enabledLevels[level] and 0 or 0.55,
-            })
-            animate(levelStroke, 0.075, { Transparency = enabledLevels[level] and 0.76 or 0.92 })
+            levelButton.TextTransparency = enabledLevels[level] and 0 or 0.55
             self:_scheduleRender()
         end)
     end
 
     local actions = Instance.new("Frame")
     actions.AnchorPoint = Vector2.new(1, 0)
-    actions.Position = compact and UDim2.new(1, 0, 0, 78) or UDim2.new(1, 0, 0, 42)
-    actions.Size = compact and UDim2.new(1, 0, 0, 26) or UDim2.fromOffset(270, 26)
+    actions.Position = UDim2.new(1, 0, 0, 40)
+    actions.Size = UDim2.fromOffset(238, 24)
     actions.BackgroundTransparency = 1
     actions.Parent = toolbar
+
     local actionLayout = Instance.new("UIListLayout")
     actionLayout.FillDirection = Enum.FillDirection.Horizontal
     actionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    actionLayout.Padding = UDim.new(0, 5)
+    actionLayout.Padding = UDim.new(0, 4)
     actionLayout.Parent = actions
 
-    local function action(name, text, width)
-        local button = makeButton(actions, name, text, UDim2.fromOffset(width, 24))
-        button.BackgroundTransparency = 1
-        button.TextColor3 = Color3.fromRGB(122, 136, 149)
-        button.TextSize = 9
-        return button
+    local function action(name, label, width)
+        local object = makeButton(
+            actions,
+            name,
+            label,
+            UDim2.fromOffset(width, 22)
+        )
+        object.BackgroundColor3 = Color3.fromRGB(34, 34, 33)
+        object.TextSize = 8
+        return object
     end
-    local autoScroll = action("AutoScroll", "Auto-scroll", 76)
-    local copySelected = action("CopySelected", "Copy entry", 68)
-    local copyAll = action("CopyAll", "Copy all", 52)
-    local clear = action("Clear", "Clear", 44)
+
+    local autoScroll = action("AutoScroll", "Auto-scroll", 68)
+    local copySelected = action("CopySelected", "Copy entry", 64)
+    local copyAll = action("CopyAll", "Copy all", 50)
+    local clear = action("Clear", "Clear", 42)
 
     local list = Instance.new("ScrollingFrame")
     list.Name = "Entries"
-    list.Position = UDim2.fromOffset(16, compact and 202 or 168)
-    list.Size = UDim2.new(1, -32, 1, compact and -238 or -204)
-    list.BackgroundColor3 = Color3.fromRGB(7, 12, 17)
+    list.Position = UDim2.fromOffset(14, compact and 192 or 154)
+    list.Size = UDim2.new(1, -28, 1, compact and -226 or -188)
+    list.BackgroundColor3 = Color3.fromRGB(29, 29, 28)
     list.BorderSizePixel = 0
     list.ScrollBarThickness = 3
-    list.ScrollBarImageColor3 = Color3.fromRGB(69, 84, 97)
+    list.ScrollBarImageColor3 = Color3.fromRGB(79, 79, 75)
     list.CanvasSize = UDim2.fromOffset(0, 0)
     list.AutomaticCanvasSize = Enum.AutomaticSize.Y
     list.Parent = window
-    createCorner(list, 12)
-    createStroke(list, Color3.fromRGB(45, 58, 70), 0.58, 1)
+    createCorner(list, 11)
+    createStroke(list, Color3.fromRGB(52, 52, 49), 0.42, 1)
 
     local listPadding = Instance.new("UIPadding")
     listPadding.PaddingTop = UDim.new(0, 6)
@@ -927,13 +893,13 @@ function Diagnostics:EnsureUI()
 
     local footer = Instance.new("TextLabel")
     footer.Name = "Footer"
-    footer.Position = UDim2.new(0, 18, 1, -30)
-    footer.Size = UDim2.new(1, -58, 0, 18)
+    footer.Position = UDim2.new(0, 16, 1, -26)
+    footer.Size = UDim2.new(1, -52, 0, 16)
     footer.BackgroundTransparency = 1
     footer.Font = Enum.Font.Gotham
-    footer.Text = "F8  |  0 entries"
-    footer.TextSize = 9
-    footer.TextColor3 = Color3.fromRGB(76, 90, 103)
+    footer.Text = "F8 | 0 entries"
+    footer.TextSize = 8
+    footer.TextColor3 = Color3.fromRGB(102, 102, 97)
     footer.TextXAlignment = Enum.TextXAlignment.Left
     footer.Parent = window
 
@@ -941,14 +907,11 @@ function Diagnostics:EnsureUI()
     resize.Name = "Resize"
     resize.AnchorPoint = Vector2.new(1, 1)
     resize.Position = UDim2.fromScale(1, 1)
-    resize.Size = UDim2.fromOffset(30, 30)
+    resize.Size = UDim2.fromOffset(28, 28)
     resize.BackgroundTransparency = 1
     resize.BorderSizePixel = 0
-    resize.AutoButtonColor = false
-    resize.Font = Enum.Font.Code
     resize.Text = "//"
-    resize.TextSize = 13
-    resize.TextColor3 = Color3.fromRGB(82, 96, 109)
+    resize.TextColor3 = Color3.fromRGB(102, 102, 97)
     resize.Parent = window
 
     self._ui = {
@@ -985,148 +948,156 @@ function Diagnostics:EnsureUI()
         compact = compact,
     }
 
-    opener.MouseEnter:Connect(function()
-        animate(opener, 0.08, { BackgroundColor3 = Color3.fromRGB(17, 24, 31), TextColor3 = Color3.fromRGB(230, 236, 242) })
-        animate(openerStroke, 0.08, { Transparency = 0.28 })
-    end)
-    opener.MouseLeave:Connect(function()
-        animate(opener, 0.08, { BackgroundColor3 = Color3.fromRGB(10, 15, 20), TextColor3 = Color3.fromRGB(178, 191, 204) })
-        animate(openerStroke, 0.08, { Transparency = 0.58 })
-    end)
-    close.MouseEnter:Connect(function()
-        animate(close, 0.075, { BackgroundTransparency = 0.72, TextColor3 = Color3.fromRGB(255, 255, 255) })
-    end)
-    close.MouseLeave:Connect(function()
-        animate(close, 0.075, { BackgroundTransparency = 0.9, TextColor3 = Color3.fromRGB(169, 177, 186) })
+    opener.Activated:Connect(function()
+        self:Toggle()
     end)
 
-    opener.Activated:Connect(function() self:Toggle() end)
-    close.Activated:Connect(function() self:Close() end)
-    backdrop.Activated:Connect(function() self:Close() end)
-    clear.Activated:Connect(function() self:Clear(false) end)
+    close.Activated:Connect(function()
+        self:Close()
+    end)
+
+    backdrop.Activated:Connect(function()
+        self:Close()
+    end)
+
+    clear.Activated:Connect(function()
+        self:Clear(false)
+    end)
+
     copySelected.Activated:Connect(function()
-        local ok, err = self:CopyEntry()
-        if not ok then
-            self:Warn(err, { subsystem = "DiagnosticsUI", native = false })
-        end
+        self:CopyEntry()
     end)
+
     copyAll.Activated:Connect(function()
-        local ok, err = self:CopyAll()
-        if not ok then
-            self:Warn(err, { subsystem = "DiagnosticsUI", native = false })
-        end
+        self:CopyAll()
     end)
+
     pause.Activated:Connect(function()
         self.Paused = not self.Paused
         pause.Text = self.Paused and "Resume" or "Pause"
-        pause.TextColor3 = self.Paused and LEVEL_COLORS.WARN or Color3.fromRGB(168, 181, 195)
+
         if not self.Paused then
             self:_scheduleRender()
         end
     end)
+
     autoScroll.Activated:Connect(function()
         self._ui.autoScrollEnabled = not self._ui.autoScrollEnabled
-        autoScroll.TextColor3 = self._ui.autoScrollEnabled and Color3.fromRGB(122, 136, 149) or Color3.fromRGB(75, 88, 100)
     end)
 
-    search:GetPropertyChangedSignal("Text"):Connect(function() self:_scheduleRender() end)
-    sourceFilter:GetPropertyChangedSignal("Text"):Connect(function() self:_scheduleRender() end)
-    moduleFilter:GetPropertyChangedSignal("Text"):Connect(function() self:_scheduleRender() end)
+    search:GetPropertyChangedSignal("Text"):Connect(function()
+        self:_scheduleRender()
+    end)
+
+    sourceFilter:GetPropertyChangedSignal("Text"):Connect(function()
+        self:_scheduleRender()
+    end)
+
+    moduleFilter:GetPropertyChangedSignal("Text"):Connect(function()
+        self:_scheduleRender()
+    end)
 
     local userInput = game:GetService("UserInputService")
-    local activeInteraction
+    local interaction
     local changedConnection
     local endedConnection
 
     local function stopInteraction()
-        activeInteraction = nil
+        interaction = nil
+
         if changedConnection then
             changedConnection:Disconnect()
             changedConnection = nil
         end
+
         if endedConnection then
             endedConnection:Disconnect()
             endedConnection = nil
         end
     end
 
-    local function beginInteraction(input, mode)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1
-            and input.UserInputType ~= Enum.UserInputType.Touch
+    local function begin(inputObject, mode)
+        if inputObject.UserInputType ~= Enum.UserInputType.MouseButton1
+            and inputObject.UserInputType ~= Enum.UserInputType.Touch
         then
             return
         end
 
         stopInteraction()
-        local expectedMovement = input.UserInputType == Enum.UserInputType.MouseButton1
-                and Enum.UserInputType.MouseMovement
-            or Enum.UserInputType.Touch
-        local currentViewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
 
-        activeInteraction = {
+        interaction = {
             Mode = mode,
-            StartPointer = input.Position,
+            StartPointer = inputObject.Position,
             StartPosition = window.Position,
             StartSize = window.AbsoluteSize,
-            ExpectedMovement = expectedMovement,
-            Viewport = currentViewport,
-            MinWidth = math.min(minSize.X, currentViewport.X - 16),
-            MaxWidth = math.min(maxSize.X, currentViewport.X - 16),
-            MinHeight = math.min(minSize.Y, currentViewport.Y - 16),
-            MaxHeight = math.min(maxSize.Y, currentViewport.Y - 16),
         }
 
         changedConnection = userInput.InputChanged:Connect(function(changed)
-            local state = activeInteraction
-            if not state or changed.UserInputType ~= state.ExpectedMovement then
+            if not interaction then
                 return
             end
 
-            local delta = changed.Position - state.StartPointer
-            if state.Mode == "drag" then
+            local expected = inputObject.UserInputType
+                == Enum.UserInputType.MouseButton1
+                and Enum.UserInputType.MouseMovement
+                or Enum.UserInputType.Touch
+
+            if changed.UserInputType ~= expected then
+                return
+            end
+
+            local delta = changed.Position - interaction.StartPointer
+
+            if interaction.Mode == "drag" then
                 window.Position = UDim2.new(
-                    state.StartPosition.X.Scale,
-                    state.StartPosition.X.Offset + delta.X,
-                    state.StartPosition.Y.Scale,
-                    state.StartPosition.Y.Offset + delta.Y
+                    interaction.StartPosition.X.Scale,
+                    interaction.StartPosition.X.Offset + delta.X,
+                    interaction.StartPosition.Y.Scale,
+                    interaction.StartPosition.Y.Offset + delta.Y
                 )
             else
                 window.Size = UDim2.fromOffset(
-                    math.clamp(state.StartSize.X + delta.X, state.MinWidth, state.MaxWidth),
-                    math.clamp(state.StartSize.Y + delta.Y, state.MinHeight, state.MaxHeight)
+                    math.clamp(
+                        interaction.StartSize.X + delta.X,
+                        minSize.X,
+                        maxSize.X
+                    ),
+                    math.clamp(
+                        interaction.StartSize.Y + delta.Y,
+                        minSize.Y,
+                        maxSize.Y
+                    )
                 )
             end
         end)
 
-        endedConnection = input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End
-                or input.UserInputState == Enum.UserInputState.Cancel
-            then
+        endedConnection = inputObject.Changed:Connect(function()
+            if inputObject.UserInputState == Enum.UserInputState.End then
                 stopInteraction()
             end
         end)
     end
 
-    header.InputBegan:Connect(function(input)
-        beginInteraction(input, "drag")
+    header.InputBegan:Connect(function(inputObject)
+        begin(inputObject, "drag")
     end)
 
-    resize.InputBegan:Connect(function(input)
-        beginInteraction(input, "resize")
+    resize.InputBegan:Connect(function(inputObject)
+        begin(inputObject, "resize")
     end)
-    gui.Destroying:Once(stopInteraction)
 
-    local keyConnection = userInput.InputBegan:Connect(function(input, processed)
-        if not processed and input.KeyCode == Enum.KeyCode.F8 then
+    local keyConnection = userInput.InputBegan:Connect(function(inputObject, processed)
+        if not processed and inputObject.KeyCode == Enum.KeyCode.F8 then
             self:Toggle()
         end
     end)
-    table.insert(self.Connections, keyConnection)
 
+    table.insert(self.Connections, keyConnection)
     self:_scheduleRender()
+
     return self._ui
 end
--- BADWARS_CONSOLE_UI_V3_END
+-- BADWARS_CONSOLE_UI_V20_4_END
 function Diagnostics:_entryMatches(entry)
     local ui = self._ui
     if not ui then
@@ -1323,39 +1294,32 @@ end
 
 function Diagnostics:Open()
     local ui = self:EnsureUI()
+
     if not ui then
         return
     end
+
     ui.openGeneration += 1
     ui.isOpen = true
     ui.backdrop.Visible = true
     ui.window.Visible = true
-    ui.window.GroupTransparency = 1
-    ui.windowScale.Scale = 0.975
-    ui.animate(ui.backdrop, 0.14, { BackgroundTransparency = 0.38 }, Enum.EasingStyle.Quart)
-    ui.animate(ui.window, 0.16, { GroupTransparency = 0 }, Enum.EasingStyle.Quint)
-    ui.spring(ui.windowScale, { Damping = 1, Frequency = 18 }, { Scale = 1 })
+    ui.window.GroupTransparency = 0
+    ui.windowScale.Scale = 1
     self.Unread = 0
     self:_scheduleRender()
 end
 
 function Diagnostics:Close()
     local ui = self:EnsureUI()
-    if not ui or not ui.window.Visible then
+
+    if not ui then
         return
     end
+
     ui.openGeneration += 1
     ui.isOpen = false
-    local generation = ui.openGeneration
-    ui.animate(ui.backdrop, 0.12, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-    ui.animate(ui.window, 0.13, { GroupTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
-    ui.spring(ui.windowScale, { Damping = 1, Frequency = 22 }, { Scale = 0.985 })
-    task.delay(0.14, function()
-        if self._ui == ui and ui.openGeneration == generation then
-            ui.window.Visible = false
-            ui.backdrop.Visible = false
-        end
-    end)
+    ui.window.Visible = false
+    ui.backdrop.Visible = false
 end
 
 function Diagnostics:Toggle()

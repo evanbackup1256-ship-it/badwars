@@ -441,12 +441,12 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-v19-obsidian-overhaul-2026-07-06-01'
+local cacheVersion = 'badwars-v20-4-unified-2026-07-06-01'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
-	return type(contents) == 'string'
-		and contents:find('Version%s*=%s*"18%.4"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%-OBSIDIAN%-OVERHAUL"') ~= nil
+    return type(contents) == "string"
+        and contents:find("BADWARS_UI_V20_4_UNIFIED", 1, true) ~= nil
+        and contents:find("Version = \"20.4\"", 1, true) ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath = 'badscript/guis/new/gui.lua'

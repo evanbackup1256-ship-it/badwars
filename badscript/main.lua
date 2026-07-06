@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Main v20.0 - Nevermore Foundation pipeline
+-- BadWars Main v19.3 - Nevermore Stabilized pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -164,12 +164,12 @@ local CFG = { repo = "evanbackup1256-ship-it", name = "badwars", branch = "main"
 local function rawUrls(path)
     local repo = CFG.repo .. "/" .. CFG.name
     local p = path:gsub(" ", "%%20")
+    local nonce = "?bwcb=" .. tostring(os.time()) .. "-" .. tostring(math.floor(os.clock() * 1000000))
     return {
-        "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p,
-        "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p,
+        "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p .. nonce,
+        "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p .. nonce,
     }
 end
-
 -- Safe helpers
 local function typeName(v)
     return typeof(v)
@@ -629,15 +629,15 @@ local function isStaleGuiCache(path, body)
     if path ~= "badscript/guis/new/gui.lua" then
         return false
     end
+
     if type(body) ~= "string" or body == "" then
         return true
     end
-    return not (
-        body:find('Version%s*=%s*"20%.0"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V20%-NEVERMORE%-FOUNDATION"') ~= nil
-    )
-end
 
+    return body:find("BADWARS_MAID_CONTRACT_V19_3_BEGIN", 1, true) == nil
+        or body:find('resourceType == "RBXScriptConnection"', 1, true) == nil
+        or body:find("local function cleanupMethod(resource)", 1, true) ~= nil
+end
 local function isStaleNevermoreCache(path, body)
     if path ~= "badscript/libraries/nevermore/NevermoreRuntime.lua" then
         return false

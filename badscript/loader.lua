@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Loader v20.0 Nevermore Foundation
+-- BadWars Loader v19.3 Nevermore Stabilized
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -143,9 +143,13 @@ queue_on_teleport=queue_on_teleport or function()end
 -- Config
 local CFG={repo='evanbackup1256-ship-it',name='badwars',branch='main',folder='badscript',file='main.lua'}
 local function rawUrls(path)
-	local repo=CFG.repo..'/'..CFG.name
-	local p=path:gsub(' ','%%20')
-	return {'https://github.com/'..repo..'/raw/'..CFG.branch..'/'..p,'https://raw.githubusercontent.com/'..repo..'/'..CFG.branch..'/'..p}
+    local repo = CFG.repo .. "/" .. CFG.name
+    local p = path:gsub(" ", "%%20")
+    local nonce = "?bwcb=" .. tostring(os.time()) .. "-" .. tostring(math.floor(os.clock() * 1000000))
+    return {
+        "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p .. nonce,
+        "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p .. nonce,
+    }
 end
 local ORCH_PATH=CFG.folder..'/'..CFG.file
 
@@ -804,12 +808,13 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v20-nevermore-foundation-2026-07-06-01'
+local cacheVersion = 'badwars-v19.3-stable-cache-2026-07-06-04'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
-	return type(contents)=='string'
-		and contents:find('Version%s*=%s*"20%.0"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V20%-NEVERMORE%-FOUNDATION"') ~= nil
+    return type(contents) == "string"
+        and contents:find("BADWARS_MAID_CONTRACT_V19_3_BEGIN", 1, true) ~= nil
+        and contents:find('resourceType == "RBXScriptConnection"', 1, true) ~= nil
+        and contents:find("local function cleanupMethod(resource)", 1, true) == nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath='badscript/guis/new/gui.lua'

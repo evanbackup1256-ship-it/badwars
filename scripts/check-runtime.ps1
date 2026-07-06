@@ -32,6 +32,8 @@ $newGui = Read-ProjectFile "badscript\guis\new\gui.lua"
 $bedwarsBase = Read-ProjectFile "badscript\games\bedwars\6872274481 - game\base.lua"
 $hashLib = Read-ProjectFile "badscript\libraries\hash.lua"
 $predictionLib = Read-ProjectFile "badscript\libraries\prediction.lua"
+$sprLib = Read-ProjectFile "badscript\libraries\spr.lua"
+$sprLicense = Read-ProjectFile "badscript\libraries\spr.LICENSE.txt"
 $entityLib = Read-ProjectFile "badscript\libraries\entity.lua"
 $universalBase = Read-ProjectFile "badscript\games\universal - base\base.lua"
 $universalManifest = Read-ProjectFile "badscript\games\universal - base\files.txt"
@@ -55,16 +57,34 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"17\.0"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V17-FLUID-MOTION-SLEEK-UI"' -and
-    $newGui -match 'BADWARS_UI_V17_FLUID_MOTION_SLEEK_UI' -and
-    $main -match "BadWars Main v17\.0" -and
-    $loader -match "BadWars Loader v17\.0" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"17\.0"'
+    $newGui -match 'Version\s*=\s*"18\.2"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V18\.2-PUBLIC-MOTION"' -and
+    $newGui -match 'BADWARS_UI_V18_2_PUBLIC_MOTION' -and
+    $main -match "BadWars Main v18\.2" -and
+    $loader -match "BadWars Loader v18\.2" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"18\.2"'
 ) {
-    Pass "V17 runtime versions are synchronized"
+    Pass "V18.2 runtime versions are synchronized"
 } else {
-    Fail "V17 runtime versions are not synchronized"
+    Fail "V18.2 runtime versions are not synchronized"
+}
+
+
+if (
+    $sprLib -match 'Spring-driven motion library' -and
+    $sprLib -match 'function spr\.target' -and
+    $sprLib -match 'function spr\.stop' -and
+    $sprLicense -match 'MIT License' -and
+    $sprLicense -match 'Copyright \(c\) 2023 Fractality' -and
+    $main -match 'badscript/libraries/spr\.lua' -and
+    $main -match 'shared\.BadWarsSpr' -and
+    $newGui -match 'MotionLibrary\s*=\s*shared\.BadWarsSpr' -and
+    $newGui -match 'function n\.Spring' -and
+    $newGui -match 'n:Spring\('
+) {
+    Pass "Public spr motion library is vendored and integrated"
+} else {
+    Fail "Public spr motion integration is incomplete"
 }
 
 $requiredComponentApis = @(
@@ -251,8 +271,8 @@ if (
     $loader -match "invalidateStaleGuiCache" -and
     $newMain -match "invalidateStaleGuiCache" -and
     $main -match "isStaleGuiCache" -and
-    $loader -match 'V17%-FLUID%-MOTION%-SLEEK%-UI' -and
-    $newMain -match 'V17%-FLUID%-MOTION%-SLEEK%-UI'
+    $loader -match 'V18%.2%-PUBLIC%-MOTION' -and
+    $newMain -match 'V18%.2%-PUBLIC%-MOTION'
 ) {
     Pass "Loadstring rejects stale GUI cache automatically"
 } else {

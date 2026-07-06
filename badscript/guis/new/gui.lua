@@ -1,4 +1,4 @@
--- BADWARS_UI_V17_FLUID_MOTION_SLEEK_UI
+-- BADWARS_UI_V18_2_PUBLIC_MOTION
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -165,13 +165,16 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "17.0",
-    PremiumBuild = "2026.07.05-V17-FLUID-MOTION-SLEEK-UI",
+    Version = "18.2",
+    PremiumBuild = "2026.07.05-V18.2-PUBLIC-MOTION",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
     _InitialLayoutReady = false,
     _SuppressEntryAnimation = true,
+    ProfilesEnabled = false,
+    TutorialEnabled = false,
+    MotionLibrary = shared.BadWarsSpr,
 }
 d.DefaultColor = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
 for e, f in
@@ -283,42 +286,45 @@ local n = {
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
-    Main = Color3.fromRGB(8, 11, 15),
-    MainSoft = Color3.fromRGB(11, 15, 20),
-    Text = Color3.fromRGB(221, 228, 236),
-    TextStrong = Color3.fromRGB(248, 250, 252),
-    Surface = Color3.fromRGB(15, 20, 26),
-    SurfaceSoft = Color3.fromRGB(18, 24, 31),
-    SurfaceHover = Color3.fromRGB(23, 31, 40),
-    Elevated = Color3.fromRGB(20, 27, 35),
-    ElevatedHover = Color3.fromRGB(27, 36, 46),
-    Border = Color3.fromRGB(37, 47, 59),
-    BorderStrong = Color3.fromRGB(64, 82, 98),
-    MutedText = Color3.fromRGB(159, 171, 186),
-    FaintText = Color3.fromRGB(101, 114, 129),
-    Danger = Color3.fromRGB(245, 93, 118),
-    Warning = Color3.fromRGB(245, 184, 86),
-    Success = Color3.fromRGB(70, 215, 156),
-    Shadow = Color3.fromRGB(0, 3, 7),
-    RadiusSmall = UDim.new(0, 6),
-    Radius = UDim.new(0, 10),
-    RadiusLarge = UDim.new(0, 14),
+    Main = Color3.fromRGB(7, 10, 14),
+    MainSoft = Color3.fromRGB(10, 14, 19),
+    Text = Color3.fromRGB(220, 228, 237),
+    TextStrong = Color3.fromRGB(249, 251, 253),
+    Surface = Color3.fromRGB(14, 19, 25),
+    SurfaceSoft = Color3.fromRGB(17, 23, 30),
+    SurfaceHover = Color3.fromRGB(22, 31, 40),
+    Elevated = Color3.fromRGB(19, 26, 34),
+    ElevatedHover = Color3.fromRGB(25, 35, 45),
+    Border = Color3.fromRGB(37, 48, 61),
+    BorderStrong = Color3.fromRGB(61, 83, 100),
+    MutedText = Color3.fromRGB(154, 169, 184),
+    FaintText = Color3.fromRGB(92, 107, 122),
+    Danger = Color3.fromRGB(244, 92, 115),
+    Warning = Color3.fromRGB(247, 186, 80),
+    Success = Color3.fromRGB(66, 214, 153),
+    Shadow = Color3.fromRGB(0, 2, 5),
+    RadiusSmall = UDim.new(0, 7),
+    Radius = UDim.new(0, 11),
+    RadiusLarge = UDim.new(0, 16),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
-    TweenPress = TweenInfo.new(0.055, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    TweenFast = TweenInfo.new(0.085, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Tween = TweenInfo.new(0.135, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSlow = TweenInfo.new(0.175, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSpring = TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenBack = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenPress = TweenInfo.new(0.05, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenFast = TweenInfo.new(0.07, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    Tween = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSlow = TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSpring = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenBack = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    SpringInteractive = { Damping = 1, Frequency = 24 },
+    SpringPanel = { Damping = 1, Frequency = 18 },
+    SpringSoft = { Damping = 0.92, Frequency = 16 },
 }
 
-local UI_WINDOW_WIDTH = 244
-local UI_HEADER_HEIGHT = 48
-local UI_MODULE_ROW_HEIGHT = d.isMobile and 50 or 42
-local UI_NAV_ROW_HEIGHT = d.isMobile and 48 or 42
-local UI_WINDOW_GAP = 12
+local UI_WINDOW_WIDTH = 252
+local UI_HEADER_HEIGHT = 52
+local UI_MODULE_ROW_HEIGHT = d.isMobile and 52 or 44
+local UI_NAV_ROW_HEIGHT = d.isMobile and 50 or 44
+local UI_WINDOW_GAP = 14
 
 local function getTableSize(p)
     if type(p) ~= "table" then
@@ -1064,12 +1070,12 @@ local function addShadow(F, G)
 
     H = Instance.new("ImageLabel")
     H.Name = "SoftShadow"
-    H.Size = UDim2.new(1, G and 18 or 14, 1, G and 18 or 14)
-    H.Position = UDim2.fromOffset(G and -9 or -7, G and -9 or -7)
+    H.Size = UDim2.new(1, G and 20 or 16, 1, G and 20 or 16)
+    H.Position = UDim2.fromOffset(G and -10 or -8, G and -10 or -8)
     H.BackgroundTransparency = 1
     H.Image = u("badscript/assets/new/" .. (G and "blurnotif" or "blur") .. ".png")
     H.ImageColor3 = o.Shadow
-    H.ImageTransparency = G and 0.78 or 0.83
+    H.ImageTransparency = G and 0.76 or 0.81
     H.ScaleType = Enum.ScaleType.Slice
     H.SliceCenter = Rect.new(52, 31, 261, 502)
     H.ZIndex = math.max(F.ZIndex - 1, 0)
@@ -1102,14 +1108,15 @@ local function addSurfaceGradient(F, G)
     H.Color = G
         or ColorSequence.new({
             ColorSequenceKeypoint.new(0, o.SurfaceSoft),
-            ColorSequenceKeypoint.new(0.55, o.Surface),
+            ColorSequenceKeypoint.new(0.48, o.Surface),
             ColorSequenceKeypoint.new(1, o.MainSoft),
         })
     H.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.03),
-        NumberSequenceKeypoint.new(1, 0.12),
+        NumberSequenceKeypoint.new(0, 0.015),
+        NumberSequenceKeypoint.new(0.52, 0.055),
+        NumberSequenceKeypoint.new(1, 0.14),
     })
-    H.Rotation = 90
+    H.Rotation = 105
     return H
 end
 
@@ -1134,7 +1141,7 @@ local function addAccentLine(F, G)
         end)
     end
 
-    H.Size = UDim2.fromOffset(30, G or 2)
+    H.Size = UDim2.fromOffset(34, G or 2)
     H.Position = UDim2.fromOffset(12, 1)
     H.BackgroundColor3 = Color3.fromHSV(
         d.GUIColor.Hue,
@@ -1176,12 +1183,12 @@ local function bindPremiumMotion(F, G, H, I)
         if pressed then
             targetScale = L.PressScale or 0.985
         elseif hovered then
-            targetScale = L.HoverScale or 1.008
+            targetScale = L.HoverScale or 1.004
         else
             targetScale = 1
         end
 
-        n:Tween(J, pressed and o.TweenPress or o.TweenFast, {
+        n:Spring(J, o.SpringInteractive, {
             Scale = targetScale,
         })
 
@@ -2229,7 +2236,7 @@ function LayoutIntelligence:UpdateDrag(object, desired)
     self:Register(object)
 
     -- Pointer movement stays direct. Collision resolution is deferred until
-    -- release so drag input never performs an O(n²) layout search per frame.
+    -- release so drag input never performs an O(n^2) layout search per frame.
     local safe = clampGuiObjectToViewport(object, desired)
     local metadata = self.metadata[object]
     if metadata then
@@ -2683,6 +2690,13 @@ do
             return nil
         end
 
+        local motionLibrary = d.MotionLibrary
+        if type(motionLibrary) == "table" and type(motionLibrary.stop) == "function" then
+            for property in pairs(K) do
+                pcall(motionLibrary.stop, I, property)
+            end
+        end
+
         local needsTween = false
         for property, targetValue in pairs(K) do
             local readable, currentValue = pcall(function()
@@ -2802,7 +2816,57 @@ do
     end
     n.tween = n.Tween
 
+    function n.Spring(H, I, J, K)
+        if typeof(I) ~= "Instance" or type(K) ~= "table" then
+            return false
+        end
+
+        local profile = type(J) == "table" and J or o.SpringInteractive
+        local damping = tonumber(profile.Damping) or 1
+        local frequency = tonumber(profile.Frequency) or 20
+        local motionLibrary = d.MotionLibrary
+
+        if type(motionLibrary) ~= "table"
+            or type(motionLibrary.target) ~= "function"
+            or type(motionLibrary.stop) ~= "function"
+        then
+            H:Tween(I, o.TweenFast, K)
+            return false
+        end
+
+        for property in pairs(K) do
+            H:Cancel(I, H.tweens, property)
+            pcall(motionLibrary.stop, I, property)
+        end
+
+        local ok, err = pcall(
+            motionLibrary.target,
+            I,
+            damping,
+            frequency,
+            K
+        )
+        if not ok then
+            a:report({
+                type = "gui-spring",
+                err = err,
+                args = { I, profile, K },
+                notifyBlacklisted = true,
+            })
+            H:Tween(I, o.TweenFast, K)
+            return false
+        end
+
+        return true
+    end
+    n.spring = n.Spring
+
     function n.Cancel(H, I, L, property)
+        local motionLibrary = d.MotionLibrary
+        if type(motionLibrary) == "table" and type(motionLibrary.stop) == "function" then
+            pcall(motionLibrary.stop, I, property)
+        end
+
         L = L or H.tweens
         local state = L[I]
         if not state then
@@ -2847,6 +2911,7 @@ d.Libraries = {
     getcustomasset = u,
     getfontsize = E,
     tween = n,
+    spr = d.MotionLibrary,
     uipallet = o,
 }
 
@@ -2941,7 +3006,7 @@ H = {
                 TextColor3 = o.Text,
                 Position = UDim2.new(1, -24, 0.5, -9),
             })
-            n:Tween(scale, o.TweenFast, { Scale = 1.006 })
+            n:Spring(scale, o.SpringInteractive, { Scale = 1.006 })
         end)
         M.MouseLeave:Connect(function()
             n:Tween(N, o.TweenFast, {
@@ -2955,13 +3020,13 @@ H = {
                 TextColor3 = o.FaintText,
                 Position = UDim2.new(1, -27, 0.5, -9),
             })
-            n:Tween(scale, o.TweenFast, { Scale = 1 })
+            n:Spring(scale, o.SpringInteractive, { Scale = 1 })
         end)
         M.MouseButton1Down:Connect(function()
-            n:Tween(scale, o.TweenPress, { Scale = 0.985 })
+            n:Spring(scale, o.SpringInteractive, { Scale = 0.985 })
         end)
         M.MouseButton1Up:Connect(function()
-            n:Tween(scale, o.TweenFast, { Scale = 1.006 })
+            n:Spring(scale, o.SpringInteractive, { Scale = 1.006 })
         end)
         M.Activated:Connect(I.Function)
 
@@ -4100,7 +4165,7 @@ H = {
                 GroupTransparency = 1,
                 BackgroundTransparency = 0.08,
             })
-            n:Tween(popupScale, dropdownTransition, {
+            n:Spring(popupScale, o.SpringInteractive, {
                 Scale = 0.985,
             })
             n:Tween(popupStroke, dropdownTransition, {
@@ -4169,7 +4234,7 @@ H = {
                 GroupTransparency = 0,
                 BackgroundTransparency = 0.02,
             })
-            n:Tween(popupScale, dropdownTransition, {
+            n:Spring(popupScale, o.SpringInteractive, {
                 Scale = 1,
             })
             n:Tween(popupStroke, dropdownTransition, {
@@ -4670,12 +4735,12 @@ H = {
         end)
 
         root.MouseEnter:Connect(function()
-            n:Tween(knobScale, o.TweenFast, { Scale = 1.14 })
+            n:Spring(knobScale, o.SpringInteractive, { Scale = 1.14 })
             n:Tween(track, o.TweenFast, { BackgroundColor3 = o.ElevatedHover })
             n:Tween(title, o.TweenFast, { TextColor3 = o.Text })
         end)
         root.MouseLeave:Connect(function()
-            n:Tween(knobScale, o.TweenFast, { Scale = 1 })
+            n:Spring(knobScale, o.SpringInteractive, { Scale = 1 })
             n:Tween(track, o.TweenFast, { BackgroundColor3 = o.Elevated })
             n:Tween(title, o.TweenFast, { TextColor3 = o.MutedText })
         end)
@@ -5872,18 +5937,18 @@ H = {
         af.MouseEnter:Connect(function()
             ae = true
             applyVisual(false)
-            n:Tween(an, o.TweenFast, { Scale = 1.008 })
+            n:Spring(an, o.SpringInteractive, { Scale = 1.008 })
         end)
         af.MouseLeave:Connect(function()
             ae = false
             applyVisual(false)
-            n:Tween(an, o.TweenFast, { Scale = 1 })
+            n:Spring(an, o.SpringInteractive, { Scale = 1 })
         end)
         af.MouseButton1Down:Connect(function()
-            n:Tween(an, o.TweenPress, { Scale = 0.988 })
+            n:Spring(an, o.SpringInteractive, { Scale = 0.988 })
         end)
         af.MouseButton1Up:Connect(function()
-            n:Tween(an, o.TweenFast, { Scale = ae and 1.008 or 1 })
+            n:Spring(an, o.SpringInteractive, { Scale = ae and 1.008 or 1 })
         end)
         af.Activated:Connect(function()
             ad:Toggle()
@@ -6391,7 +6456,7 @@ function d.CreateGUI(aa)
 
         if d._InitialLayoutReady and not d._SuppressEntryAnimation then
             mainScale.Scale = 0.992
-            n:Tween(mainScale, o.TweenSlow, { Scale = 1 })
+            n:Spring(mainScale, o.SpringPanel, { Scale = 1 })
         end
     end)
 
@@ -6402,7 +6467,7 @@ function d.CreateGUI(aa)
     ad.BackgroundTransparency = 1
     ad.Text = "BADWARS"
     ad.TextColor3 = o.TextStrong
-    ad.TextSize = 17
+    ad.TextSize = 18
     ad.TextXAlignment = Enum.TextXAlignment.Left
     ad.FontFace = o.FontBold
     ad.Parent = ac
@@ -6412,7 +6477,7 @@ function d.CreateGUI(aa)
     brandSub.Size = UDim2.fromOffset(120, 10)
     brandSub.Position = UDim2.fromOffset(12, 28)
     brandSub.BackgroundTransparency = 1
-    brandSub.Text = "CLIENT"
+    brandSub.Text = "INTERFACE"
     brandSub.TextColor3 = o.FaintText
     brandSub.TextSize = 7
     brandSub.TextXAlignment = Enum.TextXAlignment.Left
@@ -6422,7 +6487,7 @@ function d.CreateGUI(aa)
 
     local playerCard = Instance.new("Frame")
     playerCard.Name = "PlayerCard"
-    playerCard.Size = UDim2.fromOffset(UI_WINDOW_WIDTH - 24, 50)
+    playerCard.Size = UDim2.fromOffset(UI_WINDOW_WIDTH - 24, 54)
     playerCard.Position = UDim2.fromOffset(12, 43)
     playerCard.BackgroundColor3 = o.Surface
     playerCard.BackgroundTransparency = 0.12
@@ -6526,7 +6591,7 @@ function d.CreateGUI(aa)
     local af = Instance.new("ScrollingFrame")
     af.Name = "Children"
     af.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, 320)
-    af.Position = UDim2.fromOffset(0, 98)
+    af.Position = UDim2.fromOffset(0, 104)
     af.BackgroundTransparency = 1
     af.BorderSizePixel = 0
     af.CanvasSize = UDim2.new()
@@ -6569,9 +6634,9 @@ function d.CreateGUI(aa)
     ai.Parent = ah
     local aj = Instance.new("TextButton")
     aj.Name = "DiscordInvite"
-    aj.Size = UDim2.fromOffset(172, 28)
+    aj.Size = UDim2.fromOffset(188, 32)
     aj.AnchorPoint = Vector2.new(0.5, 1)
-    aj.Position = UDim2.new(0.5, 0, 1, -14)
+    aj.Position = UDim2.new(0.5, 0, 1, -16)
     aj.BackgroundColor3 = o.MainSoft
     aj.BackgroundTransparency = 0.03
     aj.BorderSizePixel = 0
@@ -6596,7 +6661,7 @@ function d.CreateGUI(aa)
     discordAccent.Name = "Accent"
     discordAccent.Size = UDim2.fromOffset(6, 6)
     discordAccent.AnchorPoint = Vector2.new(0.5, 0.5)
-    discordAccent.Position = UDim2.fromOffset(17, 16)
+    discordAccent.Position = UDim2.fromOffset(18, 16)
     discordAccent.BorderSizePixel = 0
     discordAccent.BackgroundColor3 =
         Color3.fromHSV(
@@ -6610,10 +6675,10 @@ function d.CreateGUI(aa)
 
     local discordLabel = Instance.new("TextLabel")
     discordLabel.Name = "Label"
-    discordLabel.Size = UDim2.new(1, -66, 1, 0)
-    discordLabel.Position = UDim2.fromOffset(30, 0)
+    discordLabel.Size = UDim2.new(1, -46, 1, 0)
+    discordLabel.Position = UDim2.fromOffset(34, 0)
     discordLabel.BackgroundTransparency = 1
-    discordLabel.Text = "BADWARS DISCORD"
+    discordLabel.Text = "COPY DISCORD LINK"
     discordLabel.TextColor3 = o.TextStrong
     discordLabel.TextSize = 11
     discordLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -6621,28 +6686,16 @@ function d.CreateGUI(aa)
     discordLabel.ZIndex = aj.ZIndex + 3
     discordLabel.Parent = aj
 
-    local discordAction = Instance.new("TextLabel")
-    discordAction.Name = "Action"
-    discordAction.Size = UDim2.fromOffset(54, 20)
-    discordAction.AnchorPoint = Vector2.new(1, 0.5)
-    discordAction.Position = UDim2.new(1, -7, 0.5, 0)
-    discordAction.BackgroundColor3 = o.Elevated
-    discordAction.BackgroundTransparency = 0.1
-    discordAction.BorderSizePixel = 0
-    discordAction.Text = "COPY"
-    discordAction.TextColor3 = o.MutedText
-    discordAction.TextSize = 9
-    discordAction.FontFace = o.FontBold
-    discordAction.ZIndex = aj.ZIndex + 3
-    discordAction.Parent = aj
-    addCorner(discordAction, UDim.new(1, 0))
-    addStroke(
-        discordAction,
-        o.Border,
-        0.7,
-        1,
-        "DiscordActionStroke"
-    )
+    local discordChevron = Instance.new("ImageLabel")
+    discordChevron.Name = "Chevron"
+    discordChevron.Size = UDim2.fromOffset(5, 9)
+    discordChevron.AnchorPoint = Vector2.new(1, 0.5)
+    discordChevron.Position = UDim2.new(1, -15, 0.5, 0)
+    discordChevron.BackgroundTransparency = 1
+    discordChevron.Image = u("badscript/assets/new/expandright.png")
+    discordChevron.ImageColor3 = o.FaintText
+    discordChevron.ZIndex = aj.ZIndex + 3
+    discordChevron.Parent = aj
 
     connectguicolorchange(function(hue, saturation, value)
         if discordAccent.Parent then
@@ -6981,17 +7034,17 @@ function d.CreateGUI(aa)
                 if at.Enabled then
                     playV9Sweep(avSweep)
                 end
-                n:Tween(avScale, o.TweenFast, { Scale = 1.006 })
+                n:Spring(avScale, o.SpringInteractive, { Scale = 1.006 })
             end)
             au.MouseLeave:Connect(function()
                 applyNavigationVisual()
-                n:Tween(avScale, o.TweenFast, { Scale = 1 })
+                n:Spring(avScale, o.SpringInteractive, { Scale = 1 })
             end)
             au.MouseButton1Down:Connect(function()
-                n:Tween(avScale, o.TweenPress, { Scale = 0.996 })
+                n:Spring(avScale, o.SpringInteractive, { Scale = 0.996 })
             end)
             au.MouseButton1Up:Connect(function()
-                n:Tween(avScale, o.TweenFast, { Scale = 1.006 })
+                n:Spring(avScale, o.SpringInteractive, { Scale = 1.006 })
             end)
         end
 
@@ -7292,7 +7345,7 @@ end
                     return
                 end
 
-                n:Tween(paneScale, transition, { Scale = 1 })
+                n:Spring(paneScale, o.SpringPanel, { Scale = 1 })
                 n:Tween(paneStroke, transition, { Transparency = 0.5 })
                 n:Tween(paneShadow, transition, { ImageTransparency = 0.82 })
                 return
@@ -8121,9 +8174,9 @@ end)
         n:Tween(discordLabel, o.TweenFast, {
             TextColor3 = accent:Lerp(o.TextStrong, 0.24),
         })
-        n:Tween(discordAction, o.TweenFast, {
-            BackgroundColor3 = o.ElevatedHover,
-            TextColor3 = accent,
+        n:Tween(discordChevron, o.TweenFast, {
+            ImageColor3 = accent,
+            Position = UDim2.new(1, -12, 0.5, 0),
         })
     end)
 
@@ -8138,9 +8191,9 @@ end)
         n:Tween(discordLabel, o.TweenFast, {
             TextColor3 = o.TextStrong,
         })
-        n:Tween(discordAction, o.TweenFast, {
-            BackgroundColor3 = o.Elevated,
-            TextColor3 = o.MutedText,
+        n:Tween(discordChevron, o.TweenFast, {
+            ImageColor3 = o.FaintText,
+            Position = UDim2.new(1, -15, 0.5, 0),
         })
     end)
 
@@ -8158,17 +8211,17 @@ end)
             end
         end)
 
-        local previousText = discordAction.Text
-        discordAction.Text = copied and "COPIED" or "LINK"
-        task.delay(1.25, function()
-            if discordAction.Parent then
-                discordAction.Text = previousText
+        local previousText = discordLabel.Text
+        discordLabel.Text = copied and "INVITE COPIED" or "DISCORD INVITE"
+        task.delay(1.1, function()
+            if discordLabel.Parent then
+                discordLabel.Text = previousText
             end
         end)
 
         if d.CreateNotification then
             d:CreateNotification(
-                "BadWars V1",
+                "BadWars",
                 copied
                     and "Discord invite copied to clipboard."
                     or invite,
@@ -8226,7 +8279,7 @@ end)
         )
         ac.Size = UDim2.fromOffset(
             UI_WINDOW_WIDTH,
-            102 + math.max(100, visibleHeight)
+            108 + math.max(100, visibleHeight)
         )
 
         local maxCanvasY = math.max(
@@ -9048,7 +9101,7 @@ function d.CreateCategory(aa, ab)
                         and 0.48
                     or ((aq or optionsOpen) and 0.68 or 0.88),
             })
-            n:Tween(moduleScale, o.TweenFast, { Scale = 1 })
+            n:Spring(moduleScale, o.SpringInteractive, { Scale = 1 })
 
             activeHalo.BackgroundTransparency = N.Enabled and 0.72 or 1
             activeHaloStroke.Transparency = N.Enabled and 0.32 or 1
@@ -9239,7 +9292,7 @@ function d.CreateCategory(aa, ab)
                     })
                 end
 
-                n:Tween(moduleScale, o.TweenFast, { Scale = 1.004 })
+                n:Spring(moduleScale, o.SpringInteractive, { Scale = 1.004 })
                 au.Visible = #ao.Bind > 0 or aq or optionsOpen
                 az.Visible = ao.StarActive or aq or optionsOpen
             end)
@@ -9271,7 +9324,7 @@ function d.CreateCategory(aa, ab)
                     })
                 end
 
-                n:Tween(moduleScale, o.TweenFast, {
+                n:Spring(moduleScale, o.SpringInteractive, {
                     Scale = 1,
                 })
                 au.Visible = #ao.Bind > 0 or aq or optionsOpen
@@ -9279,11 +9332,11 @@ function d.CreateCategory(aa, ab)
             end)
 
             ar.MouseButton1Down:Connect(function()
-                n:Tween(moduleScale, o.TweenPress, { Scale = 0.99 })
+                n:Spring(moduleScale, o.SpringInteractive, { Scale = 0.99 })
             end)
 
             ar.MouseButton1Up:Connect(function()
-                n:Tween(moduleScale, o.TweenFast, {
+                n:Spring(moduleScale, o.SpringInteractive, {
                     Scale = aq and 1.004 or 1,
                 })
             end)
@@ -9709,17 +9762,17 @@ function d.CreateCategory(aa, ab)
     ag.MouseEnter:Connect(function()
         updateCategoryVisual(true)
         playV9Sweep(categorySweep)
-        n:Tween(categoryScale, o.TweenFast, { Scale = 1.004 })
+        n:Spring(categoryScale, o.SpringInteractive, { Scale = 1.004 })
     end)
     ag.MouseLeave:Connect(function()
         updateCategoryVisual(false)
-        n:Tween(categoryScale, o.TweenFast, { Scale = 1 })
+        n:Spring(categoryScale, o.SpringInteractive, { Scale = 1 })
     end)
     ag.MouseButton1Down:Connect(function()
-        n:Tween(categoryScale, o.TweenPress, { Scale = 0.997 })
+        n:Spring(categoryScale, o.SpringInteractive, { Scale = 0.997 })
     end)
     ag.MouseButton1Up:Connect(function()
-        n:Tween(categoryScale, o.TweenFast, { Scale = 1 })
+        n:Spring(categoryScale, o.SpringInteractive, { Scale = 1 })
     end)
 
     ad:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -9978,7 +10031,7 @@ function d.CreateCategory(aa, ab)
                     Color = o.BorderStrong,
                     Transparency = 0.62,
                 })
-                n:Tween(moduleCategoryScale, o.TweenFast, { Scale = 1 })
+                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
                 at.TextColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
                 aw.ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
             end)
@@ -9990,17 +10043,17 @@ function d.CreateCategory(aa, ab)
                     Color = o.Border,
                     Transparency = 0.84,
                 })
-                n:Tween(moduleCategoryScale, o.TweenFast, { Scale = 1 })
+                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
                 at.TextColor3 = ao.Expanded and o.TextStrong or o.MutedText
                 aw.ImageColor3 = ao.Expanded
                     and Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
                     or o.MutedText
             end)
             aq.MouseButton1Down:Connect(function()
-                n:Tween(moduleCategoryScale, o.TweenPress, { Scale = 0.99 })
+                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 0.99 })
             end)
             aq.MouseButton1Up:Connect(function()
-                n:Tween(moduleCategoryScale, o.TweenFast, { Scale = 1 })
+                n:Spring(moduleCategoryScale, o.SpringInteractive, { Scale = 1 })
             end)
 
             success, err = pcall(function()
@@ -10954,7 +11007,7 @@ function d.CreateCategoryList(ag, ah)
         if aj.Visible then
             categoryListScale.Scale = 0.975
             categoryListAccent.BackgroundTransparency = 1
-            n:Tween(categoryListScale, o.TweenBack, { Scale = 1 })
+            n:Spring(categoryListScale, o.SpringPanel, { Scale = 1 })
             n:Tween(categoryListAccent, o.TweenSlow, { BackgroundTransparency = 0 })
         end
     end)
@@ -11573,7 +11626,7 @@ function d.CreateCategoryList(ag, ah)
             Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
             Transparency = 0.16,
         })
-        n:Tween(categoryListScale, o.TweenFast, { Scale = 1.008 })
+        n:Spring(categoryListScale, o.SpringInteractive, { Scale = 1.008 })
     end)
     an.MouseLeave:Connect(function()
         ao.ImageColor3 = o.FaintText
@@ -11581,13 +11634,13 @@ function d.CreateCategoryList(ag, ah)
             Color = o.BorderStrong,
             Transparency = 0.3,
         })
-        n:Tween(categoryListScale, o.TweenFast, { Scale = 1 })
+        n:Spring(categoryListScale, o.SpringInteractive, { Scale = 1 })
     end)
     an.MouseButton1Down:Connect(function()
-        n:Tween(categoryListScale, o.TweenPress, { Scale = 0.992 })
+        n:Spring(categoryListScale, o.SpringInteractive, { Scale = 0.992 })
     end)
     an.MouseButton1Up:Connect(function()
-        n:Tween(categoryListScale, o.TweenFast, { Scale = 1.008 })
+        n:Spring(categoryListScale, o.SpringInteractive, { Scale = 1.008 })
     end)
     an.Activated:Connect(function()
         ai:Expand()
@@ -11762,7 +11815,7 @@ function d.CreateSearch(ag)
 
     if not d.isMobile then
         ah.MouseEnter:Connect(function()
-            n:Tween(ai, o.TweenFast, { Scale = 1.016 })
+            n:Spring(ai, o.SpringInteractive, { Scale = 1.016 })
             n:Tween(searchStroke, o.TweenFast, {
                 Color = o.BorderStrong,
                 Transparency = 0.2,
@@ -11770,7 +11823,7 @@ function d.CreateSearch(ag)
         end)
         ah.MouseLeave:Connect(function()
             if not am or not am:IsFocused() then
-                n:Tween(ai, o.TweenFast, { Scale = 1 })
+                n:Spring(ai, o.SpringInteractive, { Scale = 1 })
                 n:Tween(searchStroke, o.TweenFast, {
                     Color = o.BorderStrong,
                     Transparency = 0.36,
@@ -11985,7 +12038,7 @@ function d.CreateSearch(ag)
         if am.Text == "Type to search..." then
             am.Text = ""
         end
-        n:Tween(ai, o.TweenFast, { Scale = 1.018 })
+        n:Spring(ai, o.SpringInteractive, { Scale = 1.018 })
         n:Tween(searchStroke, o.TweenFast, {
             Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
             Transparency = 0.12,
@@ -12005,7 +12058,7 @@ function d.CreateSearch(ag)
         if am.Text == "" then
             flickerTextEffect(am, true, "Type to search...")
         end
-        n:Tween(ai, o.TweenFast, { Scale = 1 })
+        n:Spring(ai, o.SpringInteractive, { Scale = 1 })
         n:Tween(searchStroke, o.TweenFast, {
             Color = o.BorderStrong,
             Transparency = 0.36,
@@ -12057,7 +12110,7 @@ function d.CreateLegit(ag)
         if aj.Visible then
             legitScale.Scale = 0.97
             legitAccent.BackgroundTransparency = 1
-            n:Tween(legitScale, o.TweenBack, { Scale = 1 })
+            n:Spring(legitScale, o.SpringPanel, { Scale = 1 })
             n:Tween(legitAccent, o.TweenSlow, { BackgroundTransparency = 0 })
         end
     end)
@@ -12545,7 +12598,7 @@ function d.CreateLegit(ag)
                 Color = ar.Enabled and accent or o.Border,
                 Transparency = ar.Enabled and 0.28 or 0.82,
             })
-            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
+            n:Spring(cardScale, o.SpringInteractive, { Scale = 1 })
             n:Tween(ax, o.Tween, {
                 BackgroundColor3 = ar.Enabled and accent or o.Elevated,
             })
@@ -12706,7 +12759,7 @@ function d.CreateLegit(ag)
                 Transparency = ar.Enabled and 0.46 or 0.64,
             })
             aw.TextColor3 = hoverAccent
-            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
+            n:Spring(cardScale, o.SpringInteractive, { Scale = 1 })
         end)
         av.MouseLeave:Connect(function()
             local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
@@ -12718,13 +12771,13 @@ function d.CreateLegit(ag)
                 Transparency = ar.Enabled and 0.5 or 0.78,
             })
             aw.TextColor3 = ar.Enabled and accent or o.MutedText
-            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
+            n:Spring(cardScale, o.SpringInteractive, { Scale = 1 })
         end)
         av.MouseButton1Down:Connect(function()
-            n:Tween(cardScale, o.TweenPress, { Scale = 0.996 })
+            n:Spring(cardScale, o.SpringInteractive, { Scale = 0.996 })
         end)
         av.MouseButton1Up:Connect(function()
-            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
+            n:Spring(cardScale, o.SpringInteractive, { Scale = 1 })
         end)
 
         av.Activated:Connect(function(inputObject)
@@ -12836,357 +12889,310 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
     ah = tostring(ah or "BadWars")
     ai = tostring(ai or "")
     aj = math.clamp(tonumber(aj) or 5, 1.5, 30)
-    local style = string.lower(tostring(ak or "info"))
+    ak = string.lower(tostring(ak or "info"))
 
     task.defer(function()
         if ag.ThreadFix then
             setthreadidentity(8)
         end
-
         if not q or not q.Parent then
             return
         end
+        ag._NotificationDismissers = ag._NotificationDismissers or setmetatable({}, { __mode = "k" })
 
-        local function notificationChildren()
-            local children = {}
+        local function cards()
+            local result = {}
             for _, child in ipairs(q:GetChildren()) do
                 if child:IsA("GuiObject") and child.Name == "Notification" then
-                    children[#children + 1] = child
+                    result[#result + 1] = child
                 end
             end
-            table.sort(children, function(left, right)
+            table.sort(result, function(left, right)
                 return (left.LayoutOrder or 0) > (right.LayoutOrder or 0)
             end)
-            return children
+            return result
         end
 
-        local function updateNotificationPositions(animated)
-            local offset = d.isMobile and 18 or 16
-            for _, notification in ipairs(notificationChildren()) do
-                local height = notification:GetAttribute("NotifHeight") or notification.AbsoluteSize.Y
-                local target = UDim2.new(1, -16, 1, -(offset + height))
+        local function layout(animated)
+            local offset = d.isMobile and 14 or 18
+            for _, card in ipairs(cards()) do
+                local height = card:GetAttribute("NotifHeight") or card.AbsoluteSize.Y
+                local target = UDim2.new(1, d.isMobile and -10 or -18, 1, -(offset + height))
                 if animated then
-                    n:Tween(notification, o.TweenSlow, { Position = target }, n.tweenstwo)
+                    n:Tween(card, o.Tween, { Position = target }, n.tweenstwo)
                 else
-                    notification.Position = target
+                    card.Position = target
                 end
-                offset += height + 10
+                offset += height + 8
             end
         end
 
-        for _, existing in ipairs(notificationChildren()) do
+        local function restart(existing)
+            local generation = (existing:GetAttribute("LifeGeneration") or 0) + 1
+            existing:SetAttribute("LifeGeneration", generation)
+            existing.LayoutOrder = math.floor(os.clock() * 100000)
+            local count = (existing:GetAttribute("DuplicateCount") or 1) + 1
+            existing:SetAttribute("DuplicateCount", count)
+            local badge = existing:FindFirstChild("Count")
+            if badge and badge:IsA("TextLabel") then
+                badge.Text = tostring(count)
+                badge.Visible = true
+            end
+            local progress = existing:FindFirstChild("Progress", true)
+            if progress and progress:IsA("Frame") then
+                progress.Size = UDim2.fromScale(1, 1)
+                n:Tween(progress, TweenInfo.new(aj, Enum.EasingStyle.Linear), {
+                    Size = UDim2.fromScale(0, 1),
+                }, n.tweenstwo)
+            end
+            local scale = existing:FindFirstChildOfClass("UIScale")
+            if scale then
+                scale.Scale = 0.985
+                n:Spring(scale, o.SpringInteractive, { Scale = 1 })
+            end
+            layout(true)
+            task.delay(aj, function()
+                if existing.Parent and existing:GetAttribute("LifeGeneration") == generation then
+                    local dismissExisting = ag._NotificationDismissers[existing]
+                    if type(dismissExisting) == "function" then
+                        dismissExisting()
+                    else
+                        existing:Destroy()
+                        layout(true)
+                    end
+                end
+            end)
+            return true
+        end
+
+        for _, existing in ipairs(cards()) do
             if existing:GetAttribute("NotifTitle") == ah and existing:GetAttribute("NotifText") == ai then
-                local duplicateCount = (existing:GetAttribute("DuplicateCount") or 1) + 1
-                existing:SetAttribute("DuplicateCount", duplicateCount)
-                existing.LayoutOrder = math.floor(os.clock() * 100000)
-
-                local duplicateBadge = existing:FindFirstChild("DuplicateBadge")
-                if duplicateBadge and duplicateBadge:IsA("TextLabel") then
-                    duplicateBadge.Text = "x" .. tostring(duplicateCount)
-                    duplicateBadge.Visible = true
-                end
-
-                local existingScale = existing:FindFirstChildOfClass("UIScale")
-                if existingScale then
-                    existingScale.Scale = 0.97
-                    n:Tween(existingScale, o.TweenBack, { Scale = 1 })
-                end
-
-                updateNotificationPositions(true)
+                restart(existing)
                 return
             end
         end
 
-        local children = notificationChildren()
-        local maxNotifications = d.isMobile and 3 or 5
-        while #children >= maxNotifications do
-            children[#children]:Destroy()
-            children = notificationChildren()
+        local current = cards()
+        local limit = d.isMobile and 3 or 4
+        while #current >= limit do
+            current[#current]:Destroy()
+            current = cards()
         end
 
-        local guiScale = math.max(A and A.Scale or 1, 0.01)
-        local viewportWidth = ((B and B.AbsoluteSize.X) or workspace.CurrentCamera.ViewportSize.X) / guiScale
-        local maxWidth = math.min(d.isMobile and 372 or 430, math.max(280, viewportWidth - 32))
-        local titleSize = d.isMobile and 15 or 14
-        local bodySize = d.isMobile and 14 or 13
-        local titleBounds = E(removeTags(ah), titleSize, o.FontSemiBold, maxWidth - 106) or Vector2.zero
-        local bodyBounds = E(removeTags(ai), bodySize, o.Font, maxWidth - 90) or Vector2.zero
-        local width = math.clamp(math.max(titleBounds.X + 132, bodyBounds.X + 106), d.isMobile and 310 or 304, maxWidth)
-        local wrappedBody = E(removeTags(ai), bodySize, o.Font, width - 90) or Vector2.zero
-        local height = math.clamp(math.max(d.isMobile and 92 or 86, wrappedBody.Y + 62), 86, d.isMobile and 164 or 154)
-
-        local styleColor = style == "alert" and o.Danger
-            or style == "warning" and o.Warning
-            or style == "success" and o.Success
+        local styleColor = ak == "alert" and o.Danger
+            or ak == "warning" and o.Warning
+            or ak == "success" and o.Success
             or Color3.fromHSV(ag.GUIColor.Hue, ag.GUIColor.Sat, ag.GUIColor.Value)
-
-        local styleName = style == "alert" and "ALERT"
-            or style == "warning" and "WARNING"
-            or style == "success" and "SUCCESS"
-            or "INFO"
+        local iconName = ak == "alert" and "alert" or ak == "warning" and "warning" or ak == "success" and "success" or "info"
+        local maxWidth = d.isMobile and 316 or 360
+        local minWidth = d.isMobile and 286 or 304
+        local bodyBounds = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, maxWidth - 66) or Vector2.zero
+        local titleBounds = E(removeTags(ah), d.isMobile and 13 or 12, o.FontSemiBold, maxWidth - 96) or Vector2.zero
+        local width = math.clamp(math.max(minWidth, math.max(bodyBounds.X + 66, titleBounds.X + 96)), minWidth, maxWidth)
+        local wrapped = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, width - 66) or Vector2.zero
+        local height = math.clamp(60 + math.max(0, wrapped.Y - 14), 68, d.isMobile and 118 or 112)
 
         local card = Instance.new("CanvasGroup")
         card.Name = "Notification"
         card.Size = UDim2.fromOffset(width, height)
         card.AnchorPoint = Vector2.new(1, 0)
-        card.Position = UDim2.new(1, width + 30, 1, -(height + 18))
+        card.Position = UDim2.new(1, width + 24, 1, -(height + 18))
         card.LayoutOrder = math.floor(os.clock() * 100000)
+        card.BackgroundColor3 = o.SurfaceSoft
+        card.BackgroundTransparency = 0.02
+        card.BorderSizePixel = 0
+        card.GroupTransparency = 1
+        card.Active = true
+        card.ClipsDescendants = false
+        card.ZIndex = 130
         card:SetAttribute("NotifHeight", height)
         card:SetAttribute("NotifTitle", ah)
         card:SetAttribute("NotifText", ai)
         card:SetAttribute("DuplicateCount", 1)
-        card.Active = true
-        card.ZIndex = 100
-        card.BackgroundColor3 = o.MainSoft
-        card.BackgroundTransparency = 0.02
-        card.BorderSizePixel = 0
-        card.GroupTransparency = 1
-        card.ClipsDescendants = false
+        card:SetAttribute("LifeGeneration", 1)
         card.Parent = q
         addCorner(card, o.RadiusLarge)
         addSurfaceGradient(card)
         addShadow(card, true)
-        addV9Chrome(card)
-        local cardStroke = addStroke(card, o.BorderStrong, 0.64, 1, "NotificationStroke")
-        local cardScale = addScale(card)
-        cardScale.Scale = 0.965
-
-        local topHighlight = Instance.new("Frame")
-        topHighlight.Name = "TopHighlight"
-        topHighlight.Size = UDim2.new(1, -24, 0, 1)
-        topHighlight.Position = UDim2.fromOffset(12, 1)
-        topHighlight.BackgroundColor3 = o.TextStrong
-        topHighlight.BackgroundTransparency = 0.88
-        topHighlight.BorderSizePixel = 0
-        topHighlight.ZIndex = 102
-        topHighlight.Parent = card
+        local stroke = addStroke(card, o.BorderStrong, 0.48, 1, "NotificationStroke")
+        local scale = addScale(card)
+        scale.Scale = 0.975
 
         local accent = Instance.new("Frame")
         accent.Name = "Accent"
-        accent.Size = UDim2.new(0, 3, 1, -18)
-        accent.Position = UDim2.fromOffset(0, 9)
+        accent.Size = UDim2.new(1, -24, 0, 2)
+        accent.Position = UDim2.fromOffset(12, 0)
         accent.BackgroundColor3 = styleColor
         accent.BorderSizePixel = 0
-        accent.ZIndex = 102
+        accent.ZIndex = 132
         accent.Parent = card
         addCorner(accent, UDim.new(1, 0))
 
-        local iconContainer = Instance.new("Frame")
-        iconContainer.Name = "IconContainer"
-        iconContainer.Size = UDim2.fromOffset(36, 36)
-        iconContainer.Position = UDim2.fromOffset(17, 16)
-        iconContainer.BackgroundColor3 = styleColor
-        iconContainer.BackgroundTransparency = 0.87
-        iconContainer.BorderSizePixel = 0
-        iconContainer.ZIndex = 102
-        iconContainer.Parent = card
-        addCorner(iconContainer, o.Radius)
-        addStroke(iconContainer, styleColor, 0.62, 1, "IconStroke")
+        local iconShell = Instance.new("Frame")
+        iconShell.Name = "IconShell"
+        iconShell.Size = UDim2.fromOffset(32, 32)
+        iconShell.Position = UDim2.fromOffset(14, 16)
+        iconShell.BackgroundColor3 = styleColor
+        iconShell.BackgroundTransparency = 0.88
+        iconShell.BorderSizePixel = 0
+        iconShell.ZIndex = 132
+        iconShell.Parent = card
+        addCorner(iconShell, o.RadiusSmall)
 
         local icon = Instance.new("ImageLabel")
         icon.Name = "Icon"
-        icon.Size = UDim2.fromOffset(17, 17)
+        icon.Size = UDim2.fromOffset(14, 14)
         icon.AnchorPoint = Vector2.new(0.5, 0.5)
         icon.Position = UDim2.fromScale(0.5, 0.5)
         icon.BackgroundTransparency = 1
-        icon.Image = u("badscript/assets/new/" .. style .. ".png")
+        icon.Image = u("badscript/assets/new/" .. iconName .. ".png")
         if icon.Image == "" then
             icon.Image = u("badscript/assets/new/info.png")
         end
         icon.ImageColor3 = styleColor
-        icon.ZIndex = 103
-        icon.Parent = iconContainer
-
-        local statusBadge = Instance.new("TextLabel")
-        statusBadge.Name = "Status"
-        statusBadge.Size = UDim2.fromOffset(styleName == "WARNING" and 66 or 54, 18)
-        statusBadge.Position = UDim2.new(1, -(styleName == "WARNING" and 104 or 92), 0, 13)
-        statusBadge.BackgroundColor3 = styleColor
-        statusBadge.BackgroundTransparency = 0.86
-        statusBadge.BorderSizePixel = 0
-        statusBadge.Text = styleName
-        statusBadge.TextColor3 = styleColor
-        statusBadge.TextSize = 9
-        statusBadge.FontFace = o.FontBold
-        statusBadge.ZIndex = 103
-        statusBadge.Parent = card
-        addCorner(statusBadge, UDim.new(1, 0))
-
-        local duplicateBadge = Instance.new("TextLabel")
-        duplicateBadge.Name = "DuplicateBadge"
-        duplicateBadge.Size = UDim2.fromOffset(30, 18)
-        duplicateBadge.Position = UDim2.new(1, -68, 0, 13)
-        duplicateBadge.BackgroundColor3 = o.Elevated
-        duplicateBadge.BackgroundTransparency = 0.12
-        duplicateBadge.BorderSizePixel = 0
-        duplicateBadge.Visible = false
-        duplicateBadge.Text = "x1"
-        duplicateBadge.TextColor3 = o.MutedText
-        duplicateBadge.TextSize = 10
-        duplicateBadge.FontFace = o.FontBold
-        duplicateBadge.ZIndex = 103
-        duplicateBadge.Parent = card
-        addCorner(duplicateBadge, UDim.new(1, 0))
+        icon.ZIndex = 133
+        icon.Parent = iconShell
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
-        title.Size = UDim2.new(1, -160, 0, math.max(20, titleBounds.Y))
-        title.Position = UDim2.fromOffset(66, 13)
+        title.Size = UDim2.new(1, -88, 0, 18)
+        title.Position = UDim2.fromOffset(56, 14)
         title.BackgroundTransparency = 1
         title.Text = ah
-        title.TextXAlignment = Enum.TextXAlignment.Left
-        title.TextYAlignment = Enum.TextYAlignment.Top
-        title.TextWrapped = true
-        title.TextTruncate = Enum.TextTruncate.AtEnd
         title.TextColor3 = o.TextStrong
-        title.TextSize = titleSize
+        title.TextSize = d.isMobile and 13 or 12
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.TextTruncate = Enum.TextTruncate.AtEnd
         title.RichText = true
         title.FontFace = o.FontSemiBold
-        title.ZIndex = 102
+        title.ZIndex = 132
         title.Parent = card
 
-        local bodyTop = math.max(41, 17 + math.max(20, titleBounds.Y))
         local body = Instance.new("TextLabel")
         body.Name = "Text"
-        body.Size = UDim2.new(1, -88, 0, math.max(20, height - bodyTop - 17))
-        body.Position = UDim2.fromOffset(66, bodyTop)
+        body.Size = UDim2.new(1, -68, 1, -38)
+        body.Position = UDim2.fromOffset(56, 33)
         body.BackgroundTransparency = 1
         body.Text = ai
+        body.TextColor3 = o.MutedText
+        body.TextSize = d.isMobile and 12 or 11
         body.TextXAlignment = Enum.TextXAlignment.Left
         body.TextYAlignment = Enum.TextYAlignment.Top
         body.TextWrapped = true
         body.TextTruncate = Enum.TextTruncate.AtEnd
-        body.TextColor3 = o.MutedText
-        body.TextSize = bodySize
         body.RichText = true
         body.FontFace = o.Font
-        body.ZIndex = 102
+        body.ZIndex = 132
         body.Parent = card
 
-        local closeButton = Instance.new("TextButton")
-        closeButton.Name = "Dismiss"
-        closeButton.Size = UDim2.fromOffset(25, 25)
-        closeButton.Position = UDim2.new(1, -32, 0, 9)
-        closeButton.BackgroundColor3 = o.Elevated
-        closeButton.BackgroundTransparency = 1
-        closeButton.BorderSizePixel = 0
-        closeButton.AutoButtonColor = false
-        closeButton.Text = "x"
-        closeButton.TextColor3 = o.FaintText
-        closeButton.TextSize = 20
-        closeButton.FontFace = o.FontSemiBold
-        closeButton.ZIndex = 104
-        closeButton.Parent = card
-        addCorner(closeButton, o.RadiusSmall)
+        local count = Instance.new("TextLabel")
+        count.Name = "Count"
+        count.Size = UDim2.fromOffset(22, 18)
+        count.Position = UDim2.new(1, -50, 0, 10)
+        count.BackgroundColor3 = o.Elevated
+        count.BackgroundTransparency = 0.08
+        count.BorderSizePixel = 0
+        count.Visible = false
+        count.Text = "2"
+        count.TextColor3 = o.MutedText
+        count.TextSize = 9
+        count.FontFace = o.FontBold
+        count.ZIndex = 134
+        count.Parent = card
+        addCorner(count, UDim.new(1, 0))
 
-        local progressTrack = Instance.new("Frame")
-        progressTrack.Name = "ProgressTrack"
-        progressTrack.Size = UDim2.new(1, -28, 0, 2)
-        progressTrack.Position = UDim2.new(0, 14, 1, -8)
-        progressTrack.BackgroundColor3 = o.Elevated
-        progressTrack.BackgroundTransparency = 0.1
-        progressTrack.BorderSizePixel = 0
-        progressTrack.ZIndex = 102
-        progressTrack.Parent = card
-        addCorner(progressTrack, UDim.new(1, 0))
+        local close = Instance.new("TextButton")
+        close.Name = "Dismiss"
+        close.Size = UDim2.fromOffset(24, 24)
+        close.Position = UDim2.new(1, -30, 0, 7)
+        close.BackgroundTransparency = 1
+        close.BorderSizePixel = 0
+        close.AutoButtonColor = false
+        close.Text = "X"
+        close.TextColor3 = o.FaintText
+        close.TextSize = 18
+        close.FontFace = o.FontSemiBold
+        close.ZIndex = 135
+        close.Parent = card
+
+        local track = Instance.new("Frame")
+        track.Name = "ProgressTrack"
+        track.Size = UDim2.new(1, -28, 0, 3)
+        track.Position = UDim2.new(0, 14, 1, -8)
+        track.BackgroundColor3 = o.Elevated
+        track.BackgroundTransparency = 0.12
+        track.BorderSizePixel = 0
+        track.ZIndex = 132
+        track.Parent = card
+        addCorner(track, UDim.new(1, 0))
 
         local progress = Instance.new("Frame")
         progress.Name = "Progress"
         progress.Size = UDim2.fromScale(1, 1)
         progress.BackgroundColor3 = styleColor
         progress.BorderSizePixel = 0
-        progress.ZIndex = 103
-        progress.Parent = progressTrack
+        progress.ZIndex = 133
+        progress.Parent = track
         addCorner(progress, UDim.new(1, 0))
 
         local dismissed = false
-        local paused = false
-
-        local function dismissNotification()
+        local function dismiss()
             if dismissed then
                 return
             end
             dismissed = true
-
-            n:Tween(card, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-                Position = UDim2.new(1, width + 30, 1, card.Position.Y.Offset),
+            ag._NotificationDismissers[card] = nil
+            n:Tween(card, TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+                Position = UDim2.new(1, width + 24, 1, card.Position.Y.Offset),
                 GroupTransparency = 1,
             }, n.tweenstwo)
-            n:Tween(cardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-                Scale = 0.965,
-            })
-
-            task.delay(0.21, function()
+            n:Tween(scale, TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.In), { Scale = 0.975 })
+            task.delay(0.15, function()
                 if card.Parent then
                     card:Destroy()
                 end
-                updateNotificationPositions(true)
+                layout(true)
             end)
         end
 
-        closeButton.MouseEnter:Connect(function()
-            n:Tween(closeButton, o.TweenFast, {
-                BackgroundTransparency = 0.18,
-                TextColor3 = o.TextStrong,
-            })
+        ag._NotificationDismissers[card] = dismiss
+        close.Activated:Connect(dismiss)
+        close.MouseEnter:Connect(function()
+            n:Tween(close, o.TweenFast, { TextColor3 = o.TextStrong })
         end)
-        closeButton.MouseLeave:Connect(function()
-            n:Tween(closeButton, o.TweenFast, {
-                BackgroundTransparency = 1,
-                TextColor3 = o.FaintText,
-            })
+        close.MouseLeave:Connect(function()
+            n:Tween(close, o.TweenFast, { TextColor3 = o.FaintText })
         end)
-        closeButton.Activated:Connect(dismissNotification)
-
         card.MouseEnter:Connect(function()
-            paused = true
-            n:Tween(cardScale, o.TweenFast, { Scale = 1.008 })
-            n:Tween(cardStroke, o.TweenFast, {
-                Color = o.BorderStrong,
-                Transparency = 0.34,
-            })
+            n:Spring(scale, o.SpringInteractive, { Scale = 1.006 })
+            n:Tween(stroke, o.TweenFast, { Transparency = 0.3, Color = styleColor:Lerp(o.BorderStrong, 0.62) })
         end)
         card.MouseLeave:Connect(function()
-            paused = false
-            n:Tween(cardScale, o.TweenFast, { Scale = 1 })
-            n:Tween(cardStroke, o.TweenFast, {
-                Color = o.BorderStrong,
-                Transparency = 0.56,
-            })
+            n:Spring(scale, o.SpringInteractive, { Scale = 1 })
+            n:Tween(stroke, o.TweenFast, { Transparency = 0.48, Color = o.BorderStrong })
         end)
-
         if d.isMobile then
-            local tap = Instance.new("TextButton")
-            tap.Name = "MobileDismiss"
-            tap.Size = UDim2.fromScale(1, 1)
-            tap.BackgroundTransparency = 1
-            tap.Text = ""
-            tap.ZIndex = 101
-            tap.Parent = card
-            setupMobileSwipeDismiss(tap, dismissNotification)
+            local swipe = Instance.new("TextButton")
+            swipe.Name = "SwipeDismiss"
+            swipe.Size = UDim2.fromScale(1, 1)
+            swipe.BackgroundTransparency = 1
+            swipe.Text = ""
+            swipe.ZIndex = 131
+            swipe.Parent = card
+            setupMobileSwipeDismiss(swipe, dismiss)
         end
 
-        updateNotificationPositions(false)
-        n:Tween(card, o.TweenBack, {
-            Position = UDim2.new(1, -16, 1, card.Position.Y.Offset),
+        layout(true)
+        n:Tween(card, o.TweenSpring, {
             GroupTransparency = 0,
         }, n.tweenstwo)
-        n:Tween(cardScale, o.TweenBack, { Scale = 1 })
+        n:Spring(scale, o.SpringSoft, { Scale = 1 })
+        n:Tween(progress, TweenInfo.new(aj, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(0, 1) }, n.tweenstwo)
 
-        task.spawn(function()
-            local elapsed = 0
-            local last = os.clock()
-            while card.Parent and not dismissed and elapsed < aj do
-                task.wait(0.04)
-                local now = os.clock()
-                if not paused then
-                    elapsed += now - last
-                    progress.Size = UDim2.fromScale(math.clamp(1 - (elapsed / aj), 0, 1), 1)
-                end
-                last = now
-            end
-            if not dismissed then
-                dismissNotification()
+        local generation = card:GetAttribute("LifeGeneration")
+        task.delay(aj, function()
+            if card.Parent and not dismissed and card:GetAttribute("LifeGeneration") == generation then
+                dismiss()
             end
         end)
     end)
@@ -13481,7 +13487,7 @@ function d.CreatePrompt(ah, ai)
         n:Tween(backdrop, o.TweenSlow, {
             BackgroundTransparency = 0.45,
         })
-        n:Tween(panelScale, o.TweenBack, {
+        n:Spring(panelScale, o.SpringPanel, {
             Scale = 1,
         })
         n:Tween(panel, o.TweenBack, {
@@ -13597,7 +13603,9 @@ function d.Load(ah, ai, aj)
         Bind = {},
     } }
 
-    ah.Categories.Profiles:ChangeValue()
+    if ah.Categories.Profiles then
+        ah.Categories.Profiles:ChangeValue()
+    end
     if ah.ProfileLabel then
         ah.ProfileLabel.Text = #ah.Profile > 10 and ah.Profile:sub(1, 10) .. "..." or ah.Profile
         ah.ProfileLabel.Size =
@@ -13721,24 +13729,9 @@ function d.Load(ah, ai, aj)
         ah:Save(ah.Profile, true)
     end
 
-    if shared.ForceBadWarsTutorial or (not an and tostring(ah.Profile) == "default") then
-        ah.NewUser = true
-    else
-        ah.NewUser = false
-    end
-
-    if not ah.NewUser and ah.TutorialAPI.isActive then
-        task.spawn(function()
-            if x then
-                x.Visible = false
-            end
-            v.Visible = true
-            ah.TutorialAPI:setText("Tutorial Complete!")
-            task.wait(1)
-            ah.TutorialAPI:setText("Thanks for using BadWars <3")
-            task.wait(1.5)
-            ah.TutorialAPI:revertTutorialMode(true)
-        end)
+    ah.NewUser = false
+    if ah.TutorialAPI and ah.TutorialAPI.isActive then
+        ah.TutorialAPI:revertTutorialMode(false)
     end
 
     if ah.Downloader then
@@ -14433,83 +14426,41 @@ d.TutorialAPI = {
     tutorialType = 2,
     isActive = false,
     label = ah,
-    flickerTextEffect = flickerTextEffect,
-    defaultText = ah.Text,
+    defaultText = "",
     cleanTutorialLabel = function(ai)
         if ai.addedBlur then
-            ai.addedBlur:Destroy()
+            pcall(function()
+                ai.addedBlur:Destroy()
+            end)
             ai.addedBlur = nil
         end
+        ai.isActive = false
+        ai.GlobeIconWait = false
+        ai.label.Visible = false
+        ai.label.Text = ""
     end,
     activateTutorial = function(ai)
         ai:cleanTutorialLabel()
-        ai.isActive = true
-        ai.label.TextScaled = false
-        ai.label.AutomaticSize = Enum.AutomaticSize.Y
-        ai.label.BackgroundTransparency = 0.8
-        ai.label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        ai.label.AnchorPoint = Vector2.new(0.5, 0)
-        ai.addedBlur = {
-            Destroy = function()
-                ai.label.BackgroundTransparency = 1
-            end,
-        }
-        n:Tween(ai.label, TweenInfo.new(1.5), {
-            TextSize = 30,
-            Position = UDim2.fromScale(0.5, 0.6),
-        })
-        ai:setText("Welcome to BadWars!")
-        ai.label.Parent = w
     end,
     tweenToSecondPosition = function(ai)
-        if not ai.isActive then
-            return
-        end
-        ai.GlobeIconWait = false
-        n:Tween(ai.label, TweenInfo.new(1.5), {
-            Position = UDim2.fromScale(0.5, 0.78),
-        })
-    end,
-    revertTutorialMode = function(ai, aj)
         ai:cleanTutorialLabel()
-        ai.GlobeIconWait = false
-        ai.isActive = false
-        ai.label.TextScaled = true
-        ai.label.AutomaticSize = Enum.AutomaticSize.None
-        local tutorialTween = n:Tween(ai.label, TweenInfo.new(0.5), {
-            Position = UDim2.fromScale(0.5, 0.97),
-        })
-        if tutorialTween then
-            tutorialTween.Completed:Once(function()
-                ai:setText(ai.defaultText)
-                ai.label.Parent = v
-            end)
-        else
-            ai:setText(ai.defaultText)
-            ai.label.Parent = v
-        end
-        if aj then
-            d:CreateNotification("Tutorial Complete!", "Thank you for using BadWars <3", 10)
-        end
     end,
-    setText = function(ai, aj)
-        if not ai.isActive and aj ~= ai.defaultText then
-            return
-        end
-        ai.flickerTextEffect(ai.label, true, aj)
+    revertTutorialMode = function(ai)
+        ai:cleanTutorialLabel()
+    end,
+    setText = function(ai)
+        ai:cleanTutorialLabel()
     end,
 }
-d:Clean(d.VisibilityChanged:Connect(function()
-    if d.TutorialAPI.isActive and d.TutorialAPI.GlobeIconWait and (not x or not x.Visible) then
-        d.TutorialAPI:setText("Tutorial Cancelled")
-        task.delay(0.3, function()
-            d.TutorialAPI:revertTutorialMode()
-        end)
-    end
-end))
+ah.Visible = false
+ah.Text = ""
 local ai = Instance.new("TextButton")
+ai.Name = "TutorialBlockerDisabled"
+ai.Size = UDim2.fromOffset(0, 0)
 ai.BackgroundTransparency = 1
-ai.Modal = true
+ai.Modal = false
+ai.Active = false
+ai.Visible = false
 ai.Text = ""
 ai.Parent = v
 local aj = Instance.new("ImageLabel")
@@ -15005,15 +14956,18 @@ an:CreateToggle({
 d:Clean(an.Update)
 d:Clean(an.ColorUpdate)
 
-d:CreateCategoryList({
-    Name = "Profiles",
-    Icon = u("badscript/assets/new/profilesicon.png"),
-    Size = UDim2.fromOffset(17, 10),
-    Position = UDim2.fromOffset(12, 16),
-    Placeholder = "Type name",
-    Profiles = true,
-})
+if d.ProfilesEnabled then
+    d:CreateCategoryList({
+        Name = "Profiles",
+        Icon = u("badscript/assets/new/profilesicon.png"),
+        Size = UDim2.fromOffset(17, 10),
+        Position = UDim2.fromOffset(12, 16),
+        Placeholder = "Type name",
+        Profiles = true,
+    })
+end
 
+if d.TutorialEnabled then
 d:connectOnLoad(function(aq)
     if aq.NewUser then
         task.spawn(function()
@@ -15071,6 +15025,7 @@ d:connectOnLoad(function(aq)
         end)
     end
 end)
+end
 
 local aq
 aq = d:CreateCategoryList({
@@ -16119,21 +16074,11 @@ function d.UpdateGUI(I, J, K, L, M)
         if O == "Main" then
             local mainObject = P.Object
             local brand = mainObject and mainObject:FindFirstChild("BrandLogo")
-            local version = brand and brand:FindFirstChild("V4Logo")
             local accent = Color3.fromHSV(J, K, L)
 
             if brand and brand:IsA("TextLabel") then
                 brand.TextColor3 = o.TextStrong
             end
-            if version then
-                if version:IsA("TextLabel") then
-                    version.BackgroundColor3 = accent
-                    version.TextColor3 = o.Main
-                elseif version:IsA("ImageLabel") then
-                    version.ImageColor3 = accent
-                end
-            end
-
             for Q, R in P.Buttons do
                 if R.Enabled then
                     R.Object.TextColor3 = N and Color3.fromHSV(d:Color((J - (R.Index * 0.025)) % 1))
@@ -16372,11 +16317,13 @@ function d.SetupHeldKeyTracking()
             d:UpdateTextGUI()
         end
 
-        for _, profile in d.Profiles do
-            if checkKeybinds(d.HeldKeybinds, profile.Bind, keyName) and profile.Name ~= d.Profile then
-                d:Save(profile.Name)
-                d:Load(true)
-                break
+        if d.ProfilesEnabled then
+            for _, profile in d.Profiles do
+                if checkKeybinds(d.HeldKeybinds, profile.Bind, keyName) and profile.Name ~= d.Profile then
+                    d:Save(profile.Name)
+                    d:Load(true)
+                    break
+                end
             end
         end
     end))
@@ -16471,7 +16418,7 @@ task.defer(function()
             end
 
             pcall(function()
-                n:Tween(scale, o.TweenFast, { Scale = 1 })
+                n:Spring(scale, o.SpringInteractive, { Scale = 1 })
                 if instance.BackgroundTransparency < 1 then
                     n:Tween(instance, o.TweenFast, { BackgroundTransparency = baseTransparency })
                 end

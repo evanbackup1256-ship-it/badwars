@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Main v17.0 - clean UI readiness pipeline
+-- BadWars Main v18.2 - public motion readiness pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -626,8 +626,22 @@ local function isStaleGuiCache(path, body)
         return true
     end
     return not (
-        body:find('Version%s*=%s*"17%.0"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V17%-FLUID%-MOTION%-SLEEK%-UI"') ~= nil
+        body:find('Version%s*=%s*"18%.2"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V18%.2%-PUBLIC%-MOTION"') ~= nil
+    )
+end
+
+local function isStaleMotionCache(path, body)
+    if path ~= "badscript/libraries/spr.lua" then
+        return false
+    end
+    if type(body) ~= "string" or body == "" then
+        return true
+    end
+    return not (
+        body:find("Spring-driven motion library", 1, true) ~= nil
+        and body:find("function spr.target", 1, true) ~= nil
+        and body:find("function spr.stop", 1, true) ~= nil
     )
 end
 
@@ -636,7 +650,7 @@ local function downloadFile(path)
         return nil, "HttpGet nil"
     end
     local cached = isfile(path) and readfile(path)
-    if isStaleGuiCache(path, cached) then
+    if isStaleGuiCache(path, cached) or isStaleMotionCache(path, cached) then
         pcall(function()
             if isfile(path) then
                 delfile(path)
@@ -1537,6 +1551,37 @@ end
 -- Stage 4: Load GUI
 setStatus("loading interface")
 installBadWarsLoaderShim()
+
+do
+    local existing = shared.BadWarsSpr
+    local valid = type(existing) == "table"
+        and type(existing.target) == "function"
+        and type(existing.stop) == "function"
+
+    if not valid then
+        local source, sourceErr = downloadFile("badscript/libraries/spr.lua")
+        if type(source) == "string" and source ~= "" then
+            local motionFn, compileErr = _loadstring(source, "badwars-spr")
+            if motionFn then
+                local ok, library = pcall(motionFn)
+                if ok
+                    and type(library) == "table"
+                    and type(library.target) == "function"
+                    and type(library.stop) == "function"
+                then
+                    shared.BadWarsSpr = library
+                else
+                    mwarn("BadWars: spr motion library runtime fallback: " .. safeStr(library))
+                end
+            else
+                mwarn("BadWars: spr motion library compile fallback: " .. safeStr(compileErr))
+            end
+        else
+            mwarn("BadWars: spr motion library unavailable; using TweenService fallback: " .. safeStr(sourceErr))
+        end
+    end
+end
+
 local guiStart = os_clock()
 local guiCode = downloadFile("badscript/guis/" .. gui .. "/gui.lua")
 if type(guiCode) ~= "string" or guiCode == "" then

@@ -398,37 +398,9 @@ local function addMaid(p)
     p._NevermoreMaid = maid
     p.Connections = maid._tasks
 
-    local function cleanupMethod(resource)
-        if type(resource) ~= "table" and type(resource) ~= "userdata" then
-            return nil
-        end
-
-        return resource.Destroy
-            or resource.Disconnect
-            or resource.Cleanup
-            or resource.Clean
-    end
-
-    local function trackPlainWrapper(owner, resource)
-        local connection = resource.conn
-            or resource.Connection
-            or resource.connection
-
-        if typeof(connection) == "RBXScriptConnection" then
-            owner._NevermoreMaid:GiveTask(function()
-                if connection.Connected then
-                    connection:Disconnect()
-                end
-            end)
-            return
-        end
-
-        local thread = resource.thread or resource.Thread
-        if typeof(thread) == "thread" then
-            owner._NevermoreMaid:GiveTask(function()
-                pcall(task.cancel, thread)
-            end)
-        end
+    local function track(owner, resource)
+        owner._NevermoreMaid:GiveTask(resource)
+        return resource
     end
 
     function p.Clean(owner, resource)
@@ -439,22 +411,59 @@ local function addMaid(p)
         local resourceType = typeof(resource)
         local luaType = type(resource)
 
-        if luaType == "table" or luaType == "userdata" then
-            local method = cleanupMethod(resource)
-            if type(method) == "function" then
-                owner._NevermoreMaid:GiveTask(resource)
-            else
-                trackPlainWrapper(owner, resource)
-            end
-            return resource
+        -- Never probe arbitrary userdata for .Destroy. Roblox connections are
+        -- userdata and only expose Disconnect/Connected.
+        if resourceType == "RBXScriptConnection" then
+            return track(owner, resource)
         end
 
-        if resourceType == "RBXScriptConnection"
-            or resourceType == "Instance"
+        if resourceType == "Instance"
             or resourceType == "thread"
             or luaType == "function"
         then
-            owner._NevermoreMaid:GiveTask(resource)
+            return track(owner, resource)
+        end
+
+        if luaType ~= "table" then
+            return resource
+        end
+
+        -- rawget is safe for plain Lua tables and avoids metamethod/property
+        -- errors while checking supported cleanup contracts.
+        local destroy = rawget(resource, "Destroy")
+        local disconnect = rawget(resource, "Disconnect")
+        local cleanup = rawget(resource, "Cleanup")
+        local clean = rawget(resource, "Clean")
+
+        if type(destroy) == "function"
+            or type(disconnect) == "function"
+            or type(cleanup) == "function"
+            or type(clean) == "function"
+        then
+            return track(owner, resource)
+        end
+
+        -- Convert common wrapper tables into cleanup functions instead of
+        -- passing the wrapper itself to Maid.
+        local connection = rawget(resource, "conn")
+            or rawget(resource, "Connection")
+            or rawget(resource, "connection")
+
+        if typeof(connection) == "RBXScriptConnection" then
+            track(owner, function()
+                if connection.Connected then
+                    connection:Disconnect()
+                end
+            end)
+        end
+
+        local thread = rawget(resource, "thread")
+            or rawget(resource, "Thread")
+
+        if typeof(thread) == "thread" then
+            track(owner, function()
+                pcall(task.cancel, thread)
+            end)
         end
 
         return resource

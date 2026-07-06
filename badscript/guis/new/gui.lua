@@ -1,3 +1,4 @@
+-- BADWARS_V19_UI_REPAIR_V5_2
 -- BADWARS_V19_UI_REPAIR_V4_4
 -- BADWARS_UI_V19_OBSIDIAN_OVERHAUL
 -- BADWARS_UI_SEMANTIC_FIX_V2
@@ -323,11 +324,7 @@ local o = {
     SpringSoft = { Damping = 0.98, Frequency = 19, Public = true },
 }
 
-local UI_WINDOW_WIDTH = d.isMobile and 268 or 282
-local UI_HEADER_HEIGHT = d.isMobile and 56 or 58
-local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 48
-local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 46
-local UI_WINDOW_GAP = 16
+local UI_WINDOW_WIDTH = d.isMobile and 268 or 272 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 46 local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_WINDOW_GAP = d.isMobile and 12 or 10
 
 local function getTableSize(p)
     if type(p) ~= "table" then
@@ -8591,12 +8588,12 @@ function d.CreateCategory(aa, ab)
         27
     )
     categorySub.BackgroundTransparency = 1
-    categorySub.Text = "MODULES"
+    categorySub.Text = ""
     categorySub.TextColor3 = o.FaintText
     categorySub.TextSize = 8
     categorySub.TextXAlignment = Enum.TextXAlignment.Left
     categorySub.FontFace = o.FontBold
-    categorySub.Visible = true
+    categorySub.Visible = false
     categorySub.ZIndex = headerSurface.ZIndex + 2
     categorySub.Parent = headerSurface
 
@@ -9298,7 +9295,7 @@ function d.CreateCategory(aa, ab)
                         and 0.48
                     or ((aq or optionsOpen) and 0.68 or 0.88),
             })
-            n:Spring(moduleScale, o.SpringInteractive, { Scale = 1 })
+            moduleScale.Scale = 1
 
             activeHalo.BackgroundTransparency = N.Enabled and 0.72 or 1
             activeHaloStroke.Transparency = N.Enabled and 0.32 or 1
@@ -9489,7 +9486,7 @@ function d.CreateCategory(aa, ab)
                     })
                 end
 
-                n:Spring(moduleScale, o.SpringInteractive, { Scale = 1.004 })
+                moduleScale.Scale = 1
                 au.Visible = #ao.Bind > 0 or aq or optionsOpen
                 az.Visible = ao.StarActive or aq or optionsOpen
             end)
@@ -9521,21 +9518,17 @@ function d.CreateCategory(aa, ab)
                     })
                 end
 
-                n:Spring(moduleScale, o.SpringInteractive, {
-                    Scale = 1,
-                })
+                moduleScale.Scale = 1
                 au.Visible = #ao.Bind > 0 or aq or optionsOpen
                 az.Visible = ao.StarActive or aq or optionsOpen
             end)
 
             ar.MouseButton1Down:Connect(function()
-                n:Spring(moduleScale, o.SpringInteractive, { Scale = 0.99 })
+                moduleScale.Scale = 1
             end)
 
             ar.MouseButton1Up:Connect(function()
-                n:Spring(moduleScale, o.SpringInteractive, {
-                    Scale = aq and 1.004 or 1,
-                })
+                moduleScale.Scale = 1
             end)
         end
         at:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -9889,13 +9882,7 @@ function d.CreateCategory(aa, ab)
             end
 
             local sizeTween
-            if needsResize then
-                sizeTween = n:Tween(ad, o.TweenSlow, {
-                    Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight),
-                })
-            else
-                ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
-            end
+            if stateChanged and needsResize then sizeTween = n:Tween(ad, o.TweenSlow, { Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight), }) else n:Cancel(ad) ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight) end
 
             local function finishCategoryTransition()
                 if animationId ~= categoryAnimationId then
@@ -9962,17 +9949,17 @@ function d.CreateCategory(aa, ab)
     ag.MouseEnter:Connect(function()
         updateCategoryVisual(true)
         playV9Sweep(categorySweep)
-        n:Spring(categoryScale, o.SpringInteractive, { Scale = 1.004 })
+        categoryScale.Scale = 1
     end)
     ag.MouseLeave:Connect(function()
         updateCategoryVisual(false)
-        n:Spring(categoryScale, o.SpringInteractive, { Scale = 1 })
+        categoryScale.Scale = 1
     end)
     ag.MouseButton1Down:Connect(function()
-        n:Spring(categoryScale, o.SpringInteractive, { Scale = 0.997 })
+        categoryScale.Scale = 1
     end)
     ag.MouseButton1Up:Connect(function()
-        n:Spring(categoryScale, o.SpringInteractive, { Scale = 1 })
+        categoryScale.Scale = 1
     end)
 
     ad:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -10319,19 +10306,25 @@ function d.CreateCategory(aa, ab)
                 end
             end
 
-            local moduleCategoryAnimationId = 0
-local moduleCategoryAnimating = false
+            local moduleCategoryLastContentHeight = -1
+local moduleCategoryRefreshQueued = false
+
+local function getModuleCategoryContentHeight()
+    return math.max(
+        0,
+        math.ceil(ay.AbsoluteContentSize.Y / math.max(A.Scale, 0.05))
+    )
+end
 
 local function refreshModuleCategory(force)
-    if moduleCategoryAnimating and not force then
+    local contentHeight = getModuleCategoryContentHeight()
+    if not force
+        and math.abs(contentHeight - moduleCategoryLastContentHeight) < 2
+    then
         return
     end
 
-    local scale = math.max(A.Scale, 0.05)
-    local contentHeight = math.max(
-        0,
-        math.ceil(ay.AbsoluteContentSize.Y / scale)
-    )
+    moduleCategoryLastContentHeight = contentHeight
     local targetHeight = ao.Expanded and contentHeight or 0
 
     n:Cancel(ax)
@@ -10345,17 +10338,24 @@ local function refreshModuleCategory(force)
         ap.Position = UDim2.fromOffset(0, -targetHeight)
     end
 
-    aj.CanvasSize = UDim2.fromOffset(
+    local parentContentHeight = math.max(
         0,
-        math.max(0, math.ceil(al.AbsoluteContentSize.Y / scale))
+        math.ceil(al.AbsoluteContentSize.Y / math.max(A.Scale, 0.05))
     )
 
+    aj.CanvasSize = UDim2.fromOffset(0, parentContentHeight + 4)
+
     if ac.Expanded then
+        local viewportLimit = math.max(
+            160,
+            (B.AbsoluteSize.Y / math.max(A.Scale, 0.05)) - 96
+        )
         ad.Size = UDim2.fromOffset(
-            220,
+            UI_WINDOW_WIDTH,
             math.min(
-                41 + math.ceil(al.AbsoluteContentSize.Y / scale),
-                601
+                UI_HEADER_HEIGHT + parentContentHeight + 8,
+                viewportLimit,
+                606
             )
         )
     end
@@ -10377,18 +10377,17 @@ function ao.Toggle(az, desiredState, instant)
     end
 
     az.Expanded = nextState
-    moduleCategoryAnimationId += 1
-    local animationId = moduleCategoryAnimationId
-    moduleCategoryAnimating = not instant
-    moduleCategoryScale.Scale = 1
-    ap:SetAttribute("LayoutAnimating", moduleCategoryAnimating)
+    ap:SetAttribute("LayoutAnimating", true)
     ao.ExpandEvent:Fire()
 
-    local scale = math.max(A.Scale, 0.05)
-    local contentHeight = math.max(
-        0,
-        math.ceil(ay.AbsoluteContentSize.Y / scale)
-    )
+    n:Cancel(aw)
+    n:Cancel(as)
+    n:Cancel(ax)
+    n:Cancel(ap)
+
+    moduleCategoryScale.Scale = 1
+    local contentHeight = getModuleCategoryContentHeight()
+    moduleCategoryLastContentHeight = contentHeight
     local targetHeight = az.Expanded and contentHeight or 0
     local arrowRotation = az.Expanded
         and (az.UpExpand and 180 or 0)
@@ -10400,65 +10399,26 @@ function ao.Toggle(az, desiredState, instant)
         and m.Dark(o.Main, 0.12)
         or (an.BackgroundColor or m.Dark(o.Main, 0.08))
 
-    n:Cancel(aw)
-    n:Cancel(as)
-    n:Cancel(ax)
-    n:Cancel(ap)
-    ax.Visible = true
+    ax.Visible = az.Expanded
+    ax.Size = UDim2.new(1, 0, 0, targetHeight)
+    ap.Size = UDim2.fromOffset(220, 46 + targetHeight)
+    ap.BackgroundColor3 = background
+    aw.Rotation = arrowRotation
+    aw.ImageColor3 = az.Expanded and accent or o.Text
+    as.ImageColor3 = az.Expanded and accent or o.Text
 
-    local function finish()
-        if animationId ~= moduleCategoryAnimationId then
+    if az.UpExpand then
+        ap.Position = UDim2.fromOffset(0, -targetHeight)
+    end
+
+    task.defer(function()
+        if not ap.Parent then
             return
         end
-        moduleCategoryAnimating = false
         ap:SetAttribute("LayoutAnimating", false)
-        if not az.Expanded then
-            ax.Visible = false
-        end
         refreshModuleCategory(true)
-    end
-
-    if instant then
-        aw.Rotation = arrowRotation
-        aw.ImageColor3 = az.Expanded and accent or o.Text
-        as.ImageColor3 = az.Expanded and accent or o.Text
-        ap.BackgroundColor3 = background
-        ax.Size = UDim2.new(1, 0, 0, targetHeight)
-        ap.Size = UDim2.fromOffset(220, 46 + targetHeight)
-        if az.UpExpand then
-            ap.Position = UDim2.fromOffset(0, -targetHeight)
-        end
-        finish()
-        return
-    end
-
-    local transition = TweenInfo.new(
-        0.1,
-        Enum.EasingStyle.Quart,
-        Enum.EasingDirection.Out
-    )
-
-    n:Tween(aw, transition, {
-        Rotation = arrowRotation,
-        ImageColor3 = az.Expanded and accent or o.Text,
-    })
-    n:Tween(as, transition, {
-        ImageColor3 = az.Expanded and accent or o.Text,
-    })
-    n:Tween(ap, transition, {
-        BackgroundColor3 = background,
-        Size = UDim2.fromOffset(220, 46 + targetHeight),
-        Position = az.UpExpand
-            and UDim2.fromOffset(0, -targetHeight)
-            or ap.Position,
-    })
-    n:Tween(ax, transition, {
-        Size = UDim2.new(1, 0, 0, targetHeight),
-    })
-
-    task.delay(0.11, finish)
+    end)
 end
-
 function ao.Expand(az)
                 az:Toggle()
             end
@@ -10565,8 +10525,15 @@ function ao.Expand(az)
                 end)
 
                 connectDeferredPropertyChanged(ay, "AbsoluteContentSize", function()
-                    refreshModuleCategory()
-                end)
+        if moduleCategoryRefreshQueued then
+            return
+        end
+        moduleCategoryRefreshQueued = true
+        task.defer(function()
+            moduleCategoryRefreshQueued = false
+            refreshModuleCategory(false)
+        end)
+    end)
             end)
             if not success then
                 bwarn("[ModuleCategory] Event connections failed:", err)
@@ -13076,7 +13043,7 @@ function d.CreateLegit(ag)
             n:Spring(cardScale, o.SpringInteractive, { Scale = 1 })
         end)
         av.MouseButton1Down:Connect(function()
-            n:Spring(cardScale, o.SpringInteractive, { Scale = 0.996 })
+            cardScale.Scale = 1
         end)
         av.MouseButton1Up:Connect(function()
             n:Spring(cardScale, o.SpringInteractive, { Scale = 1 })
@@ -14892,14 +14859,46 @@ local function responsiveScale()
     local viewport = B.AbsoluteSize
     local width = viewport.X > 0 and viewport.X or 1600
     local height = viewport.Y > 0 and viewport.Y or 900
-    local scale
 
     if d.isMobile then
-        scale = math.clamp(math.min(width / 760, height / 540), 0.8, 1)
-    elseif width >= 1180 and height >= 650 then
-        scale = 1
+        local mobileScale
+        if width >= 900 and height >= 600 then
+            mobileScale = 1
+        elseif width >= 700 and height >= 500 then
+            mobileScale = 0.9
+        else
+            mobileScale = 0.8
+        end
+        return mobileScale
+    end
+
+    local scale
+    if width >= 2300 and height >= 1200 then
+        scale = 0.9
+    elseif width >= 1700 and height >= 850 then
+        scale = 0.8
+    elseif width >= 1280 and height >= 700 then
+        scale = 0.75
     else
-        scale = math.clamp(math.min(width / 1280, height / 720), 0.85, 1)
+        scale = 0.7
+    end
+
+    local aspect = width / math.max(height, 1)
+    if aspect < 1.4 then
+        scale = math.max(0.7, scale - 0.05)
+    end
+
+    local windowCount = 0
+    for _, window in d.Windows do
+        if typeof(window) == "Instance" and window.Parent then
+            windowCount += 1
+        end
+    end
+
+    if windowCount >= 6 then
+        scale = math.min(scale, 0.75)
+    elseif windowCount >= 4 then
+        scale = math.min(scale, 0.8)
     end
 
     return math.floor(scale * 20 + 0.5) / 20
@@ -15431,7 +15430,7 @@ au = at:CreateSlider({
             A.Scale = av
         end
     end,
-    Default = 1,
+    Default = (d.isMobile and 0.9 or 0.8),
     Darker = true,
     Visible = false,
 })

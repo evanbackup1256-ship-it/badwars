@@ -993,7 +993,7 @@ local E = function(E, F, G, H)
         maxWidth = math.huge
     end
 
-    local text = removeTags(tostring(E or ""))
+    local text = tostring(E or ""):gsub("<[^>]->", "")
     local longestLine = 0
     local totalChars = 0
     local lineCount = 1

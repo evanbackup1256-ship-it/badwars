@@ -1,3 +1,4 @@
+-- BADWARS_UI_V20_2_1_BENTO
 -- BADWARS_UI_V20_ATLAS
 -- BADWARS_V19_UI_REPAIR_V5_2
 -- BADWARS_V19_UI_REPAIR_V4_4
@@ -168,8 +169,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "20.0",
-    PremiumBuild = "2026.07.06-V20-ATLAS",
+    Version = "20.2.1",
+    PremiumBuild = "2026.07.06-V20.2.1-BENTO",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -16713,63 +16714,72 @@ end
 
 
 
--- BADWARS_UI_V20_ATLAS_RUNTIME_BEGIN
+-- V20 Atlas presentation runtime removed by BadWars V20.2 Bento
+
+
+
+-- BADWARS_UI_V20_2_1_BENTO_RUNTIME_BEGIN
 (function()
-    local V20 = {
-        Version = "20.0",
-        Name = "Atlas",
-        WindowWidth = d.isMobile and 268 or 272,
-        HeaderHeight = d.isMobile and 52 or 44,
-        ModuleHeight = d.isMobile and 50 or 40,
-        Gap = d.isMobile and 8 or 10,
-        Margin = d.isMobile and 6 or 12,
-        Styled = setmetatable({}, { __mode = "k" }),
-        ManagedWindows = setmetatable({}, { __mode = "k" }),
-        ScaleLocks = setmetatable({}, { __mode = "k" }),
-        Queue = {},
-        QueueHead = 1,
-        ArrangeGeneration = 0,
-        InitialArrangeComplete = false,
+    local Players = game:GetService("Players")
+    local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+
+    local Bento = {
+        Version = "20.2.1",
+        Name = "Bento",
+        Docked = false,
+        ActivePage = nil,
+        Pages = {},
+        PageByObject = setmetatable({}, { __mode = "k" }),
+        Original = setmetatable({}, { __mode = "k" }),
+        Guards = setmetatable({}, { __mode = "k" }),
+        LockedScales = setmetatable({}, { __mode = "k" }),
+        ModuleRecords = {},
+        SearchGeneration = 0,
+        SavedScale = A.Scale,
+        Compact = false,
     }
 
-    d.V20 = V20
-    d.Version = "20.0"
-    d.PremiumBuild = "2026.07.06-V20-ATLAS"
+    d.V20Bento = Bento
+    d.Version = "20.2.1"
+    d.PremiumBuild = "2026.07.06-V20.2.1-BENTO"
 
-    local palette = {
-        Backdrop = Color3.fromRGB(5, 8, 12),
-        Window = Color3.fromRGB(9, 14, 19),
-        WindowRaised = Color3.fromRGB(12, 18, 24),
-        Surface = Color3.fromRGB(15, 22, 29),
-        SurfaceHover = Color3.fromRGB(20, 29, 38),
-        SurfaceActive = Color3.fromRGB(24, 34, 44),
-        Border = Color3.fromRGB(40, 54, 67),
-        BorderStrong = Color3.fromRGB(74, 96, 114),
-        Text = Color3.fromRGB(221, 230, 237),
-        TextStrong = Color3.fromRGB(248, 250, 252),
-        TextMuted = Color3.fromRGB(148, 165, 179),
-        TextFaint = Color3.fromRGB(104, 121, 136),
-        Track = Color3.fromRGB(20, 29, 37),
-        Shadow = Color3.fromRGB(0, 2, 4),
+    local Theme = {
+        Shell = Color3.fromRGB(24, 24, 23),
+        Sidebar = Color3.fromRGB(21, 21, 20),
+        Panel = Color3.fromRGB(28, 28, 27),
+        Card = Color3.fromRGB(32, 32, 31),
+        CardHover = Color3.fromRGB(38, 38, 37),
+        CardActive = Color3.fromRGB(42, 42, 41),
+        Border = Color3.fromRGB(50, 50, 48),
+        BorderStrong = Color3.fromRGB(77, 77, 73),
+        Text = Color3.fromRGB(220, 220, 216),
+        TextStrong = Color3.fromRGB(250, 250, 247),
+        TextMuted = Color3.fromRGB(149, 149, 143),
+        TextFaint = Color3.fromRGB(101, 101, 96),
+        Danger = Color3.fromRGB(214, 91, 103),
+        Shadow = Color3.fromRGB(0, 0, 0),
     }
 
-    V20.Palette = palette
+    Bento.Theme = Theme
 
     local function accent()
         return Color3.fromHSV(
             d.GUIColor.Hue,
-            d.GUIColor.Sat,
-            d.GUIColor.Value
+            math.min(d.GUIColor.Sat, 0.72),
+            math.max(d.GUIColor.Value, 0.76)
         )
     end
 
     local function clean(resource)
         if resource == nil then
-            return resource
+            return nil
         end
+
         if type(d.Clean) == "function" then
             return d:Clean(resource)
         end
+
         return resource
     end
 
@@ -16779,246 +16789,1375 @@ end
         end)
     end
 
+    local function create(className, properties, parent)
+        local object = Instance.new(className)
+
+        for property, value in pairs(properties or {}) do
+            safeSet(object, property, value)
+        end
+
+        object.Parent = parent
+        return object
+    end
+
     local function ensureCorner(parent, radius)
-        local corner = parent:FindFirstChild("V20Corner")
-        if not corner or not corner:IsA("UICorner") then
-            corner = parent:FindFirstChildOfClass("UICorner")
+        local object = parent:FindFirstChild("BentoCorner")
+
+        if not object or not object:IsA("UICorner") then
+            object = parent:FindFirstChildOfClass("UICorner")
         end
-        if not corner then
-            corner = Instance.new("UICorner")
-            corner.Name = "V20Corner"
-            corner.Parent = parent
+
+        if not object then
+            object = create("UICorner", {
+                Name = "BentoCorner",
+            }, parent)
         end
-        corner.CornerRadius = UDim.new(0, radius)
-        return corner
+
+        object.CornerRadius = UDim.new(0, radius)
+        return object
     end
 
-    local function ensureStroke(parent, transparency)
-        local stroke = parent:FindFirstChild("V20Stroke")
-        if not stroke or not stroke:IsA("UIStroke") then
-            stroke = parent:FindFirstChildOfClass("UIStroke")
+    local function ensureStroke(parent, transparency, color)
+        local object = parent:FindFirstChild("BentoStroke")
+
+        if not object or not object:IsA("UIStroke") then
+            object = parent:FindFirstChildOfClass("UIStroke")
         end
-        if not stroke then
-            stroke = Instance.new("UIStroke")
-            stroke.Name = "V20Stroke"
-            stroke.Parent = parent
+
+        if not object then
+            object = create("UIStroke", {
+                Name = "BentoStroke",
+            }, parent)
         end
-        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        stroke.LineJoinMode = Enum.LineJoinMode.Round
-        stroke.Thickness = 1
-        stroke.Color = palette.Border
-        stroke.Transparency = transparency
-        return stroke
+
+        object.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        object.LineJoinMode = Enum.LineJoinMode.Round
+        object.Thickness = 1
+        object.Transparency = transparency or 0
+        object.Color = color or Theme.Border
+        return object
     end
 
-    local function isManagedDescendant(object)
-        local current = object
-        while current and current ~= B do
-            if V20.ManagedWindows[current] then
-                return true
+    local function text(parent, properties)
+        properties = properties or {}
+        properties.BackgroundTransparency = 1
+        properties.BorderSizePixel = 0
+        properties.FontFace = properties.FontFace
+            or Font.fromEnum(Enum.Font.Gotham)
+        properties.TextColor3 = properties.TextColor3 or Theme.Text
+        properties.TextSize = properties.TextSize or 11
+        properties.TextStrokeTransparency = 1
+        properties.TextTruncate = properties.TextTruncate
+            or Enum.TextTruncate.AtEnd
+
+        return create("TextLabel", properties, parent)
+    end
+
+    local function button(parent, properties)
+        properties = properties or {}
+        properties.AutoButtonColor = false
+        properties.BorderSizePixel = 0
+        properties.FontFace = properties.FontFace
+            or Font.fromEnum(Enum.Font.GothamMedium)
+        properties.TextColor3 = properties.TextColor3 or Theme.Text
+        properties.TextSize = properties.TextSize or 11
+        properties.TextStrokeTransparency = 1
+
+        local object = create("TextButton", properties, parent)
+        ensureCorner(object, properties.CornerRadius or 9)
+        return object
+    end
+
+    local function animate(object, properties, duration)
+        if not object or not object.Parent then
+            return nil
+        end
+
+        local animation = TweenService:Create(
+            object,
+            TweenInfo.new(
+                duration or 0.08,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            properties
+        )
+
+        animation:Play()
+        return animation
+    end
+
+    local function hover(object, normal, highlighted)
+        clean(object.MouseEnter:Connect(function()
+            animate(object, {
+                BackgroundColor3 = highlighted,
+            }, 0.06)
+        end))
+
+        clean(object.MouseLeave:Connect(function()
+            animate(object, {
+                BackgroundColor3 = normal,
+            }, 0.06)
+        end))
+    end
+
+    local Root = create("Frame", {
+        Name = "BadWarsV20Bento",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(1060, 680),
+        BackgroundColor3 = Theme.Shell,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Visible = false,
+        ZIndex = 3200,
+    }, v)
+
+    ensureCorner(Root, 18)
+    ensureStroke(Root, 0.08, Theme.BorderStrong)
+
+    local Sidebar = create("Frame", {
+        Name = "Sidebar",
+        Size = UDim2.new(0, 196, 1, 0),
+        BackgroundColor3 = Theme.Sidebar,
+        BorderSizePixel = 0,
+        ZIndex = Root.ZIndex + 2,
+    }, Root)
+
+    local Divider = create("Frame", {
+        Name = "Divider",
+        Position = UDim2.new(1, -1, 0, 0),
+        Size = UDim2.new(0, 1, 1, 0),
+        BackgroundColor3 = Theme.Border,
+        BackgroundTransparency = 0.25,
+        BorderSizePixel = 0,
+        ZIndex = Sidebar.ZIndex + 1,
+    }, Sidebar)
+
+    local WindowControls = create("Frame", {
+        Name = "WindowControls",
+        Position = UDim2.fromOffset(12, 12),
+        Size = UDim2.new(1, -24, 0, 28),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = Sidebar.ZIndex + 2,
+    }, Sidebar)
+
+    local Close = button(WindowControls, {
+        Name = "Close",
+        Size = UDim2.fromOffset(28, 28),
+        BackgroundColor3 = Theme.Card,
+        Text = "×",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 16,
+        ZIndex = WindowControls.ZIndex + 1,
+    })
+
+    ensureStroke(Close, 0.62, Theme.Border)
+    hover(Close, Theme.Card, Color3.fromRGB(58, 31, 35))
+
+    local Float = button(WindowControls, {
+        Name = "Float",
+        Position = UDim2.fromOffset(34, 0),
+        Size = UDim2.fromOffset(28, 28),
+        BackgroundColor3 = Theme.Card,
+        Text = "↗",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 13,
+        ZIndex = WindowControls.ZIndex + 1,
+    })
+
+    ensureStroke(Float, 0.62, Theme.Border)
+    hover(Float, Theme.Card, Theme.CardHover)
+
+    local Brand = text(WindowControls, {
+        Name = "Brand",
+        Position = UDim2.fromOffset(74, 0),
+        Size = UDim2.new(1, -74, 1, 0),
+        Text = "BADWARS",
+        TextColor3 = Theme.TextStrong,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = WindowControls.ZIndex + 1,
+    })
+
+    local Player = Players.LocalPlayer
+    local Profile = create("Frame", {
+        Name = "Profile",
+        Position = UDim2.fromOffset(12, 52),
+        Size = UDim2.new(1, -24, 0, 58),
+        BackgroundColor3 = Theme.Card,
+        BorderSizePixel = 0,
+        ZIndex = Sidebar.ZIndex + 2,
+    }, Sidebar)
+
+    ensureCorner(Profile, 11)
+    ensureStroke(Profile, 0.68, Theme.Border)
+
+    local Avatar = create("ImageLabel", {
+        Name = "Avatar",
+        Position = UDim2.fromOffset(8, 9),
+        Size = UDim2.fromOffset(40, 40),
+        BackgroundColor3 = Theme.Panel,
+        BorderSizePixel = 0,
+        Image = Player
+            and (
+                "rbxthumb://type=AvatarHeadShot&id="
+                .. tostring(Player.UserId)
+                .. "&w=150&h=150"
+            )
+            or "",
+        ZIndex = Profile.ZIndex + 1,
+    }, Profile)
+
+    ensureCorner(Avatar, 9)
+
+    local ProfileName = text(Profile, {
+        Name = "Name",
+        Position = UDim2.fromOffset(58, 10),
+        Size = UDim2.new(1, -66, 0, 19),
+        Text = Player and Player.DisplayName or "Player",
+        TextColor3 = Theme.TextStrong,
+        FontFace = Font.fromEnum(Enum.Font.GothamMedium),
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Profile.ZIndex + 1,
+    })
+
+    local ProfileRole = text(Profile, {
+        Name = "Role",
+        Position = UDim2.fromOffset(58, 30),
+        Size = UDim2.new(1, -66, 0, 16),
+        Text = "Local client",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 9,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Profile.ZIndex + 1,
+    })
+
+    local NavCaption = text(Sidebar, {
+        Name = "NavCaption",
+        Position = UDim2.fromOffset(18, 122),
+        Size = UDim2.new(1, -36, 0, 14),
+        Text = "NAVIGATION",
+        TextColor3 = Theme.TextFaint,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 8,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Sidebar.ZIndex + 2,
+    })
+
+    local Nav = create("ScrollingFrame", {
+        Name = "Navigation",
+        Position = UDim2.fromOffset(10, 142),
+        Size = UDim2.new(1, -20, 1, -204),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = Theme.BorderStrong,
+        ScrollBarImageTransparency = 0.38,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ElasticBehavior = Enum.ElasticBehavior.Never,
+        ZIndex = Sidebar.ZIndex + 2,
+    }, Sidebar)
+
+    local NavLayout = create("UIListLayout", {
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, Nav)
+
+    local SidebarFooter = text(Sidebar, {
+        Name = "Footer",
+        Position = UDim2.new(0, 16, 1, -46),
+        Size = UDim2.new(1, -32, 0, 28),
+        Text = "System ready\nV20.2 Bento",
+        TextColor3 = Theme.TextFaint,
+        TextSize = 8,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = Sidebar.ZIndex + 2,
+    })
+
+    local Main = create("Frame", {
+        Name = "Main",
+        Position = UDim2.fromOffset(196, 0),
+        Size = UDim2.new(1, -196, 1, 0),
+        BackgroundColor3 = Theme.Panel,
+        BorderSizePixel = 0,
+        ZIndex = Root.ZIndex + 1,
+    }, Root)
+
+    local Header = create("Frame", {
+        Name = "Header",
+        Size = UDim2.new(1, 0, 0, 66),
+        BackgroundColor3 = Theme.Panel,
+        BorderSizePixel = 0,
+        ZIndex = Main.ZIndex + 2,
+    }, Main)
+
+    local HeaderDivider = create("Frame", {
+        Name = "Divider",
+        Position = UDim2.new(0, 0, 1, -1),
+        Size = UDim2.new(1, 0, 0, 1),
+        BackgroundColor3 = Theme.Border,
+        BackgroundTransparency = 0.34,
+        BorderSizePixel = 0,
+        ZIndex = Header.ZIndex + 1,
+    }, Header)
+
+    local PageTitle = text(Header, {
+        Name = "PageTitle",
+        Position = UDim2.fromOffset(20, 12),
+        Size = UDim2.new(0, 280, 0, 22),
+        Text = "Home",
+        TextColor3 = Theme.TextStrong,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Header.ZIndex + 2,
+    })
+
+    local PageSubtitle = text(Header, {
+        Name = "PageSubtitle",
+        Position = UDim2.fromOffset(20, 36),
+        Size = UDim2.new(0, 320, 0, 15),
+        Text = "Everything you need at a glance",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 9,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Header.ZIndex + 2,
+    })
+
+    local SearchBox = create("Frame", {
+        Name = "SearchBox",
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -18, 0.5, 0),
+        Size = UDim2.fromOffset(260, 34),
+        BackgroundColor3 = Theme.Card,
+        BorderSizePixel = 0,
+        ZIndex = Header.ZIndex + 2,
+    }, Header)
+
+    ensureCorner(SearchBox, 9)
+    ensureStroke(SearchBox, 0.62, Theme.Border)
+
+    local SearchIcon = text(SearchBox, {
+        Name = "Icon",
+        Position = UDim2.fromOffset(10, 0),
+        Size = UDim2.fromOffset(18, 34),
+        Text = "⌕",
+        TextColor3 = Theme.TextFaint,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = SearchBox.ZIndex + 1,
+    })
+
+    local Search = create("TextBox", {
+        Name = "Search",
+        Position = UDim2.fromOffset(34, 0),
+        Size = UDim2.new(1, -42, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+        FontFace = Font.fromEnum(Enum.Font.Gotham),
+        PlaceholderText = "Search modules  Ctrl+K",
+        PlaceholderColor3 = Theme.TextFaint,
+        Text = "",
+        TextColor3 = Theme.Text,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextStrokeTransparency = 1,
+        ZIndex = SearchBox.ZIndex + 1,
+    }, SearchBox)
+
+    local Content = create("Frame", {
+        Name = "Content",
+        Position = UDim2.fromOffset(16, 82),
+        Size = UDim2.new(1, -32, 1, -100),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = Main.ZIndex + 1,
+    }, Main)
+
+    local Home = create("ScrollingFrame", {
+        Name = "Home",
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Theme.BorderStrong,
+        ScrollBarImageTransparency = 0.3,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ElasticBehavior = Enum.ElasticBehavior.Never,
+        ZIndex = Content.ZIndex + 1,
+    }, Content)
+
+    local HomePadding = create("UIPadding", {
+        PaddingRight = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 10),
+    }, Home)
+
+    local HomeLayout = create("UIListLayout", {
+        Padding = UDim.new(0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, Home)
+
+    local Hero = create("Frame", {
+        Name = "Hero",
+        Size = UDim2.new(1, -5, 0, 138),
+        BackgroundColor3 = Theme.Card,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+        ZIndex = Home.ZIndex + 1,
+    }, Home)
+
+    ensureCorner(Hero, 13)
+    ensureStroke(Hero, 0.56, Theme.Border)
+
+    local HeroAvatar = create("ImageLabel", {
+        Name = "Avatar",
+        Position = UDim2.fromOffset(18, 18),
+        Size = UDim2.fromOffset(62, 62),
+        BackgroundColor3 = Theme.Panel,
+        BorderSizePixel = 0,
+        Image = Avatar.Image,
+        ZIndex = Hero.ZIndex + 1,
+    }, Hero)
+
+    ensureCorner(HeroAvatar, 13)
+
+    local HeroName = text(Hero, {
+        Name = "Name",
+        Position = UDim2.fromOffset(96, 21),
+        Size = UDim2.new(1, -116, 0, 26),
+        Text = Player and Player.DisplayName or "Player",
+        TextColor3 = Theme.TextStrong,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 18,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Hero.ZIndex + 1,
+    })
+
+    local HeroUser = text(Hero, {
+        Name = "Username",
+        Position = UDim2.fromOffset(96, 49),
+        Size = UDim2.new(1, -116, 0, 18),
+        Text = Player and ("@" .. Player.Name) or "@player",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Hero.ZIndex + 1,
+    })
+
+    local HeroLine = create("Frame", {
+        Name = "Line",
+        Position = UDim2.fromOffset(18, 94),
+        Size = UDim2.new(1, -36, 0, 1),
+        BackgroundColor3 = Theme.Border,
+        BackgroundTransparency = 0.28,
+        BorderSizePixel = 0,
+        ZIndex = Hero.ZIndex + 1,
+    }, Hero)
+
+    local HeroHint = text(Hero, {
+        Name = "Hint",
+        Position = UDim2.fromOffset(18, 105),
+        Size = UDim2.new(1, -36, 0, 20),
+        Text = "Choose a category below. Existing module callbacks remain unchanged.",
+        TextColor3 = Theme.TextMuted,
+        TextSize = 9,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = Hero.ZIndex + 1,
+    })
+
+    local Stats = create("Frame", {
+        Name = "Stats",
+        Size = UDim2.new(1, -5, 0, 88),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 2,
+        ZIndex = Home.ZIndex + 1,
+    }, Home)
+
+    local StatsGrid = create("UIGridLayout", {
+        CellPadding = UDim2.fromOffset(10, 0),
+        CellSize = UDim2.new(0.25, -8, 1, 0),
+        FillDirectionMaxCells = 4,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, Stats)
+
+    local function stat(order, titleValue, valueValue)
+        local card = create("Frame", {
+            Name = titleValue,
+            BackgroundColor3 = Theme.Card,
+            BorderSizePixel = 0,
+            LayoutOrder = order,
+            ZIndex = Stats.ZIndex + 1,
+        }, Stats)
+
+        ensureCorner(card, 11)
+        ensureStroke(card, 0.68, Theme.Border)
+
+        text(card, {
+            Position = UDim2.fromOffset(12, 12),
+            Size = UDim2.new(1, -24, 0, 15),
+            Text = titleValue,
+            TextColor3 = Theme.TextFaint,
+            FontFace = Font.fromEnum(Enum.Font.GothamBold),
+            TextSize = 8,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = card.ZIndex + 1,
+        })
+
+        return text(card, {
+            Name = "Value",
+            Position = UDim2.fromOffset(12, 34),
+            Size = UDim2.new(1, -24, 0, 30),
+            Text = tostring(valueValue),
+            TextColor3 = Theme.TextStrong,
+            FontFace = Font.fromEnum(Enum.Font.GothamBold),
+            TextSize = 17,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = card.ZIndex + 1,
+        })
+    end
+
+    local CategoryStat = stat(1, "CATEGORIES", "0")
+    local ModuleStat = stat(2, "MODULES", "0")
+    local ProfileStat = stat(3, "PROFILE", d.Profile or "default")
+    local PlaceStat = stat(4, "PLACE", tostring(d.Place or game.PlaceId))
+
+    local QuickLabel = text(Home, {
+        Name = "QuickLabel",
+        Size = UDim2.new(1, -5, 0, 18),
+        Text = "QUICK ACCESS",
+        TextColor3 = Theme.TextFaint,
+        FontFace = Font.fromEnum(Enum.Font.GothamBold),
+        TextSize = 8,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        LayoutOrder = 3,
+        ZIndex = Home.ZIndex + 1,
+    })
+
+    local Quick = create("Frame", {
+        Name = "Quick",
+        Size = UDim2.new(1, -5, 0, 188),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 4,
+        ZIndex = Home.ZIndex + 1,
+    }, Home)
+
+    local QuickGrid = create("UIGridLayout", {
+        CellPadding = UDim2.fromOffset(10, 10),
+        CellSize = UDim2.new(0.3333, -7, 0, 84),
+        FillDirectionMaxCells = 3,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, Quick)
+
+    local DockPill = button(v, {
+        Name = "BadWarsV20BentoOpen",
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, 12),
+        Size = UDim2.fromOffset(172, 34),
+        BackgroundColor3 = Theme.Shell,
+        Text = "OPEN BADWARS V20.2",
+        TextColor3 = Theme.TextStrong,
+        TextSize = 9,
+        Visible = false,
+        ZIndex = 5000,
+    })
+
+    ensureCorner(DockPill, 11)
+    ensureStroke(DockPill, 0.22, Theme.BorderStrong)
+    hover(DockPill, Theme.Shell, Theme.CardHover)
+
+    local function normalize(value)
+        value = tostring(value or "")
+        value = value:gsub("[%c\r\n\t]", " ")
+        value = value:gsub("%s+", " ")
+        value = value:gsub("^%s+", "")
+        value = value:gsub("%s+$", "")
+        return value
+    end
+
+    local function categoryObject(category)
+        if type(category) ~= "table" then
+            return nil
+        end
+
+        if typeof(category.Object) == "Instance" then
+            return category.Object
+        end
+
+        if typeof(category.Window) == "Instance" then
+            return category.Window
+        end
+
+        return nil
+    end
+
+    local function titleFromObject(object)
+        local header = object and object:FindFirstChild("HeaderSurface")
+
+        if header then
+            local titleObject = header:FindFirstChild("Title")
+
+            if titleObject and titleObject:IsA("TextLabel") then
+                local value = normalize(titleObject.Text)
+
+                if value ~= "" then
+                    return value
+                end
             end
-            current = current.Parent
         end
-        return false
+
+        return object and normalize(object.Name) or "Window"
+    end
+
+    local function iconFromObject(object)
+        local header = object and object:FindFirstChild("HeaderSurface")
+        local icon = header and header:FindFirstChild("Icon")
+
+        if icon and icon:IsA("ImageLabel") then
+            return icon.Image
+        end
+
+        return ""
+    end
+
+    local function saveState(object)
+        if Bento.Original[object] then
+            return
+        end
+
+        local header = object:FindFirstChild("HeaderSurface")
+        local children = object:FindFirstChild("Children")
+        local divider = object:FindFirstChild("Divider")
+        local shadow = object:FindFirstChild("SoftShadow")
+        local scale = object:FindFirstChildOfClass("UIScale")
+
+        Bento.Original[object] = {
+            Parent = object.Parent,
+            Position = object.Position,
+            Size = object.Size,
+            AnchorPoint = object.AnchorPoint,
+            Visible = object.Visible,
+            ZIndex = object.ZIndex,
+            ClipsDescendants = object.ClipsDescendants,
+            BackgroundColor3 = object.BackgroundColor3,
+            BackgroundTransparency = object.BackgroundTransparency,
+            AutomaticSize = object.AutomaticSize,
+            Header = header,
+            HeaderVisible = header and header.Visible,
+            Children = children,
+            ChildrenPosition = children and children.Position,
+            ChildrenSize = children and children.Size,
+            ChildrenVisible = children and children.Visible,
+            Divider = divider,
+            DividerVisible = divider and divider.Visible,
+            Shadow = shadow,
+            ShadowVisible = shadow and shadow.Visible,
+            Scale = scale,
+            ScaleValue = scale and scale.Scale,
+        }
     end
 
     local function lockScale(scale)
-        if V20.ScaleLocks[scale]
+        if not scale
+            or not scale:IsA("UIScale")
             or scale == A
-            or not isManagedDescendant(scale)
+            or Bento.LockedScales[scale]
         then
             return
         end
 
-        V20.ScaleLocks[scale] = true
+        Bento.LockedScales[scale] = true
         scale.Scale = 1
+
         clean(scale:GetPropertyChangedSignal("Scale"):Connect(function()
-            if scale.Parent and math.abs(scale.Scale - 1) > 0.001 then
+            if Bento.Docked
+                and scale.Parent
+                and math.abs(scale.Scale - 1) > 0.001
+            then
                 scale.Scale = 1
             end
         end))
     end
 
-    local function styleText(object)
-        object.TextStrokeTransparency = 1
-        object.TextTruncate = Enum.TextTruncate.AtEnd
-
-        local lowerName = string.lower(object.Name)
-        local isTitle = string.find(lowerName, "title", 1, true) ~= nil
-            or string.find(lowerName, "name", 1, true) ~= nil
-        local isValue = string.find(lowerName, "value", 1, true) ~= nil
-
-        if object:IsA("TextBox") then
-            object.TextColor3 = palette.Text
-            object.PlaceholderColor3 = palette.TextFaint
-            object.TextSize = math.max(object.TextSize, d.isMobile and 12 or 11)
-            return
-        end
-
-        if isTitle then
-            object.TextColor3 = palette.TextStrong
-            object.TextSize = math.clamp(
-                object.TextSize,
-                d.isMobile and 12 or 11,
-                d.isMobile and 15 or 14
-            )
-        elseif isValue then
-            object.TextColor3 = palette.Text
-            object.TextSize = math.max(object.TextSize, 10)
-        else
-            object.TextColor3 = palette.TextMuted
-            object.TextSize = math.max(object.TextSize, 10)
-        end
-    end
-
-    local function styleScroller(scroller)
-        scroller.Active = true
-        scroller.ScrollingEnabled = true
-        scroller.ScrollingDirection = Enum.ScrollingDirection.Y
-        scroller.ElasticBehavior = Enum.ElasticBehavior.Never
-        scroller.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
-        scroller.ScrollBarThickness = d.isMobile and 5 or 3
-        scroller.ScrollBarImageColor3 = palette.BorderStrong
-        scroller.ScrollBarImageTransparency = 0.22
-    end
-
-    local function styleControl(object)
-        if V20.Styled[object] or not object.Parent then
-            return
-        end
-        V20.Styled[object] = true
-
-        if object:IsA("UIScale") then
-            lockScale(object)
-            return
-        end
-
-        if object:IsA("UIGradient") then
-            if isManagedDescendant(object) then
-                object.Enabled = false
-            end
-            return
-        end
-
-        if object:IsA("UIStroke") then
-            object.LineJoinMode = Enum.LineJoinMode.Round
-            object.Thickness = math.min(object.Thickness, 1)
-            return
-        end
-
-        if object:IsA("ScrollingFrame") then
-            styleScroller(object)
-        elseif object:IsA("TextLabel")
-            or object:IsA("TextButton")
-            or object:IsA("TextBox")
-        then
-            styleText(object)
-        elseif object:IsA("ImageLabel")
-            or object:IsA("ImageButton")
-        then
-            safeSet(object, "ResampleMode", Enum.ResamplerMode.Default)
-        end
-
-        if object:IsA("TextButton") or object:IsA("ImageButton") then
-            object.AutoButtonColor = false
-        end
-    end
-
-    local function addAccentRail(window)
-        local rail = window:FindFirstChild("V20WindowAccent")
-        if not rail then
-            rail = Instance.new("Frame")
-            rail.Name = "V20WindowAccent"
-            rail.BorderSizePixel = 0
-            rail.Position = UDim2.fromOffset(0, 10)
-            rail.Size = UDim2.new(0, 2, 0, V20.HeaderHeight - 20)
-            rail.ZIndex = window.ZIndex + 8
-            rail.Parent = window
-            ensureCorner(rail, 99)
-        end
-        rail.BackgroundColor3 = accent()
-        return rail
-    end
-
-    local function styleWindow(window)
-        if typeof(window) ~= "Instance"
-            or not window:IsA("GuiObject")
-            or not window.Parent
-        then
-            return
-        end
-
-        V20.ManagedWindows[window] = true
-        window.BackgroundColor3 = palette.Window
-        window.BackgroundTransparency = 0.02
-        window.BorderSizePixel = 0
-        window.Size = UDim2.new(
-            0,
-            V20.WindowWidth,
-            window.Size.Y.Scale,
-            window.Size.Y.Offset
-        )
-
-        ensureCorner(window, d.isMobile and 14 or 12)
-        ensureStroke(window, 0.34)
-        addAccentRail(window)
-
-        for _, descendant in ipairs(window:GetDescendants()) do
-            styleControl(descendant)
-        end
-    end
-
     local function styleModule(module)
-        local object = module and module.Object
-        if typeof(object) ~= "Instance"
-            or not object:IsA("GuiObject")
-            or not object.Parent
+        if type(module) ~= "table"
+            or typeof(module.Object) ~= "Instance"
+            or not module.Object.Parent
         then
             return
         end
 
+        local object = module.Object
         object.BackgroundColor3 = module.Enabled
-            and palette.SurfaceActive
-            or palette.Surface
-        object.BackgroundTransparency = 0.02
+            and Theme.CardActive
+            or Theme.Card
+        object.BackgroundTransparency = 0.01
         object.BorderSizePixel = 0
         object.Size = UDim2.new(
             object.Size.X.Scale,
             object.Size.X.Offset,
             0,
-            V20.ModuleHeight
+            d.isMobile and 50 or 42
         )
 
-        ensureCorner(object, d.isMobile and 10 or 8)
-        local stroke = ensureStroke(object, module.Enabled and 0.48 or 0.78)
-        stroke.Color = module.Enabled and palette.BorderStrong or palette.Border
+        ensureCorner(object, 9)
+        ensureStroke(
+            object,
+            module.Enabled and 0.42 or 0.76,
+            module.Enabled and Theme.BorderStrong or Theme.Border
+        )
 
-        local existingScale = object:FindFirstChildOfClass("UIScale")
-        if existingScale then
-            lockScale(existingScale)
+        local scale = object:FindFirstChildOfClass("UIScale")
+
+        if scale then
+            lockScale(scale)
         end
 
-        for _, descendant in ipairs(object:GetDescendants()) do
-            styleControl(descendant)
+        Bento.ModuleRecords[#Bento.ModuleRecords + 1] = {
+            Module = module,
+            Object = object,
+            Name = string.lower(normalize(
+                module.Name
+                or module.DisplayName
+                or object.Name
+            )),
+            Page = nil,
+        }
+    end
+
+    local function addPage(name, object, category, order)
+        if object and Bento.PageByObject[object] then
+            return Bento.PageByObject[object]
+        end
+
+        local page = {
+            Name = name,
+            Object = object,
+            Category = category,
+            Order = order,
+            Icon = object and iconFromObject(object) or "",
+            Button = nil,
+            Home = object == nil,
+        }
+
+        Bento.Pages[#Bento.Pages + 1] = page
+
+        if object then
+            Bento.PageByObject[object] = page
+            saveState(object)
+        end
+
+        return page
+    end
+
+    local HomePage = addPage("Home", nil, nil, 0)
+
+    local preferred = {
+        { "Settings", "Main" },
+        { "Combat", "Combat" },
+        { "Blatant", "Blatant" },
+        { "Render", "Render" },
+        { "Utility", "Utility" },
+        { "World", "World" },
+        { "Legit", "Legit" },
+    }
+
+    for order, item in ipairs(preferred) do
+        local category = d.Categories[item[2]]
+        local object = categoryObject(category)
+
+        if object and object.Parent then
+            addPage(item[1], object, category, order)
         end
     end
 
-    local function registerCurrentWindows()
-        for _, window in d.Windows do
-            styleWindow(window)
-        end
+    table.sort(Bento.Pages, function(left, right)
+        return left.Order < right.Order
+    end)
 
-        for _, category in d.Categories do
-            if type(category) == "table" then
-                styleWindow(category.Object)
-                if typeof(category.Window) == "Instance" then
-                    styleWindow(category.Window)
+    local function updateModulePages()
+        for _, record in ipairs(Bento.ModuleRecords) do
+            record.Page = nil
+
+            for _, page in ipairs(Bento.Pages) do
+                if page.Object
+                    and record.Object:IsDescendantOf(page.Object)
+                then
+                    record.Page = page
+                    break
                 end
             end
         end
     end
 
-    local function styleCurrentModules()
+    local function navVisual(page, active)
+        local object = page.Button
+
+        if not object then
+            return
+        end
+
+        local rail = object:FindFirstChild("Rail")
+        local nameLabel = object:FindFirstChild("NameLabel")
+
+        animate(object, {
+            BackgroundColor3 = active
+                and Theme.CardActive
+                or Theme.Sidebar,
+        }, 0.07)
+
+        if rail then
+            rail.BackgroundColor3 = accent()
+            rail.BackgroundTransparency = active and 0 or 1
+        end
+
+        if nameLabel then
+            nameLabel.TextColor3 = active
+                and Theme.TextStrong
+                or Theme.TextMuted
+        end
+    end
+
+    local function createNav(page)
+        local object = button(Nav, {
+            Name = page.Name,
+            Size = UDim2.new(1, 0, 0, 38),
+            BackgroundColor3 = Theme.Sidebar,
+            Text = "",
+            LayoutOrder = page.Order,
+            ZIndex = Nav.ZIndex + 1,
+        })
+
+        local rail = create("Frame", {
+            Name = "Rail",
+            Position = UDim2.fromOffset(0, 8),
+            Size = UDim2.fromOffset(3, 22),
+            BackgroundColor3 = accent(),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = object.ZIndex + 2,
+        }, object)
+
+        ensureCorner(rail, 99)
+
+        local icon
+
+        if page.Icon ~= "" then
+            icon = create("ImageLabel", {
+                Name = "Icon",
+                Position = UDim2.fromOffset(14, 11),
+                Size = UDim2.fromOffset(16, 16),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Image = page.Icon,
+                ImageColor3 = Theme.TextMuted,
+                ZIndex = object.ZIndex + 1,
+            }, object)
+        else
+            icon = text(object, {
+                Name = "Icon",
+                Position = UDim2.fromOffset(12, 8),
+                Size = UDim2.fromOffset(20, 22),
+                Text = page.Name == "Home" and "⌂" or string.sub(page.Name, 1, 1),
+                TextColor3 = Theme.TextMuted,
+                FontFace = Font.fromEnum(Enum.Font.GothamBold),
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                ZIndex = object.ZIndex + 1,
+            })
+        end
+
+        local nameLabel = text(object, {
+            Name = "NameLabel",
+            Position = UDim2.fromOffset(42, 0),
+            Size = UDim2.new(1, -50, 1, 0),
+            Text = page.Name,
+            TextColor3 = Theme.TextMuted,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = object.ZIndex + 1,
+        })
+
+        clean(object.MouseEnter:Connect(function()
+            if Bento.ActivePage ~= page then
+                animate(object, {
+                    BackgroundColor3 = Theme.Card,
+                }, 0.06)
+            end
+        end))
+
+        clean(object.MouseLeave:Connect(function()
+            if Bento.ActivePage ~= page then
+                animate(object, {
+                    BackgroundColor3 = Theme.Sidebar,
+                }, 0.06)
+            end
+        end))
+
+        page.Button = object
+        return object
+    end
+
+    for _, page in ipairs(Bento.Pages) do
+        createNav(page)
+    end
+
+    local function quickCard(page, order)
+        if page.Home then
+            return
+        end
+
+        local object = button(Quick, {
+            Name = page.Name,
+            BackgroundColor3 = Theme.Card,
+            Text = "",
+            LayoutOrder = order,
+            ZIndex = Quick.ZIndex + 1,
+        })
+
+        ensureStroke(object, 0.67, Theme.Border)
+        hover(object, Theme.Card, Theme.CardHover)
+
+        if page.Icon ~= "" then
+            create("ImageLabel", {
+                Name = "Icon",
+                Position = UDim2.fromOffset(14, 13),
+                Size = UDim2.fromOffset(18, 18),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Image = page.Icon,
+                ImageColor3 = accent(),
+                ZIndex = object.ZIndex + 1,
+            }, object)
+        else
+            text(object, {
+                Position = UDim2.fromOffset(14, 10),
+                Size = UDim2.fromOffset(20, 22),
+                Text = string.sub(page.Name, 1, 1),
+                TextColor3 = accent(),
+                FontFace = Font.fromEnum(Enum.Font.GothamBold),
+                TextSize = 14,
+                ZIndex = object.ZIndex + 1,
+            })
+        end
+
+        text(object, {
+            Position = UDim2.fromOffset(14, 45),
+            Size = UDim2.new(1, -28, 0, 18),
+            Text = page.Name,
+            TextColor3 = Theme.TextStrong,
+            FontFace = Font.fromEnum(Enum.Font.GothamMedium),
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = object.ZIndex + 1,
+        })
+
+        clean(object.MouseButton1Click:Connect(function()
+            Bento:Activate(page)
+        end))
+    end
+
+    local quickOrder = 1
+
+    for _, page in ipairs(Bento.Pages) do
+        if not page.Home then
+            quickCard(page, quickOrder)
+            quickOrder += 1
+        end
+    end
+
+    local function contentBounds()
+        local scale = math.max(A.Scale, 0.05)
+        local rootPosition = v.AbsolutePosition
+
+        return {
+            Position = Vector2.new(
+                (Content.AbsolutePosition.X - rootPosition.X) / scale,
+                (Content.AbsolutePosition.Y - rootPosition.Y) / scale
+            ),
+            Size = Content.AbsoluteSize / scale,
+        }
+    end
+
+    local function updateCanvas(page)
+        local state = page.Object and Bento.Original[page.Object]
+        local children = state and state.Children
+
+        if not children
+            or not children:IsA("ScrollingFrame")
+            or not children.Parent
+        then
+            return
+        end
+
+        local layout = children:FindFirstChildOfClass("UIListLayout")
+        local paddingObject = children:FindFirstChildOfClass("UIPadding")
+        local paddingHeight = 0
+
+        if paddingObject then
+            paddingHeight =
+                paddingObject.PaddingTop.Offset
+                + paddingObject.PaddingBottom.Offset
+        end
+
+        if layout then
+            children.CanvasSize = UDim2.fromOffset(
+                0,
+                math.max(
+                    0,
+                    math.ceil(layout.AbsoluteContentSize.Y + paddingHeight + 8)
+                )
+            )
+        end
+    end
+
+    local function applyDock(page)
+        if page.Home or not page.Object then
+            return
+        end
+
+        local object = page.Object
+        local state = Bento.Original[object]
+
+        if not state then
+            return
+        end
+
+        local bounds = contentBounds()
+        local guard = Bento.Guards[object] or {}
+        Bento.Guards[object] = guard
+        guard.Applying = true
+
+        object.AnchorPoint = Vector2.new(0, 0)
+        object.Position = UDim2.fromOffset(
+            bounds.Position.X,
+            bounds.Position.Y
+        )
+        object.Size = UDim2.fromOffset(
+            bounds.Size.X,
+            bounds.Size.Y
+        )
+        object.ZIndex = Root.ZIndex + 8
+        object.ClipsDescendants = true
+        object.BackgroundColor3 = Theme.Panel
+        object.BackgroundTransparency = 0
+        safeSet(object, "AutomaticSize", Enum.AutomaticSize.None)
+
+        ensureCorner(object, 12)
+        ensureStroke(object, 0.56, Theme.Border)
+
+        if state.Header then
+            state.Header.Visible = false
+        end
+
+        if state.Divider then
+            state.Divider.Visible = false
+        end
+
+        if state.Shadow then
+            state.Shadow.Visible = false
+        end
+
+        if state.Scale then
+            lockScale(state.Scale)
+        end
+
+        if state.Children then
+            state.Children.Visible = true
+            state.Children.Position = UDim2.fromOffset(0, 0)
+            state.Children.Size = UDim2.fromScale(1, 1)
+            state.Children.BackgroundTransparency = 1
+            state.Children.Active = true
+            state.Children.ScrollingEnabled = true
+            state.Children.ElasticBehavior = Enum.ElasticBehavior.Never
+            state.Children.ScrollBarThickness = 3
+            state.Children.ScrollBarImageColor3 = Theme.BorderStrong
+            state.Children.ScrollBarImageTransparency = 0.25
+        end
+
+        for _, descendant in ipairs(object:GetDescendants()) do
+            if descendant:IsA("UIScale") then
+                lockScale(descendant)
+            elseif descendant:IsA("UIGradient") then
+                descendant.Enabled = false
+            elseif descendant:IsA("ImageLabel")
+                or descendant:IsA("ImageButton")
+            then
+                safeSet(
+                    descendant,
+                    "ResampleMode",
+                    Enum.ResamplerMode.Default
+                )
+            end
+        end
+
+        updateCanvas(page)
+        guard.Applying = false
+    end
+
+    local function restore(page)
+        if page.Home or not page.Object then
+            return
+        end
+
+        local object = page.Object
+        local state = Bento.Original[object]
+
+        if not state then
+            return
+        end
+
+        local guard = Bento.Guards[object] or {}
+        Bento.Guards[object] = guard
+        guard.Applying = true
+
+        object.Parent = state.Parent
+        object.AnchorPoint = state.AnchorPoint
+        object.Position = state.Position
+        object.Size = state.Size
+        object.Visible = state.Visible
+        object.ZIndex = state.ZIndex
+        object.ClipsDescendants = state.ClipsDescendants
+        object.BackgroundColor3 = state.BackgroundColor3
+        object.BackgroundTransparency = state.BackgroundTransparency
+        safeSet(object, "AutomaticSize", state.AutomaticSize)
+
+        if state.Header then
+            state.Header.Visible = state.HeaderVisible
+        end
+
+        if state.Children then
+            state.Children.Position = state.ChildrenPosition
+            state.Children.Size = state.ChildrenSize
+            state.Children.Visible = state.ChildrenVisible
+        end
+
+        if state.Divider then
+            state.Divider.Visible = state.DividerVisible
+        end
+
+        if state.Shadow then
+            state.Shadow.Visible = state.ShadowVisible
+        end
+
+        if state.Scale then
+            state.Scale.Scale = state.ScaleValue or 1
+        end
+
+        guard.Applying = false
+    end
+
+    local function installGuard(page)
+        if page.Home or not page.Object then
+            return
+        end
+
+        local object = page.Object
+
+        if Bento.Guards[object] and Bento.Guards[object].Installed then
+            return
+        end
+
+        local guard = Bento.Guards[object] or {}
+        guard.Installed = true
+        guard.Applying = false
+        Bento.Guards[object] = guard
+
+        clean(object:GetPropertyChangedSignal("Size"):Connect(function()
+            if Bento.Docked and not guard.Applying then
+                task.defer(function()
+                    if Bento.Docked and object.Parent then
+                        applyDock(page)
+                    end
+                end)
+            end
+        end))
+
+        clean(object:GetPropertyChangedSignal("Position"):Connect(function()
+            if Bento.Docked and not guard.Applying then
+                task.defer(function()
+                    if Bento.Docked and object.Parent then
+                        applyDock(page)
+                    end
+                end)
+            end
+        end))
+
+        local state = Bento.Original[object]
+
+        if state and state.Children then
+            local layout = state.Children:FindFirstChildOfClass("UIListLayout")
+
+            if layout then
+                clean(layout:GetPropertyChangedSignal(
+                    "AbsoluteContentSize"
+                ):Connect(function()
+                    if Bento.Docked then
+                        task.defer(function()
+                            updateCanvas(page)
+                        end)
+                    end
+                end))
+            end
+        end
+    end
+
+    local function updateResponsive()
+        local viewport = B.AbsoluteSize
+        local width = math.clamp(viewport.X - 30, 720, 1120)
+        local height = math.clamp(viewport.Y - 30, 520, 760)
+        local compact = width < 850
+
+        Root.Size = UDim2.fromOffset(width, height)
+        Bento.Compact = compact
+
+        local sidebarWidth = compact and 64 or 196
+        Sidebar.Size = UDim2.new(0, sidebarWidth, 1, 0)
+        Main.Position = UDim2.fromOffset(sidebarWidth, 0)
+        Main.Size = UDim2.new(1, -sidebarWidth, 1, 0)
+
+        Brand.Visible = not compact
+        ProfileName.Visible = not compact
+        ProfileRole.Visible = not compact
+        NavCaption.Visible = not compact
+        SidebarFooter.Visible = not compact
+        Float.Visible = not compact
+        Profile.Size = UDim2.new(1, -24, 0, compact and 58 or 58)
+        Avatar.Position = compact
+            and UDim2.fromOffset(0, 9)
+            or UDim2.fromOffset(8, 9)
+        Avatar.AnchorPoint = compact
+            and Vector2.new(0.5, 0)
+            or Vector2.new(0, 0)
+        Avatar.Position = compact
+            and UDim2.new(0.5, 0, 0, 9)
+            or UDim2.fromOffset(8, 9)
+
+        for _, page in ipairs(Bento.Pages) do
+            if page.Button then
+                local nameLabel = page.Button:FindFirstChild("NameLabel")
+                local icon = page.Button:FindFirstChild("Icon")
+
+                if nameLabel then
+                    nameLabel.Visible = not compact
+                end
+
+                if icon then
+                    icon.Position = compact
+                        and UDim2.new(0.5, -8, 0, 11)
+                        or UDim2.fromOffset(14, 11)
+                end
+            end
+        end
+
+        SearchBox.Size = UDim2.fromOffset(
+            compact and 190 or 260,
+            34
+        )
+        PageSubtitle.Visible = not compact
+
+        if Bento.Docked then
+            task.defer(function()
+                for _, page in ipairs(Bento.Pages) do
+                    if page.Object then
+                        applyDock(page)
+                    end
+                end
+            end)
+        end
+    end
+
+    function Bento:Filter()
+        self.SearchGeneration += 1
+        local generation = self.SearchGeneration
+        local query = string.lower(normalize(Search.Text))
+
+        task.delay(0.035, function()
+            if generation ~= self.SearchGeneration then
+                return
+            end
+
+            for _, record in ipairs(self.ModuleRecords) do
+                if record.Object.Parent then
+                    local active = record.Page == self.ActivePage
+                    local match = query == ""
+                        or string.find(
+                            record.Name,
+                            query,
+                            1,
+                            true
+                        ) ~= nil
+
+                    if active then
+                        record.Object.Visible = match
+                    end
+                end
+            end
+
+            local count = 0
+
+            for _, record in ipairs(self.ModuleRecords) do
+                if record.Object.Parent and record.Object.Visible then
+                    count += 1
+                end
+            end
+
+            SidebarFooter.Text =
+                tostring(count)
+                .. " visible modules\nV20.2 Bento"
+
+            if self.ActivePage then
+                updateCanvas(self.ActivePage)
+            end
+        end)
+    end
+
+    function Bento:Activate(page)
+        if not page then
+            return
+        end
+
+        self.ActivePage = page
+        Home.Visible = page.Home
+
+        for _, current in ipairs(self.Pages) do
+            navVisual(current, current == page)
+
+            if current.Object then
+                current.Object.Visible = self.Docked and current == page
+            end
+        end
+
+        PageTitle.Text = page.Name
+        PageSubtitle.Text = page.Home
+            and "Everything you need at a glance"
+            or "Modules, controls, and advanced options"
+        Search.Text = ""
+        SearchBox.Visible = not page.Home
+
+        if page.Object then
+            applyDock(page)
+        end
+
+        self:Filter()
+    end
+
+    function Bento:Refresh()
+        table.clear(self.ModuleRecords)
+
         for _, module in d.Modules do
             styleModule(module)
         end
@@ -17028,185 +18167,163 @@ end
                 styleModule(module)
             end
         end
+
+        updateModulePages()
+        CategoryStat.Text = tostring(math.max(0, #self.Pages - 1))
+        ModuleStat.Text = tostring(#self.ModuleRecords)
+        ProfileStat.Text = tostring(d.Profile or "default")
+        PlaceStat.Text = tostring(d.Place or game.PlaceId)
+        self:Filter()
     end
 
-    local function queue(object)
-        if not object or V20.Styled[object] then
-            return
-        end
-        V20.Queue[#V20.Queue + 1] = object
-    end
-
-    local function processQueue()
-        local processed = 0
-        while processed < 36 and V20.QueueHead <= #V20.Queue do
-            local object = V20.Queue[V20.QueueHead]
-            V20.Queue[V20.QueueHead] = nil
-            V20.QueueHead += 1
-            processed += 1
-
-            if object and object.Parent then
-                styleControl(object)
-            end
-        end
-
-        if V20.QueueHead > #V20.Queue then
-            table.clear(V20.Queue)
-            V20.QueueHead = 1
-        end
-    end
-
-    local function windowOrder()
-        local output = {}
-        local seen = setmetatable({}, { __mode = "k" })
-        local preferred = {
-            "Main",
-            "Combat",
-            "Blatant",
-            "Render",
-            "Utility",
-            "World",
-            "Legit",
-        }
-
-        for _, name in ipairs(preferred) do
-            local category = d.Categories[name]
-            local object = category and category.Object
-            if typeof(object) == "Instance"
-                and object.Parent
-                and object.Visible
-                and not seen[object]
-            then
-                seen[object] = true
-                output[#output + 1] = object
-            end
-        end
-
-        for _, window in d.Windows do
-            if typeof(window) == "Instance"
-                and window.Parent
-                and window.Visible
-                and not seen[window]
-            then
-                seen[window] = true
-                output[#output + 1] = window
-            end
-        end
-
-        return output
-    end
-
-    function V20:Arrange(force)
-        if self.InitialArrangeComplete and not force then
+    function Bento:Dock()
+        if self.Docked then
+            Root.Visible = true
+            DockPill.Visible = false
             return
         end
 
-        self.ArrangeGeneration += 1
-        local generation = self.ArrangeGeneration
-        task.defer(function()
-            if generation ~= self.ArrangeGeneration
-                or not B
-                or not B.Parent
-            then
-                return
-            end
+        self.SavedScale = A.Scale
+        A.Scale = d.isMobile and 0.95 or 1
+        self.Docked = true
+        Root.Visible = true
+        DockPill.Visible = false
 
-            local scale = math.max(A.Scale, 0.05)
-            local viewport = B.AbsoluteSize / scale
-            local availableWidth = math.max(
-                self.WindowWidth,
-                viewport.X - self.Margin * 2
-            )
-            local columns = math.max(
-                1,
-                math.floor(
-                    (availableWidth + self.Gap)
-                    / (self.WindowWidth + self.Gap)
-                )
-            )
-
-            local x = self.Margin
-            local y = self.Margin + 34
-            local column = 1
-
-            for _, window in ipairs(windowOrder()) do
-                local target = Vector2.new(x, y)
-                window.Position = UDim2.fromOffset(target.X, target.Y)
-
-                column += 1
-                if column > columns then
-                    column = 1
-                    x = self.Margin
-                    y += math.max(
-                        self.HeaderHeight + 20,
-                        window.AbsoluteSize.Y / scale
-                    ) + self.Gap
-                else
-                    x += self.WindowWidth + self.Gap
-                end
-            end
-
-            self.InitialArrangeComplete = true
-        end)
-    end
-
-    function V20:Refresh()
-        registerCurrentWindows()
-        styleCurrentModules()
-
-        for _, descendant in ipairs(B:GetDescendants()) do
-            queue(descendant)
-        end
-
-        task.defer(function()
-            processQueue()
-            d:UpdateGUI(
-                d.GUIColor.Hue,
-                d.GUIColor.Sat,
-                d.GUIColor.Value,
-                true
-            )
-        end)
-    end
-
-    function V20:ResetLayout()
-        self.InitialArrangeComplete = false
-        self:Arrange(true)
-    end
-
-    d.V20Refresh = function()
-        V20:Refresh()
-    end
-
-    d.V20ArrangeWindows = function()
-        V20:Arrange(true)
-    end
-
-    if d.LayoutIntelligence then
         pcall(function()
-            d.LayoutIntelligence:SetMode("Clamp")
-            d.LayoutIntelligence:SetResolveOnDragEnd(false)
-            d.LayoutIntelligence:SetResolveOnResize(false)
-            d.LayoutIntelligence:SetMargin(V20.Gap)
+            if d.LayoutIntelligence
+                and type(d.LayoutIntelligence.SetMode) == "function"
+            then
+                d.LayoutIntelligence:SetMode("Off")
+                d.LayoutIntelligence:SetResolveOnDragEnd(false)
+                d.LayoutIntelligence:SetResolveOnResize(false)
+            end
+        end)
+
+        for _, page in ipairs(self.Pages) do
+            if page.Object then
+                installGuard(page)
+                applyDock(page)
+                page.Object.Visible = false
+            end
+        end
+
+        updateResponsive()
+        self:Refresh()
+        self:Activate(HomePage)
+    end
+
+    function Bento:Float()
+        if not self.Docked then
+            return
+        end
+
+        self.Docked = false
+
+        for _, page in ipairs(self.Pages) do
+            restore(page)
+        end
+
+        A.Scale = self.SavedScale
+        Root.Visible = false
+        DockPill.Visible = true
+
+        pcall(function()
+            if d.LayoutIntelligence
+                and type(d.LayoutIntelligence.SetMode) == "function"
+            then
+                d.LayoutIntelligence:SetMode("Clamp")
+            end
         end)
     end
 
-    clean(B.DescendantAdded:Connect(function(object)
-        queue(object)
+    function Bento:Reset()
+        if self.Docked then
+            updateResponsive()
+            self:Activate(HomePage)
+        else
+            pcall(function()
+                if d.LayoutIntelligence
+                    and type(d.LayoutIntelligence.ResolveAll) == "function"
+                then
+                    d.LayoutIntelligence:ResolveAll(true, true)
+                end
+            end)
+        end
+    end
+
+    d.V20BentoDock = function()
+        Bento:Dock()
+    end
+
+    d.V20BentoFloat = function()
+        Bento:Float()
+    end
+
+    d.V20BentoReset = function()
+        Bento:Reset()
+    end
+
+    d.V20BentoRefresh = function()
+        Bento:Refresh()
+    end
+
+    for _, page in ipairs(Bento.Pages) do
+        clean(page.Button.MouseButton1Click:Connect(function()
+            Bento:Activate(page)
+        end))
+    end
+
+    clean(Close.MouseButton1Click:Connect(function()
+        pcall(function()
+            d:SetClickGuiVisible(false)
+        end)
     end))
 
-    clean(k.Heartbeat:Connect(function()
-        if V20.QueueHead <= #V20.Queue then
-            processQueue()
+    clean(Float.MouseButton1Click:Connect(function()
+        Bento:Float()
+    end))
+
+    clean(DockPill.MouseButton1Click:Connect(function()
+        Bento:Dock()
+    end))
+
+    clean(Search:GetPropertyChangedSignal("Text"):Connect(function()
+        Bento:Filter()
+    end))
+
+    clean(UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then
+            return
+        end
+
+        if input.KeyCode == Enum.KeyCode.K
+            and (
+                UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
+                or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
+            )
+        then
+            Search:CaptureFocus()
+        elseif input.KeyCode == Enum.KeyCode.Escape
+            and Search:IsFocused()
+        then
+            Search.Text = ""
+            Search:ReleaseFocus()
+        end
+    end))
+
+    clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if Bento.Docked then
+            updateResponsive()
         end
     end))
 
     clean(d.GUIColorChanged.Event:Connect(function()
         local currentAccent = accent()
 
-        for window in pairs(V20.ManagedWindows) do
-            if window.Parent then
-                local rail = window:FindFirstChild("V20WindowAccent")
+        for _, page in ipairs(Bento.Pages) do
+            if page.Button then
+                local rail = page.Button:FindFirstChild("Rail")
+
                 if rail then
                     rail.BackgroundColor3 = currentAccent
                 end
@@ -17214,33 +18331,17 @@ end
         end
     end))
 
-    clean(d.PreloadEvent:Connect(function()
-        V20:Refresh()
-        V20:Arrange(false)
-    end))
-
     clean(d.VisibilityChanged.Event:Connect(function(visible)
-        if visible then
-            V20:Refresh()
-            V20:Arrange(false)
-        end
-    end))
-
-    clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        if d.Scale and d.Scale.Enabled then
-            A.Scale = responsiveScale()
-        end
-
-        if V20.InitialArrangeComplete then
-            V20:Arrange(true)
+        if visible and Bento.Docked then
+            Root.Visible = true
+            updateResponsive()
         end
     end))
 
     task.defer(function()
-        V20:Refresh()
-        V20:Arrange(false)
+        Bento:Dock()
     end)
 end)()
--- BADWARS_UI_V20_ATLAS_RUNTIME_END
+-- BADWARS_UI_V20_2_1_BENTO_RUNTIME_END
 
 return d

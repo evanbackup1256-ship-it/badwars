@@ -1,4 +1,4 @@
--- BADWARS_UI_V19_1_ADAPTIVE_WORKSPACE
+-- BADWARS_UI_V19_2_MASSIVE_OVERHAUL
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -165,8 +165,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "19.1",
-    PremiumBuild = "2026.07.06-V19.1-ADAPTIVE-WORKSPACE",
+    Version = "19.2",
+    PremiumBuild = "2026.07.06-V19.2-MASSIVE-OVERHAUL",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -288,26 +288,26 @@ local n = {
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
     -- Obsidian design system: neutral graphite surfaces with a single live accent.
-    Main = Color3.fromRGB(5, 8, 12),
-    MainSoft = Color3.fromRGB(8, 12, 17),
+    Main = Color3.fromRGB(6, 9, 13),
+    MainSoft = Color3.fromRGB(9, 14, 19),
     Text = Color3.fromRGB(218, 227, 235),
     TextStrong = Color3.fromRGB(248, 251, 253),
-    Surface = Color3.fromRGB(13, 19, 25),
-    SurfaceSoft = Color3.fromRGB(16, 23, 30),
-    SurfaceHover = Color3.fromRGB(22, 32, 42),
-    Elevated = Color3.fromRGB(18, 27, 35),
-    ElevatedHover = Color3.fromRGB(27, 40, 51),
-    Border = Color3.fromRGB(34, 47, 59),
-    BorderStrong = Color3.fromRGB(67, 91, 108),
-    MutedText = Color3.fromRGB(157, 174, 189),
-    FaintText = Color3.fromRGB(92, 110, 126),
+    Surface = Color3.fromRGB(14, 21, 28),
+    SurfaceSoft = Color3.fromRGB(18, 26, 34),
+    SurfaceHover = Color3.fromRGB(24, 35, 46),
+    Elevated = Color3.fromRGB(20, 30, 39),
+    ElevatedHover = Color3.fromRGB(30, 44, 56),
+    Border = Color3.fromRGB(38, 52, 65),
+    BorderStrong = Color3.fromRGB(72, 96, 114),
+    MutedText = Color3.fromRGB(166, 181, 194),
+    FaintText = Color3.fromRGB(104, 120, 135),
     Danger = Color3.fromRGB(255, 102, 124),
     Warning = Color3.fromRGB(255, 198, 92),
     Success = Color3.fromRGB(75, 222, 168),
     Shadow = Color3.fromRGB(0, 1, 3),
-    RadiusSmall = UDim.new(0, 8),
-    Radius = UDim.new(0, 12),
-    RadiusLarge = UDim.new(0, 18),
+    RadiusSmall = UDim.new(0, 7),
+    Radius = UDim.new(0, 10),
+    RadiusLarge = UDim.new(0, 14),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
@@ -322,24 +322,32 @@ local o = {
     SpringSoft = { Damping = 0.98, Frequency = 19, Public = true },
 }
 
-local UI_WINDOW_WIDTH = d.isMobile and 268 or 282
-local UI_HEADER_HEIGHT = d.isMobile and 56 or 58
-local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 48
-local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 46
-local UI_WINDOW_GAP = 16
+local UI_WINDOW_WIDTH = d.isMobile and 276 or 304
+local UI_HEADER_HEIGHT = d.isMobile and 54 or 56
+local UI_MODULE_ROW_HEIGHT = d.isMobile and 52 or 46
+local UI_NAV_ROW_HEIGHT = d.isMobile and 50 or 44
+local UI_WINDOW_GAP = d.isMobile and 10 or 14
 
-
+-- V19.2 uses one responsive token model instead of scattered window constants.
 d.LayoutTokens = {
-    MainMin = d.isMobile and Vector2.new(252, 310) or Vector2.new(264, 330),
-    MainMax = Vector2.new(620, 820),
-    CategoryMin = d.isMobile and Vector2.new(246, 210) or Vector2.new(260, 220),
-    CategoryMax = Vector2.new(620, 720),
-    ListMin = d.isMobile and Vector2.new(246, 230) or Vector2.new(260, 240),
-    ListMax = Vector2.new(650, 760),
-    LegitMin = d.isMobile and Vector2.new(330, 300) or Vector2.new(520, 330),
-    LegitMax = Vector2.new(1180, 820),
-    ContentInset = d.isMobile and 10 or 12,
-    ResizeMargin = d.isMobile and 5 or 8,
+    MainMin = d.isMobile and Vector2.new(264, 332) or Vector2.new(286, 350),
+    MainMax = Vector2.new(720, 880),
+    CategoryMin = d.isMobile and Vector2.new(258, 216) or Vector2.new(282, 228),
+    CategoryMax = Vector2.new(760, 780),
+    ListMin = d.isMobile and Vector2.new(258, 244) or Vector2.new(284, 252),
+    ListMax = Vector2.new(760, 820),
+    LegitMin = d.isMobile and Vector2.new(340, 310) or Vector2.new(560, 350),
+    LegitMax = Vector2.new(1280, 880),
+    ContentInset = d.isMobile and 10 or 14,
+    ResizeMargin = d.isMobile and 5 or 9,
+    HeaderHeight = UI_HEADER_HEIGHT,
+    ModuleRowHeight = UI_MODULE_ROW_HEIGHT,
+    NavRowHeight = UI_NAV_ROW_HEIGHT,
+    TouchTarget = d.isMobile and 44 or 34,
+    CompactBreakpoint = 330,
+    WideBreakpoint = 430,
+    DropdownMaxHeight = d.isMobile and 292 or 336,
+    ScrollBottomPadding = d.isMobile and 18 or 14,
 }
 
 local function getTableSize(p)
@@ -1039,6 +1047,20 @@ local E = function(E, F, G, H)
 
     return J
 end
+function m.Padding(parent, left, right, top, bottom)
+    local padding = parent:FindFirstChild("AdaptivePadding")
+    if not padding or not padding:IsA("UIPadding") then
+        padding = Instance.new("UIPadding")
+        padding.Name = "AdaptivePadding"
+        padding.Parent = parent
+    end
+    padding.PaddingLeft = UDim.new(0, left or 0)
+    padding.PaddingRight = UDim.new(0, right or 0)
+    padding.PaddingTop = UDim.new(0, top or 0)
+    padding.PaddingBottom = UDim.new(0, bottom or 0)
+    return padding
+end
+
 local function addCorner(F, G)
     local H = F:FindFirstChildOfClass("UICorner")
     if not H then
@@ -1883,23 +1905,12 @@ local F = function(F, G, H)
 end
 
 local G = shared.CACHED_ICON_LIBRARY
-if not G then
-    F(function()
-        local H, I = pcall(function()
-            local H =
-                loadstring(d.http_function("https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"))()
-            H.SetIconsType("lucide")
-            return H
-        end)
-        if not H then
-            pcall(function()
-                d:CreateNotification("BadWars | Icons", "Failure loading custom icons :c", 5, "alert")
-            end)
-            bwarn(`[Icons Failure]: {tostring(I)}`)
-        end
-        G = H and I or nil
-        shared.CACHED_ICON_LIBRARY = G
-    end, 3)
+if type(G) ~= "table" or type(G.GetIcon) ~= "function" then
+    -- Never execute third-party icon code from the network inside the GUI.
+    -- A previously initialized compatible cache may still be reused, but the
+    -- bundled BadWars assets remain the authoritative no-network fallback.
+    G = nil
+    shared.CACHED_ICON_LIBRARY = nil
 end
 local iconCache = {}
 local missingIconWarnings = {}
@@ -2358,6 +2369,13 @@ function LayoutIntelligence:ResolveAll()
         return
     end
 
+    for object in pairs(self.objects) do
+        if object and object.Parent and object:GetAttribute("BadWarsResizing") == true then
+            self.dirty = true
+            return
+        end
+    end
+
     self.resolving = true
     local blockers = self:_reservedRects()
     local objects = self:_visibleObjects()
@@ -2458,6 +2476,9 @@ local function bindDirectDrag(handle, target, visibleGuard, headerOnly)
         local smartEntry = smartWindowId and d.WindowManager and d.WindowManager.Entries[smartWindowId]
         if smartEntry and smartEntry.LockPosition then
             return
+        end
+        if smartWindowId and d.WindowManager then
+            d.WindowManager:BringToFront(smartWindowId)
         end
 
         if headerOnly and input.Position.Y - target.AbsolutePosition.Y > 40 * getGuiScale() then
@@ -3965,12 +3986,23 @@ H = {
             )
 
             local visibleCount = #filtered
+            local maximumListHeight = math.max(
+                rowHeight,
+                d.LayoutTokens.DropdownMaxHeight - 10 - searchHeight
+            )
+            local responsiveRows = math.max(
+                1,
+                math.floor(maximumListHeight / rowHeight)
+            )
             local rows = math.max(
                 1,
-                math.min(maxRows, visibleCount)
+                math.min(maxRows, responsiveRows, visibleCount)
             )
             local listHeight = rows * rowHeight
-            local popupHeight = 10 + searchHeight + listHeight
+            local popupHeight = math.min(
+                d.LayoutTokens.DropdownMaxHeight,
+                10 + searchHeight + listHeight
+            )
 
             noResults.Visible = visibleCount == 0
             scroll.Size = UDim2.new(
@@ -4454,6 +4486,27 @@ H = {
 
         updateTitle()
         button.Activated:Connect(openDropdown)
+
+        root:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+            if popupOpen and popup and popup.Parent then
+                refreshPopup(search.Text, true)
+            end
+        end)
+        root:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            if popupOpen and popup and popup.Parent then
+                refreshPopup(search.Text, true)
+            end
+        end)
+        B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            if popupOpen and popup and popup.Parent then
+                refreshPopup(search.Text, true)
+            end
+        end)
+        A:GetPropertyChangedSignal("Scale"):Connect(function()
+            if popupOpen and popup and popup.Parent then
+                refreshPopup(search.Text, true)
+            end
+        end)
 
         root.MouseEnter:Connect(function()
             if popupOpen then
@@ -6994,13 +7047,14 @@ function d.CreateGUI(aa)
         au.BackgroundTransparency = 0.14
         au.BorderSizePixel = 0
         au.AutoButtonColor = false
-        au.Text = (as.Icon and "          " or "    ") .. tostring(as.Name)
+        au.Text = tostring(as.Name)
         au.TextXAlignment = Enum.TextXAlignment.Left
         au.TextColor3 = o.MutedText
         au.TextSize = 14
         au.FontFace = o.FontSemiBold
         au.ClipsDescendants = true
         au.Parent = af
+        m.Padding(au, as.Icon and 46 or 16, 38, 0, 0)
         addCorner(au, o.Radius)
         local avStroke = addStroke(au, o.Border, 0.88, 1, "NavigationStroke")
         local avScale = addScale(au)
@@ -7027,7 +7081,8 @@ function d.CreateGUI(aa)
             av = Instance.new("ImageLabel")
             av.Name = "Icon"
             av.Size = as.Size
-            av.Position = UDim2.fromOffset(14, 13)
+            av.AnchorPoint = Vector2.new(0, 0.5)
+            av.Position = UDim2.new(0, 15, 0.5, 0)
             av.BackgroundTransparency = 1
             av.Image = as.Icon
             av.ImageColor3 = o.MutedText
@@ -8354,26 +8409,42 @@ end)
         end
 
         local scale = math.max(A.Scale, 0.01)
+        local viewport = B.AbsoluteSize / scale
         local contentHeight = math.max(0, ag.AbsoluteContentSize.Y / scale)
-        local viewportHeight = math.max(180, (B.AbsoluteSize.Y / scale) - 148)
-        local visibleHeight = math.min(contentHeight + 8, viewportHeight)
-        local automaticHeight = 120 + math.max(100, visibleHeight)
+        local minimum = aa.LayoutTokens.MainMin
+        local maximum = aa.LayoutTokens.MainMax
         local userResized = ac:GetAttribute("BadWarsUserResized") == true
+        local resizing = ac:GetAttribute("BadWarsResizing") == true
+        local actualSize = ac.AbsoluteSize / scale
+        local maxWidth = math.min(maximum.X, math.max(minimum.X, viewport.X - aa.LayoutTokens.ResizeMargin * 2))
+        local maxHeight = math.min(maximum.Y, math.max(minimum.Y, viewport.Y - aa.LayoutTokens.ResizeMargin * 2))
+        local visibleContent = math.min(contentHeight + aa.LayoutTokens.ScrollBottomPadding, math.max(120, maxHeight - 120))
+        local automaticHeight = math.clamp(120 + visibleContent, minimum.Y, maxHeight)
+        local targetWidth = math.clamp(
+            resizing and actualSize.X or (tonumber(ac:GetAttribute("BadWarsUserWidth")) or UI_WINDOW_WIDTH),
+            minimum.X,
+            maxWidth
+        )
+        local targetHeight = math.clamp(
+            resizing and actualSize.Y or (tonumber(ac:GetAttribute("BadWarsUserHeight")) or automaticHeight),
+            minimum.Y,
+            maxHeight
+        )
 
-        af.CanvasSize = UDim2.fromOffset(0, contentHeight + 8)
+        af.CanvasSize = UDim2.fromOffset(0, contentHeight + aa.LayoutTokens.ScrollBottomPadding)
         if not userResized or forceAuto == "reset" then
             ac.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, automaticHeight)
+            ac:SetAttribute("BadWarsUserWidth", UI_WINDOW_WIDTH)
+            ac:SetAttribute("BadWarsUserHeight", automaticHeight)
+        elseif resizing then
+            ac.Size = UDim2.fromOffset(targetWidth, targetHeight)
         end
-        af.Size = UDim2.new(1, 0, 1, -120)
 
+        local footerReserve = d.isMobile and 116 or 120
+        af.Size = UDim2.new(1, 0, 1, -footerReserve)
+        af.ScrollingEnabled = contentHeight > af.AbsoluteWindowSize.Y
         local maxCanvasY = math.max(0, af.AbsoluteCanvasSize.Y - af.AbsoluteWindowSize.Y)
         af.CanvasPosition = Vector2.new(0, math.clamp(af.CanvasPosition.Y, 0, maxCanvasY))
-
-        for _, buttonApi in ab.Buttons do
-            if buttonApi.Icon then
-                buttonApi.Object.Text = string.rep(" ", math.max(18, math.floor(36 * A.Scale))) .. buttonApi.Name
-            end
-        end
     end
 
     ag:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(
@@ -8455,7 +8526,8 @@ function d.CreateCategory(aa, ab)
     local ae = Instance.new("ImageLabel")
     ae.Name = "Icon"
     ae.Size = ab.Size
-    ae.Position = UDim2.fromOffset(16, (ae.Size.X.Offset > 20 and 17 or 16))
+    ae.AnchorPoint = Vector2.new(0, 0.5)
+    ae.Position = UDim2.new(0, 16, 0.5, 0)
     ae.BackgroundTransparency = 1
     ae.Image = ab.Icon
     ae.ImageColor3 = o.MutedText
@@ -8464,32 +8536,15 @@ function d.CreateCategory(aa, ab)
     local af = Instance.new("TextLabel")
     af.Name = "Title"
     af.Size = UDim2.new(1, -(ab.Size.X.Offset > 18 and 44 or 37), 1, 0)
-    af.Position = UDim2.fromOffset(math.abs(af.Size.X.Offset) + 2, 0)
+    af.Position = UDim2.fromOffset(math.abs(af.Size.X.Offset), 0)
     af.BackgroundTransparency = 1
     af.Text = ab.Name
     af.TextXAlignment = Enum.TextXAlignment.Left
     af.TextColor3 = o.MutedText
-    af.TextSize = 14
+    af.TextSize = d.isMobile and 14 or 15
     af.FontFace = o.FontSemiBold
     af.ZIndex = headerSurface.ZIndex + 2
     af.Parent = headerSurface
-
-    local categorySub = Instance.new("TextLabel")
-    categorySub.Name = "Subtitle"
-    categorySub.Size = UDim2.new(1, -56, 0, 11)
-    categorySub.Position = UDim2.fromOffset(
-        math.abs(af.Size.X.Offset) + 2,
-        27
-    )
-    categorySub.BackgroundTransparency = 1
-    categorySub.Text = "MODULES"
-    categorySub.TextColor3 = o.FaintText
-    categorySub.TextSize = 8
-    categorySub.TextXAlignment = Enum.TextXAlignment.Left
-    categorySub.FontFace = o.FontBold
-    categorySub.Visible = true
-    categorySub.ZIndex = headerSurface.ZIndex + 2
-    categorySub.Parent = headerSurface
 
     local ag = Instance.new("TextButton")
     ag.Name = "Arrow"
@@ -8629,12 +8684,13 @@ function d.CreateCategory(aa, ab)
         ar.BorderSizePixel = 0
         ar.AutoButtonColor = false
         ar.ClipsDescendants = true
-        ar.Text = "     " .. ap
+        ar.Text = ap
         ar.TextXAlignment = Enum.TextXAlignment.Left
         ar.TextColor3 = o.MutedText
         ar.TextSize = d.isMobile and 15 or 14
         ar.FontFace = o.FontSemiBold
         ar.Parent = aj
+        m.Padding(ar, d.isMobile and 18 or 16, d.isMobile and 74 or 62, 0, 0)
         addCorner(ar, o.Radius)
         local moduleStroke = addStroke(ar, o.Border, 0.76, 1, "ModuleStroke")
         local moduleScale = addScale(ar)
@@ -9731,97 +9787,84 @@ function d.CreateCategory(aa, ab)
         categoryAnimationId += 1
         local animationId = categoryAnimationId
         local stateChanged = renderedExpanded ~= ac.Expanded
+        local activelyResizing = ad:GetAttribute("BadWarsResizing") == true
         renderedExpanded = ac.Expanded
 
-        local userWidth = tonumber(ad:GetAttribute("BadWarsUserWidth")) or UI_WINDOW_WIDTH
-        local userHeight = tonumber(ad:GetAttribute("BadWarsUserHeight"))
-        local targetHeight = ac.Expanded
-            and (ad:GetAttribute("BadWarsUserResized") == true and math.max(UI_HEADER_HEIGHT + 96, userHeight or getExpandedCategoryHeight()) or getExpandedCategoryHeight())
-            or UI_HEADER_HEIGHT
-        local targetWidth = math.max(d.LayoutTokens.CategoryMin.X, userWidth)
+        local scale = math.max(A.Scale, 0.01)
+        local viewport = B.AbsoluteSize / scale
+        local minimum = d.LayoutTokens.CategoryMin
+        local maximum = d.LayoutTokens.CategoryMax
+        local actualSize = ad.AbsoluteSize / scale
+        local storedWidth = tonumber(ad:GetAttribute("BadWarsUserWidth"))
+        local storedHeight = tonumber(ad:GetAttribute("BadWarsUserHeight"))
+        local userSized = ad:GetAttribute("BadWarsUserResized") == true
+        local targetWidth = math.clamp(
+            activelyResizing and actualSize.X or (storedWidth or UI_WINDOW_WIDTH),
+            minimum.X,
+            math.min(maximum.X, math.max(minimum.X, viewport.X - d.LayoutTokens.ResizeMargin * 2))
+        )
+        local automaticHeight = getExpandedCategoryHeight()
+        local expandedHeight = userSized and math.max(UI_HEADER_HEIGHT + 96, storedHeight or automaticHeight) or automaticHeight
+        local targetHeight = ac.Expanded and expandedHeight or UI_HEADER_HEIGHT
+        if activelyResizing and ac.Expanded then
+            targetHeight = math.max(UI_HEADER_HEIGHT + 96, actualSize.Y)
+        end
+        targetHeight = math.clamp(
+            targetHeight,
+            ac.Expanded and minimum.Y or UI_HEADER_HEIGHT,
+            math.min(maximum.Y, math.max(minimum.Y, viewport.Y - d.LayoutTokens.ResizeMargin * 2))
+        )
 
         aj.CanvasSize = UDim2.fromOffset(
             0,
-            math.max(
-                0,
-                al.AbsoluteContentSize.Y
-                    / math.max(A.Scale, 0.01)
-                    + 8
-            )
+            math.max(0, al.AbsoluteContentSize.Y / scale + d.LayoutTokens.ScrollBottomPadding)
         )
+        aj.ScrollingEnabled = ac.Expanded
+            and aj.CanvasSize.Y.Offset > math.max(0, targetHeight - UI_HEADER_HEIGHT)
 
-        aj.ScrollingEnabled =
-            ac.Expanded
-            and aj.CanvasSize.Y.Offset
-                > math.max(0, targetHeight - UI_HEADER_HEIGHT)
+        local direct = instant or activelyResizing or not d.Loaded or d._SuppressEntryAnimation
+        local needsResize = math.abs(ad.Size.X.Offset - targetWidth) > 0.5
+            or math.abs(ad.Size.Y.Offset - targetHeight) > 0.5
 
-        local currentHeight = ad.Size.Y.Offset
-        local needsResize =
-            math.abs(currentHeight - targetHeight) > 0.5
+        ad.ClipsDescendants = true
+        if ac.Expanded then
+            aj.Visible = true
+        end
 
-        if instant or not d.Loaded or d._SuppressEntryAnimation then
-            ad.ClipsDescendants = true
+        if direct then
             ad.Size = UDim2.fromOffset(targetWidth, targetHeight)
             ai.Rotation = ac.Expanded and 0 or 180
             aj.Visible = ac.Expanded
         else
-            ad.ClipsDescendants = true
-
-            if ac.Expanded then
-                aj.Visible = true
-            end
-
             if stateChanged then
-                n:Tween(ai, o.TweenSlow, {
-                    Rotation = ac.Expanded and 0 or 180,
-                })
+                n:Tween(ai, o.TweenSlow, { Rotation = ac.Expanded and 0 or 180 })
             else
                 ai.Rotation = ac.Expanded and 0 or 180
             end
 
-            local sizeTween
-            if needsResize then
-                sizeTween = n:Tween(ad, o.TweenSlow, {
-                    Size = UDim2.fromOffset(targetWidth, targetHeight),
-                })
-            else
-                ad.Size = UDim2.fromOffset(targetWidth, targetHeight)
-            end
+            local sizeTween = needsResize and n:Tween(ad, o.TweenSlow, {
+                Size = UDim2.fromOffset(targetWidth, targetHeight),
+            }) or nil
 
             local function finishCategoryTransition()
                 if animationId ~= categoryAnimationId then
                     return
                 end
-
                 aj.Visible = ac.Expanded
                 ad.ClipsDescendants = true
             end
 
             if sizeTween then
-                sizeTween.Completed:Once(
-                    finishCategoryTransition
-                )
+                sizeTween.Completed:Once(finishCategoryTransition)
             else
                 finishCategoryTransition()
             end
         end
 
-        local maxCanvasY = math.max(
-            0,
-            aj.AbsoluteCanvasSize.Y - aj.AbsoluteWindowSize.Y
-        )
-
-        aj.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(
-                aj.CanvasPosition.Y,
-                0,
-                maxCanvasY
-            )
-        )
-
+        local maxCanvasY = math.max(0, aj.AbsoluteCanvasSize.Y - aj.AbsoluteWindowSize.Y)
+        aj.CanvasPosition = Vector2.new(0, math.clamp(aj.CanvasPosition.Y, 0, maxCanvasY))
         ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
-        updateCategoryVisual(false, instant or not d.Loaded)
+        updateCategoryVisual(false, direct)
     end
 
     function ac.Expand(am, an, instant)
@@ -11227,20 +11270,33 @@ function d.CreateCategoryList(ag, ah)
 
     function ai.RefreshScroll(aC)
         local scale = getGuiScale()
-        local contentHeight = math.max(0, math.ceil(at.AbsoluteContentSize.Y / scale) + 8)
-        local viewport = (B and B.AbsoluteSize)
+        local contentHeight = math.max(0, math.ceil(at.AbsoluteContentSize.Y / scale) + d.LayoutTokens.ScrollBottomPadding)
+        local viewport = ((B and B.AbsoluteSize)
             or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
-            or Vector2.new(1280, 720)
-        local viewportHeight = viewport.Y / scale
-        local maximumHeight = math.max(176, math.min(614, viewportHeight - 72))
-        local userWidth = tonumber(aj:GetAttribute("BadWarsUserWidth")) or UI_WINDOW_WIDTH
-        local userHeight = tonumber(aj:GetAttribute("BadWarsUserHeight"))
-        local targetHeight = aC.Expanded
-            and (aj:GetAttribute("BadWarsUserResized") == true and math.max(UI_HEADER_HEIGHT + 110, userHeight or maximumHeight) or math.min(UI_HEADER_HEIGHT + contentHeight + 6, maximumHeight))
-            or UI_HEADER_HEIGHT
-        local targetWidth = math.max(d.LayoutTokens.ListMin.X, userWidth)
+            or Vector2.new(1280, 720)) / scale
+        local minimum = d.LayoutTokens.ListMin
+        local maximum = d.LayoutTokens.ListMax
+        local actualSize = aj.AbsoluteSize / scale
+        local resizing = aj:GetAttribute("BadWarsResizing") == true
+        local userSized = aj:GetAttribute("BadWarsUserResized") == true
+        local storedWidth = tonumber(aj:GetAttribute("BadWarsUserWidth"))
+        local storedHeight = tonumber(aj:GetAttribute("BadWarsUserHeight"))
+        local maximumHeight = math.min(maximum.Y, math.max(minimum.Y, viewport.Y - d.LayoutTokens.ResizeMargin * 2))
+        local automaticHeight = math.min(UI_HEADER_HEIGHT + contentHeight + 6, maximumHeight)
+        local expandedHeight = userSized and math.max(UI_HEADER_HEIGHT + 110, storedHeight or automaticHeight) or automaticHeight
+        local targetHeight = aC.Expanded and expandedHeight or UI_HEADER_HEIGHT
+        local targetWidth = storedWidth or UI_WINDOW_WIDTH
+
+        if resizing and aC.Expanded then
+            targetWidth = actualSize.X
+            targetHeight = actualSize.Y
+        end
+
+        targetWidth = math.clamp(targetWidth, minimum.X, math.min(maximum.X, math.max(minimum.X, viewport.X - d.LayoutTokens.ResizeMargin * 2)))
+        targetHeight = math.clamp(targetHeight, aC.Expanded and minimum.Y or UI_HEADER_HEIGHT, maximumHeight)
 
         ap.CanvasSize = UDim2.fromOffset(0, contentHeight)
+        ap.ScrollingEnabled = aC.Expanded and contentHeight > math.max(0, targetHeight - UI_HEADER_HEIGHT)
         local visibleCanvasHeight = math.max(0, targetHeight - UI_HEADER_HEIGHT)
         local maximumCanvasY = math.max(0, contentHeight - visibleCanvasHeight)
         if ap.CanvasPosition.Y > maximumCanvasY then
@@ -11322,15 +11378,25 @@ function d.CreateCategoryList(ag, ah)
                         end
                         shared.BadReload = true
                         if shared.BadDeveloper then
-                            loadstring(readfile("badscript/loader.lua"), "loader")()
+                            local source = readfile("badscript/loader.lua")
+                            local runner, compileError = loadstring(source, "loader")
+                            if type(runner) ~= "function" then
+                                error("loader compile failed: " .. tostring(compileError), 0)
+                            end
+                            runner()
                         else
-                            loadstring(
-                                d.http_function(
-                                    "https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",
-                                    true
-                                ),
-                                "loader"
-                            )()
+                            local source = d.http_function(
+                                "https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",
+                                true
+                            )
+                            if type(source) ~= "string" or source == "" then
+                                error("loader download failed", 0)
+                            end
+                            local runner, compileError = loadstring(source, "loader")
+                            if type(runner) ~= "function" then
+                                error("loader compile failed: " .. tostring(compileError), 0)
+                            end
+                            runner()
                         end
                     end,
                     OnCancel = function() end,
@@ -13076,10 +13142,12 @@ function d.CreateLegit(ag)
 
     local function refreshLegitGrid()
         local scale = math.max(A.Scale, 0.01)
-        local logicalWidth = math.max(300, an.AbsoluteSize.X / scale)
-        local columns = math.clamp(math.floor((logicalWidth + 6) / 169), 2, 6)
+        local logicalWidth = math.max(260, an.AbsoluteSize.X / scale)
+        local minimumColumns = d.isMobile and 1 or 2
+        local maximumColumns = d.isMobile and 3 or 6
+        local columns = math.clamp(math.floor((logicalWidth + 8) / (d.isMobile and 154 or 172)), minimumColumns, maximumColumns)
         ao.FillDirectionMaxCells = columns
-        ao.CellSize = UDim2.new(1 / columns, -6, 0, 114)
+        ao.CellSize = UDim2.new(1 / columns, -8, 0, d.isMobile and 108 or 114)
         an.CanvasSize = UDim2.fromOffset(0, ao.AbsoluteContentSize.Y / scale + 8)
     end
 
@@ -14880,7 +14948,7 @@ d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
     end)
 end))
 
--- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_1_BEGIN
+-- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_2_BEGIN
 do
     local managerClass = shared.BadWarsWindowManagerClass
     if type(managerClass) == "table" and type(managerClass.new) == "function" then
@@ -14888,7 +14956,11 @@ do
             UserInputService = h,
             HttpService = l,
             TouchEnabled = d.isMobile,
-            PersistencePath = "badscript/profiles/ui-layout-v19.1.json",
+            PersistencePath = "badscript/profiles/ui-layout-v19.2.json",
+            LegacyPersistencePaths = {
+                "badscript/profiles/ui-layout-v19.1.json",
+                "badscript/profiles/ui-layout.json",
+            },
             Accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
             Surface = o.Elevated,
             Border = o.BorderStrong,
@@ -14903,6 +14975,21 @@ do
         manager:BindViewportSignal(B:GetPropertyChangedSignal("AbsoluteSize"))
 
         function d.RegisterSmartWindow(self, id, object, options)
+            options = type(options) == "table" and options or {}
+            local resizeStart = options.OnResizeStart
+            local resizeEnd = options.OnResizeEnd
+            options.OnResizeStart = function(target, entry)
+                LayoutIntelligence:BeginDrag(target)
+                if type(resizeStart) == "function" then
+                    resizeStart(target, entry)
+                end
+            end
+            options.OnResizeEnd = function(target, entry)
+                if type(resizeEnd) == "function" then
+                    resizeEnd(target, entry)
+                end
+                LayoutIntelligence:EndDrag(target)
+            end
             return manager:Register(id, object, options)
         end
 
@@ -14921,6 +15008,14 @@ do
             return manager:SetLocked(id, "position", locked)
         end
 
+        function d.ResetWindowSize(self, id)
+            return manager:ResetSize(id)
+        end
+
+        function d.ResetWindowPosition(self, id)
+            return manager:ResetPosition(id)
+        end
+
         d:Clean(function()
             manager:Destroy()
         end)
@@ -14935,9 +15030,15 @@ do
         function d.LockWindowPosition()
             return false
         end
+        function d.ResetWindowSize()
+            return false
+        end
+        function d.ResetWindowPosition()
+            return false
+        end
     end
 end
--- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_1_END
+-- BADWARS_ADAPTIVE_WORKSPACE_MANAGER_V19_2_END
 
 local cursorConnection
 local function stopCursorTracking()
@@ -15094,15 +15195,25 @@ am:CreateButton({
         end
         shared.BadReload = true
         if shared.BadDeveloper then
-            loadstring(readfile("badscript/loader.lua"), "loader")()
+            local source = readfile("badscript/loader.lua")
+            local runner, compileError = loadstring(source, "loader")
+            if type(runner) ~= "function" then
+                error("loader compile failed: " .. tostring(compileError), 0)
+            end
+            runner()
         else
-            loadstring(
-                d.http_function(
-                    "https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",
-                    true
-                ),
-                "loader"
-            )()
+            local source = d.http_function(
+                "https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",
+                true
+            )
+            if type(source) ~= "string" or source == "" then
+                error("loader download failed", 0)
+            end
+            local runner, compileError = loadstring(source, "loader")
+            if type(runner) ~= "function" then
+                error("loader compile failed: " .. tostring(compileError), 0)
+            end
+            runner()
         end
     end,
     Tooltip = "This will set your profile to the default BadWars settings",
@@ -15126,15 +15237,25 @@ am:CreateButton({
     Function = function()
         shared.BadReload = true
         if shared.BadDeveloper then
-            loadstring(readfile("badscript/loader.lua"), "loader")()
+            local source = readfile("badscript/loader.lua")
+            local runner, compileError = loadstring(source, "loader")
+            if type(runner) ~= "function" then
+                error("loader compile failed: " .. tostring(compileError), 0)
+            end
+            runner()
         else
-            loadstring(
-                d.http_function(
-                    "https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",
-                    true
-                ),
-                "loader"
-            )()
+            local source = d.http_function(
+                "https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua",
+                true
+            )
+            if type(source) ~= "string" or source == "" then
+                error("loader download failed", 0)
+            end
+            local runner, compileError = loadstring(source, "loader")
+            if type(runner) ~= "function" then
+                error("loader compile failed: " .. tostring(compileError), 0)
+            end
+            runner()
         end
     end,
     Tooltip = "Reloads BadWars for debugging purposes",
@@ -15444,6 +15565,32 @@ d.LayoutLock = at:CreateToggle({
         end
     end,
 })
+at:CreateButton({
+    Name = "Reset window sizes",
+    Tooltip = "Restores every resizable BadWars window to its responsive default size",
+    Function = function()
+        if not d.WindowManager then
+            return
+        end
+        for id in pairs(d.WindowManager.Entries) do
+            d.WindowManager:ResetSize(id)
+        end
+        d:CreateNotification("Window sizes reset", "Resizable windows were restored without moving them.", 3, "success")
+    end,
+})
+at:CreateButton({
+    Name = "Reset window positions",
+    Tooltip = "Moves every BadWars window back to a safe default position",
+    Function = function()
+        if not d.WindowManager then
+            return
+        end
+        for id in pairs(d.WindowManager.Entries) do
+            d.WindowManager:ResetPosition(id)
+        end
+        d:CreateNotification("Window positions reset", "All windows were moved back into a safe workspace.", 3, "success")
+    end,
+})
 d.RainbowMode = at:CreateDropdown({
     Name = "Rainbow Mode",
     List = { "Normal", "Gradient", "Retro" },
@@ -15475,17 +15622,8 @@ d.TooltipSlider = at:CreateSlider({
         z.TextSize = av
     end,
 })
-at:CreateButton({
-    Name = "Reset GUI positions",
-    Function = function()
-        for av, aw in d.Categories do
-            aw.Object.Position = UDim2.fromOffset(6, 42)
-        end
-    end,
-    Tooltip = "This will reset your GUI back to default",
-})
 d.SortGuiCallback = function(av, force)
-    local aw = {
+    local order = {
         GUICategory = 1,
         CombatCategory = 2,
         BlatantCategory = 3,
@@ -15499,35 +15637,57 @@ d.SortGuiCallback = function(av, force)
         TargetsCategoryList = 11,
         FriendsCategoryList = 12,
     }
-    local ax = {}
-    for ay, az in d.Categories do
-        if az.Type == "Overlay" then
-            continue
+    local windows = {}
+    for _, category in d.Categories do
+        if category.Type ~= "Overlay"
+            and category.Object
+            and category.Object.Parent
+            and category.Object.Visible
+            and not (av and category.Object.Name == "ProfilesCategoryList")
+        then
+            windows[#windows + 1] = category
         end
-        if av and az.Object.Name == "ProfilesCategoryList" then
-            continue
-        end
-        table.insert(ax, az)
     end
-    table.sort(ax, function(ay, az)
-        return (aw[ay.Object.Name] or 99) < (aw[az.Object.Name] or 99)
+    table.sort(windows, function(left, right)
+        return (order[left.Object.Name] or 99) < (order[right.Object.Name] or 99)
     end)
 
-    local ay = 0
-    for az, aA in ax do
-        if aA.Object.Visible then
-            local windowId = aA.Object:GetAttribute("BadWarsWindowId")
-            local hasSavedLayout = windowId and d.WindowManager and d.WindowManager.Layout.Windows[windowId] ~= nil
-            if force or not hasSavedLayout then
-                aA.Object.Position = UDim2.fromOffset(6 + (ay % 8 * (UI_WINDOW_WIDTH + UI_WINDOW_GAP)), 60 + (ay > 7 and 360 or 0))
-                if force and windowId and d.WindowManager then
-                    d.WindowManager:NotifyMoved(windowId)
-                end
+    local scale = math.max(A.Scale, 0.01)
+    local viewport = B.AbsoluteSize / scale
+    local margin = d.LayoutTokens.ResizeMargin
+    local gap = UI_WINDOW_GAP
+    local cursorX = margin
+    local cursorY = math.max(60, margin)
+    local rowHeight = 0
+
+    for _, category in ipairs(windows) do
+        local object = category.Object
+        local windowId = object:GetAttribute("BadWarsWindowId")
+        local hasSavedLayout = windowId and d.WindowManager and d.WindowManager.Layout.Windows[windowId] ~= nil
+        if force or not hasSavedLayout then
+            local size = object.AbsoluteSize / scale
+            if cursorX > margin and cursorX + size.X > viewport.X - margin then
+                cursorX = margin
+                cursorY += rowHeight + gap
+                rowHeight = 0
             end
-            ay += 1
+            if cursorY + size.Y > viewport.Y - margin then
+                cursorY = margin
+            end
+            local anchor = object.AnchorPoint
+            object.Position = UDim2.fromOffset(
+                cursorX + size.X * anchor.X,
+                cursorY + size.Y * anchor.Y
+            )
+            if force and windowId and d.WindowManager then
+                d.WindowManager:NotifyMoved(windowId)
+            end
+            cursorX += size.X + gap
+            rowHeight = math.max(rowHeight, size.Y)
         end
     end
 end
+
 
 function d.WaitForModuleReadiness(self, timeoutSeconds)
     local deadline = os.clock() + (tonumber(timeoutSeconds) or 4)

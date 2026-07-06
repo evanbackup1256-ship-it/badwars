@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Main v19.1 - Adaptive Workspace UI pipeline
+-- BadWars Main v19.2 - Massive Overhaul UI pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -626,8 +626,8 @@ local function isStaleGuiCache(path, body)
         return true
     end
     return not (
-        body:find('Version%s*=%s*"19%.1"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%.1%-ADAPTIVE%-WORKSPACE"') ~= nil
+        body:find('Version%s*=%s*"19%.2"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%.2%-MASSIVE%-OVERHAUL"') ~= nil
     )
 end
 
@@ -652,7 +652,7 @@ local function isStaleWindowManagerCache(path, body)
     if type(body) ~= "string" or body == "" then
         return true
     end
-    return body:find("BADWARS_WINDOW_MANAGER_V19_1", 1, true) == nil
+    return body:find("BADWARS_WINDOW_MANAGER_V19_2", 1, true) == nil
         or body:find("function WindowManager:Register", 1, true) == nil
         or body:find("function WindowManager:ResetAll", 1, true) == nil
 end

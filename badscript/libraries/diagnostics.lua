@@ -1,4 +1,4 @@
--- BADWARS_DIAGNOSTICS_V19_1_ADAPTIVE_WORKSPACE
+-- BADWARS_DIAGNOSTICS_V19_2_MASSIVE_OVERHAUL
 -- BadWars centralized runtime diagnostics
 -- Loaded before the normal loader whenever possible.
 
@@ -633,11 +633,14 @@ function Diagnostics:EnsureUI()
     gui.Parent = parent
 
     local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local layoutPath = "badscript/profiles/diagnostics-layout-v19.1.json"
+    local layoutPath = "badscript/profiles/diagnostics-layout-v19.2.json"
     local savedLayout
     pcall(function()
-        if type(isfile) == "function" and type(readfile) == "function" and isfile(layoutPath) then
-            savedLayout = game:GetService("HttpService"):JSONDecode(readfile(layoutPath))
+        if type(isfile) == "function" and type(readfile) == "function" then
+            local sourcePath = isfile(layoutPath) and layoutPath or (isfile("badscript/profiles/diagnostics-layout-v19.1.json") and "badscript/profiles/diagnostics-layout-v19.1.json" or nil)
+            if sourcePath then
+                savedLayout = game:GetService("HttpService"):JSONDecode(readfile(sourcePath))
+            end
         end
     end)
     savedLayout = type(savedLayout) == "table" and savedLayout or {}
@@ -645,7 +648,7 @@ function Diagnostics:EnsureUI()
     local initialHeight = math.clamp(tonumber(savedLayout.Height) or (viewport.Y - 52), 360, math.min(820, viewport.Y - 16))
     local minSize = Vector2.new(math.min(340, viewport.X - 16), math.min(300, viewport.Y - 16))
     local maxSize = Vector2.new(1280, 820)
-    local compact = viewport.X < 720
+    local compact = initialWidth < 720
     local initialCenter = Vector2.new(
         math.clamp(tonumber(savedLayout.CenterX) or (viewport.X / 2), initialWidth / 2 + 8, viewport.X - initialWidth / 2 - 8),
         math.clamp(tonumber(savedLayout.CenterY) or (viewport.Y / 2), initialHeight / 2 + 8, viewport.Y - initialHeight / 2 - 8)
@@ -953,18 +956,37 @@ function Diagnostics:EnsureUI()
     resize.Name = "Resize"
     resize.AnchorPoint = Vector2.new(1, 1)
     resize.Position = UDim2.fromScale(1, 1)
-    resize.Size = UDim2.fromOffset(32, 32)
-    resize.BackgroundColor3 = Color3.fromRGB(15, 23, 30)
-    resize.BackgroundTransparency = 0.32
+    resize.Size = UDim2.fromOffset(36, 36)
+    resize.BackgroundTransparency = 1
     resize.BorderSizePixel = 0
     resize.AutoButtonColor = false
-    resize.Font = Enum.Font.Code
-    resize.Text = "//"
-    resize.TextSize = 13
-    resize.TextColor3 = Color3.fromRGB(92, 112, 128)
+    resize.Text = ""
     resize.Parent = window
-    createCorner(resize, 9)
-    createStroke(resize, Color3.fromRGB(64, 82, 96), 0.58, 1)
+
+    local resizeVisual = Instance.new("Frame")
+    resizeVisual.Name = "Visual"
+    resizeVisual.AnchorPoint = Vector2.new(1, 1)
+    resizeVisual.Position = UDim2.new(1, -4, 1, -4)
+    resizeVisual.Size = UDim2.fromOffset(20, 20)
+    resizeVisual.BackgroundColor3 = Color3.fromRGB(15, 23, 30)
+    resizeVisual.BackgroundTransparency = 0.7
+    resizeVisual.BorderSizePixel = 0
+    resizeVisual.Parent = resize
+    createCorner(resizeVisual, 7)
+    local resizeStroke = createStroke(resizeVisual, Color3.fromRGB(64, 82, 96), 0.68, 1)
+
+    for index = 0, 2 do
+        local dot = Instance.new("Frame")
+        dot.Name = "Dot" .. tostring(index + 1)
+        dot.AnchorPoint = Vector2.new(0.5, 0.5)
+        dot.Position = UDim2.new(1, -(5 + index * 4), 1, -(5 + (2 - index) * 4))
+        dot.Size = UDim2.fromOffset(2, 2)
+        dot.BackgroundColor3 = Color3.fromRGB(98, 119, 136)
+        dot.BackgroundTransparency = 0.12 + index * 0.14
+        dot.BorderSizePixel = 0
+        dot.Parent = resizeVisual
+        createCorner(dot, 99)
+    end
 
     local resizeRight = Instance.new("TextButton")
     resizeRight.Name = "ResizeRight"
@@ -987,6 +1009,42 @@ function Diagnostics:EnsureUI()
     resizeBottom.AutoButtonColor = false
     resizeBottom.Text = ""
     resizeBottom.Parent = window
+
+    local responsiveQueued = false
+    local function applyResponsiveLayout()
+        responsiveQueued = false
+        if not window.Parent then
+            return
+        end
+        local width = window.AbsoluteSize.X
+        local useCompact = width < 720
+        compact = useCompact
+        toolbar.Size = UDim2.new(1, -36, 0, useCompact and 118 or 82)
+        search.Size = useCompact and UDim2.new(1, -74, 0, 32) or UDim2.new(0.46, -4, 0, 32)
+        sourceFilter.Visible = not useCompact
+        moduleFilter.Visible = not useCompact
+        filters.Size = useCompact and UDim2.new(1, 0, 0, 26) or UDim2.new(1, -278, 0, 26)
+        actions.Position = useCompact and UDim2.new(1, 0, 0, 78) or UDim2.new(1, 0, 0, 42)
+        actions.Size = useCompact and UDim2.new(1, 0, 0, 26) or UDim2.fromOffset(270, 26)
+        list.Position = UDim2.fromOffset(16, useCompact and 202 or 168)
+        list.Size = UDim2.new(1, -32, 1, useCompact and -238 or -204)
+        counters.Visible = width >= 610
+        subtitle.Visible = width >= 540
+        if self._ui then
+            self._ui.compact = useCompact
+        end
+    end
+
+    local function requestResponsiveLayout()
+        if responsiveQueued then
+            return
+        end
+        responsiveQueued = true
+        task.defer(applyResponsiveLayout)
+    end
+
+    window:GetPropertyChangedSignal("AbsoluteSize"):Connect(requestResponsiveLayout)
+    task.defer(applyResponsiveLayout)
 
     self._ui = {
         gui = gui,
@@ -1035,6 +1093,15 @@ function Diagnostics:EnsureUI()
     end)
     close.MouseLeave:Connect(function()
         animate(close, 0.075, { BackgroundTransparency = 0.9, TextColor3 = Color3.fromRGB(169, 177, 186) })
+    end)
+
+    resize.MouseEnter:Connect(function()
+        animate(resizeVisual, 0.075, { BackgroundTransparency = 0.28 })
+        animate(resizeStroke, 0.075, { Transparency = 0.28, Color = Color3.fromRGB(66, 214, 153) })
+    end)
+    resize.MouseLeave:Connect(function()
+        animate(resizeVisual, 0.075, { BackgroundTransparency = 0.7 })
+        animate(resizeStroke, 0.075, { Transparency = 0.68, Color = Color3.fromRGB(64, 82, 96) })
     end)
 
     opener.Activated:Connect(function() self:Toggle() end)
@@ -1118,8 +1185,11 @@ function Diagnostics:EnsureUI()
             endedConnection:Disconnect()
             endedConnection = nil
         end
+        animate(resizeVisual, 0.075, { BackgroundTransparency = 0.7 })
+        animate(resizeStroke, 0.075, { Transparency = 0.68, Color = Color3.fromRGB(64, 82, 96) })
         if save then
             clampWindow()
+            requestResponsiveLayout()
             saveLayout()
         end
     end
@@ -1131,6 +1201,8 @@ function Diagnostics:EnsureUI()
         stopInteraction(false)
         local expectedMovement = input.UserInputType == Enum.UserInputType.MouseButton1 and Enum.UserInputType.MouseMovement or Enum.UserInputType.Touch
         local currentViewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+        animate(resizeVisual, 0.075, { BackgroundTransparency = 0.12 })
+        animate(resizeStroke, 0.075, { Transparency = 0.12, Color = Color3.fromRGB(66, 214, 153) })
         activeInteraction = {
             Mode = mode,
             StartPointer = input.Position,
@@ -1162,6 +1234,7 @@ function Diagnostics:EnsureUI()
                 height = math.clamp(state.StartSize.Y + delta.Y, state.MinHeight, state.MaxHeight)
             end
             window.Size = UDim2.fromOffset(width, height)
+            requestResponsiveLayout()
         end)
         endedConnection = input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then

@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Loader v19.1 Adaptive Workspace
+-- BadWars Loader v19.2 Massive Overhaul
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -751,12 +751,12 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v19.1-adaptive-workspace-2026-07-06-01'
+local cacheVersion = 'badwars-v19.2-massive-overhaul-2026-07-06-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents)=='string'
-		and contents:find('Version%s*=%s*"19%.1"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%.1%-ADAPTIVE%-WORKSPACE"') ~= nil
+		and contents:find('Version%s*=%s*"19%.2"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V19%.2%-MASSIVE%-OVERHAUL"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath='badscript/guis/new/gui.lua'

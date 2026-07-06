@@ -121,7 +121,8 @@ do
 
     __badwarsLoadDiagnostics()
 end
--- BADWARS_DIAGNOSTICS_BOOTSTRAP_END-- BadWars Main v16.0 - clean UI readiness pipeline
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
+-- BadWars Main v17.0 - clean UI readiness pipeline
 repeat
     task.wait()
 until game:IsLoaded()
@@ -625,8 +626,8 @@ local function isStaleGuiCache(path, body)
         return true
     end
     return not (
-        body:find('Version%s*=%s*"16%.0"') ~= nil
-        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V16%-RENDER%-HUD%-PAGE%-MANAGER"') ~= nil
+        body:find('Version%s*=%s*"17%.0"') ~= nil
+        and body:find('PremiumBuild%s*=%s*"2026%.07%.05%-V17%-FLUID%-MOTION%-SLEEK%-UI"') ~= nil
     )
 end
 

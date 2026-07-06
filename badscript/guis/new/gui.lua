@@ -1,4 +1,4 @@
--- BADWARS_UI_V16_RENDER_HUD_PAGE_MANAGER
+-- BADWARS_UI_V17_FLUID_MOTION_SLEEK_UI
 -- BADWARS_UI_SEMANTIC_FIX_V2
 -- BADWARS_LOCAL_REGISTER_REPAIR_V2
 -- BADWARS_ADAPTIVE_UI_REWRITE_V1
@@ -142,9 +142,9 @@ local c = function(c)
 end
 local d = {
     GUIColor = {
-        Hue = 0.59,
-        Sat = 0.78,
-        Value = 0.94,
+        Hue = 0.46,
+        Sat = 0.74,
+        Value = 0.92,
     },
     HeldKeybinds = {},
     Keybind = { "RightShift" },
@@ -165,8 +165,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "16.0",
-    PremiumBuild = "2026.07.05-V16-RENDER-HUD-PAGE-MANAGER",
+    Version = "17.0",
+    PremiumBuild = "2026.07.05-V17-FLUID-MOTION-SLEEK-UI",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -283,36 +283,42 @@ local n = {
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
-    Main = Color3.fromRGB(7, 10, 14),
-    MainSoft = Color3.fromRGB(10, 14, 19),
-    Text = Color3.fromRGB(224, 231, 239),
-    TextStrong = Color3.fromRGB(248, 251, 255),
-    Surface = Color3.fromRGB(13, 18, 24),
-    SurfaceSoft = Color3.fromRGB(17, 23, 30),
-    SurfaceHover = Color3.fromRGB(22, 30, 39),
-    Elevated = Color3.fromRGB(24, 33, 42),
-    ElevatedHover = Color3.fromRGB(30, 42, 54),
-    Border = Color3.fromRGB(34, 46, 58),
-    BorderStrong = Color3.fromRGB(63, 84, 101),
-    MutedText = Color3.fromRGB(158, 169, 184),
-    FaintText = Color3.fromRGB(103, 117, 132),
-    Danger = Color3.fromRGB(248, 101, 122),
-    Warning = Color3.fromRGB(247, 188, 91),
-    Success = Color3.fromRGB(80, 221, 167),
-    Shadow = Color3.fromRGB(0, 2, 5),
-    RadiusSmall = UDim.new(0, 4),
-    Radius = UDim.new(0, 7),
-    RadiusLarge = UDim.new(0, 10),
+    Main = Color3.fromRGB(8, 11, 15),
+    MainSoft = Color3.fromRGB(11, 15, 20),
+    Text = Color3.fromRGB(221, 228, 236),
+    TextStrong = Color3.fromRGB(248, 250, 252),
+    Surface = Color3.fromRGB(15, 20, 26),
+    SurfaceSoft = Color3.fromRGB(18, 24, 31),
+    SurfaceHover = Color3.fromRGB(23, 31, 40),
+    Elevated = Color3.fromRGB(20, 27, 35),
+    ElevatedHover = Color3.fromRGB(27, 36, 46),
+    Border = Color3.fromRGB(37, 47, 59),
+    BorderStrong = Color3.fromRGB(64, 82, 98),
+    MutedText = Color3.fromRGB(159, 171, 186),
+    FaintText = Color3.fromRGB(101, 114, 129),
+    Danger = Color3.fromRGB(245, 93, 118),
+    Warning = Color3.fromRGB(245, 184, 86),
+    Success = Color3.fromRGB(70, 215, 156),
+    Shadow = Color3.fromRGB(0, 3, 7),
+    RadiusSmall = UDim.new(0, 6),
+    Radius = UDim.new(0, 10),
+    RadiusLarge = UDim.new(0, 14),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
-    TweenPress = TweenInfo.new(0.065, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    TweenFast = TweenInfo.new(0.11, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Tween = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSlow = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSpring = TweenInfo.new(0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenBack = TweenInfo.new(0.19, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenPress = TweenInfo.new(0.055, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenFast = TweenInfo.new(0.085, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    Tween = TweenInfo.new(0.135, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSlow = TweenInfo.new(0.175, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSpring = TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenBack = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 }
+
+local UI_WINDOW_WIDTH = 244
+local UI_HEADER_HEIGHT = 48
+local UI_MODULE_ROW_HEIGHT = d.isMobile and 50 or 42
+local UI_NAV_ROW_HEIGHT = d.isMobile and 48 or 42
+local UI_WINDOW_GAP = 12
 
 local function getTableSize(p)
     if type(p) ~= "table" then
@@ -1128,8 +1134,8 @@ local function addAccentLine(F, G)
         end)
     end
 
-    H.Size = UDim2.fromOffset(G or 3, 18)
-    H.Position = UDim2.fromOffset(1, 10)
+    H.Size = UDim2.fromOffset(30, G or 2)
+    H.Position = UDim2.fromOffset(12, 1)
     H.BackgroundColor3 = Color3.fromHSV(
         d.GUIColor.Hue,
         d.GUIColor.Sat,
@@ -1140,60 +1146,9 @@ local function addAccentLine(F, G)
 end
 
 local function addV9Chrome(F, label)
-    local existing = F:FindFirstChild("FrameGuide")
-    if existing then
-        return existing
-    end
-
-    local root = Instance.new("Frame")
-    root.Name = "FrameGuide"
-    root.Size = UDim2.fromScale(1, 1)
-    root.BackgroundTransparency = 1
-    root.BorderSizePixel = 0
-    root.ZIndex = F.ZIndex + 3
-    root.Active = false
-    root.Parent = F
-
-    local topTick = Instance.new("Frame")
-    topTick.Name = "TopTick"
-    topTick.Size = UDim2.fromOffset(22, 1)
-    topTick.Position = UDim2.fromOffset(12, 1)
-    topTick.BorderSizePixel = 0
-    topTick.BackgroundTransparency = 0.26
-    topTick.Parent = root
-
-    local sideTick = Instance.new("Frame")
-    sideTick.Name = "SideTick"
-    sideTick.Size = UDim2.fromOffset(1, 12)
-    sideTick.Position = UDim2.fromOffset(1, 12)
-    sideTick.BorderSizePixel = 0
-    sideTick.BackgroundTransparency = 0.34
-    sideTick.Parent = root
-
-    local endCap = Instance.new("Frame")
-    endCap.Name = "EndCap"
-    endCap.Size = UDim2.fromOffset(4, 4)
-    endCap.AnchorPoint = Vector2.new(1, 1)
-    endCap.Position = UDim2.new(1, -8, 1, -8)
-    endCap.BorderSizePixel = 0
-    endCap.BackgroundTransparency = 0.42
-    endCap.Parent = root
-    addCorner(endCap, UDim.new(1, 0))
-
-    local function recolor()
-        local accent = Color3.fromHSV(
-            d.GUIColor.Hue,
-            d.GUIColor.Sat,
-            d.GUIColor.Value
-        )
-        topTick.BackgroundColor3 = accent
-        sideTick.BackgroundColor3 = accent:Lerp(o.BorderStrong, 0.45)
-        endCap.BackgroundColor3 = accent
-    end
-
-    recolor()
-    connectguicolorchange(recolor)
-    return root
+    -- V17 intentionally removes the decorative corner ticks. The previous
+    -- chrome added visual noise to every panel without improving hierarchy.
+    return nil
 end
 
 local function addV9Sweep(F)
@@ -1213,33 +1168,58 @@ local function bindPremiumMotion(F, G, H, I)
     local J = addScale(G or F)
     local K = H
     local L = I or {}
+    local hovered = false
+    local pressed = false
 
-    F.MouseEnter:Connect(function()
-        n:Tween(J, o.TweenFast, { Scale = 1 })
+    local function updateMotion()
+        local targetScale
+        if pressed then
+            targetScale = L.PressScale or 0.985
+        elseif hovered then
+            targetScale = L.HoverScale or 1.008
+        else
+            targetScale = 1
+        end
+
+        n:Tween(J, pressed and o.TweenPress or o.TweenFast, {
+            Scale = targetScale,
+        })
+
         if K then
             n:Tween(K, o.TweenFast, {
-                Color = L.HoverStroke or Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-                Transparency = L.HoverTransparency or 0.2,
+                Color = hovered
+                        and (L.HoverStroke or Color3.fromHSV(
+                            d.GUIColor.Hue,
+                            d.GUIColor.Sat,
+                            d.GUIColor.Value
+                        ))
+                    or (L.NormalStroke or o.Border),
+                Transparency = hovered
+                        and (L.HoverTransparency or 0.28)
+                    or (L.NormalTransparency or 0.68),
             })
         end
+    end
+
+    F.MouseEnter:Connect(function()
+        hovered = true
+        updateMotion()
     end)
 
     F.MouseLeave:Connect(function()
-        n:Tween(J, o.TweenFast, { Scale = 1 })
-        if K then
-            n:Tween(K, o.TweenFast, {
-                Color = L.NormalStroke or o.Border,
-                Transparency = L.NormalTransparency or 0.58,
-            })
-        end
+        hovered = false
+        pressed = false
+        updateMotion()
     end)
 
     F.MouseButton1Down:Connect(function()
-        n:Tween(J, o.TweenPress, { Scale = L.PressScale or 0.994 })
+        pressed = true
+        updateMotion()
     end)
 
     F.MouseButton1Up:Connect(function()
-        n:Tween(J, o.TweenFast, { Scale = 1 })
+        pressed = false
+        updateMotion()
     end)
 end
 
@@ -2349,22 +2329,8 @@ function LayoutIntelligence:Start()
         return
     end
     self.started = true
-
-    d:Clean(k.Heartbeat:Connect(function()
-        local now = os.clock()
-        if now - self.lastStep < self.stepInterval then
-            return
-        end
-        self.lastStep = now
-
-        if self.activeObject then
-            return
-        end
-
-        if self.dirty then
-            self:ResolveAll()
-        end
-    end))
+    -- Layout work is event-driven through RequestResolve. A permanent
+    -- Heartbeat listener made idle UI pay a cost even when nothing moved.
 end
 -- BADWARS_ADAPTIVE_LAYOUT_ENGINE_V1_END
 
@@ -2657,6 +2623,49 @@ do
         end
     end
 
+    local function createMotionState()
+        return {
+            __MotionState = true,
+            Tweens = {},
+            Properties = {},
+            Targets = {},
+        }
+    end
+
+    local function stateIsEmpty(state)
+        return next(state.Tweens) == nil
+    end
+
+    local function removeTweenFromState(H, instance, registry, state, tween, preserve)
+        local targets = state.Targets[tween]
+        if preserve and targets and instance.Parent then
+            for property, value in pairs(targets) do
+                if not preserve[property] then
+                    pcall(function()
+                        instance[property] = value
+                    end)
+                end
+            end
+        end
+
+        disconnectTweenCompletion(H, tween)
+        pcall(function()
+            tween:Cancel()
+        end)
+
+        state.Tweens[tween] = nil
+        state.Targets[tween] = nil
+        for property, activeTween in pairs(state.Properties) do
+            if activeTween == tween then
+                state.Properties[property] = nil
+            end
+        end
+
+        if stateIsEmpty(state) and registry[instance] == state then
+            registry[instance] = nil
+        end
+    end
+
     function n.Tween(H, I, J, K, L, M, N)
         if type(L) == "boolean" then
             M = L
@@ -2689,15 +2698,30 @@ do
         end
 
         L = L or H.tweens
-        local previous = L[I]
-        if previous then
-            disconnectTweenCompletion(H, previous)
-            pcall(function()
-                previous:Cancel()
-            end)
-            if L[I] == previous then
-                L[I] = nil
+        local state = L[I]
+        if type(state) ~= "table" or state.__MotionState ~= true then
+            if state then
+                disconnectTweenCompletion(H, state)
+                pcall(function()
+                    state:Cancel()
+                end)
             end
+            state = createMotionState()
+            L[I] = state
+        end
+
+        local replacing = {}
+        local toCancel = {}
+        for property in pairs(K) do
+            replacing[property] = true
+            local activeTween = state.Properties[property]
+            if activeTween then
+                toCancel[activeTween] = true
+            end
+        end
+
+        for activeTween in pairs(toCancel) do
+            removeTweenFromState(H, I, L, state, activeTween, replacing)
         end
 
         if not I.Parent then
@@ -2706,6 +2730,9 @@ do
                     I[property] = value
                 end
             end)
+            if stateIsEmpty(state) and L[I] == state then
+                L[I] = nil
+            end
             return nil
         end
 
@@ -2726,17 +2753,32 @@ do
                 end
             end)
 
+            if stateIsEmpty(state) and L[I] == state then
+                L[I] = nil
+            end
             return nil
         end
 
-        L[I] = tween
+        state.Tweens[tween] = true
+        state.Targets[tween] = K
+        for property in pairs(K) do
+            state.Properties[property] = tween
+        end
+
         local connection
         connection = tween.Completed:Connect(function(playbackState)
-            if L[I] ~= tween then
+            if not state.Tweens[tween] then
                 disconnectTweenCompletion(H, tween)
                 return
             end
-            L[I] = nil
+
+            state.Tweens[tween] = nil
+            state.Targets[tween] = nil
+            for property, activeTween in pairs(state.Properties) do
+                if activeTween == tween then
+                    state.Properties[property] = nil
+                end
+            end
             disconnectTweenCompletion(H, tween)
 
             if playbackState == Enum.PlaybackState.Completed and not N then
@@ -2745,6 +2787,10 @@ do
                         I[property] = value
                     end
                 end)
+            end
+
+            if stateIsEmpty(state) and L[I] == state then
+                L[I] = nil
             end
         end)
         H.completionConnections[tween] = connection
@@ -2756,17 +2802,41 @@ do
     end
     n.tween = n.Tween
 
-    function n.Cancel(H, I, L)
+    function n.Cancel(H, I, L, property)
         L = L or H.tweens
-        local tween = L[I]
-        if tween then
-            disconnectTweenCompletion(H, tween)
+        local state = L[I]
+        if not state then
+            return
+        end
+
+        if type(state) ~= "table" or state.__MotionState ~= true then
+            disconnectTweenCompletion(H, state)
             pcall(function()
-                tween:Cancel()
+                state:Cancel()
             end)
-            if L[I] == tween then
+            if L[I] == state then
                 L[I] = nil
             end
+            return
+        end
+
+        if property ~= nil then
+            local tween = state.Properties[property]
+            if tween then
+                removeTweenFromState(H, I, L, state, tween)
+            end
+            return
+        end
+
+        local active = {}
+        for tween in pairs(state.Tweens) do
+            active[#active + 1] = tween
+        end
+        for _, tween in ipairs(active) do
+            removeTweenFromState(H, I, L, state, tween)
+        end
+        if L[I] == state then
+            L[I] = nil
         end
     end
     n.cancel = n.Cancel
@@ -3471,7 +3541,7 @@ H = {
 
         local baseSize =
             settings.Size
-            or UDim2.new(1, 0, 0, d.isMobile and 46 or 40)
+            or UDim2.new(1, 0, 0, d.isMobile and 48 or 42)
 
         local root = Instance.new("TextButton")
         root.Name = tostring(settings.Name) .. "Dropdown"
@@ -3496,15 +3566,15 @@ H = {
         background.Position = UDim2.fromOffset(8, 3)
         background.BackgroundColor3 =
             settings.Darker and o.MainSoft or o.Surface
+        background.BackgroundTransparency = 0.08
         background.BorderSizePixel = 0
         background.Parent = root
         addCorner(background, o.Radius)
-        addSurfaceGradient(background)
 
         local stroke = addStroke(
             background,
             o.Border,
-            0.76,
+            0.78,
             1,
             "DropdownStroke"
         )
@@ -3522,8 +3592,8 @@ H = {
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
-        title.Size = UDim2.new(1, -38, 1, 0)
-        title.Position = UDim2.fromOffset(12, 0)
+        title.Size = UDim2.new(1, -42, 1, 0)
+        title.Position = UDim2.fromOffset(13, 0)
         title.BackgroundTransparency = 1
         title.TextXAlignment = Enum.TextXAlignment.Left
         title.TextColor3 = o.MutedText
@@ -3535,31 +3605,46 @@ H = {
         local arrow = Instance.new("ImageLabel")
         arrow.Name = "Arrow"
         arrow.Size = UDim2.fromOffset(5, 9)
-        arrow.Position = UDim2.new(1, -19, 0.5, -4)
+        arrow.Position = UDim2.new(1, -20, 0.5, -4)
         arrow.BackgroundTransparency = 1
         arrow.Image = u("badscript/assets/new/expandright.png")
-        arrow.ImageColor3 = o.MutedText
+        arrow.ImageColor3 = o.FaintText
         arrow.Rotation = 90
         arrow.Parent = button
 
         local popup
         local popupScale
         local popupStroke
-        local popupShadow
+        local search
+        local scroll
+        local noResults
         local outsideConnection
         local scrollConnection
         local popupGeneration = 0
-        local dropdownTransition = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local popupOpen = false
+        local rowHeight = d.isMobile and 44 or 34
+        local maxRows = 7
+        local poolSize = maxRows + 2
+        local rowButtons = {}
+        local rowRails = {}
+        local rowBindings = setmetatable({}, { __mode = "k" })
+        local hoveredRows = setmetatable({}, { __mode = "k" })
+        local filtered = {}
+        local dropdownTransition = TweenInfo.new(
+            0.075,
+            Enum.EasingStyle.Quart,
+            Enum.EasingDirection.Out
+        )
 
         local function updateTitle()
             title.Text =
                 tostring(settings.Name)
-                .. "  |  "
+                .. "   "
                 .. tostring(api.Value)
         end
 
         local function pointInObject(point, object)
-            if not object or not object.Parent then
+            if not object or not object.Parent or not object.Visible then
                 return false
             end
 
@@ -3572,35 +3657,562 @@ H = {
                 and point.Y <= position.Y + size.Y
         end
 
+        local function applyRowVisual(option, animate)
+            local entry = rowBindings[option]
+            if not entry then
+                return
+            end
+
+            local selected = entry.Value == api.Value
+            local hovered = hoveredRows[option] == true
+            local accent = Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            )
+            local target = {
+                BackgroundColor3 = hovered and o.SurfaceHover
+                    or (selected and o.Elevated or o.Surface),
+                BackgroundTransparency = hovered and 0.02
+                    or (selected and 0.08 or 0.34),
+                TextColor3 = hovered and o.TextStrong
+                    or (selected and o.Text or o.MutedText),
+            }
+
+            option.FontFace = selected and o.FontSemiBold or o.Font
+            local rail = rowRails[option]
+            if rail then
+                rail.Visible = selected
+                rail.BackgroundColor3 = accent
+            end
+
+            if animate then
+                n:Tween(option, o.TweenFast, target)
+            else
+                for property, value in pairs(target) do
+                    option[property] = value
+                end
+            end
+        end
+
+        local function updateVirtualRows(animate)
+            if not scroll then
+                return
+            end
+
+            local firstIndex = math.max(
+                1,
+                math.floor(scroll.CanvasPosition.Y / rowHeight) + 1
+            )
+
+            for poolIndex, option in ipairs(rowButtons) do
+                local dataIndex = firstIndex + poolIndex - 1
+                local entry = filtered[dataIndex]
+                rowBindings[option] = entry
+
+                if entry then
+                    option.Visible = true
+                    option.Position = UDim2.fromOffset(
+                        2,
+                        (dataIndex - 1) * rowHeight
+                    )
+                    option.Text = "   " .. entry.Display
+                    applyRowVisual(option, animate == true)
+                else
+                    option.Visible = false
+                    hoveredRows[option] = nil
+                end
+            end
+        end
+
+        local function positionPopup(height)
+            if not popup or not popup.Parent then
+                return
+            end
+
+            local scale = math.max(A.Scale, 0.01)
+            local rootPosition = root.AbsolutePosition
+            local rootSize = root.AbsoluteSize
+            local rootOrigin = w.AbsolutePosition
+            local viewportWidth = B.AbsoluteSize.X / scale
+            local viewportHeight = B.AbsoluteSize.Y / scale
+            local popupWidth = math.clamp(
+                math.max(
+                    172,
+                    (rootSize.X / scale) - 16
+                ),
+                172,
+                math.max(172, viewportWidth - 16)
+            )
+            local x = (rootPosition.X - rootOrigin.X) / scale + 8
+            local belowY =
+                (rootPosition.Y - rootOrigin.Y) / scale
+                + (rootSize.Y / scale)
+                - 2
+            local aboveY =
+                (rootPosition.Y - rootOrigin.Y) / scale
+                - height
+                + 2
+
+            x = math.clamp(
+                x,
+                8,
+                math.max(8, viewportWidth - popupWidth - 8)
+            )
+
+            local y =
+                belowY + height <= viewportHeight - 8
+                    and belowY
+                or math.max(8, aboveY)
+
+            popup.Position = UDim2.fromOffset(x, y)
+            popup.Size = UDim2.fromOffset(popupWidth, height)
+        end
+
+        local function rebuildFiltered(query)
+            table.clear(filtered)
+            query = tostring(query or ""):lower()
+            for _, item in ipairs(settings.List) do
+                local display = tostring(item)
+                if query == ""
+                    or string.find(display:lower(), query, 1, true) ~= nil
+                then
+                    filtered[#filtered + 1] = {
+                        Value = item,
+                        Display = display,
+                    }
+                end
+            end
+        end
+
+        local function refreshPopup(query, keepScroll)
+            if not popup then
+                return
+            end
+
+            rebuildFiltered(query)
+            local showSearch =
+                settings.Search == true
+                or (
+                    settings.Search ~= false
+                    and #settings.List > maxRows
+                )
+            local searchHeight = showSearch and 36 or 0
+            search.Visible = showSearch
+            scroll.Position = UDim2.fromOffset(
+                5,
+                5 + searchHeight
+            )
+
+            local visibleCount = #filtered
+            local rows = math.max(
+                1,
+                math.min(maxRows, visibleCount)
+            )
+            local listHeight = rows * rowHeight
+            local popupHeight = 10 + searchHeight + listHeight
+
+            noResults.Visible = visibleCount == 0
+            scroll.Size = UDim2.new(
+                1,
+                -10,
+                0,
+                listHeight
+            )
+            scroll.CanvasSize = UDim2.fromOffset(
+                0,
+                math.max(rowHeight, visibleCount * rowHeight)
+            )
+
+            if not keepScroll then
+                local selectedIndex
+                for index, entry in ipairs(filtered) do
+                    if entry.Value == api.Value then
+                        selectedIndex = index
+                        break
+                    end
+                end
+
+                if selectedIndex then
+                    local targetY = math.max(
+                        0,
+                        (selectedIndex - 3) * rowHeight
+                    )
+                    local maxY = math.max(
+                        0,
+                        visibleCount * rowHeight - listHeight
+                    )
+                    scroll.CanvasPosition = Vector2.new(
+                        0,
+                        math.clamp(targetY, 0, maxY)
+                    )
+                else
+                    scroll.CanvasPosition = Vector2.zero
+                end
+            else
+                local maxY = math.max(
+                    0,
+                    visibleCount * rowHeight - listHeight
+                )
+                scroll.CanvasPosition = Vector2.new(
+                    0,
+                    math.clamp(scroll.CanvasPosition.Y, 0, maxY)
+                )
+            end
+
+            positionPopup(popupHeight)
+            updateVirtualRows(false)
+        end
+
+        local function ensurePopup()
+            if popup and popup.Parent then
+                return
+            end
+
+            popup = Instance.new("CanvasGroup")
+            popup.Name = tostring(settings.Name) .. "DropdownPopup"
+            popup.Size = UDim2.fromOffset(172, rowHeight + 10)
+            popup.BackgroundColor3 = o.Elevated
+            popup.BackgroundTransparency = 0.04
+            popup.GroupTransparency = 1
+            popup.BorderSizePixel = 0
+            popup.ClipsDescendants = true
+            popup.ZIndex = 20000
+            popup.Visible = false
+            popup.Active = false
+            popup.Interactable = false
+            popup.Parent = w
+            addCorner(popup, o.RadiusLarge)
+            popupStroke = addStroke(
+                popup,
+                o.BorderStrong,
+                0.58,
+                1,
+                "DropdownPopupStroke"
+            )
+            popupScale = addScale(popup)
+            popupScale.Scale = 0.985
+
+            local accentLine = Instance.new("Frame")
+            accentLine.Name = "Accent"
+            accentLine.Size = UDim2.new(1, -20, 0, 2)
+            accentLine.Position = UDim2.fromOffset(10, 0)
+            accentLine.BackgroundColor3 = Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            )
+            accentLine.BackgroundTransparency = 0.18
+            accentLine.BorderSizePixel = 0
+            accentLine.ZIndex = 20003
+            accentLine.Parent = popup
+            addCorner(accentLine, UDim.new(1, 0))
+            connectguicolorchange(function(hue, saturation, value)
+                if accentLine.Parent then
+                    accentLine.BackgroundColor3 =
+                        Color3.fromHSV(hue, saturation, value)
+                end
+            end)
+
+            search = Instance.new("TextBox")
+            search.Name = "SearchBar"
+            search.Size = UDim2.new(1, -12, 0, 29)
+            search.Position = UDim2.fromOffset(6, 5)
+            search.BackgroundColor3 = o.MainSoft
+            search.BackgroundTransparency = 0.08
+            search.BorderSizePixel = 0
+            search.PlaceholderText = "Search"
+            search.PlaceholderColor3 = o.FaintText
+            search.Text = ""
+            search.TextColor3 = o.Text
+            search.TextSize = d.isMobile and 14 or 13
+            search.FontFace = o.Font
+            search.ClearTextOnFocus = false
+            search.ZIndex = 20002
+            search.Parent = popup
+            addCorner(search, o.RadiusSmall)
+            addStroke(
+                search,
+                o.Border,
+                0.78,
+                1,
+                "DropdownSearchStroke"
+            )
+
+            scroll = Instance.new("ScrollingFrame")
+            scroll.Name = "Scroll"
+            scroll.Position = UDim2.fromOffset(5, 5)
+            scroll.Size = UDim2.new(1, -10, 0, rowHeight)
+            scroll.BackgroundTransparency = 1
+            scroll.BorderSizePixel = 0
+            scroll.ScrollBarImageColor3 = o.BorderStrong
+            scroll.ScrollBarImageTransparency =
+                d.isMobile and 0.24 or 0.62
+            scroll.ScrollBarThickness =
+                d.isMobile and 6 or 3
+            scroll.VerticalScrollBarInset =
+                Enum.ScrollBarInset.ScrollBar
+            scroll.ElasticBehavior =
+                Enum.ElasticBehavior.Never
+            scroll.AutomaticCanvasSize =
+                Enum.AutomaticSize.None
+            scroll.CanvasSize = UDim2.new()
+            scroll.ScrollingDirection =
+                Enum.ScrollingDirection.Y
+            scroll.ZIndex = 20001
+            scroll.Parent = popup
+
+            noResults = Instance.new("TextLabel")
+            noResults.Name = "NoResults"
+            noResults.Size = UDim2.new(1, 0, 0, rowHeight)
+            noResults.BackgroundTransparency = 1
+            noResults.Text = "No matching options"
+            noResults.TextColor3 = o.MutedText
+            noResults.TextSize = d.isMobile and 14 or 13
+            noResults.FontFace = o.Font
+            noResults.Visible = false
+            noResults.ZIndex = 20002
+            noResults.Parent = scroll
+
+            for index = 1, poolSize do
+                local option = Instance.new("TextButton")
+                option.Name = "VirtualOption_" .. tostring(index)
+                option.Size = UDim2.new(
+                    1,
+                    -4,
+                    0,
+                    rowHeight - 2
+                )
+                option.BackgroundColor3 = o.Surface
+                option.BackgroundTransparency = 0.34
+                option.BorderSizePixel = 0
+                option.AutoButtonColor = false
+                option.Text = ""
+                option.TextColor3 = o.MutedText
+                option.TextXAlignment = Enum.TextXAlignment.Left
+                option.TextSize = d.isMobile and 14 or 13
+                option.FontFace = o.Font
+                option.Visible = false
+                option.ZIndex = 20002
+                option.Parent = scroll
+                addCorner(option, o.RadiusSmall)
+
+                local rail = Instance.new("Frame")
+                rail.Name = "SelectedRail"
+                rail.Size = UDim2.fromOffset(2, 16)
+                rail.AnchorPoint = Vector2.new(0, 0.5)
+                rail.Position = UDim2.new(0, 1, 0.5, 0)
+                rail.BorderSizePixel = 0
+                rail.Visible = false
+                rail.ZIndex = option.ZIndex + 1
+                rail.Parent = option
+                addCorner(rail, UDim.new(1, 0))
+
+                rowButtons[index] = option
+                rowRails[option] = rail
+
+                if not d.isMobile then
+                    option.MouseEnter:Connect(function()
+                        hoveredRows[option] = true
+                        applyRowVisual(option, true)
+                    end)
+                    option.MouseLeave:Connect(function()
+                        hoveredRows[option] = nil
+                        applyRowVisual(option, true)
+                    end)
+                end
+
+                option.Activated:Connect(function()
+                    local entry = rowBindings[option]
+                    if entry then
+                        api:SetValue(entry.Value, true)
+                    end
+                end)
+            end
+
+            search:GetPropertyChangedSignal("Text"):Connect(function()
+                if popupOpen then
+                    refreshPopup(search.Text, false)
+                end
+            end)
+
+            scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+                updateVirtualRows(false)
+            end)
+        end
+
         local function closeDropdown(instant)
             popupGeneration += 1
-            if outsideConnection then outsideConnection:Disconnect(); outsideConnection = nil end
-            if scrollConnection then scrollConnection:Disconnect(); scrollConnection = nil end
-            if d._OpenDropdown == closeDropdown then d._OpenDropdown = nil end
+            local closeGeneration = popupGeneration
+            popupOpen = false
+
+            if outsideConnection then
+                outsideConnection:Disconnect()
+                outsideConnection = nil
+            end
+            if scrollConnection then
+                scrollConnection:Disconnect()
+                scrollConnection = nil
+            end
+            if d._OpenDropdown == closeDropdown then
+                d._OpenDropdown = nil
+            end
 
             if instant then
                 arrow.Rotation = 90
-                arrow.ImageColor3 = o.MutedText
-                background.BackgroundColor3 = settings.Darker and o.MainSoft or o.Surface
+                arrow.ImageColor3 = o.FaintText
+                background.BackgroundColor3 =
+                    settings.Darker and o.MainSoft or o.Surface
+                background.BackgroundTransparency = 0.08
                 stroke.Color = o.Border
-                stroke.Transparency = 0.76
+                stroke.Transparency = 0.78
             else
-                n:Tween(arrow, dropdownTransition, { Rotation = 90, ImageColor3 = o.MutedText })
-                n:Tween(background, dropdownTransition, { BackgroundColor3 = settings.Darker and o.MainSoft or o.Surface })
-                n:Tween(stroke, dropdownTransition, { Color = o.Border, Transparency = 0.76 })
+                n:Tween(arrow, dropdownTransition, {
+                    Rotation = 90,
+                    ImageColor3 = o.FaintText,
+                })
+                n:Tween(background, dropdownTransition, {
+                    BackgroundColor3 =
+                        settings.Darker and o.MainSoft or o.Surface,
+                    BackgroundTransparency = 0.08,
+                })
+                n:Tween(stroke, dropdownTransition, {
+                    Color = o.Border,
+                    Transparency = 0.78,
+                })
             end
 
-            local closingPopup, closingScale = popup, popupScale
-            local closingStroke, closingShadow = popupStroke, popupShadow
-            popup, popupScale, popupStroke, popupShadow = nil, nil, nil, nil
-            if not closingPopup or not closingPopup.Parent then return end
-
-            local function destroyPopup()
-                if closingPopup and closingPopup.Parent then closingPopup:Destroy() end
+            if not popup or not popup.Parent then
+                return
             end
-            if instant or not d.Loaded then destroyPopup(); return end
 
-            closingPopup.Active = false closingPopup.GroupTransparency = 1 closingPopup.BackgroundTransparency = 1 destroyPopup()
+            popup.Active = false
+            popup.Interactable = false
+
+            if instant or not d.Loaded then
+                popup.Visible = false
+                popup.GroupTransparency = 1
+                popupScale.Scale = 0.985
+                return
+            end
+
+            local fade = n:Tween(popup, dropdownTransition, {
+                GroupTransparency = 1,
+                BackgroundTransparency = 0.08,
+            })
+            n:Tween(popupScale, dropdownTransition, {
+                Scale = 0.985,
+            })
+            n:Tween(popupStroke, dropdownTransition, {
+                Transparency = 0.82,
+            })
+
+            local function finishClose()
+                if popup
+                    and popup.Parent
+                    and not popupOpen
+                    and closeGeneration == popupGeneration
+                then
+                    popup.Visible = false
+                end
+            end
+
+            if fade then
+                fade.Completed:Once(finishClose)
+            else
+                finishClose()
+            end
+        end
+
+        local function openDropdown()
+            if popupOpen then
+                closeDropdown()
+                return
+            end
+
+            if d._OpenDropdown and d._OpenDropdown ~= closeDropdown then
+                pcall(d._OpenDropdown)
+            end
+
+            ensurePopup()
+            popupGeneration += 1
+            popupOpen = true
+            d._OpenDropdown = closeDropdown
+
+            refreshPopup(search.Text, false)
+            popup.Visible = true
+            popup.Active = true
+            popup.Interactable = true
+            popup.GroupTransparency = 0.08
+            popup.BackgroundTransparency = 0.08
+            popupScale.Scale = 0.985
+            popupStroke.Transparency = 0.82
+
+            local accent = Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            )
+            n:Tween(arrow, dropdownTransition, {
+                Rotation = 270,
+                ImageColor3 = accent,
+            })
+            n:Tween(background, dropdownTransition, {
+                BackgroundColor3 = o.SurfaceHover,
+                BackgroundTransparency = 0.02,
+            })
+            n:Tween(stroke, dropdownTransition, {
+                Color = accent:Lerp(o.BorderStrong, 0.58),
+                Transparency = 0.38,
+            })
+            n:Tween(popup, dropdownTransition, {
+                GroupTransparency = 0,
+                BackgroundTransparency = 0.02,
+            })
+            n:Tween(popupScale, dropdownTransition, {
+                Scale = 1,
+            })
+            n:Tween(popupStroke, dropdownTransition, {
+                Color = accent:Lerp(o.BorderStrong, 0.72),
+                Transparency = 0.48,
+            })
+
+            local scrollingParent = parent
+            while
+                scrollingParent
+                and not scrollingParent:IsA("ScrollingFrame")
+            do
+                scrollingParent = scrollingParent.Parent
+            end
+
+            if scrollingParent then
+                scrollConnection =
+                    scrollingParent:GetPropertyChangedSignal(
+                        "CanvasPosition"
+                    ):Connect(function()
+                        closeDropdown(true)
+                    end)
+            end
+
+            outsideConnection = h.InputBegan:Connect(function(input)
+                if input.KeyCode == Enum.KeyCode.Escape then
+                    closeDropdown()
+                    return
+                end
+
+                if input.UserInputType
+                        == Enum.UserInputType.MouseButton1
+                    or input.UserInputType
+                        == Enum.UserInputType.Touch
+                then
+                    local point = input.Position
+                    if not pointInObject(point, root)
+                        and not pointInObject(point, popup)
+                    then
+                        closeDropdown()
+                    end
+                end
+            end)
         end
 
         function api.Save(self, target)
@@ -3615,7 +4227,6 @@ H = {
             if settings.NoSave or type(saved) ~= "table" then
                 return
             end
-
             self:SetValue(saved.Value, false)
         end
 
@@ -3630,6 +4241,9 @@ H = {
                 or "None"
 
             self:SetValue(desired, not suppressCallback)
+            if popup then
+                refreshPopup(search.Text, false)
+            end
         end
 
         function api.SetValues(self, newList, newValue)
@@ -3644,6 +4258,9 @@ H = {
             end
 
             self:SetValue(desired, false)
+            if popup then
+                refreshPopup(search.Text, false)
+            end
         end
 
         function api.SetCallback(self, callback)
@@ -3662,6 +4279,10 @@ H = {
             local changed = self.Value ~= selected
             self.Value = selected
             updateTitle()
+
+            if popup then
+                refreshPopup(search.Text, true)
+            end
             closeDropdown()
 
             if changed or fromUser then
@@ -3669,397 +4290,46 @@ H = {
             end
         end
 
-        local function openDropdown()
-            if popup then
-                closeDropdown()
-                return
-            end
-
-            if d._OpenDropdown and d._OpenDropdown ~= closeDropdown then
-                pcall(d._OpenDropdown)
-            end
-
-            popupGeneration += 1
-            local openGeneration = popupGeneration
-            d._OpenDropdown = closeDropdown
-
-            n:Tween(arrow, dropdownTransition, {
-                Rotation = 270,
-                ImageColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-            })
-            n:Tween(background, dropdownTransition, { BackgroundColor3 = o.SurfaceHover })
-            n:Tween(stroke, dropdownTransition, {
-                Color = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value),
-                Transparency = 0.52,
-            })
-
-            local rowHeight = d.isMobile and 42 or 32
-            local searchHeight = 34
-            local maxRows = 7
-
-            popup = Instance.new("CanvasGroup")
-            popup.Name = tostring(settings.Name) .. "DropdownPopup"
-            popup.Size = UDim2.fromOffset(
-                math.max(160, root.AbsoluteSize.X / math.max(A.Scale, 0.01) - 16),
-                searchHeight + rowHeight + 8
-            )
-            popup.BackgroundColor3 = o.Elevated
-            popup.BackgroundTransparency = 1
-            popup.GroupTransparency = 1
-            popup.BorderSizePixel = 0
-            popup.ClipsDescendants = true
-            popup.ZIndex = 20000
-            popup.Parent = w
-            addCorner(popup, o.Radius) popupShadow = nil
-            popupStroke = addStroke(popup, o.BorderStrong, 1, 1, "DropdownPopupStroke")
-            popupScale = addScale(popup)
-            popupScale.Scale = 1
-
-            local search = Instance.new("TextBox")
-            search.Name = "SearchBar"
-            search.Size = UDim2.new(
-                1,
-                -12,
-                0,
-                searchHeight - 7
-            )
-            search.Position = UDim2.fromOffset(6, 4)
-            search.BackgroundColor3 = o.MainSoft
-            search.BorderSizePixel = 0
-            search.PlaceholderText = "Search options"
-            search.PlaceholderColor3 = o.FaintText
-            search.Text = ""
-            search.TextColor3 = o.Text
-            search.TextSize = d.isMobile and 14 or 13
-            search.FontFace = o.Font
-            search.ClearTextOnFocus = false
-            search.ZIndex = 20002
-            search.Parent = popup
-            addCorner(search, o.RadiusSmall)
-            addStroke(
-                search,
-                o.Border,
-                0.76,
-                1,
-                "DropdownSearchStroke"
-            )
-
-            local scroll = Instance.new("ScrollingFrame")
-            scroll.Name = "Scroll"
-            scroll.Position = UDim2.fromOffset(5, searchHeight)
-            scroll.Size = UDim2.new(
-                1,
-                -10,
-                0,
-                rowHeight
-            )
-            scroll.BackgroundTransparency = 1
-            scroll.BorderSizePixel = 0
-            scroll.ScrollBarImageColor3 = o.BorderStrong
-            scroll.ScrollBarImageTransparency =
-                d.isMobile and 0.25 or 0.56
-            scroll.ScrollBarThickness =
-                d.isMobile and 7 or 3
-            scroll.VerticalScrollBarInset =
-                Enum.ScrollBarInset.ScrollBar
-            scroll.ElasticBehavior =
-                Enum.ElasticBehavior.Never
-            scroll.AutomaticCanvasSize =
-                Enum.AutomaticSize.None
-            scroll.CanvasSize = UDim2.new()
-            scroll.ScrollingDirection =
-                Enum.ScrollingDirection.Y
-            scroll.ZIndex = 20001
-            scroll.Parent = popup
-
-            local noResults = Instance.new("TextLabel")
-            noResults.Name = "NoResults"
-            noResults.Size = UDim2.new(
-                1,
-                0,
-                0,
-                rowHeight
-            )
-            noResults.BackgroundTransparency = 1
-            noResults.Text = "No matching options"
-            noResults.TextColor3 = o.MutedText
-            noResults.TextSize = d.isMobile and 14 or 13
-            noResults.FontFace = o.Font
-            noResults.Visible = false
-            noResults.ZIndex = 20002
-            noResults.Parent = scroll
-
-            local entries = {}
-
-            for index, item in ipairs(settings.List) do
-                local display = tostring(item)
-                local option = Instance.new("TextButton")
-                option.Name = "Option_" .. tostring(index)
-                option.Size = UDim2.new(
-                    1,
-                    -4,
-                    0,
-                    rowHeight - 2
-                )
-                option.BackgroundColor3 =
-                    item == api.Value
-                        and o.SurfaceHover
-                        or o.Surface
-                option.BackgroundTransparency =
-                    item == api.Value and 0.08 or 0.74
-                option.BorderSizePixel = 0
-                option.AutoButtonColor = false
-                option.Text = "   " .. display
-                option.TextColor3 =
-                    item == api.Value
-                        and o.TextStrong
-                        or o.MutedText
-                option.TextXAlignment =
-                    Enum.TextXAlignment.Left
-                option.TextSize =
-                    d.isMobile and 14 or 13
-                option.FontFace =
-                    item == api.Value
-                        and o.FontSemiBold
-                        or o.Font
-                option.ZIndex = 20002
-                option.Parent = scroll
-                addCorner(option, o.RadiusSmall)
-
-                if not d.isMobile then
-                    option.MouseEnter:Connect(function()
-                        n:Tween(option, o.TweenFast, {
-                            BackgroundColor3 = o.SurfaceHover,
-                            BackgroundTransparency = 0.08,
-                            TextColor3 = o.TextStrong,
-                        })
-                    end)
-
-                    option.MouseLeave:Connect(function()
-                        n:Tween(option, o.TweenFast, {
-                            BackgroundColor3 =
-                                item == api.Value
-                                    and o.SurfaceHover
-                                    or o.Surface,
-                            BackgroundTransparency =
-                                item == api.Value and 0.08 or 0.74,
-                            TextColor3 =
-                                item == api.Value
-                                    and o.TextStrong
-                                    or o.MutedText,
-                        })
-                    end)
-                end
-
-                option.Activated:Connect(function()
-                    api:SetValue(item, true)
-                end)
-
-                entries[#entries + 1] = {
-                    Button = option,
-                    Value = item,
-                    Search = display:lower(),
-                }
-            end
-
-            local function positionPopup(height)
-                if
-                    not popup
-                    or openGeneration ~= popupGeneration
-                then
-                    return
-                end
-
-                local scale = math.max(A.Scale, 0.01)
-                local rootPosition = root.AbsolutePosition
-                local rootSize = root.AbsoluteSize
-                local scaledRootX =
-                    (rootPosition.X - w.AbsolutePosition.X) / scale
-                local scaledRootY =
-                    (rootPosition.Y - w.AbsolutePosition.Y) / scale
-                local viewportHeight = B.AbsoluteSize.Y / scale
-
-                local x = scaledRootX + 8
-                local belowY =
-                    scaledRootY
-                    + (rootSize.Y / scale)
-                    - 3
-                local aboveY =
-                    scaledRootY
-                    - height
-                    + 3
-
-                local y =
-                    belowY + height <= viewportHeight - 8
-                        and belowY
-                        or math.max(8, aboveY)
-
-                popup.Position = UDim2.fromOffset(x, y)
-                popup.Size = UDim2.fromOffset(
-                    math.max(
-                        160,
-                        (rootSize.X / scale) - 16
-                    ),
-                    height
-                )
-            end
-
-            local function filter(query)
-                query = tostring(query or ""):lower()
-                local visibleCount = 0
-
-                for _, entry in ipairs(entries) do
-                    local visible =
-                        query == ""
-                        or string.find(
-                            entry.Search,
-                            query,
-                            1,
-                            true
-                        ) ~= nil
-
-                    entry.Button.Visible = visible
-
-                    if visible then
-                        entry.Button.Position =
-                            UDim2.fromOffset(
-                                2,
-                                visibleCount * rowHeight
-                            )
-                        visibleCount += 1
-                    end
-                end
-
-                noResults.Visible = visibleCount == 0
-
-                local rows = math.max(
-                    1,
-                    math.min(maxRows, visibleCount)
-                )
-                local listHeight = rows * rowHeight
-                local popupHeight =
-                    searchHeight + listHeight + 7
-
-                scroll.CanvasSize = UDim2.fromOffset(
-                    0,
-                    math.max(
-                        rowHeight,
-                        visibleCount * rowHeight
-                    )
-                )
-                scroll.Size = UDim2.new(
-                    1,
-                    -10,
-                    0,
-                    listHeight
-                )
-
-                local maxCanvasY = math.max(
-                    0,
-                    scroll.AbsoluteCanvasSize.Y
-                        - scroll.AbsoluteWindowSize.Y
-                )
-                scroll.CanvasPosition = Vector2.new(
-                    0,
-                    math.clamp(
-                        scroll.CanvasPosition.Y,
-                        0,
-                        maxCanvasY
-                    )
-                )
-
-                positionPopup(popupHeight)
-            end
-
-            search:GetPropertyChangedSignal("Text"):Connect(function()
-                filter(search.Text)
-            end)
-
-            filter("") popup.GroupTransparency = 0 popup.BackgroundTransparency = 0.01 popupScale.Scale = 1 popupStroke.Transparency = 0.54
-
-            local scrollingParent = parent
-            while
-                scrollingParent
-                and not scrollingParent:IsA("ScrollingFrame")
-            do
-                scrollingParent = scrollingParent.Parent
-            end
-
-            if scrollingParent then
-                scrollConnection =
-                    scrollingParent:GetPropertyChangedSignal(
-                        "CanvasPosition"
-                    ):Connect(closeDropdown)
-            end
-
-            task.defer(function()
-                if
-                    not popup
-                    or openGeneration ~= popupGeneration
-                then
-                    return
-                end
-
-                outsideConnection = h.InputBegan:Connect(
-                    function(input)
-                        if input.KeyCode == Enum.KeyCode.Escape then
-                            closeDropdown()
-                            return
-                        end
-
-                        if
-                            input.UserInputType
-                                == Enum.UserInputType.MouseButton1
-                            or input.UserInputType
-                                == Enum.UserInputType.Touch
-                        then
-                            local point = input.Position
-                            if
-                                not pointInObject(point, root)
-                                and not pointInObject(point, popup)
-                            then
-                                closeDropdown()
-                            end
-                        end
-                    end
-                )
-            end)
-        end
-
         updateTitle()
-
         button.Activated:Connect(openDropdown)
 
         root.MouseEnter:Connect(function()
-            if popup then
+            if popupOpen then
                 return
             end
 
             n:Tween(background, o.TweenFast, {
                 BackgroundColor3 = o.SurfaceHover,
+                BackgroundTransparency = 0.03,
             })
             n:Tween(stroke, o.TweenFast, {
                 Color = o.BorderStrong,
-                Transparency = 0.66,
+                Transparency = 0.58,
             })
         end)
 
         root.MouseLeave:Connect(function()
-            if popup then
+            if popupOpen then
                 return
             end
 
             n:Tween(background, o.TweenFast, {
                 BackgroundColor3 =
                     settings.Darker and o.MainSoft or o.Surface,
+                BackgroundTransparency = 0.08,
             })
             n:Tween(stroke, o.TweenFast, {
                 Color = o.Border,
-                Transparency = 0.76,
+                Transparency = 0.78,
             })
         end)
 
-        root.Destroying:Once(closeDropdown)
+        root.Destroying:Once(function()
+            closeDropdown(true)
+            if popup and popup.Parent then
+                popup:Destroy()
+            end
+        end)
 
         api.Object = root
         owner.Options[settings.Name] = api
@@ -6097,13 +6367,14 @@ function d.CreateGUI(aa)
     local ac = Instance.new("TextButton")
     ac.Name = "GUICategory"
     ac.Position = UDim2.fromOffset(6, 60)
-    ac.BackgroundColor3 = o.MainSoft
+    ac.BackgroundColor3 = o.Main
+    ac.BackgroundTransparency = 0.02
     ac.AutoButtonColor = false
     ac.Text = ""
     ac.Parent = v
     addShadow(ac)
     addCorner(ac, o.RadiusLarge)
-    local mainStroke = addStroke(ac, o.BorderStrong, 0.54, 1, "MainStroke")
+    local mainStroke = addStroke(ac, o.BorderStrong, 0.62, 1, "MainStroke")
     addSurfaceGradient(ac)
     local mainAccent = addAccentLine(ac, 2)
     addV9Chrome(ac)
@@ -6166,10 +6437,10 @@ function d.CreateGUI(aa)
 
     local playerCard = Instance.new("Frame")
     playerCard.Name = "PlayerCard"
-    playerCard.Size = UDim2.fromOffset(208, 48)
+    playerCard.Size = UDim2.fromOffset(UI_WINDOW_WIDTH - 24, 50)
     playerCard.Position = UDim2.fromOffset(12, 43)
     playerCard.BackgroundColor3 = o.Surface
-    playerCard.BackgroundTransparency = 0.08
+    playerCard.BackgroundTransparency = 0.12
     playerCard.BorderSizePixel = 0
     playerCard.ClipsDescendants = true
     playerCard.Parent = ac
@@ -6269,7 +6540,7 @@ function d.CreateGUI(aa)
 
     local af = Instance.new("ScrollingFrame")
     af.Name = "Children"
-    af.Size = UDim2.fromOffset(232, 320)
+    af.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, 320)
     af.Position = UDim2.fromOffset(0, 98)
     af.BackgroundTransparency = 1
     af.BorderSizePixel = 0
@@ -6286,7 +6557,7 @@ function d.CreateGUI(aa)
     local ag = Instance.new("UIListLayout")
     ag.SortOrder = Enum.SortOrder.LayoutOrder
     ag.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    ag.Padding = UDim.new(0, 4)
+    ag.Padding = UDim.new(0, 5)
     ag.Parent = af
     local ah = Instance.new("TextButton")
     ah.Name = "Settings"
@@ -6597,8 +6868,9 @@ function d.CreateGUI(aa)
 
         local au = Instance.new("TextButton")
         au.Name = as.Name
-        au.Size = UDim2.new(1, -12, 0, 40)
+        au.Size = UDim2.new(1, -14, 0, UI_NAV_ROW_HEIGHT)
         au.BackgroundColor3 = o.Surface
+        au.BackgroundTransparency = 0.14
         au.BorderSizePixel = 0
         au.AutoButtonColor = false
         au.Text = (as.Icon and "          " or "    ") .. tostring(as.Name)
@@ -6609,7 +6881,7 @@ function d.CreateGUI(aa)
         au.ClipsDescendants = true
         au.Parent = af
         addCorner(au, o.Radius)
-        local avStroke = addStroke(au, o.Border, 0.9, 1, "NavigationStroke")
+        local avStroke = addStroke(au, o.Border, 0.88, 1, "NavigationStroke")
         local avScale = addScale(au)
         local avSweep = addV9Sweep(au)
 
@@ -6672,20 +6944,25 @@ function d.CreateGUI(aa)
         at.Object = au
 
         local function applyNavigationVisual()
-            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-            local dimAccent = accent:Lerp(o.MutedText, 0.68)
-            local activeText = accent:Lerp(o.TextStrong, 0.72)
+            local accent = Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            )
+            local dimAccent = accent:Lerp(o.MutedText, 0.62)
+            local activeText = accent:Lerp(o.TextStrong, 0.8)
             avRail.Visible = at.Enabled
             n:Tween(au, o.TweenFast, {
-                BackgroundColor3 = at.Enabled and o.SurfaceHover or o.Surface,
+                BackgroundColor3 = at.Enabled and o.Elevated or o.Surface,
+                BackgroundTransparency = at.Enabled and 0.03 or 0.14,
                 TextColor3 = at.Enabled and activeText or o.MutedText,
             })
             n:Tween(avStroke, o.TweenFast, {
                 Color = at.Enabled and dimAccent or o.Border,
-                Transparency = at.Enabled and 0.72 or 0.9,
+                Transparency = at.Enabled and 0.58 or 0.88,
             })
             n:Tween(aw, o.TweenFast, {
-                Position = UDim2.new(1, at.Enabled and -16 or -20, 0.5, -4),
+                Position = UDim2.new(1, at.Enabled and -17 or -20, 0.5, -4),
                 ImageColor3 = at.Enabled and dimAccent or o.FaintText,
             })
             if av then
@@ -6720,6 +6997,7 @@ function d.CreateGUI(aa)
                 local hoverAccent = accent:Lerp(o.TextStrong, 0.78)
                 n:Tween(au, o.TweenFast, {
                     BackgroundColor3 = o.SurfaceHover,
+                    BackgroundTransparency = 0.01,
                     TextColor3 = hoverAccent,
                 })
                 n:Tween(avStroke, o.TweenFast, {
@@ -6733,7 +7011,7 @@ function d.CreateGUI(aa)
                 if at.Enabled then
                     playV9Sweep(avSweep)
                 end
-                n:Tween(avScale, o.TweenFast, { Scale = 1 })
+                n:Tween(avScale, o.TweenFast, { Scale = 1.006 })
             end)
             au.MouseLeave:Connect(function()
                 applyNavigationVisual()
@@ -6743,7 +7021,7 @@ function d.CreateGUI(aa)
                 n:Tween(avScale, o.TweenPress, { Scale = 0.996 })
             end)
             au.MouseButton1Up:Connect(function()
-                n:Tween(avScale, o.TweenFast, { Scale = 1 })
+                n:Tween(avScale, o.TweenFast, { Scale = 1.006 })
             end)
         end
 
@@ -7973,11 +8251,11 @@ end)
             contentHeight + 8
         )
         af.Size = UDim2.fromOffset(
-            232,
+            UI_WINDOW_WIDTH,
             math.max(100, visibleHeight)
         )
         ac.Size = UDim2.fromOffset(
-            232,
+            UI_WINDOW_WIDTH,
             102 + math.max(100, visibleHeight)
         )
 
@@ -8033,9 +8311,10 @@ function d.CreateCategory(aa, ab)
 
     local ad = Instance.new("TextButton")
     ad.Name = ab.Name .. "Category"
-    ad.Size = UDim2.fromOffset(232, 44)
+    ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, UI_HEADER_HEIGHT)
     ad.Position = UDim2.fromOffset(250, 60)
-    ad.BackgroundColor3 = o.MainSoft
+    ad.BackgroundColor3 = o.Main
+    ad.BackgroundTransparency = 0.02
     ad.AutoButtonColor = false
     ad.Visible = false
     ad.Text = ""
@@ -8052,9 +8331,10 @@ function d.CreateCategory(aa, ab)
 
     local headerSurface = Instance.new("Frame")
     headerSurface.Name = "HeaderSurface"
-    headerSurface.Size = UDim2.new(1, 0, 0, 44)
+    headerSurface.Size = UDim2.new(1, 0, 0, UI_HEADER_HEIGHT)
     headerSurface.Position = UDim2.fromOffset(0, 0)
     headerSurface.BackgroundColor3 = o.MainSoft
+    headerSurface.BackgroundTransparency = 0.03
     headerSurface.BorderSizePixel = 0
     headerSurface.ZIndex = ad.ZIndex + 10
     headerSurface.Parent = ad
@@ -8102,7 +8382,7 @@ function d.CreateCategory(aa, ab)
     local ag = Instance.new("TextButton")
     ag.Name = "Arrow"
 
-    ag.Size = UDim2.new(1, 0, 0, 46)
+    ag.Size = UDim2.new(1, 0, 0, UI_HEADER_HEIGHT)
     ag.Position = UDim2.fromOffset(0, 0)
     ag.BackgroundTransparency = 1
     ag.Text = ""
@@ -8123,8 +8403,8 @@ function d.CreateCategory(aa, ab)
     ai.Parent = ag
     local aj = Instance.new("ScrollingFrame")
     aj.Name = "Children"
-    aj.Size = UDim2.new(1, 0, 1, -46)
-    aj.Position = UDim2.fromOffset(0, 44)
+    aj.Size = UDim2.new(1, 0, 1, -UI_HEADER_HEIGHT)
+    aj.Position = UDim2.fromOffset(0, UI_HEADER_HEIGHT)
     aj.BackgroundTransparency = 1
     aj.BorderSizePixel = 0
     aj.Visible = false
@@ -8143,7 +8423,7 @@ function d.CreateCategory(aa, ab)
     local ak = Instance.new("Frame")
     ak.Name = "Divider"
     ak.Size = UDim2.new(1, -20, 0, 1)
-    ak.Position = UDim2.fromOffset(10, 44)
+    ak.Position = UDim2.fromOffset(10, UI_HEADER_HEIGHT)
     ak.BackgroundColor3 = Color3.new(1, 1, 1)
     ak.BackgroundTransparency = 0.928
     ak.BorderSizePixel = 0
@@ -8152,37 +8432,57 @@ function d.CreateCategory(aa, ab)
     local al = Instance.new("UIListLayout")
     al.SortOrder = Enum.SortOrder.LayoutOrder
     al.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    al.Padding = UDim.new(0, 4)
+    al.Padding = UDim.new(0, 5)
     al.Parent = aj
 
-    local function updateCategoryVisual(hovered)
+    local function updateCategoryVisual(hovered, instant)
         local accent = Color3.fromHSV(
             d.GUIColor.Hue,
             d.GUIColor.Sat,
             d.GUIColor.Value
         )
         local active = ac.Expanded or hovered
-        local textAccent = accent:Lerp(o.TextStrong, 0.35)
-
-        ae.ImageColor3 = ac.Expanded
-            and accent:Lerp(o.TextStrong, 0.18)
+        local textAccent = accent:Lerp(o.TextStrong, 0.42)
+        local iconColor = ac.Expanded
+                and accent:Lerp(o.TextStrong, 0.16)
             or (hovered and textAccent or o.MutedText)
-        af.TextColor3 = ac.Expanded
-            and o.TextStrong
+        local titleColor = ac.Expanded
+                and o.TextStrong
             or (hovered and textAccent or o.MutedText)
-        categoryAccent.BackgroundTransparency =
-            active and 0.1 or 0.5
-        headerSurface.BackgroundColor3 =
-            hovered and o.SurfaceHover
+        local headerColor = hovered
+                and o.SurfaceHover
             or (ac.Expanded and o.Elevated or o.MainSoft)
-        ad.BackgroundColor3 = o.MainSoft
-        categoryStroke.Color =
-            active
-            and accent:Lerp(o.BorderStrong, 0.6)
+        local strokeColor = active
+                and accent:Lerp(o.BorderStrong, 0.68)
             or o.Border
-        categoryStroke.Transparency =
-            hovered and 0.58
-            or (ac.Expanded and 0.7 or 0.82)
+        local strokeTransparency = hovered
+                and 0.46
+            or (ac.Expanded and 0.58 or 0.8)
+        local accentTransparency = active and 0.08 or 0.58
+
+        if instant then
+            ae.ImageColor3 = iconColor
+            af.TextColor3 = titleColor
+            headerSurface.BackgroundColor3 = headerColor
+            categoryStroke.Color = strokeColor
+            categoryStroke.Transparency = strokeTransparency
+            categoryAccent.BackgroundTransparency = accentTransparency
+            return
+        end
+
+        n:Tween(ae, o.TweenFast, { ImageColor3 = iconColor })
+        n:Tween(af, o.TweenFast, { TextColor3 = titleColor })
+        n:Tween(headerSurface, o.TweenFast, {
+            BackgroundColor3 = headerColor,
+            BackgroundTransparency = hovered and 0 or 0.03,
+        })
+        n:Tween(categoryStroke, o.TweenFast, {
+            Color = strokeColor,
+            Transparency = strokeTransparency,
+        })
+        n:Tween(categoryAccent, o.TweenFast, {
+            BackgroundTransparency = accentTransparency,
+        })
     end
 
     function ac.CreateModule(am, an)
@@ -8211,19 +8511,20 @@ function d.CreateCategory(aa, ab)
         local aq = false
         local ar = Instance.new("TextButton")
         ar.Name = an.Name
-        ar.Size = UDim2.new(1, -12, 0, d.isMobile and 50 or 40)
+        ar.Size = UDim2.new(1, -14, 0, UI_MODULE_ROW_HEIGHT)
         ar.BackgroundColor3 = o.Surface
+        ar.BackgroundTransparency = 0.16
         ar.BorderSizePixel = 0
         ar.AutoButtonColor = false
         ar.ClipsDescendants = true
-        ar.Text = "      " .. ap
+        ar.Text = "    " .. ap
         ar.TextXAlignment = Enum.TextXAlignment.Left
         ar.TextColor3 = o.MutedText
         ar.TextSize = d.isMobile and 15 or 14
         ar.FontFace = o.FontSemiBold
         ar.Parent = aj
         addCorner(ar, o.Radius)
-        local moduleStroke = addStroke(ar, o.Border, 0.9, 1, "ModuleStroke")
+        local moduleStroke = addStroke(ar, o.Border, 0.88, 1, "ModuleStroke")
         local moduleScale = addScale(ar)
         local moduleSweep = addV9Sweep(ar)
 
@@ -8232,7 +8533,7 @@ function d.CreateCategory(aa, ab)
         moduleKeyline.Size = UDim2.new(1, -20, 0, 1)
         moduleKeyline.Position = UDim2.new(0, 10, 1, -1)
         moduleKeyline.BackgroundColor3 = o.Border
-        moduleKeyline.BackgroundTransparency = 0.82
+        moduleKeyline.BackgroundTransparency = 1
         moduleKeyline.BorderSizePixel = 0
         moduleKeyline.ZIndex = ar.ZIndex + 1
         moduleKeyline.Parent = ar
@@ -8751,21 +9052,36 @@ function d.CreateCategory(aa, ab)
             as.Enabled = false
             activeRail.Visible = N.Enabled
 
-            local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-            local enabledSurface = o.Elevated:Lerp(accent, 0.16)
-            local enabledText = o.TextStrong:Lerp(accent, 0.42)
+            local accent = Color3.fromHSV(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value
+            )
+            local enabledSurface = o.Elevated:Lerp(accent, 0.08)
+            local enabledText = accent:Lerp(o.TextStrong, 0.78)
             n:Tween(ar, o.TweenFast, {
-                BackgroundColor3 = N.Enabled and enabledSurface or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
+                BackgroundColor3 = N.Enabled
+                        and enabledSurface
+                    or ((aq or optionsOpen) and o.SurfaceHover or o.Surface),
+                BackgroundTransparency = N.Enabled
+                        and 0.02
+                    or ((aq or optionsOpen) and 0.04 or 0.16),
+                TextColor3 = N.Enabled
+                        and enabledText
+                    or ((aq or optionsOpen) and o.Text or o.MutedText),
             })
             n:Tween(moduleStroke, o.TweenFast, {
-                Color = N.Enabled and accent or o.Border,
-                Transparency = N.Enabled and 0.34 or ((aq or optionsOpen) and 0.7 or 0.9),
+                Color = N.Enabled
+                        and accent:Lerp(o.BorderStrong, 0.45)
+                    or o.Border,
+                Transparency = N.Enabled
+                        and 0.48
+                    or ((aq or optionsOpen) and 0.68 or 0.88),
             })
             n:Tween(moduleScale, o.TweenFast, { Scale = 1 })
 
-            ar.TextColor3 = N.Enabled and enabledText or ((aq or optionsOpen) and o.Text or o.MutedText)
-            activeHalo.BackgroundTransparency = N.Enabled and 0.62 or 1
-            activeHaloStroke.Transparency = N.Enabled and 0.18 or 1
+            activeHalo.BackgroundTransparency = N.Enabled and 0.72 or 1
+            activeHaloStroke.Transparency = N.Enabled and 0.32 or 1
             I.ImageColor3 = N.Enabled and accent or o.FaintText
             av.ImageColor3 = N.Enabled and enabledText or o.FaintText
             aw.TextColor3 = N.Enabled and enabledText or o.FaintText
@@ -8928,42 +9244,60 @@ function d.CreateCategory(aa, ab)
             ar.MouseEnter:Connect(function()
                 aq = true
                 playV9Sweep(moduleSweep)
+                local accent = Color3.fromHSV(
+                    d.GUIColor.Hue,
+                    d.GUIColor.Sat,
+                    d.GUIColor.Value
+                )
                 if not ao.Enabled and not optionsOpen then
-                    ar.TextColor3 = o.Text
                     n:Tween(ar, o.TweenFast, {
                         BackgroundColor3 = o.SurfaceHover,
+                        BackgroundTransparency = 0.03,
+                        TextColor3 = o.Text,
                     })
                     n:Tween(moduleStroke, o.TweenFast, {
                         Color = o.BorderStrong,
-                        Transparency = 0.7,
+                        Transparency = 0.6,
                     })
                 elseif ao.Enabled then
+                    n:Tween(ar, o.TweenFast, {
+                        BackgroundTransparency = 0,
+                    })
                     n:Tween(moduleStroke, o.TweenFast, {
-                        Color = o.BorderStrong,
-                        Transparency = 0.52,
+                        Color = accent:Lerp(o.BorderStrong, 0.42),
+                        Transparency = 0.4,
                     })
                 end
 
-                n:Tween(moduleScale, o.TweenFast, { Scale = 1 })
+                n:Tween(moduleScale, o.TweenFast, { Scale = 1.004 })
                 au.Visible = #ao.Bind > 0 or aq or optionsOpen
                 az.Visible = ao.StarActive or aq or optionsOpen
             end)
 
             ar.MouseLeave:Connect(function()
                 aq = false
+                local accent = Color3.fromHSV(
+                    d.GUIColor.Hue,
+                    d.GUIColor.Sat,
+                    d.GUIColor.Value
+                )
                 if not ao.Enabled and not optionsOpen then
-                    ar.TextColor3 = o.MutedText
                     n:Tween(ar, o.TweenFast, {
                         BackgroundColor3 = o.Surface,
+                        BackgroundTransparency = 0.16,
+                        TextColor3 = o.MutedText,
                     })
                     n:Tween(moduleStroke, o.TweenFast, {
                         Color = o.Border,
                         Transparency = 0.88,
                     })
                 elseif ao.Enabled then
+                    n:Tween(ar, o.TweenFast, {
+                        BackgroundTransparency = 0.02,
+                    })
                     n:Tween(moduleStroke, o.TweenFast, {
-                        Color = o.BorderStrong,
-                        Transparency = 0.58,
+                        Color = accent:Lerp(o.BorderStrong, 0.45),
+                        Transparency = 0.48,
                     })
                 end
 
@@ -8975,7 +9309,7 @@ function d.CreateCategory(aa, ab)
             end)
 
             ar.MouseButton1Down:Connect(function()
-                n:Tween(moduleScale, o.TweenPress, { Scale = 0.996 })
+                n:Tween(moduleScale, o.TweenPress, { Scale = 0.99 })
             end)
 
             ar.MouseButton1Up:Connect(function()
@@ -9276,7 +9610,7 @@ function d.CreateCategory(aa, ab)
         )
 
         return math.min(
-            44 + contentHeight + 8,
+            UI_HEADER_HEIGHT + contentHeight + 8,
             viewportLimit,
             606
         )
@@ -9290,7 +9624,7 @@ function d.CreateCategory(aa, ab)
 
         local targetHeight = ac.Expanded
             and getExpandedCategoryHeight()
-            or 44
+            or UI_HEADER_HEIGHT
 
         aj.CanvasSize = UDim2.fromOffset(
             0,
@@ -9305,7 +9639,7 @@ function d.CreateCategory(aa, ab)
         aj.ScrollingEnabled =
             ac.Expanded
             and aj.CanvasSize.Y.Offset
-                > math.max(0, targetHeight - 44)
+                > math.max(0, targetHeight - UI_HEADER_HEIGHT)
 
         local currentHeight = ad.Size.Y.Offset
         local needsResize =
@@ -9313,7 +9647,7 @@ function d.CreateCategory(aa, ab)
 
         if instant or not d.Loaded or d._SuppressEntryAnimation then
             ad.ClipsDescendants = true
-            ad.Size = UDim2.fromOffset(232, targetHeight)
+            ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
             ai.Rotation = ac.Expanded and 0 or 180
             aj.Visible = ac.Expanded
         else
@@ -9334,10 +9668,10 @@ function d.CreateCategory(aa, ab)
             local sizeTween
             if needsResize then
                 sizeTween = n:Tween(ad, o.TweenSlow, {
-                    Size = UDim2.fromOffset(232, targetHeight),
+                    Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight),
                 })
             else
-                ad.Size = UDim2.fromOffset(232, targetHeight)
+                ad.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
             end
 
             local function finishCategoryTransition()
@@ -9373,7 +9707,7 @@ function d.CreateCategory(aa, ab)
         )
 
         ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
-        updateCategoryVisual(false)
+        updateCategoryVisual(false, instant or not d.Loaded)
     end
 
     function ac.Expand(am, an, instant)
@@ -9393,7 +9727,7 @@ function d.CreateCategory(aa, ab)
     if ab.Visible then
         ac:Expand(true, true)
     else
-        updateCategoryVisual(false)
+        updateCategoryVisual(false, true)
     end
 
     ag.Activated:Connect(function()
@@ -9405,7 +9739,7 @@ function d.CreateCategory(aa, ab)
     ag.MouseEnter:Connect(function()
         updateCategoryVisual(true)
         playV9Sweep(categorySweep)
-        n:Tween(categoryScale, o.TweenFast, { Scale = 1 })
+        n:Tween(categoryScale, o.TweenFast, { Scale = 1.004 })
     end)
     ag.MouseLeave:Connect(function()
         updateCategoryVisual(false)
@@ -9424,7 +9758,7 @@ function d.CreateCategory(aa, ab)
         end
 
         categoryScale.Scale = 1
-        updateCategoryVisual(false)
+        updateCategoryVisual(false, true)
 
         if d._InitialLayoutReady then
             refreshCategoryLayout(true)
@@ -10579,7 +10913,7 @@ function d.CreateCategoryList(ag, ah)
 
     local aj = Instance.new("TextButton")
     aj.Name = ah.Name .. "CategoryList"
-    aj.Size = UDim2.fromOffset(232, 48)
+    aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, 48)
     aj.Position = UDim2.fromOffset(240, 46)
     aj.BackgroundColor3 = o.MainSoft
     aj.AutoButtonColor = false
@@ -11214,7 +11548,7 @@ function d.CreateCategoryList(ag, ah)
         local targetHeight = aC.Expanded and math.min(54 + at.AbsoluteContentSize.Y / A.Scale, 614) or 48
 
         local tween = n:Tween(aj, o.TweenSlow, {
-            Size = UDim2.fromOffset(232, targetHeight),
+            Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight),
         })
 
         if not aC.Expanded and tween then
@@ -11331,7 +11665,7 @@ function d.CreateCategoryList(ag, ah)
         end
         ap.CanvasSize = UDim2.fromOffset(0, at.AbsoluteContentSize.Y / A.Scale)
         if ai.Expanded then
-            aj.Size = UDim2.fromOffset(232, math.min(54 + at.AbsoluteContentSize.Y / A.Scale, 614))
+            aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, math.min(54 + at.AbsoluteContentSize.Y / A.Scale, 614))
         end
     end)
     au:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -13475,7 +13809,7 @@ function d.Load(ah, ai, aj)
                     at.Bind.Button.Visible = v.Visible
                 end
             end
-            v.Visible = not v.Visible
+            ah:SetClickGuiVisible(not v.Visible)
             z.Visible = false
             ah:BlurCheck()
         end
@@ -14038,17 +14372,81 @@ w.Name = "ScaledGui"
 w.Size = UDim2.fromScale(1, 1)
 w.BackgroundTransparency = 1
 w.Parent = B
-v = Instance.new("Frame")
+v = Instance.new("CanvasGroup")
 v.Name = "ClickGui"
 v.Size = UDim2.fromScale(1, 1)
 v.BackgroundTransparency = 1
+v.GroupTransparency = 0
+v.Interactable = true
+v.Active = true
 v.Visible = false
 v.Parent = w
+
+local clickGuiVisibilityGeneration = 0
+function d.SetClickGuiVisible(self, visible, instant)
+    visible = visible == true
+    clickGuiVisibilityGeneration += 1
+    local generation = clickGuiVisibilityGeneration
+
+    if visible then
+        v.Visible = true
+        v.Active = true
+        v.Interactable = true
+
+        if instant then
+            n:Cancel(v)
+            v.GroupTransparency = 0
+        else
+            v.GroupTransparency = math.max(v.GroupTransparency, 0.08)
+            n:Tween(v, o.TweenFast, {
+                GroupTransparency = 0,
+            })
+        end
+        return
+    end
+
+    v.Active = false
+    v.Interactable = false
+
+    if instant or not v.Visible then
+        n:Cancel(v)
+        v.GroupTransparency = 1
+        v.Visible = false
+        return
+    end
+
+    local fade = n:Tween(v, o.TweenFast, {
+        GroupTransparency = 1,
+    })
+
+    local function finish()
+        if generation == clickGuiVisibilityGeneration
+            and not v.Interactable
+        then
+            v.Visible = false
+        end
+    end
+
+    if fade then
+        fade.Completed:Once(finish)
+    else
+        finish()
+    end
+end
+
 LayoutIntelligence:Start()
 d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
     LayoutIntelligence:RequestResolve()
 end))
 d:Clean(v:GetPropertyChangedSignal("Visible"):Connect(function()
+    if v.Visible and v.GroupTransparency >= 0.99 then
+        v.Active = true
+        v.Interactable = true
+        v.GroupTransparency = 0.08
+        n:Tween(v, o.TweenFast, {
+            GroupTransparency = 0,
+        })
+    end
     d.VisibilityChanged:Fire(v.Visible)
 end))
 local ah = Instance.new("TextLabel")
@@ -14880,7 +15278,7 @@ d.SortGuiCallback = function(av)
     local ay = 0
     for az, aA in ax do
         if aA.Object.Visible then
-            aA.Object.Position = UDim2.fromOffset(6 + (ay % 8 * 244), 60 + (ay > 7 and 360 or 0))
+            aA.Object.Position = UDim2.fromOffset(6 + (ay % 8 * (UI_WINDOW_WIDTH + UI_WINDOW_GAP)), 60 + (ay > 7 and 360 or 0))
             ay += 1
         end
     end
@@ -15972,7 +16370,7 @@ function d.SetupHeldKeyTracking()
             for _, window in d.Windows do
                 window.Visible = false
             end
-            v.Visible = not v.Visible
+            d:SetClickGuiVisible(not v.Visible)
             z.Visible = false
             d:BlurCheck()
             return

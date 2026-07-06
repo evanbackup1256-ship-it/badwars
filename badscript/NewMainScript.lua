@@ -121,7 +121,8 @@ do
 
     __badwarsLoadDiagnostics()
 end
--- BADWARS_DIAGNOSTICS_BOOTSTRAP_ENDlocal function safeHttpGet(inst, url, nocache)
+-- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
+local function safeHttpGet(inst, url, nocache)
 	local g = inst or game
 	local httpget = g.HttpGet or (getgenv and getgenv().HttpGet)
 	if httpget then
@@ -444,12 +445,12 @@ for _, folder in {'badscript', 'badscript/games', 'badscript/profiles', 'badscri
 	end
 end
 
-local cacheVersion = 'badwars-v16-render-hud-page-manager-2026-07-05-01'
+local cacheVersion = 'badwars-v17-fluid-motion-sleek-ui-2026-07-05-01'
 local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents) == 'string'
-		and contents:find('Version%s*=%s*"16%.0"') ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V16%-RENDER%-HUD%-PAGE%-MANAGER"') ~= nil
+		and contents:find('Version%s*=%s*"17%.0"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.05%-V17%-FLUID%-MOTION%-SLEEK%-UI"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath = 'badscript/guis/new/gui.lua'

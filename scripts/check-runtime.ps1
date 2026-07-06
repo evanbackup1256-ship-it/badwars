@@ -55,16 +55,16 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 }
 
 if (
-    $newGui -match 'Version\s*=\s*"16\.0"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V16-RENDER-HUD-PAGE-MANAGER"' -and
-    $newGui -match 'BADWARS_UI_V16_RENDER_HUD_PAGE_MANAGER' -and
-    $main -match "BadWars Main v16\.0" -and
-    $loader -match "BadWars Loader v16\.0" -and
-    $bedwarsBase -match 'compatibility\.Version\s*=\s*"16\.0"'
+    $newGui -match 'Version\s*=\s*"17\.0"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.05-V17-FLUID-MOTION-SLEEK-UI"' -and
+    $newGui -match 'BADWARS_UI_V17_FLUID_MOTION_SLEEK_UI' -and
+    $main -match "BadWars Main v17\.0" -and
+    $loader -match "BadWars Loader v17\.0" -and
+    $bedwarsBase -match 'compatibility\.Version\s*=\s*"17\.0"'
 ) {
-    Pass "V16 runtime versions are synchronized"
+    Pass "V17 runtime versions are synchronized"
 } else {
-    Fail "V16 runtime versions are not synchronized"
+    Fail "V17 runtime versions are not synchronized"
 }
 
 $requiredComponentApis = @(
@@ -251,8 +251,8 @@ if (
     $loader -match "invalidateStaleGuiCache" -and
     $newMain -match "invalidateStaleGuiCache" -and
     $main -match "isStaleGuiCache" -and
-    $loader -match 'V16%-RENDER%-HUD%-PAGE%-MANAGER' -and
-    $newMain -match 'V16%-RENDER%-HUD%-PAGE%-MANAGER'
+    $loader -match 'V17%-FLUID%-MOTION%-SLEEK%-UI' -and
+    $newMain -match 'V17%-FLUID%-MOTION%-SLEEK%-UI'
 ) {
     Pass "Loadstring rejects stale GUI cache automatically"
 } else {

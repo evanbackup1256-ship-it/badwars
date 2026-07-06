@@ -1,3 +1,4 @@
+-- BADWARS_UI_V20_ATLAS
 -- BADWARS_V19_UI_REPAIR_V5_2
 -- BADWARS_V19_UI_REPAIR_V4_4
 -- BADWARS_UI_V19_OBSIDIAN_OVERHAUL
@@ -167,8 +168,8 @@ local d = {
     ToggleNotifications = {},
     FavoriteNotifications = {},
     BindNotifications = {},
-    Version = "19.0",
-    PremiumBuild = "2026.07.06-V19-OBSIDIAN-OVERHAUL",
+    Version = "20.0",
+    PremiumBuild = "2026.07.06-V20-ATLAS",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -14861,44 +14862,41 @@ local function responsiveScale()
     local height = viewport.Y > 0 and viewport.Y or 900
 
     if d.isMobile then
-        local mobileScale
         if width >= 900 and height >= 600 then
-            mobileScale = 1
+            return 0.95
         elseif width >= 700 and height >= 500 then
-            mobileScale = 0.9
-        else
-            mobileScale = 0.8
+            return 0.88
         end
-        return mobileScale
+        return 0.82
     end
 
     local scale
-    if width >= 2300 and height >= 1200 then
-        scale = 0.9
-    elseif width >= 1700 and height >= 850 then
+    if width >= 2500 and height >= 1250 then
+        scale = 0.88
+    elseif width >= 1900 and height >= 900 then
         scale = 0.8
-    elseif width >= 1280 and height >= 700 then
-        scale = 0.75
+    elseif width >= 1500 and height >= 760 then
+        scale = 0.74
+    elseif width >= 1280 and height >= 680 then
+        scale = 0.68
     else
-        scale = 0.7
+        scale = 0.62
     end
 
-    local aspect = width / math.max(height, 1)
-    if aspect < 1.4 then
-        scale = math.max(0.7, scale - 0.05)
-    end
-
-    local windowCount = 0
+    local visibleWindowCount = 0
     for _, window in d.Windows do
-        if typeof(window) == "Instance" and window.Parent then
-            windowCount += 1
+        if typeof(window) == "Instance"
+            and window.Parent
+            and window.Visible
+        then
+            visibleWindowCount += 1
         end
     end
 
-    if windowCount >= 6 then
+    if visibleWindowCount >= 7 then
+        scale = math.min(scale, 0.7)
+    elseif visibleWindowCount >= 5 then
         scale = math.min(scale, 0.75)
-    elseif windowCount >= 4 then
-        scale = math.min(scale, 0.8)
     end
 
     return math.floor(scale * 20 + 0.5) / 20
@@ -15701,7 +15699,7 @@ aw:CreateSlider({
     Min = 0,
     Max = 2,
     Decimal = 10,
-    Default = 1,
+    Default = (d.isMobile and 0.9 or 0.75),
     Function = function(aC)
         aB.Scale = aC
         d:UpdateTextGUI()
@@ -16711,16 +16709,112 @@ end
 
 -- Entire appended V21 presentation/runtime suffix disabled by BADWARS_V19_PERFORMANCE_HOTFIX_V2.
 
--- BADWARS_UI_QUALITY_RUNTIME_V4_BEGIN
-(function()
-    local UserInputService = game:GetService("UserInputService")
-    local boundScrollers = setmetatable({}, { __mode = "k" })
-    local queuedCanvasUpdates = setmetatable({}, { __mode = "k" })
+-- BADWARS_V4_QUALITY_RUNTIME_REPLACED_BY_V20
 
-    local function ancestorNamed(object, name)
+
+
+-- BADWARS_UI_V20_ATLAS_RUNTIME_BEGIN
+(function()
+    local V20 = {
+        Version = "20.0",
+        Name = "Atlas",
+        WindowWidth = d.isMobile and 268 or 272,
+        HeaderHeight = d.isMobile and 52 or 44,
+        ModuleHeight = d.isMobile and 50 or 40,
+        Gap = d.isMobile and 8 or 10,
+        Margin = d.isMobile and 6 or 12,
+        Styled = setmetatable({}, { __mode = "k" }),
+        ManagedWindows = setmetatable({}, { __mode = "k" }),
+        ScaleLocks = setmetatable({}, { __mode = "k" }),
+        Queue = {},
+        QueueHead = 1,
+        ArrangeGeneration = 0,
+        InitialArrangeComplete = false,
+    }
+
+    d.V20 = V20
+    d.Version = "20.0"
+    d.PremiumBuild = "2026.07.06-V20-ATLAS"
+
+    local palette = {
+        Backdrop = Color3.fromRGB(5, 8, 12),
+        Window = Color3.fromRGB(9, 14, 19),
+        WindowRaised = Color3.fromRGB(12, 18, 24),
+        Surface = Color3.fromRGB(15, 22, 29),
+        SurfaceHover = Color3.fromRGB(20, 29, 38),
+        SurfaceActive = Color3.fromRGB(24, 34, 44),
+        Border = Color3.fromRGB(40, 54, 67),
+        BorderStrong = Color3.fromRGB(74, 96, 114),
+        Text = Color3.fromRGB(221, 230, 237),
+        TextStrong = Color3.fromRGB(248, 250, 252),
+        TextMuted = Color3.fromRGB(148, 165, 179),
+        TextFaint = Color3.fromRGB(104, 121, 136),
+        Track = Color3.fromRGB(20, 29, 37),
+        Shadow = Color3.fromRGB(0, 2, 4),
+    }
+
+    V20.Palette = palette
+
+    local function accent()
+        return Color3.fromHSV(
+            d.GUIColor.Hue,
+            d.GUIColor.Sat,
+            d.GUIColor.Value
+        )
+    end
+
+    local function clean(resource)
+        if resource == nil then
+            return resource
+        end
+        if type(d.Clean) == "function" then
+            return d:Clean(resource)
+        end
+        return resource
+    end
+
+    local function safeSet(object, property, value)
+        pcall(function()
+            object[property] = value
+        end)
+    end
+
+    local function ensureCorner(parent, radius)
+        local corner = parent:FindFirstChild("V20Corner")
+        if not corner or not corner:IsA("UICorner") then
+            corner = parent:FindFirstChildOfClass("UICorner")
+        end
+        if not corner then
+            corner = Instance.new("UICorner")
+            corner.Name = "V20Corner"
+            corner.Parent = parent
+        end
+        corner.CornerRadius = UDim.new(0, radius)
+        return corner
+    end
+
+    local function ensureStroke(parent, transparency)
+        local stroke = parent:FindFirstChild("V20Stroke")
+        if not stroke or not stroke:IsA("UIStroke") then
+            stroke = parent:FindFirstChildOfClass("UIStroke")
+        end
+        if not stroke then
+            stroke = Instance.new("UIStroke")
+            stroke.Name = "V20Stroke"
+            stroke.Parent = parent
+        end
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.LineJoinMode = Enum.LineJoinMode.Round
+        stroke.Thickness = 1
+        stroke.Color = palette.Border
+        stroke.Transparency = transparency
+        return stroke
+    end
+
+    local function isManagedDescendant(object)
         local current = object
         while current and current ~= B do
-            if current.Name == name then
+            if V20.ManagedWindows[current] then
                 return true
             end
             current = current.Parent
@@ -16728,274 +16822,425 @@ end
         return false
     end
 
-    local function isVirtualDropdownScroll(scroller)
-        return ancestorNamed(scroller, "DropdownPopup")
-    end
+    local function lockScale(scale)
+        if V20.ScaleLocks[scale]
+            or scale == A
+            or not isManagedDescendant(scale)
+        then
+            return
+        end
 
-    local function findLayout(scroller)
-        for _, child in ipairs(scroller:GetChildren()) do
-            if child:IsA("UIListLayout")
-                or child:IsA("UIGridLayout")
-            then
-                return child
+        V20.ScaleLocks[scale] = true
+        scale.Scale = 1
+        clean(scale:GetPropertyChangedSignal("Scale"):Connect(function()
+            if scale.Parent and math.abs(scale.Scale - 1) > 0.001 then
+                scale.Scale = 1
             end
-        end
-        return nil
+        end))
     end
 
-    local function canvasPadding(scroller)
-        local padding = scroller:FindFirstChildOfClass("UIPadding")
-        if not padding then
-            return 0
-        end
-        return padding.PaddingTop.Offset + padding.PaddingBottom.Offset
-    end
+    local function styleText(object)
+        object.TextStrokeTransparency = 1
+        object.TextTruncate = Enum.TextTruncate.AtEnd
 
-    local function updateCanvas(scroller)
-        if not scroller.Parent or isVirtualDropdownScroll(scroller) then
+        local lowerName = string.lower(object.Name)
+        local isTitle = string.find(lowerName, "title", 1, true) ~= nil
+            or string.find(lowerName, "name", 1, true) ~= nil
+        local isValue = string.find(lowerName, "value", 1, true) ~= nil
+
+        if object:IsA("TextBox") then
+            object.TextColor3 = palette.Text
+            object.PlaceholderColor3 = palette.TextFaint
+            object.TextSize = math.max(object.TextSize, d.isMobile and 12 or 11)
             return
         end
 
-        local layout = findLayout(scroller)
-        if not layout then
-            return
-        end
-
-        local height = math.max(
-            0,
-            math.ceil(layout.AbsoluteContentSize.Y + canvasPadding(scroller) + 4)
-        )
-        scroller.CanvasSize = UDim2.fromOffset(0, height)
-
-        local windowHeight = scroller.AbsoluteWindowSize.Y
-        if windowHeight <= 0 then
-            windowHeight = scroller.AbsoluteSize.Y
-        end
-        local maxY = math.max(0, height - windowHeight)
-        if scroller.CanvasPosition.Y > maxY then
-            scroller.CanvasPosition = Vector2.new(
-                scroller.CanvasPosition.X,
-                maxY
+        if isTitle then
+            object.TextColor3 = palette.TextStrong
+            object.TextSize = math.clamp(
+                object.TextSize,
+                d.isMobile and 12 or 11,
+                d.isMobile and 15 or 14
             )
+        elseif isValue then
+            object.TextColor3 = palette.Text
+            object.TextSize = math.max(object.TextSize, 10)
+        else
+            object.TextColor3 = palette.TextMuted
+            object.TextSize = math.max(object.TextSize, 10)
         end
     end
 
-    local function queueCanvasUpdate(scroller)
-        if queuedCanvasUpdates[scroller] then
-            return
-        end
-        queuedCanvasUpdates[scroller] = true
-        task.defer(function()
-            queuedCanvasUpdates[scroller] = nil
-            if scroller.Parent then
-                updateCanvas(scroller)
-            end
-        end)
-    end
-
-    local function bindScroller(scroller)
-        if boundScrollers[scroller] then
-            return
-        end
-
-        boundScrollers[scroller] = true
+    local function styleScroller(scroller)
         scroller.Active = true
         scroller.ScrollingEnabled = true
         scroller.ScrollingDirection = Enum.ScrollingDirection.Y
         scroller.ElasticBehavior = Enum.ElasticBehavior.Never
         scroller.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
-        scroller.ScrollBarThickness = d.isMobile and 6 or 4
-        scroller.ScrollBarImageTransparency = 0.18
-        scroller.ScrollBarImageColor3 = o.BorderStrong
-
-        if not isVirtualDropdownScroll(scroller) then
-            scroller.AutomaticCanvasSize = Enum.AutomaticSize.None
-            local layout = findLayout(scroller)
-            if layout then
-                d:Clean(layout:GetPropertyChangedSignal(
-                    "AbsoluteContentSize"
-                ):Connect(function()
-                    queueCanvasUpdate(scroller)
-                end))
-            end
-            d:Clean(scroller:GetPropertyChangedSignal(
-                "AbsoluteSize"
-            ):Connect(function()
-                queueCanvasUpdate(scroller)
-            end))
-            queueCanvasUpdate(scroller)
-        end
+        scroller.ScrollBarThickness = d.isMobile and 5 or 3
+        scroller.ScrollBarImageColor3 = palette.BorderStrong
+        scroller.ScrollBarImageTransparency = 0.22
     end
 
-    local function normalizeObject(object)
+    local function styleControl(object)
+        if V20.Styled[object] or not object.Parent then
+            return
+        end
+        V20.Styled[object] = true
+
+        if object:IsA("UIScale") then
+            lockScale(object)
+            return
+        end
+
+        if object:IsA("UIGradient") then
+            if isManagedDescendant(object) then
+                object.Enabled = false
+            end
+            return
+        end
+
+        if object:IsA("UIStroke") then
+            object.LineJoinMode = Enum.LineJoinMode.Round
+            object.Thickness = math.min(object.Thickness, 1)
+            return
+        end
+
         if object:IsA("ScrollingFrame") then
-            bindScroller(object)
+            styleScroller(object)
+        elseif object:IsA("TextLabel")
+            or object:IsA("TextButton")
+            or object:IsA("TextBox")
+        then
+            styleText(object)
         elseif object:IsA("ImageLabel")
             or object:IsA("ImageButton")
         then
-            pcall(function()
-                object.ResampleMode = Enum.ResamplerMode.Default
-            end)
-        elseif object:IsA("UIScale") then
-            local parent = object.Parent
-            if parent
-                and parent:FindFirstChild("ModulesContainer")
-            then
-                object.Scale = 1
-            end
+            safeSet(object, "ResampleMode", Enum.ResamplerMode.Default)
+        end
+
+        if object:IsA("TextButton") or object:IsA("ImageButton") then
+            object.AutoButtonColor = false
         end
     end
 
-    for _, descendant in ipairs(B:GetDescendants()) do
-        normalizeObject(descendant)
-    end
-
-    d:Clean(B.DescendantAdded:Connect(function(descendant)
-        normalizeObject(descendant)
-        if descendant:IsA("UIListLayout")
-            or descendant:IsA("UIGridLayout")
-        then
-            local parent = descendant.Parent
-            if parent and parent:IsA("ScrollingFrame") then
-                bindScroller(parent)
-                queueCanvasUpdate(parent)
-            end
+    local function addAccentRail(window)
+        local rail = window:FindFirstChild("V20WindowAccent")
+        if not rail then
+            rail = Instance.new("Frame")
+            rail.Name = "V20WindowAccent"
+            rail.BorderSizePixel = 0
+            rail.Position = UDim2.fromOffset(0, 10)
+            rail.Size = UDim2.new(0, 2, 0, V20.HeaderHeight - 20)
+            rail.ZIndex = window.ZIndex + 8
+            rail.Parent = window
+            ensureCorner(rail, 99)
         end
-    end))
-
-    local function pointInside(point, object)
-        local position = object.AbsolutePosition
-        local size = object.AbsoluteSize
-        return point.X >= position.X
-            and point.X <= position.X + size.X
-            and point.Y >= position.Y
-            and point.Y <= position.Y + size.Y
+        rail.BackgroundColor3 = accent()
+        return rail
     end
 
-    local function visibleScrollerAt(point)
-        local best
-        local bestZ = -math.huge
-        local bestArea = math.huge
-
-        for scroller in pairs(boundScrollers) do
-            if scroller.Parent
-                and scroller.Visible
-                and scroller.ScrollingEnabled
-                and isEffectivelyVisible(scroller)
-                and pointInside(point, scroller)
-            then
-                local contentHeight = scroller.CanvasSize.Y.Offset
-                    + scroller.CanvasSize.Y.Scale * scroller.AbsoluteSize.Y
-                local windowHeight = scroller.AbsoluteWindowSize.Y
-                if windowHeight <= 0 then
-                    windowHeight = scroller.AbsoluteSize.Y
-                end
-
-                if contentHeight > windowHeight + 1 then
-                    local area = scroller.AbsoluteSize.X
-                        * scroller.AbsoluteSize.Y
-                    if scroller.ZIndex > bestZ
-                        or (
-                            scroller.ZIndex == bestZ
-                            and area < bestArea
-                        )
-                    then
-                        best = scroller
-                        bestZ = scroller.ZIndex
-                        bestArea = area
-                    end
-                end
-            end
-        end
-
-        return best
-    end
-
-    d:Clean(UserInputService.InputChanged:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseWheel
-            or not v.Visible
+    local function styleWindow(window)
+        if typeof(window) ~= "Instance"
+            or not window:IsA("GuiObject")
+            or not window.Parent
         then
             return
         end
 
-        local scroller = visibleScrollerAt(
-            UserInputService:GetMouseLocation()
-        )
-        if not scroller then
-            return
-        end
-
-        local contentHeight = scroller.CanvasSize.Y.Offset
-            + scroller.CanvasSize.Y.Scale * scroller.AbsoluteSize.Y
-        local windowHeight = scroller.AbsoluteWindowSize.Y
-        if windowHeight <= 0 then
-            windowHeight = scroller.AbsoluteSize.Y
-        end
-        local maxY = math.max(0, contentHeight - windowHeight)
-        local nextY = math.clamp(
-            scroller.CanvasPosition.Y - input.Position.Z * 52,
+        V20.ManagedWindows[window] = true
+        window.BackgroundColor3 = palette.Window
+        window.BackgroundTransparency = 0.02
+        window.BorderSizePixel = 0
+        window.Size = UDim2.new(
             0,
-            maxY
+            V20.WindowWidth,
+            window.Size.Y.Scale,
+            window.Size.Y.Offset
         )
-        scroller.CanvasPosition = Vector2.new(
-            scroller.CanvasPosition.X,
-            nextY
-        )
-    end))
 
-    local tooltipQueued = false
-    local function clampTooltip()
-        if tooltipQueued or not z or not z.Visible then
+        ensureCorner(window, d.isMobile and 14 or 12)
+        ensureStroke(window, 0.34)
+        addAccentRail(window)
+
+        for _, descendant in ipairs(window:GetDescendants()) do
+            styleControl(descendant)
+        end
+    end
+
+    local function styleModule(module)
+        local object = module and module.Object
+        if typeof(object) ~= "Instance"
+            or not object:IsA("GuiObject")
+            or not object.Parent
+        then
             return
         end
 
-        tooltipQueued = true
+        object.BackgroundColor3 = module.Enabled
+            and palette.SurfaceActive
+            or palette.Surface
+        object.BackgroundTransparency = 0.02
+        object.BorderSizePixel = 0
+        object.Size = UDim2.new(
+            object.Size.X.Scale,
+            object.Size.X.Offset,
+            0,
+            V20.ModuleHeight
+        )
+
+        ensureCorner(object, d.isMobile and 10 or 8)
+        local stroke = ensureStroke(object, module.Enabled and 0.48 or 0.78)
+        stroke.Color = module.Enabled and palette.BorderStrong or palette.Border
+
+        local existingScale = object:FindFirstChildOfClass("UIScale")
+        if existingScale then
+            lockScale(existingScale)
+        end
+
+        for _, descendant in ipairs(object:GetDescendants()) do
+            styleControl(descendant)
+        end
+    end
+
+    local function registerCurrentWindows()
+        for _, window in d.Windows do
+            styleWindow(window)
+        end
+
+        for _, category in d.Categories do
+            if type(category) == "table" then
+                styleWindow(category.Object)
+                if typeof(category.Window) == "Instance" then
+                    styleWindow(category.Window)
+                end
+            end
+        end
+    end
+
+    local function styleCurrentModules()
+        for _, module in d.Modules do
+            styleModule(module)
+        end
+
+        if d.Legit and type(d.Legit.Modules) == "table" then
+            for _, module in d.Legit.Modules do
+                styleModule(module)
+            end
+        end
+    end
+
+    local function queue(object)
+        if not object or V20.Styled[object] then
+            return
+        end
+        V20.Queue[#V20.Queue + 1] = object
+    end
+
+    local function processQueue()
+        local processed = 0
+        while processed < 36 and V20.QueueHead <= #V20.Queue do
+            local object = V20.Queue[V20.QueueHead]
+            V20.Queue[V20.QueueHead] = nil
+            V20.QueueHead += 1
+            processed += 1
+
+            if object and object.Parent then
+                styleControl(object)
+            end
+        end
+
+        if V20.QueueHead > #V20.Queue then
+            table.clear(V20.Queue)
+            V20.QueueHead = 1
+        end
+    end
+
+    local function windowOrder()
+        local output = {}
+        local seen = setmetatable({}, { __mode = "k" })
+        local preferred = {
+            "Main",
+            "Combat",
+            "Blatant",
+            "Render",
+            "Utility",
+            "World",
+            "Legit",
+        }
+
+        for _, name in ipairs(preferred) do
+            local category = d.Categories[name]
+            local object = category and category.Object
+            if typeof(object) == "Instance"
+                and object.Parent
+                and object.Visible
+                and not seen[object]
+            then
+                seen[object] = true
+                output[#output + 1] = object
+            end
+        end
+
+        for _, window in d.Windows do
+            if typeof(window) == "Instance"
+                and window.Parent
+                and window.Visible
+                and not seen[window]
+            then
+                seen[window] = true
+                output[#output + 1] = window
+            end
+        end
+
+        return output
+    end
+
+    function V20:Arrange(force)
+        if self.InitialArrangeComplete and not force then
+            return
+        end
+
+        self.ArrangeGeneration += 1
+        local generation = self.ArrangeGeneration
         task.defer(function()
-            tooltipQueued = false
-            if not z or not z.Parent or not z.Visible then
+            if generation ~= self.ArrangeGeneration
+                or not B
+                or not B.Parent
+            then
                 return
             end
 
-            local viewport = B.AbsoluteSize
-            local size = z.AbsoluteSize
-            local position = z.AbsolutePosition
-            local margin = 8
-            local x = math.clamp(
-                position.X,
-                margin,
-                math.max(margin, viewport.X - size.X - margin)
+            local scale = math.max(A.Scale, 0.05)
+            local viewport = B.AbsoluteSize / scale
+            local availableWidth = math.max(
+                self.WindowWidth,
+                viewport.X - self.Margin * 2
             )
-            local yPosition = math.clamp(
-                position.Y,
-                margin,
-                math.max(margin, viewport.Y - size.Y - margin)
+            local columns = math.max(
+                1,
+                math.floor(
+                    (availableWidth + self.Gap)
+                    / (self.WindowWidth + self.Gap)
+                )
             )
 
-            if math.abs(x - position.X) > 0.5
-                or math.abs(yPosition - position.Y) > 0.5
-            then
-                local scale = math.max(A.Scale, 0.05)
-                local parentPosition = z.Parent.AbsolutePosition
-                z.Position = UDim2.fromOffset(
-                    (x - parentPosition.X) / scale,
-                    (yPosition - parentPosition.Y) / scale
-                )
+            local x = self.Margin
+            local y = self.Margin + 34
+            local column = 1
+
+            for _, window in ipairs(windowOrder()) do
+                local target = Vector2.new(x, y)
+                window.Position = UDim2.fromOffset(target.X, target.Y)
+
+                column += 1
+                if column > columns then
+                    column = 1
+                    x = self.Margin
+                    y += math.max(
+                        self.HeaderHeight + 20,
+                        window.AbsoluteSize.Y / scale
+                    ) + self.Gap
+                else
+                    x += self.WindowWidth + self.Gap
+                end
             end
+
+            self.InitialArrangeComplete = true
         end)
     end
 
-    d:Clean(z:GetPropertyChangedSignal("Position"):Connect(clampTooltip))
-    d:Clean(z:GetPropertyChangedSignal("Visible"):Connect(clampTooltip))
-    d:Clean(z:GetPropertyChangedSignal("AbsoluteSize"):Connect(clampTooltip))
+    function V20:Refresh()
+        registerCurrentWindows()
+        styleCurrentModules()
 
-    d.RefreshScrollCanvases = function()
-        for scroller in pairs(boundScrollers) do
-            queueCanvasUpdate(scroller)
+        for _, descendant in ipairs(B:GetDescendants()) do
+            queue(descendant)
         end
+
+        task.defer(function()
+            processQueue()
+            d:UpdateGUI(
+                d.GUIColor.Hue,
+                d.GUIColor.Sat,
+                d.GUIColor.Value,
+                true
+            )
+        end)
     end
 
-    task.defer(d.RefreshScrollCanvases)
+    function V20:ResetLayout()
+        self.InitialArrangeComplete = false
+        self:Arrange(true)
+    end
+
+    d.V20Refresh = function()
+        V20:Refresh()
+    end
+
+    d.V20ArrangeWindows = function()
+        V20:Arrange(true)
+    end
+
+    if d.LayoutIntelligence then
+        pcall(function()
+            d.LayoutIntelligence:SetMode("Clamp")
+            d.LayoutIntelligence:SetResolveOnDragEnd(false)
+            d.LayoutIntelligence:SetResolveOnResize(false)
+            d.LayoutIntelligence:SetMargin(V20.Gap)
+        end)
+    end
+
+    clean(B.DescendantAdded:Connect(function(object)
+        queue(object)
+    end))
+
+    clean(k.Heartbeat:Connect(function()
+        if V20.QueueHead <= #V20.Queue then
+            processQueue()
+        end
+    end))
+
+    clean(d.GUIColorChanged.Event:Connect(function()
+        local currentAccent = accent()
+
+        for window in pairs(V20.ManagedWindows) do
+            if window.Parent then
+                local rail = window:FindFirstChild("V20WindowAccent")
+                if rail then
+                    rail.BackgroundColor3 = currentAccent
+                end
+            end
+        end
+    end))
+
+    clean(d.PreloadEvent:Connect(function()
+        V20:Refresh()
+        V20:Arrange(false)
+    end))
+
+    clean(d.VisibilityChanged.Event:Connect(function(visible)
+        if visible then
+            V20:Refresh()
+            V20:Arrange(false)
+        end
+    end))
+
+    clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if d.Scale and d.Scale.Enabled then
+            A.Scale = responsiveScale()
+        end
+
+        if V20.InitialArrangeComplete then
+            V20:Arrange(true)
+        end
+    end))
+
+    task.defer(function()
+        V20:Refresh()
+        V20:Arrange(false)
+    end)
 end)()
--- BADWARS_UI_QUALITY_RUNTIME_V4_END
+-- BADWARS_UI_V20_ATLAS_RUNTIME_END
 
 return d

@@ -122,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Loader v19.0 Obsidian Overhaul
+-- BadWars Loader v20.0 Atlas
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -145,7 +145,7 @@ local CFG={repo='evanbackup1256-ship-it',name='badwars',branch='main',folder='ba
 local function rawUrls(path)
     local repo=CFG.repo..'/'..CFG.name
     local p=path:gsub(' ','%%20')
-    local query='?bwui=v19-ui-repair-5-2'
+    local query='?bwui=v20-atlas-1'
     return {
         'https://github.com/'..repo..'/raw/'..CFG.branch..'/'..p..query,
         'https://raw.githubusercontent.com/'..repo..'/'..CFG.branch..'/'..p..query
@@ -755,13 +755,13 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v19-ui-repair-2026-07-06-05-2'
+local cacheVersion = 'badwars-v20-atlas-2026-07-06-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"
-        and contents:find("BADWARS_V19_UI_REPAIR_V5_2", 1, true) ~= nil
-        and contents:find("BADWARS_UI_QUALITY_RUNTIME_V4_BEGIN", 1, true) ~= nil
-        and contents:find("BADWARS_FUSION_DESIGN_RUNTIME_V21_BEGIN", 1, true) == nil
+        and contents:find("BADWARS_UI_V20_ATLAS", 1, true) ~= nil
+        and contents:find("BADWARS_UI_V20_ATLAS_RUNTIME_BEGIN", 1, true) ~= nil
+        and contents:find("Version = \"20.0\"", 1, true) ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath='badscript/guis/new/gui.lua'

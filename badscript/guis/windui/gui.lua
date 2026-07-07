@@ -92,13 +92,13 @@ Tabs.Modules:Space()
 Tabs.Modules:Button({
 	Title = "Jump to Blatant (see sidebar tabs)",
 	Callback = function()
-		d:CreateNotification("BadWars", "Use the left sidebar or top tabs to switch to Blatant", 3)
+		pcall(function() WindUI:Notify({ Title = "BadWars", Content = "Use the left sidebar or top tabs to switch to Blatant", Duration = 3 }) end)
 	end,
 })
 Tabs.Modules:Button({
 	Title = "Jump to Render",
 	Callback = function()
-		d:CreateNotification("BadWars", "Use the left sidebar or top tabs to switch to Render", 3)
+		pcall(function() WindUI:Notify({ Title = "BadWars", Content = "Use the left sidebar or top tabs to switch to Render", Duration = 3 }) end)
 	end,
 })
 Tabs.Blatant = Window:Tab({ Title = "Blatant", Icon = "flame", Desc = "High visibility / strong modules" })
@@ -214,7 +214,7 @@ refreshNotifTab()
 Tabs.Settings:Toggle({
 	Title = "UI Transparency",
 	Desc = "Slight acrylic blur effect",
-	Default = true,
+	Value = true,
 	Callback = function(v)
 		WindUI.TransparencyValue = v and 0.08 or 0
 		-- WindUI will pick it up on next interactions; force a small recreate if needed
@@ -318,7 +318,7 @@ local function createCategoryObj(name, iconName)
 		local modToggle = tab:Toggle({
 			Title = modName,
 			Desc = settings.Tooltip or settings.Description or "",
-			Default = false,
+			Value = false,
 			Callback = function(state)
 				mod.Enabled = state == true
 				-- Call user module function
@@ -352,7 +352,7 @@ local function createCategoryObj(name, iconName)
 					created = tab:Toggle({
 						Title = opt.Name or "Option",
 						Desc = opt.Desc or opt.Tooltip,
-						Default = opt.Default or false,
+						Value = (opt.Default ~= nil and opt.Default) or (opt.Value ~= nil and opt.Value) or false,
 						Callback = function(v)
 							mod.Options[elName] = mod.Options[elName] or {}
 							mod.Options[elName].Value = v
@@ -360,14 +360,13 @@ local function createCategoryObj(name, iconName)
 						end,
 					})
 				elseif elementType == "Slider" then
+					local minV = opt.Min or opt.MinValue or 0
+					local maxV = opt.Max or opt.MaxValue or 100
+					local defV = opt.Default or opt.Value or minV
 					created = tab:Slider({
 						Title = opt.Name or "Slider",
 						Desc = opt.Desc,
-						Value = {
-							Min = opt.Min or opt.MinValue or 0,
-							Max = opt.Max or opt.MaxValue or 100,
-							Default = opt.Default or opt.Value or 50,
-						},
+						Value = { Min = minV, Max = maxV, Default = defV },
 						Step = opt.Step or 1,
 						Callback = function(v)
 							mod.Options[elName] = mod.Options[elName] or {}
@@ -511,7 +510,7 @@ local function createCategoryObj(name, iconName)
 end
 
 -- Create the primary categories expected by modules
-d:CreateCategory = function(self, cfg)
+d.CreateCategory = function(self, cfg)
 	-- legacy path sometimes used
 	return createCategoryObj(cfg.Name, cfg.Icon and "folder" or nil)
 end
@@ -571,7 +570,7 @@ Tabs.General:Button({
 
 Tabs.General:Toggle({
 	Title = "GUI Bind Indicator",
-	Default = true,
+	Value = true,
 	Callback = function(v)
 		-- Store for main.lua bootstrap
 		if d.Categories.Main and d.Categories.Main.Options then

@@ -327,6 +327,10 @@ local o = {
 
 local UI_WINDOW_WIDTH = d.isMobile and 268 or 272 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 46 local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_WINDOW_GAP = d.isMobile and 12 or 10 local UI_SCROLL_BOTTOM_PADDING = 24
 
+local function snapOffset(value)
+    return math.round(tonumber(value) or 0)
+end
+
 local function getTableSize(p)
     if type(p) ~= "table" then
         return 0
@@ -1987,10 +1991,6 @@ end
 
 getGuiScale = function()
     return math.max(A and A.Scale or 1, 0.05)
-end
-
-local function snapOffset(value)
-    return math.round(tonumber(value) or 0)
 end
 
 local function getLayoutContentHeight(layout, extraPadding)

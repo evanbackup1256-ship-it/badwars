@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Copy, Download, ExternalLink, Home, LayoutDashboard, RefreshCcw, Search, Wifi } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Copy, Download, ExternalLink, LayoutDashboard, RefreshCcw, Search, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,25 +99,38 @@ function AppFrame({ title, description, children }: { title: string; description
   return (
     <>
       <SiteNav />
-      <main className="site-wrap grid gap-5 py-10 lg:grid-cols-[250px_1fr]">
-        <aside className="glass sticky top-24 hidden h-fit rounded-2xl border p-3 lg:block">
-          <div className="mb-3 flex items-center gap-2 px-2 text-sm text-muted-foreground"><Home className="h-4 w-4" /> BadWars Console</div>
-          <nav className="grid gap-1">
-            {sidebar.map((item) => {
-              const Icon = item.icon;
-              return <Link className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground" href={item.href} key={item.href}><Icon className="h-4 w-4" /> {item.label}</Link>;
-            })}
-          </nav>
-        </aside>
-        <section className="min-w-0">
-          <div className="mb-6">
-            <Badge>Console</Badge>
-            <h1 className="mt-3 font-display text-4xl font-black md:text-6xl">{title}</h1>
-            <p className="mt-3 max-w-2xl text-muted-foreground">{description}</p>
-          </div>
-          {children}
-        </section>
-      </main>
+      <div className="site-wrap">
+        <div className="grid gap-8 py-10 lg:grid-cols-[240px_1fr]">
+          <aside className="hidden lg:block">
+            <div className="sticky top-24">
+              <div className="uppercase tracking-[2px] text-[10px] font-semibold text-muted-foreground mb-3 px-2">Console</div>
+              <nav className="space-y-1">
+                {sidebar.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link 
+                      key={item.href} 
+                      href={item.href} 
+                      className="flex items-center gap-3 rounded-2xl px-4 py-[10px] text-sm hover:bg-white/5 transition text-muted-foreground hover:text-foreground"
+                    >
+                      <Icon className="h-4 w-4" /> {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </aside>
+
+          <main>
+            <div className="mb-8">
+              <Badge className="mb-2">BadWars Console</Badge>
+              <h1 className="font-display text-5xl font-black tracking-[-1.8px]">{title}</h1>
+              <p className="mt-2 max-w-lg text-muted-foreground">{description}</p>
+            </div>
+            {children}
+          </main>
+        </div>
+      </div>
       <Footer />
     </>
   );
@@ -174,7 +187,15 @@ export function DashboardPage() {
           const Icon = widget.icon;
           return (
             <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }} key={widget.label}>
-              <Card><CardHeader><Icon className="h-5 w-5 text-primary" /><CardTitle>{widget.value}</CardTitle><CardDescription>{widget.label} · {widget.detail}</CardDescription></CardHeader></Card>
+              <Card className="border-white/10 hover:border-primary/20">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+                    <Icon className="h-3.5 w-3.5" /> {widget.label}
+                  </div>
+                  <CardTitle className="text-4xl font-black tracking-tighter mt-1">{widget.value}</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">{widget.detail}</CardDescription>
+                </CardHeader>
+              </Card>
             </motion.div>
           );
         })}
@@ -304,27 +325,49 @@ export function DownloadsPage() {
   const latestCommit = commits.data?.commits[0];
 
   return (
-    <AppFrame title="Download center" description="Version history, release notes, system requirements, checksum display, copy buttons, and latest release highlight.">
-      <Card className="mb-5 border-primary/40">
-        <CardHeader><Badge>Latest GitHub sync</Badge><CardTitle>{latestCommit ? `BadWars ${latestCommit.shortSha}` : `BadWars ${releases[0].version}`}</CardTitle><CardDescription>{latestCommit?.message || "Next.js site, live status API, dashboard shell, and runtime routing fixes."}</CardDescription></CardHeader>
-        <CardContent className="flex flex-wrap gap-3"><Button onClick={() => { downloadLatestLoader(); toast.success("Download started", { description: loaderFileName }); }}><Download className="h-4 w-4" /> Download latest</Button><Button variant="outline" onClick={async () => { await navigator.clipboard?.writeText(latestCommit?.sha || releases[0].checksum); toast.success("Checksum copied"); }}><Copy className="h-4 w-4" /> Copy ref</Button></CardContent>
+    <AppFrame title="Downloads" description="Grab the latest loader or browse historical builds. Everything is one click away.">
+      <Card className="border-primary/30 mb-8">
+        <CardHeader>
+          <Badge variant="success" className="w-fit">Current</Badge>
+          <CardTitle className="text-3xl">Latest Loader</CardTitle>
+          <CardDescription>{latestCommit?.message || "Production build ready"}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex gap-3">
+          <Button size="lg" onClick={downloadLatestLoader}>
+            <Download className="h-4 w-4 mr-2" /> Download
+          </Button>
+          <Button size="lg" variant="outline" onClick={async () => {
+            try {
+              const text = await currentLoaderText();
+              await navigator.clipboard?.writeText(text);
+              toast.success("Loader copied");
+            } catch {
+              toast.error("Failed to copy");
+            }
+          }}>
+            <Copy className="h-4 w-4 mr-2" /> Copy
+          </Button>
+        </CardContent>
       </Card>
-      <div className="grid gap-4">
-        {(commits.data?.commits.length ? commits.data.commits : releases.map((release) => ({
-          sha: release.checksum,
-          shortSha: release.version,
-          message: release.notes.join(", "),
-          htmlUrl: "#",
-          syncedAt: new Date().toISOString(),
-          fallback: true,
-          committedAt: release.date,
-          author: release.channel
-        }))).map((release, index) => (
-          <Card key={release.sha}>
-            <CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>{release.shortSha}</CardTitle><Badge variant={index === 0 ? "success" : "muted"}>{index === 0 ? "Latest" : "Commit"}</Badge></div><CardDescription>{formatCommitDate(release.committedAt)} · {release.sha}</CardDescription></CardHeader>
-            <CardContent><ul className="grid gap-2 text-sm text-muted-foreground"><li>{release.message}</li>{release.author ? <li>Author: {release.author}</li> : null}</ul><div className="mt-4 flex flex-wrap gap-2"><Button size="sm" onClick={() => { downloadLatestLoader(); toast.success(`${release.shortSha} download started`); }}><Download className="h-4 w-4" /> Download</Button><Button size="sm" variant="outline" onClick={async () => { await navigator.clipboard?.writeText(release.sha); toast.success("Ref copied"); }}><Copy className="h-4 w-4" /> Ref</Button>{release.htmlUrl !== "#" ? <Button asChild size="sm" variant="ghost"><Link href={release.htmlUrl} target="_blank"><ExternalLink className="h-4 w-4" /> GitHub</Link></Button> : null}</div></CardContent>
-          </Card>
-        ))}
+
+      <div>
+        <div className="font-medium text-sm mb-3 text-muted-foreground px-1">HISTORY</div>
+        <div className="space-y-[3px]">
+          {(commits.data?.commits.length ? commits.data.commits : releases).slice(0, 7).map((r: any, idx: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+            <div key={idx} className="flex items-center justify-between px-5 py-3.5 rounded-2xl border hover:bg-card/60 transition text-sm">
+              <div className="flex items-center gap-4">
+                <span className="font-mono text-xs text-primary/70 w-[72px]">{r.shortSha || r.version}</span>
+                <span className="text-muted-foreground truncate max-w-[340px]">{String(r.message || (r.notes && r.notes.join(", ")) || "")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" onClick={async () => {
+                  try { await navigator.clipboard.writeText(await currentLoaderText()); toast.success("Copied"); } catch {} 
+                }}>Copy</Button>
+                <Button size="sm" variant="ghost" onClick={downloadLatestLoader}>Download</Button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </AppFrame>
   );
@@ -354,14 +397,23 @@ export function ChangelogPage() {
 
 export function FeaturesPage() {
   return (
-    <AppFrame title="Features" description="Feature comparison, performance charts, animation-ready sections, and premium launcher UX.">
+    <AppFrame title="Features" description="Everything you need for a reliable and pleasant loader experience.">
       <div className="grid gap-4 md:grid-cols-2">
-        {features.map((feature) => {
+        {features.map((feature, i) => {
           const Icon = feature.icon;
-          return <Card key={feature.title}><CardHeader><Icon className="h-6 w-6 text-primary" /><CardTitle>{feature.title}</CardTitle><CardDescription>{feature.description}</CardDescription></CardHeader></Card>;
+          return (
+            <Card key={i} className="hover:border-primary/30 transition">
+              <CardHeader>
+                <div className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 mb-4">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <CardTitle>{feature.title}</CardTitle>
+                <CardDescription>{feature.description}</CardDescription>
+              </CardHeader>
+            </Card>
+          );
         })}
       </div>
-      <Card className="mt-5"><CardHeader><CardTitle>Performance chart</CardTitle><CardDescription>Placeholder chart area for launch metrics, loader copies, route searches, and warnings.</CardDescription></CardHeader><CardContent><div className="grid h-64 place-items-center rounded-2xl border bg-muted/35 text-muted-foreground">Chart surface ready</div></CardContent></Card>
     </AppFrame>
   );
 }

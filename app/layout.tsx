@@ -10,19 +10,18 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mon
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://badwars-production.up.railway.app"),
   title: {
-    default: "BadWars | Premium Script Hub",
-    template: "%s | BadWars"
+    default: "BadWars — Premium Roblox Loader Console",
+    template: "%s • BadWars"
   },
-  description: "Premium Roblox script hub with live loader sync, Roblox update watch, supported-game routing, dashboard, downloads, changelog, and clean diagnostics.",
+  description: "The premium loader console. Live Roblox status, one-click latest loader, full game routing, and professional diagnostics.",
+  icons: {
+    icon: "/logo.svg"
+  },
   openGraph: {
     title: "BadWars",
-    description: "Copy the newest loader, check Roblox status, and find supported game routes from one premium dashboard.",
-    type: "website"
+    description: "Copy the newest loader. Know when Roblox updates. Every supported route, instantly.",
+    images: [{ url: "/logo.svg" }],
   },
-  robots: {
-    index: true,
-    follow: true
-  }
 };
 
 export const viewport: Viewport = {

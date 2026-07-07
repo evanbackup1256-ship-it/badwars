@@ -2013,6 +2013,10 @@ local function getCategoryMaxWindowHeight()
     return UI_HEADER_HEIGHT + bodyHeight
 end
 
+local function getCategoryBodyHeight(targetHeight)
+    return math.max(0, snapOffset(targetHeight - UI_HEADER_HEIGHT))
+end
+
 local function syncScrollingFrame(scroller, contentHeight, preserveScroll)
     if not scroller or not scroller.Parent or not scroller:IsA("ScrollingFrame") then
         return
@@ -11332,23 +11336,18 @@ function d.CreateCategoryList(ag, ah)
     ao.Parent = an
     local ap = Instance.new("ScrollingFrame")
     ap.Name = "Children"
-    ap.Size = UDim2.new(1, 0, 1, -UI_HEADER_HEIGHT)
+    ap.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, UI_CATEGORY_MIN_BODY_HEIGHT)
     ap.Position = UDim2.fromOffset(0, UI_HEADER_HEIGHT)
     ap.BackgroundTransparency = 1
     ap.BorderSizePixel = 0
     ap.Visible = false
-    ap.ScrollBarThickness = d.isMobile and 7 or 3
-    ap.ScrollBarImageTransparency = d.isMobile and 0.35 or 0.58
-    ap.ScrollBarImageColor3 = o.MutedText
     ap.CanvasSize = UDim2.new()
     ap.AutomaticCanvasSize = Enum.AutomaticSize.None
-    ap.ScrollingDirection = Enum.ScrollingDirection.Y
     ap.ScrollingEnabled = true
-    ap.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
-    ap.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     ap.Active = true
     ap.Selectable = true
     ap.ClipsDescendants = true
+    styleScrollFrame(ap)
     ap.Parent = aj
     local aq = Instance.new("Frame")
     aq.BackgroundTransparency = 1
@@ -11392,21 +11391,20 @@ function d.CreateCategoryList(ag, ah)
     au.Parent = aq
 
     function ai.RefreshScroll(aC)
-        local scale = getGuiScale()
-        local contentHeight = math.max(0, math.ceil(at.AbsoluteContentSize.Y / scale) + 8)
-        local viewport = (B and B.AbsoluteSize)
-            or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
-            or Vector2.new(1280, 720)
-        local viewportHeight = viewport.Y / scale
-        local maximumHeight = math.max(176, math.min(614, viewportHeight - 72))
-        local targetHeight = aC.Expanded and math.min(UI_HEADER_HEIGHT + contentHeight + 6, maximumHeight) or UI_HEADER_HEIGHT
+        aC = aC or ai
+        local contentHeight = getLayoutContentHeight(at, UI_SCROLL_BOTTOM_PADDING)
+        local maxWindowHeight = getCategoryMaxWindowHeight()
+        local targetHeight = aC.Expanded
+            and math.min(UI_HEADER_HEIGHT + contentHeight, maxWindowHeight)
+            or UI_HEADER_HEIGHT
+        local bodyHeight = getCategoryBodyHeight(targetHeight)
+        local targetScrollSize = UDim2.fromOffset(UI_WINDOW_WIDTH, bodyHeight)
 
-        ap.CanvasSize = UDim2.fromOffset(0, contentHeight)
-        local visibleCanvasHeight = math.max(0, targetHeight - UI_HEADER_HEIGHT)
-        local maximumCanvasY = math.max(0, contentHeight - visibleCanvasHeight)
-        if ap.CanvasPosition.Y > maximumCanvasY then
-            ap.CanvasPosition = Vector2.new(0, maximumCanvasY)
+        if ap.Size ~= targetScrollSize then
+            ap.Size = targetScrollSize
         end
+
+        syncScrollingFrame(ap, contentHeight, true)
 
         if aC.Expanded then
             aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
@@ -12018,6 +12016,7 @@ function d.CreateCategoryList(ag, ah)
             return
         end
         aq.Visible = not aq.Visible
+        ai:RefreshScroll()
     end)
     connectDeferredPropertyChanged(at, "AbsoluteContentSize", function()
         if ag.ThreadFix then
@@ -12033,6 +12032,11 @@ function d.CreateCategoryList(ag, ah)
         if aq.Size ~= targetSize then
             aq.Size = targetSize
         end
+        task.defer(function()
+            if ap.Parent then
+                ai:RefreshScroll()
+            end
+        end)
     end)
 
     ai.Button = ag.Categories.Main:CreateButton({

@@ -15729,6 +15729,8 @@ d.GUIColor = d.Categories.Main:CreateGUISlider({
 })
 d.Categories.Main:CreateBind()
 
+-- BADWARS_TEXT_GUI_REGISTER_SCOPE_V3_BEGIN
+;(function()
 local aw = d:CreateOverlay({
     Name = "Text GUI",
     Icon = u("badscript/assets/new/textguiicon.png"),
@@ -16633,6 +16635,8 @@ function d.UpdateGUI(I, J, K, L, M)
         end
     end
 end
+end)()
+-- BADWARS_TEXT_GUI_REGISTER_SCOPE_V3_END
 
 d:Clean(q.ChildRemoved:Connect(function()
     local notifications = {}

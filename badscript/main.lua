@@ -158,7 +158,7 @@ local CFG = { repo = "evanbackup1256-ship-it", name = "badwars", branch = "main"
 local function rawUrls(path)
     local repo = CFG.repo .. "/" .. CFG.name
     local p = path:gsub(" ", "%%20")
-    local query = "?bwui=v19-ui-repair-5-2"
+    local query = "?bwui=v19-ui-repair-" .. tostring(os.time())  -- dynamic cache-bust for robustness
     return {
         "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p .. query,
         "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p .. query,
@@ -796,6 +796,13 @@ local function repairKnownSourceDefects(path, source)
         fixes += changed
     end
 
+    -- Additional common Roblox deprecation repair
+    repaired, changed = repaired:gsub(
+        "game:GetService%(["']RunService["']%)%.Heartbeat:Wait%(\)\s*game:GetService%(["']RunService["']%)%.Heartbeat:Wait\(\)\;",
+        "local rs = game:GetService('RunService'); rs.Heartbeat:Wait(); rs.Heartbeat:Wait();"
+    )
+    fixes += changed
+
     if fixes > 0 then
         mwarn("BadWars: [SOURCE REPAIR] " .. tostring(path) .. " repaired " .. tostring(fixes) .. " known defect(s)")
     end
@@ -1301,6 +1308,18 @@ local function healthCheck()
     if type(B.Libraries) ~= "table" then
         table.insert(warns, "Libraries missing")
     end
+    -- Additional robustness check
+    if type(B) == "table" and type(B.Modules) == "table" then
+        local nilModules = 0
+        for name, mod in pairs(B.Modules) do
+            if type(mod) ~= "table" then
+                nilModules = nilModules + 1
+            end
+        end
+        if nilModules > 0 then
+            table.insert(warns, "Some modules registered as non-table: " .. nilModules)
+        end
+    end
     pcall(function()
         collectgarbage("collect")
         local m = collectgarbage("count")
@@ -1781,8 +1800,7 @@ if not shared.BadIndependent then
         "BadWars: Pipeline "
             .. (totalErr == 0 and "OK" or "ISSUES")
             .. " in "
-            .. string.format("%.2f", el)
-            .. "s"
+            .. string.format("%.2f", el) .. "s"
             .. (totalErr > 0 and " (" .. totalErr .. " error(s))" or "")
     )
 else

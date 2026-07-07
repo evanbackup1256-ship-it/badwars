@@ -45,3 +45,19 @@ npm start
 - `/admin` admin dashboard shell
 - `/api/roblox/status` Roblox status API
 - `/api/roblox/check` forced Roblox check
+
+## Troubleshooting & Diagnostics
+
+The loader includes a comprehensive runtime diagnostics system (press F8 or use the console button in the status GUI).
+
+Common issues and repairs are tracked in repo files such as:
+- `BadWars-Diagnostics-*.txt`
+- `BadWars-*-Repair.txt`
+- `BedWars-Module-Audit-V11.md`
+
+If modules fail to load or the GUI doesn't appear:
+1. Check the diagnostics console for specific errors.
+2. The loader automatically repairs known source defects and clears stale caches on version mismatch.
+3. For Roblox API changes (e.g., CollisionGroup), repairs are applied dynamically.
+
+Report issues with full diagnostics output for faster resolution.

@@ -6962,6 +6962,7 @@ function d.CreateGUI(aa)
     an.Image = u("badscript/assets/new/back.png")
     an.ImageColor3 = m.Light(o.Main, 0.37)
     an.Parent = ak
+    styleCrispImage(an)
     addCorner(ak, o.RadiusLarge)
     addStroke(ak, o.Border, 0.32, 1)
     local ap = Instance.new("ScrollingFrame")
@@ -11327,12 +11328,13 @@ function d.CreateCategoryList(ag, ah)
     an.Parent = aj
     local ao = Instance.new("ImageLabel")
     ao.Name = "Arrow"
-    ao.Size = UDim2.fromOffset(9, 4)
-    ao.Position = UDim2.fromOffset(18, 19)
+    ao.Size = UDim2.fromOffset(10, 5)
+    ao.Position = UDim2.new(0.5, -5, 0.5, -2)
     ao.BackgroundTransparency = 1
     ao.Image = u("badscript/assets/new/expandup.png")
     ao.ImageColor3 = o.FaintText
     ao.Rotation = 180
+    styleCrispImage(ao)
     ao.Parent = an
     local ap = Instance.new("ScrollingFrame")
     ap.Name = "Children"
@@ -11353,6 +11355,7 @@ function d.CreateCategoryList(ag, ah)
     aq.BackgroundTransparency = 1
     aq.BackgroundColor3 = m.Dark(o.Main, 0.02)
     aq.Visible = false
+    aq.LayoutOrder = 0
     aq.Parent = ap
     local ar = Instance.new("ImageButton")
     ar.Name = "Settings"
@@ -11363,6 +11366,7 @@ function d.CreateCategoryList(ag, ah)
     ar.Image = ah.Name ~= "Profiles" and u("badscript/assets/new/customsettings.png")
         or u("badscript/assets/new/worldicon.png")
     ar.ImageColor3 = o.FaintText
+    styleCrispImage(ar)
     ar.Parent = aj
     if ah.Profiles then
         ak = ar
@@ -11385,6 +11389,12 @@ function d.CreateCategoryList(ag, ah)
     at.HorizontalAlignment = Enum.HorizontalAlignment.Center
     at.Padding = UDim.new(0, 3)
     at.Parent = ap
+    local categoryListPadding = Instance.new("UIPadding")
+    categoryListPadding.PaddingTop = UDim.new(0, 2)
+    categoryListPadding.PaddingBottom = UDim.new(0, 4)
+    categoryListPadding.PaddingLeft = UDim.new(0, 10)
+    categoryListPadding.PaddingRight = UDim.new(0, 10)
+    categoryListPadding.Parent = ap
     local au = Instance.new("UIListLayout")
     au.SortOrder = Enum.SortOrder.LayoutOrder
     au.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -11392,7 +11402,11 @@ function d.CreateCategoryList(ag, ah)
 
     function ai.RefreshScroll(aC)
         aC = aC or ai
-        local contentHeight = getLayoutContentHeight(at, UI_SCROLL_BOTTOM_PADDING)
+        local scale = math.max(getGuiScale(), 0.05)
+        local layoutHeight = at.AbsoluteContentSize.Y / scale
+        local contentHeight = snapOffset(
+            math.max(0, layoutHeight + UI_SCROLL_BOTTOM_PADDING + 6)
+        )
         local maxWindowHeight = getCategoryMaxWindowHeight()
         local targetHeight = aC.Expanded
             and math.min(UI_HEADER_HEIGHT + contentHeight, maxWindowHeight)
@@ -11405,6 +11419,18 @@ function d.CreateCategoryList(ag, ah)
         end
 
         syncScrollingFrame(ap, contentHeight, true)
+
+        task.defer(function()
+            if not ap.Parent or not aC.Expanded then
+                return
+            end
+            local windowHeight = ap.AbsoluteWindowSize.Y
+            if windowHeight <= 0 then
+                windowHeight = ap.AbsoluteSize.Y
+            end
+            local canvasHeight = ap.CanvasSize.Y.Offset
+            ap.ScrollingEnabled = canvasHeight > windowHeight + 1
+        end)
 
         if aC.Expanded then
             aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, targetHeight)
@@ -11500,11 +11526,17 @@ function d.CreateCategoryList(ag, ah)
             Tooltip = "This will set your profile to the default BadWars settings",
             BackgroundTransparency = 1,
         }, ap, { Options = {} })
+        if av and av.Object then
+            av.Object.LayoutOrder = 2
+        end
+        if aw and aw.Object then
+            aw.Object.LayoutOrder = 3
+        end
     end
     local ax = Instance.new("Frame")
     ax.Name = "Add"
-    ax.Size = UDim2.new(1, -20, 0, 36)
-    ax.Position = UDim2.fromOffset(10, 48)
+    ax.Size = UDim2.new(1, 0, 0, 36)
+    ax.LayoutOrder = 1000
     ax.BackgroundColor3 = o.Surface
     ax.Parent = ap
     addCorner(ax, o.Radius)
@@ -11534,11 +11566,8 @@ function d.CreateCategoryList(ag, ah)
     aA.Image = u("badscript/assets/new/add.png")
     aA.ImageColor3 = ah.Color
     aA.ImageTransparency = 0.3
+    styleCrispImage(aA)
     aA.Parent = ax
-    local aB = Instance.new("Frame")
-    aB.Size = UDim2.fromOffset()
-    aB.BackgroundTransparency = 1
-    aB.Parent = ap
     ah.Function = ah.Function or function() end
 
     local function profilesButtonRefresh()
@@ -11603,7 +11632,8 @@ function d.CreateCategoryList(ag, ah)
             if ah.Profiles then
                 local aH = Instance.new("TextButton")
                 aH.Name = aF.Name
-                aH.Size = UDim2.fromOffset(200, 33)
+                aH.Size = UDim2.new(1, 0, 0, 33)
+                aH.LayoutOrder = 10 + aE
                 aH.BackgroundColor3 = m.Light(o.Main, 0.02)
                 aH.AutoButtonColor = false
                 aH.Text = ""
@@ -11780,7 +11810,8 @@ function d.CreateCategoryList(ag, ah)
                 local aH = table.find(aC.ListEnabled, aF)
                 local aI = Instance.new("TextButton")
                 aI.Name = aF
-                aI.Size = UDim2.fromOffset(200, 32)
+                aI.Size = UDim2.new(1, 0, 0, 32)
+                aI.LayoutOrder = 10 + aE
                 aI.BackgroundColor3 = m.Light(o.Main, 0.02)
                 aI.AutoButtonColor = false
                 aI.Text = ""
@@ -13348,11 +13379,11 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         local iconName = ak == "alert" and "alert" or ak == "warning" and "warning" or ak == "success" and "success" or "info"
         local maxWidth = d.isMobile and 326 or 384
         local minWidth = d.isMobile and 296 or 320
-        local bodyBounds = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, maxWidth - 66) or Vector2.zero
-        local titleBounds = E(removeTags(ah), d.isMobile and 13 or 12, o.FontSemiBold, maxWidth - 96) or Vector2.zero
-        local width = math.clamp(math.max(minWidth, math.max(bodyBounds.X + 66, titleBounds.X + 96)), minWidth, maxWidth)
-        local wrapped = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, width - 66) or Vector2.zero
-        local height = math.clamp(56 + math.max(0, wrapped.Y - 10), 62, d.isMobile and 118 or 108)
+        local bodyBounds = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, maxWidth - 78) or Vector2.zero
+        local titleBounds = E(removeTags(ah), d.isMobile and 13 or 12, o.FontSemiBold, maxWidth - 108) or Vector2.zero
+        local width = math.clamp(math.max(minWidth, math.max(bodyBounds.X + 78, titleBounds.X + 108)), minWidth, maxWidth)
+        local wrapped = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, width - 78) or Vector2.zero
+        local height = math.clamp(64 + math.max(0, wrapped.Y - 12), 68, d.isMobile and 124 or 114)
 
         local card = Instance.new("CanvasGroup")
         card.Name = "Notification"
@@ -13360,8 +13391,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         card.AnchorPoint = Vector2.new(1, 0)
         card.Position = UDim2.new(1, width + 20, 1, -(height + 16))
         card.LayoutOrder = math.floor(os.clock() * 100000)
-        card.BackgroundColor3 = o.Main
-        card.BackgroundTransparency = 0.08
+        card.BackgroundColor3 = o.Elevated
+        card.BackgroundTransparency = 0.14
         card.BorderSizePixel = 0
         card.GroupTransparency = 1
         card.Active = true
@@ -13372,42 +13403,62 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         card:SetAttribute("DuplicateCount", 1)
         card:SetAttribute("LifeGeneration", 1)
         card.Parent = q
-        addCorner(card, o.Radius)
-        local stroke = addStroke(card, o.BorderStrong, 0.62, 1, "NotificationStroke")
+        addCorner(card, o.RadiusLarge)
+        addShadow(card, true)
+        addSurfaceGradient(card)
+        local stroke = addStroke(card, styleColor:Lerp(o.BorderStrong, 0.72), 0.78, 1, "NotificationStroke")
         local scale = addScale(card)
-        scale.Scale = 0.99
+        scale.Scale = 0.985
 
         local rail = Instance.new("Frame")
         rail.Name = "Accent"
-        rail.Size = UDim2.new(0, 3, 1, -14)
-        rail.Position = UDim2.fromOffset(10, 7)
+        rail.Size = UDim2.new(0, 2, 1, -18)
+        rail.Position = UDim2.fromOffset(12, 9)
         rail.BackgroundColor3 = styleColor
-        rail.BackgroundTransparency = 0.04
+        rail.BackgroundTransparency = 0.12
         rail.BorderSizePixel = 0
         rail.ZIndex = 132
         rail.Parent = card
         addCorner(rail, UDim.new(1, 0))
+        local railGlow = Instance.new("UIGradient")
+        railGlow.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, styleColor:Lerp(Color3.new(1, 1, 1), 0.18)),
+            ColorSequenceKeypoint.new(0.5, styleColor),
+            ColorSequenceKeypoint.new(1, styleColor:Lerp(o.Main, 0.35)),
+        })
+        railGlow.Rotation = 90
+        railGlow.Parent = rail
+
+        local iconBadge = Instance.new("Frame")
+        iconBadge.Name = "IconBadge"
+        iconBadge.Size = UDim2.fromOffset(28, 28)
+        iconBadge.Position = UDim2.fromOffset(22, 12)
+        iconBadge.BackgroundColor3 = styleColor:Lerp(o.Surface, 0.55)
+        iconBadge.BackgroundTransparency = 0.42
+        iconBadge.BorderSizePixel = 0
+        iconBadge.ZIndex = 132
+        iconBadge.Parent = card
+        addCorner(iconBadge, UDim.new(1, 0))
+        addStroke(iconBadge, styleColor:Lerp(o.BorderStrong, 0.5), 0.72, 1)
 
         local icon = Instance.new("ImageLabel")
         icon.Name = "Icon"
-        icon.Size = UDim2.fromOffset(13, 13)
-        icon.Position = UDim2.fromOffset(22, 14)
+        icon.Size = UDim2.fromOffset(14, 14)
+        icon.Position = UDim2.new(0.5, -7, 0.5, -7)
         icon.BackgroundTransparency = 1
         icon.Image = u("badscript/assets/new/" .. iconName .. ".png")
         if icon.Image == "" then
             icon.Image = u("badscript/assets/new/info.png")
         end
-        icon.ImageColor3 = styleColor:Lerp(o.TextStrong, 0.35)
+        icon.ImageColor3 = styleColor:Lerp(o.TextStrong, 0.22)
         icon.ZIndex = 133
-        icon.Parent = card
-        pcall(function()
-            icon.ResampleMode = Enum.ResampleMode.Default
-        end)
+        styleCrispImage(icon)
+        icon.Parent = iconBadge
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
-        title.Size = UDim2.new(1, -88, 0, 18)
-        title.Position = UDim2.fromOffset(42, 10)
+        title.Size = UDim2.new(1, -104, 0, 18)
+        title.Position = UDim2.fromOffset(58, 12)
         title.BackgroundTransparency = 1
         title.Text = ah
         title.TextColor3 = o.TextStrong
@@ -13422,8 +13473,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local body = Instance.new("TextLabel")
         body.Name = "Text"
-        body.Size = UDim2.new(1, -52, 1, -36)
-        body.Position = UDim2.fromOffset(42, 28)
+        body.Size = UDim2.new(1, -66, 1, -44)
+        body.Position = UDim2.fromOffset(58, 32)
         body.BackgroundTransparency = 1
         body.Text = ai
         body.TextColor3 = o.MutedText
@@ -13432,6 +13483,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         body.TextYAlignment = Enum.TextYAlignment.Top
         body.TextWrapped = true
         body.TextTruncate = Enum.TextTruncate.AtEnd
+        body.LineHeight = 1.12
         body.RichText = true
         body.FontFace = o.Font
         body.TextStrokeTransparency = 1
@@ -13440,10 +13492,10 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local count = Instance.new("TextLabel")
         count.Name = "Count"
-        count.Size = UDim2.fromOffset(20, 16)
-        count.Position = UDim2.new(1, -46, 0, 9)
-        count.BackgroundColor3 = o.Elevated
-        count.BackgroundTransparency = 0.12
+        count.Size = UDim2.fromOffset(18, 16)
+        count.Position = UDim2.new(1, -62, 0, 12)
+        count.BackgroundColor3 = styleColor:Lerp(o.Elevated, 0.35)
+        count.BackgroundTransparency = 0.28
         count.BorderSizePixel = 0
         count.Visible = false
         count.Text = "2"
@@ -13453,27 +13505,30 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         count.ZIndex = 134
         count.Parent = card
         addCorner(count, UDim.new(1, 0))
+        addStroke(count, styleColor:Lerp(o.BorderStrong, 0.45), 0.55, 1)
 
-        local close = Instance.new("TextButton")
+        local close = Instance.new("ImageButton")
         close.Name = "Dismiss"
-        close.Size = UDim2.fromOffset(20, 20)
-        close.Position = UDim2.new(1, -26, 0, 8)
-        close.BackgroundTransparency = 1
+        close.Size = UDim2.fromOffset(22, 22)
+        close.Position = UDim2.new(1, -30, 0, 10)
+        close.BackgroundColor3 = o.Surface
+        close.BackgroundTransparency = 0.55
         close.BorderSizePixel = 0
         close.AutoButtonColor = false
-        close.Text = "x"
-        close.TextColor3 = o.FaintText
-        close.TextSize = 14
-        close.FontFace = o.FontSemiBold
+        close.Image = u("badscript/assets/new/closemini.png")
+        close.ImageColor3 = o.FaintText
+        close.ImageTransparency = 0.15
         close.ZIndex = 135
+        styleCrispImage(close)
         close.Parent = card
+        addCorner(close, UDim.new(1, 0))
 
         local track = Instance.new("Frame")
         track.Name = "ProgressTrack"
-        track.Size = UDim2.new(1, -24, 0, 1)
-        track.Position = UDim2.new(0, 12, 1, -6)
+        track.Size = UDim2.new(1, -32, 0, 2)
+        track.Position = UDim2.new(0, 16, 1, -10)
         track.BackgroundColor3 = o.Border
-        track.BackgroundTransparency = 0.45
+        track.BackgroundTransparency = 0.62
         track.BorderSizePixel = 0
         track.ZIndex = 132
         track.Parent = card
@@ -13483,7 +13538,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         progress.Name = "Progress"
         progress.Size = UDim2.fromScale(1, 1)
         progress.BackgroundColor3 = styleColor
-        progress.BackgroundTransparency = 0.08
+        progress.BackgroundTransparency = 0.18
         progress.BorderSizePixel = 0
         progress.ZIndex = 133
         progress.Parent = track
@@ -13512,20 +13567,28 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         ag._NotificationDismissers[card] = dismiss
         close.Activated:Connect(dismiss)
         close.MouseEnter:Connect(function()
-            n:Tween(close, o.TweenFast, { TextColor3 = o.TextStrong })
+            n:Tween(close, o.TweenFast, {
+                BackgroundTransparency = 0.28,
+                ImageColor3 = o.TextStrong,
+                ImageTransparency = 0,
+            })
         end)
         close.MouseLeave:Connect(function()
-            n:Tween(close, o.TweenFast, { TextColor3 = o.FaintText })
+            n:Tween(close, o.TweenFast, {
+                BackgroundTransparency = 0.55,
+                ImageColor3 = o.FaintText,
+                ImageTransparency = 0.15,
+            })
         end)
         card.MouseEnter:Connect(function()
-            n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.04 })
-            n:Tween(stroke, o.TweenFast, { Transparency = 0.48, Color = styleColor:Lerp(o.BorderStrong, 0.45) })
-            n:Tween(rail, o.TweenFast, { BackgroundTransparency = 0 })
+            n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.08 })
+            n:Tween(stroke, o.TweenFast, { Transparency = 0.58, Color = styleColor:Lerp(o.BorderStrong, 0.35) })
+            n:Tween(rail, o.TweenFast, { BackgroundTransparency = 0.02 })
         end)
         card.MouseLeave:Connect(function()
-            n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.08 })
-            n:Tween(stroke, o.TweenFast, { Transparency = 0.62, Color = o.BorderStrong })
-            n:Tween(rail, o.TweenFast, { BackgroundTransparency = 0.04 })
+            n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.14 })
+            n:Tween(stroke, o.TweenFast, { Transparency = 0.78, Color = styleColor:Lerp(o.BorderStrong, 0.72) })
+            n:Tween(rail, o.TweenFast, { BackgroundTransparency = 0.12 })
         end)
         if d.isMobile then
             local swipe = Instance.new("TextButton")
@@ -13539,10 +13602,10 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         end
 
         layout(true)
-        n:Tween(card, o.TweenFast, {
+        n:Tween(card, o.TweenSlow, {
             GroupTransparency = 0,
         }, n.tweenstwo)
-        scale.Scale = 1
+        n:Spring(scale, o.SpringInteractive, { Scale = 1 })
         n:Tween(progress, TweenInfo.new(aj, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(0, 1) }, n.tweenstwo)
 
         local generation = card:GetAttribute("LifeGeneration")

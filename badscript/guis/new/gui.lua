@@ -1,3 +1,4 @@
+-- BADWARS_V19_UI_REPAIR_V7
 -- BADWARS_V19_UI_REPAIR_V6
 -- BADWARS_V19_UI_REPAIR_V5_2
 -- BADWARS_V19_UI_REPAIR_V4_4
@@ -169,7 +170,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "19.0",
-    PremiumBuild = "2026.07.06-V19-UI-REPAIR-V6",
+    PremiumBuild = "2026.07.06-V19-UI-REPAIR-V7",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -325,7 +326,7 @@ local o = {
     SpringSoft = { Damping = 0.98, Frequency = 19, Public = true },
 }
 
-local UI_WINDOW_WIDTH = d.isMobile and 268 or 272 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 46 local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_WINDOW_GAP = d.isMobile and 12 or 10 local UI_SCROLL_BOTTOM_PADDING = 24
+local UI_WINDOW_WIDTH = d.isMobile and 268 or 272 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 46 local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_WINDOW_GAP = d.isMobile and 12 or 10 local UI_SCROLL_BOTTOM_PADDING = 28 local UI_CATEGORY_MAX_BODY_HEIGHT = d.isMobile and 360 or 420 local UI_CATEGORY_MIN_BODY_HEIGHT = 140
 
 local function snapOffset(value)
     return math.round(tonumber(value) or 0)
@@ -1487,12 +1488,6 @@ local function hideTooltip(immediate)
         if tooltipStroke then
             tooltipStroke.Transparency = 1
         end
-        if y then
-            y.ImageTransparency = 1
-        end
-        if tooltipAccent then
-            tooltipAccent.BackgroundTransparency = 1
-        end
         if tooltipScale then
             tooltipScale.Scale = 0.99
         end
@@ -1513,18 +1508,6 @@ local function hideTooltip(immediate)
     if tooltipStroke then
         n:Tween(tooltipStroke, transition, {
             Transparency = 1,
-        })
-    end
-
-    if y then
-        n:Tween(y, transition, {
-            ImageTransparency = 1,
-        })
-    end
-
-    if tooltipAccent then
-        n:Tween(tooltipAccent, transition, {
-            BackgroundTransparency = 1,
         })
     end
 
@@ -1621,14 +1604,8 @@ local function showTooltip(ownerToken, target, tooltipText)
         if tooltipStroke then
             tooltipStroke.Transparency = 1
         end
-        if y then
-            y.ImageTransparency = 1
-        end
-        if tooltipAccent then
-            tooltipAccent.BackgroundTransparency = 1
-        end
         if tooltipScale then
-            tooltipScale.Scale = 0.99
+            tooltipScale.Scale = 1
         end
 
         n:Tween(
@@ -1640,7 +1617,7 @@ local function showTooltip(ownerToken, target, tooltipText)
             ),
             {
                 TextTransparency = 0,
-                BackgroundTransparency = 0.04,
+                BackgroundTransparency = 0.06,
             }
         )
     end
@@ -1655,34 +1632,6 @@ local function showTooltip(ownerToken, target, tooltipText)
             ),
             {
                 Transparency = 0.48,
-            }
-        )
-    end
-
-    if y then
-        n:Tween(
-            y,
-            TweenInfo.new(
-                0.065,
-                Enum.EasingStyle.Quart,
-                Enum.EasingDirection.Out
-            ),
-            {
-                ImageTransparency = 0.82,
-            }
-        )
-    end
-
-    if tooltipAccent then
-        n:Tween(
-            tooltipAccent,
-            TweenInfo.new(
-                0.065,
-                Enum.EasingStyle.Quart,
-                Enum.EasingDirection.Out
-            ),
-            {
-                BackgroundTransparency = 0.08,
             }
         )
     end
@@ -2003,11 +1952,25 @@ local function getLayoutContentHeight(layout, extraPadding)
     )
 end
 
-local function getCategoryViewportLimit()
-    return math.max(
-        220,
-        (B.AbsoluteSize.Y / getGuiScale()) - 80
+local function quantizeGuiScale(scale)
+    scale = math.clamp(tonumber(scale) or 1, 0.5, 2)
+    if scale >= 1 then
+        return math.floor(scale * 10 + 0.5) / 10
+    end
+    return math.floor(scale * 20 + 0.5) / 20
+end
+
+local function getCategoryMaxWindowHeight()
+    local viewportBody = math.max(
+        UI_CATEGORY_MIN_BODY_HEIGHT,
+        (B.AbsoluteSize.Y / getGuiScale()) - 148
     )
+    local ratioCap = snapOffset(viewportBody * 0.56)
+    local bodyHeight = math.max(
+        UI_CATEGORY_MIN_BODY_HEIGHT,
+        math.min(ratioCap, UI_CATEGORY_MAX_BODY_HEIGHT)
+    )
+    return UI_HEADER_HEIGHT + bodyHeight
 end
 
 local function syncScrollingFrame(scroller, contentHeight, preserveScroll)
@@ -2021,22 +1984,29 @@ local function syncScrollingFrame(scroller, contentHeight, preserveScroll)
         scroller.CanvasSize = targetCanvas
     end
 
-    task.defer(function()
+    local function applyScrollState()
         if not scroller.Parent then
             return
         end
 
-        local maxY = math.max(
-            0,
-            scroller.AbsoluteCanvasSize.Y - scroller.AbsoluteWindowSize.Y
+        local windowHeight = scroller.AbsoluteWindowSize.Y
+        local canvasHeight = math.max(
+            contentHeight,
+            scroller.AbsoluteCanvasSize.Y
         )
-        scroller.ScrollingEnabled = maxY > 1
+        local maxY = math.max(0, canvasHeight - windowHeight)
+        scroller.ScrollingEnabled = maxY > 0.5
 
         local currentY = preserveScroll and scroller.CanvasPosition.Y or 0
         local targetY = math.clamp(currentY, 0, maxY)
         if math.abs(scroller.CanvasPosition.Y - targetY) > 0.5 then
             scroller.CanvasPosition = Vector2.new(0, targetY)
         end
+    end
+
+    task.defer(function()
+        applyScrollState()
+        task.defer(applyScrollState)
     end)
 end
 
@@ -8671,7 +8641,7 @@ function d.CreateCategory(aa, ab)
     ai.Parent = ag
     local aj = Instance.new("ScrollingFrame")
     aj.Name = "Children"
-    aj.Size = UDim2.new(1, 0, 1, -UI_HEADER_HEIGHT)
+    aj.Size = UDim2.fromOffset(UI_WINDOW_WIDTH, UI_CATEGORY_MIN_BODY_HEIGHT)
     aj.Position = UDim2.fromOffset(0, UI_HEADER_HEIGHT)
     aj.BackgroundTransparency = 1
     aj.BorderSizePixel = 0
@@ -8685,6 +8655,8 @@ function d.CreateCategory(aa, ab)
     aj.AutomaticCanvasSize = Enum.AutomaticSize.None
     aj.ElasticBehavior = Enum.ElasticBehavior.Never
     aj.CanvasSize = UDim2.new()
+    aj.ScrollingEnabled = true
+    aj.Active = true
     aj.ClipsDescendants = true
     aj.ZIndex = ad.ZIndex + 1
     aj.Parent = ad
@@ -9893,12 +9865,16 @@ function d.CreateCategory(aa, ab)
             al,
             UI_SCROLL_BOTTOM_PADDING
         )
-        local viewportLimit = getCategoryViewportLimit()
+        local maxWindowHeight = getCategoryMaxWindowHeight()
 
         return math.min(
             UI_HEADER_HEIGHT + contentHeight,
-            viewportLimit
+            maxWindowHeight
         )
+    end
+
+    local function getCategoryBodyHeight(targetHeight)
+        return math.max(0, snapOffset(targetHeight - UI_HEADER_HEIGHT))
     end
 
     local function refreshCategoryLayout(instant)
@@ -9911,11 +9887,21 @@ function d.CreateCategory(aa, ab)
             and getExpandedCategoryHeight()
             or UI_HEADER_HEIGHT
 
-        syncScrollingFrame(
-            aj,
-            getLayoutContentHeight(al, UI_SCROLL_BOTTOM_PADDING),
-            true
+        local contentHeight = getLayoutContentHeight(
+            al,
+            UI_SCROLL_BOTTOM_PADDING
         )
+        local bodyHeight = getCategoryBodyHeight(targetHeight)
+        local targetScrollSize = UDim2.fromOffset(
+            UI_WINDOW_WIDTH,
+            bodyHeight
+        )
+
+        if aj.Size ~= targetScrollSize then
+            aj.Size = targetScrollSize
+        end
+
+        syncScrollingFrame(aj, contentHeight, true)
 
         local currentHeight = ad.Size.Y.Offset
         local needsResize =
@@ -13298,16 +13284,16 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         local titleBounds = E(removeTags(ah), d.isMobile and 13 or 12, o.FontSemiBold, maxWidth - 96) or Vector2.zero
         local width = math.clamp(math.max(minWidth, math.max(bodyBounds.X + 66, titleBounds.X + 96)), minWidth, maxWidth)
         local wrapped = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, width - 66) or Vector2.zero
-        local height = math.clamp(66 + math.max(0, wrapped.Y - 14), 74, d.isMobile and 126 or 120)
+        local height = math.clamp(56 + math.max(0, wrapped.Y - 10), 62, d.isMobile and 118 or 108)
 
         local card = Instance.new("CanvasGroup")
         card.Name = "Notification"
         card.Size = UDim2.fromOffset(width, height)
         card.AnchorPoint = Vector2.new(1, 0)
-        card.Position = UDim2.new(1, width + 24, 1, -(height + 18))
+        card.Position = UDim2.new(1, width + 20, 1, -(height + 16))
         card.LayoutOrder = math.floor(os.clock() * 100000)
-        card.BackgroundColor3 = o.MainSoft
-        card.BackgroundTransparency = 0.005
+        card.BackgroundColor3 = o.Main
+        card.BackgroundTransparency = 0.08
         card.BorderSizePixel = 0
         card.GroupTransparency = 1
         card.Active = true
@@ -13318,52 +13304,41 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         card:SetAttribute("DuplicateCount", 1)
         card:SetAttribute("LifeGeneration", 1)
         card.Parent = q
-        addCorner(card, o.RadiusLarge)
-        addSurfaceGradient(card)
-        addShadow(card, true)
-        local stroke = addStroke(card, o.BorderStrong, 0.38, 1, "NotificationStroke")
+        addCorner(card, o.Radius)
+        local stroke = addStroke(card, o.BorderStrong, 0.62, 1, "NotificationStroke")
         local scale = addScale(card)
-        scale.Scale = 0.975
+        scale.Scale = 0.99
 
-        local accent = Instance.new("Frame")
-        accent.Name = "Accent"
-        accent.Size = UDim2.new(1, -28, 0, 2)
-        accent.Position = UDim2.fromOffset(14, 0)
-        accent.BackgroundColor3 = styleColor
-        accent.BorderSizePixel = 0
-        accent.ZIndex = 132
-        accent.Parent = card
-        addCorner(accent, UDim.new(1, 0))
-
-        local iconShell = Instance.new("Frame")
-        iconShell.Name = "IconShell"
-        iconShell.Size = UDim2.fromOffset(36, 36)
-        iconShell.Position = UDim2.fromOffset(16, 18)
-        iconShell.BackgroundColor3 = styleColor
-        iconShell.BackgroundTransparency = 0.88
-        iconShell.BorderSizePixel = 0
-        iconShell.ZIndex = 132
-        iconShell.Parent = card
-        addCorner(iconShell, o.RadiusSmall)
+        local rail = Instance.new("Frame")
+        rail.Name = "Accent"
+        rail.Size = UDim2.new(0, 3, 1, -14)
+        rail.Position = UDim2.fromOffset(10, 7)
+        rail.BackgroundColor3 = styleColor
+        rail.BorderSizePixel = 0
+        rail.ZIndex = 132
+        rail.Parent = card
+        addCorner(rail, UDim.new(1, 0))
 
         local icon = Instance.new("ImageLabel")
         icon.Name = "Icon"
-        icon.Size = UDim2.fromOffset(14, 14)
-        icon.AnchorPoint = Vector2.new(0.5, 0.5)
-        icon.Position = UDim2.fromScale(0.5, 0.5)
+        icon.Size = UDim2.fromOffset(13, 13)
+        icon.Position = UDim2.fromOffset(22, 14)
         icon.BackgroundTransparency = 1
         icon.Image = u("badscript/assets/new/" .. iconName .. ".png")
         if icon.Image == "" then
             icon.Image = u("badscript/assets/new/info.png")
         end
-        icon.ImageColor3 = styleColor
+        icon.ImageColor3 = styleColor:Lerp(o.TextStrong, 0.35)
         icon.ZIndex = 133
-        icon.Parent = iconShell
+        icon.Parent = card
+        pcall(function()
+            icon.ResampleMode = Enum.ResampleMode.Default
+        end)
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
-        title.Size = UDim2.new(1, -100, 0, 20)
-        title.Position = UDim2.fromOffset(64, 15)
+        title.Size = UDim2.new(1, -88, 0, 18)
+        title.Position = UDim2.fromOffset(42, 10)
         title.BackgroundTransparency = 1
         title.Text = ah
         title.TextColor3 = o.TextStrong
@@ -13372,13 +13347,14 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         title.TextTruncate = Enum.TextTruncate.AtEnd
         title.RichText = true
         title.FontFace = o.FontSemiBold
+        title.TextStrokeTransparency = 1
         title.ZIndex = 132
         title.Parent = card
 
         local body = Instance.new("TextLabel")
         body.Name = "Text"
-        body.Size = UDim2.new(1, -80, 1, -44)
-        body.Position = UDim2.fromOffset(64, 37)
+        body.Size = UDim2.new(1, -52, 1, -36)
+        body.Position = UDim2.fromOffset(42, 28)
         body.BackgroundTransparency = 1
         body.Text = ai
         body.TextColor3 = o.MutedText
@@ -13389,19 +13365,20 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         body.TextTruncate = Enum.TextTruncate.AtEnd
         body.RichText = true
         body.FontFace = o.Font
+        body.TextStrokeTransparency = 1
         body.ZIndex = 132
         body.Parent = card
 
         local count = Instance.new("TextLabel")
         count.Name = "Count"
-        count.Size = UDim2.fromOffset(22, 18)
-        count.Position = UDim2.new(1, -50, 0, 10)
+        count.Size = UDim2.fromOffset(20, 16)
+        count.Position = UDim2.new(1, -46, 0, 9)
         count.BackgroundColor3 = o.Elevated
-        count.BackgroundTransparency = 0.08
+        count.BackgroundTransparency = 0.12
         count.BorderSizePixel = 0
         count.Visible = false
         count.Text = "2"
-        count.TextColor3 = o.MutedText
+        count.TextColor3 = o.TextStrong
         count.TextSize = 9
         count.FontFace = o.FontBold
         count.ZIndex = 134
@@ -13410,24 +13387,24 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local close = Instance.new("TextButton")
         close.Name = "Dismiss"
-        close.Size = UDim2.fromOffset(24, 24)
-        close.Position = UDim2.new(1, -30, 0, 7)
+        close.Size = UDim2.fromOffset(20, 20)
+        close.Position = UDim2.new(1, -26, 0, 8)
         close.BackgroundTransparency = 1
         close.BorderSizePixel = 0
         close.AutoButtonColor = false
-        close.Text = "X"
+        close.Text = "x"
         close.TextColor3 = o.FaintText
-        close.TextSize = 18
+        close.TextSize = 14
         close.FontFace = o.FontSemiBold
         close.ZIndex = 135
         close.Parent = card
 
         local track = Instance.new("Frame")
         track.Name = "ProgressTrack"
-        track.Size = UDim2.new(1, -32, 0, 2)
-        track.Position = UDim2.new(0, 16, 1, -8)
-        track.BackgroundColor3 = o.Elevated
-        track.BackgroundTransparency = 0.12
+        track.Size = UDim2.new(1, -24, 0, 1)
+        track.Position = UDim2.new(0, 12, 1, -6)
+        track.BackgroundColor3 = o.Border
+        track.BackgroundTransparency = 0.45
         track.BorderSizePixel = 0
         track.ZIndex = 132
         track.Parent = card
@@ -13437,6 +13414,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         progress.Name = "Progress"
         progress.Size = UDim2.fromScale(1, 1)
         progress.BackgroundColor3 = styleColor
+        progress.BackgroundTransparency = 0.08
         progress.BorderSizePixel = 0
         progress.ZIndex = 133
         progress.Parent = track
@@ -13471,12 +13449,12 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             n:Tween(close, o.TweenFast, { TextColor3 = o.FaintText })
         end)
         card.MouseEnter:Connect(function()
-            n:Spring(scale, o.SpringInteractive, { Scale = 1.006 })
-            n:Tween(stroke, o.TweenFast, { Transparency = 0.3, Color = styleColor:Lerp(o.BorderStrong, 0.62) })
+            n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.03 })
+            n:Tween(stroke, o.TweenFast, { Transparency = 0.42, Color = styleColor:Lerp(o.BorderStrong, 0.5) })
         end)
         card.MouseLeave:Connect(function()
-            n:Spring(scale, o.SpringInteractive, { Scale = 1 })
-            n:Tween(stroke, o.TweenFast, { Transparency = 0.48, Color = o.BorderStrong })
+            n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.08 })
+            n:Tween(stroke, o.TweenFast, { Transparency = 0.62, Color = o.BorderStrong })
         end)
         if d.isMobile then
             local swipe = Instance.new("TextButton")
@@ -13490,10 +13468,10 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         end
 
         layout(true)
-        n:Tween(card, o.TweenSpring, {
+        n:Tween(card, o.TweenFast, {
             GroupTransparency = 0,
         }, n.tweenstwo)
-        n:Spring(scale, o.SpringSoft, { Scale = 1 })
+        scale.Scale = 1
         n:Tween(progress, TweenInfo.new(aj, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(0, 1) }, n.tweenstwo)
 
         local generation = card:GetAttribute("LifeGeneration")
@@ -14827,8 +14805,7 @@ z.BackgroundColor3 = o.Elevated
 z.Visible = false
 z.Text = ""
 z.TextColor3 = o.TextStrong
-z.TextStrokeColor3 = o.Main
-z.TextStrokeTransparency = 0.82
+z.TextStrokeTransparency = 1
 z.TextSize = d.isMobile and 14 or 13
 z.TextWrapped = true
 z.RichText = false
@@ -14839,29 +14816,13 @@ z.BackgroundTransparency = 1
 z.Parent = w
 addCorner(z, o.Radius)
 tooltipStroke = addStroke(z, o.BorderStrong, 1, 1, "TooltipStroke")
-y = addShadow(z, true)
-y.ImageTransparency = 1
 tooltipScale = addScale(z)
-tooltipScale.Scale = 0.985
-tooltipAccent = Instance.new("Frame")
-tooltipAccent.Name = "Accent"
-tooltipAccent.Size = UDim2.new(0, 2, 1, -12)
-tooltipAccent.Position = UDim2.fromOffset(5, 6)
-tooltipAccent.BorderSizePixel = 0
-tooltipAccent.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-tooltipAccent.BackgroundTransparency = 1
-tooltipAccent.ZIndex = z.ZIndex + 1
-tooltipAccent.Parent = z
-addCorner(tooltipAccent, UDim.new(1, 0))
-connectguicolorchange(function(hue, saturation, value)
-    if tooltipAccent.Parent then
-        tooltipAccent.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
-    end
-end)
+tooltipScale.Scale = 1
+tooltipAccent = nil
 
 local tooltipPadding = Instance.new("UIPadding")
-tooltipPadding.PaddingLeft = UDim.new(0, 14)
-tooltipPadding.PaddingRight = UDim.new(0, 11)
+tooltipPadding.PaddingLeft = UDim.new(0, 10)
+tooltipPadding.PaddingRight = UDim.new(0, 10)
 tooltipPadding.PaddingTop = UDim.new(0, 7)
 tooltipPadding.PaddingBottom = UDim.new(0, 7)
 tooltipPadding.Parent = z
@@ -14934,7 +14895,7 @@ local function responsiveScale()
         scale = math.min(scale, 0.8)
     end
 
-    return math.floor(scale * 20 + 0.5) / 20
+    return quantizeGuiScale(scale)
 end
 A.Scale = responsiveScale()
 A.Parent = w
@@ -14963,7 +14924,11 @@ d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 end))
 
 d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
-    A.Scale = math.clamp(A.Scale, 0.5, 2)
+    local quantized = quantizeGuiScale(A.Scale)
+    if math.abs(quantized - A.Scale) > 0.001 then
+        A.Scale = quantized
+        return
+    end
     w.Size = UDim2.fromScale(1 / A.Scale, 1 / A.Scale)
     if z then
         z.Visible = false
@@ -14979,6 +14944,9 @@ d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
                     setGuiAbsolutePosition(window, clamped)
                 end
             end
+        end
+        if d._InitialLayoutReady and d.FinalizeInitialLayout then
+            d:FinalizeInitialLayout(true)
         end
     end)
 end))
@@ -15463,7 +15431,7 @@ au = at:CreateSlider({
     Decimal = 10,
     Function = function(av, aw)
         if aw and not d.Scale.Enabled then
-            A.Scale = av
+            A.Scale = quantizeGuiScale(av)
         end
     end,
     Default = (d.isMobile and 0.9 or 0.8),

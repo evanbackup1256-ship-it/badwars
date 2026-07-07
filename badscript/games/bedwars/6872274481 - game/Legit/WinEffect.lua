@@ -1,3 +1,10 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
+local store = Bad.store or {}
+local entitylib = Bad.entitylib or {}
+local compat = Bad.BedWarsCompatibility or {}
+local BadEvents = Bad.BadEvents or {}
+
 local WinEffect
 local List
 local NameToId = {}
@@ -7,7 +14,8 @@ WinEffect = Bad.Legit:CreateModule({
 	Function = function(callback)
 		if callback then
 			WinEffect:Clean(BadEvents.MatchEndEvent.Event:Connect(function()
-				for i, v in getconnections(bedwars.Client:Get('WinEffectTriggered').instance.OnClientEvent) do
+				local gc = Bad.getconnections or getconnections or function() return {} end
+				for i, v in gc(bedwars.Client:Get('WinEffectTriggered').instance.OnClientEvent) do
 					if v.Function then
 						v.Function({
 							winEffectType = NameToId[List.Value],

@@ -1,12 +1,17 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
+local store = Bad.store or {}
+local entitylib = Bad.entitylib or {}
+local compat = Bad.BedWarsCompatibility or {}
+
 local KitESP
 local Background
 local Color = {}
 local Reference = {}
 local Folder = Instance.new('Folder')
 Folder.Parent = Bad.gui
-local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
-local collectionService = game:GetService('CollectionService')
-local addBlur = (shared.Bad and shared.Bad.addBlur) or function() return Instance.new('Frame') end
+local collectionService = Bad.collectionService or game:GetService('CollectionService')
+local addBlur = Bad.addBlur or function() return Instance.new('Frame') end
 
 local ESPKits = {
 	alchemist = {'alchemist_ingedients', 'wild_flower'},

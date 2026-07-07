@@ -1,3 +1,10 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
+local store = Bad.store or {}
+local entitylib = Bad.entitylib or {}
+local compat = Bad.BedWarsCompatibility or {}
+local lplr = Bad.lplr or game:GetService("Players").LocalPlayer
+
 local AutoBank
 local UIToggle
 local UI

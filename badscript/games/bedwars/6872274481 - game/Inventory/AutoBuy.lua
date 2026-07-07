@@ -1,3 +1,9 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
+local store = Bad.store or {}
+local entitylib = Bad.entitylib or {}
+local compat = Bad.BedWarsCompatibility or {}
+
 local AutoBuy
 local Sword
 local Armor
@@ -12,7 +18,7 @@ local UpgradeToggles = {}
 local Functions, id = {}
 local Callbacks = {Custom, Functions, CustomPost}
 local npctick = tick()
-local compatibility = Bad.BedWarsCompatibility
+local compatibility = Bad.BedWarsCompatibility or compat
 
 local function getStoreState()
 	if compatibility and type(compatibility.GetStoreState) == 'function' then

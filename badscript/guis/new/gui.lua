@@ -150,10 +150,10 @@ local c = function(c)
 end
 local d = {
     GUIColor = {
-        Hue = 0.46,
-        Sat = 0.74,
-        Value = 0.92,
-    },
+        Hue = 0.60,
+        Sat = 0.65,
+        Value = 0.93,
+    }, -- premium obsidian blue-teal accent
     HeldKeybinds = {},
     Keybind = { "RightShift" },
     Loaded = false,
@@ -331,7 +331,16 @@ local o = {
     SpringSoft = { Damping = 0.98, Frequency = 19, Public = true },
 }
 
-local UI_WINDOW_WIDTH = d.isMobile and 270 or 276 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_NAV_ROW_HEIGHT = d.isMobile and 50 or 42 local UI_WINDOW_GAP = d.isMobile and 12 or 10 local UI_SCROLL_BOTTOM_PADDING = 30 local UI_CATEGORY_MAX_BODY_HEIGHT = d.isMobile and 368 or 428 local UI_CATEGORY_MIN_BODY_HEIGHT = 144
+local UI_WINDOW_WIDTH = d.isMobile and 278 or 292
+local UI_HEADER_HEIGHT = d.isMobile and 54 or 48
+local UI_MODULE_ROW_HEIGHT = d.isMobile and 50 or 42
+local UI_NAV_ROW_HEIGHT = d.isMobile and 48 or 40
+local UI_WINDOW_GAP = d.isMobile and 10 or 8
+local UI_SCROLL_BOTTOM_PADDING = 24
+local UI_CATEGORY_MAX_BODY_HEIGHT = d.isMobile and 352 or 410
+local UI_CATEGORY_MIN_BODY_HEIGHT = 132
+local UI_NOTIF_WIDTH = d.isMobile and 310 or 360
+local UI_NOTIF_STACK_LIMIT = d.isMobile and 3 or 5
 
 local function snapOffset(value)
     return math.round(tonumber(value) or 0)
@@ -13515,16 +13524,18 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         end
 
         local function layout(animated)
-            local offset = d.isMobile and 14 or 18
+            local offset = d.isMobile and 12 or 16
             for _, card in ipairs(cards()) do
                 local height = card:GetAttribute("NotifHeight") or card.AbsoluteSize.Y
-                local target = UDim2.new(1, d.isMobile and -10 or -18, 1, -(offset + height))
+                local target = UDim2.new(1, d.isMobile and -8 or -14, 1, -(offset + height))
                 if animated then
-                    n:Tween(card, o.Tween, { Position = target }, n.tweenstwo)
+                    n:Tween(card, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = target }, true)
+                    local sc = card:FindFirstChildOfClass("UIScale")
+                    if sc then n:Spring(sc, { Scale = 1 }, { Frequency = 3.5, Damping = 0.8 }) end
                 else
                     card.Position = target
                 end
-                offset += height + 8
+                offset += height + 6
             end
         end
 
@@ -13574,7 +13585,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         end
 
         local current = cards()
-        local limit = d.isMobile and 3 or 4
+        local limit = UI_NOTIF_STACK_LIMIT or (d.isMobile and 3 or 5)
         while #current >= limit do
             current[#current]:Destroy()
             current = cards()
@@ -13583,26 +13594,27 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         local styleColor = ak == "alert" and o.Danger
             or ak == "warning" and o.Warning
             or ak == "success" and o.Success
-            or Color3.fromHSV(ag.GUIColor.Hue, ag.GUIColor.Sat, ag.GUIColor.Value)
-        local iconName = ak == "alert" and "alert" or ak == "warning" and "warning" or ak == "success" and "success" or "info"
-        local maxWidth = d.isMobile and 326 or 384
-        local minWidth = d.isMobile and 296 or 320
-        local bodyBounds = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, maxWidth - 78) or Vector2.zero
-        local titleBounds = E(removeTags(ah), d.isMobile and 13 or 12, o.FontSemiBold, maxWidth - 108) or Vector2.zero
-        local width = math.clamp(math.max(minWidth, math.max(bodyBounds.X + 78, titleBounds.X + 108)), minWidth, maxWidth)
-        local wrapped = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, width - 78) or Vector2.zero
-        local height = math.clamp(64 + math.max(0, wrapped.Y - 12), 68, d.isMobile and 124 or 114)
+            or ak == "error" and o.Danger
+            or Color3.fromHSV(ag.GUIColor.Hue, math.max(ag.GUIColor.Sat - 0.05, 0.6), math.min(ag.GUIColor.Value + 0.1, 0.98))
+        local iconName = (ak == "alert" or ak == "error") and "alert" or ak == "warning" and "warning" or ak == "success" and "allowedicon" or "notification"
+        local maxWidth = d.isMobile and 320 or 370
+        local minWidth = d.isMobile and 290 or 310
+        local bodyBounds = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, maxWidth - 72) or Vector2.zero
+        local titleBounds = E(removeTags(ah), d.isMobile and 13 or 12, o.FontSemiBold, maxWidth - 100) or Vector2.zero
+        local width = math.clamp(math.max(minWidth, math.max(bodyBounds.X + 72, titleBounds.X + 100)), minWidth, maxWidth)
+        local wrapped = E(removeTags(ai), d.isMobile and 12 or 11, o.Font, width - 72) or Vector2.zero
+        local height = math.clamp(58 + math.max(0, wrapped.Y - 10), 62, d.isMobile and 118 or 108)
 
         local card = Instance.new("CanvasGroup")
         card.Name = "Notification"
         card.Size = UDim2.fromOffset(width, height)
         card.AnchorPoint = Vector2.new(1, 0)
-        card.Position = UDim2.new(1, width + 20, 1, -(height + 16))
+        card.Position = UDim2.new(1, width + 40, 1, -(height + 20))
         card.LayoutOrder = math.floor(os.clock() * 100000)
         card.BackgroundColor3 = o.Elevated
-        card.BackgroundTransparency = 0.14
+        card.BackgroundTransparency = 0.08
         card.BorderSizePixel = 0
-        card.GroupTransparency = 1
+        card.GroupTransparency = 0.2
         card.Active = true
         card.ZIndex = 130
         card:SetAttribute("NotifHeight", height)
@@ -13614,49 +13626,67 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         addCorner(card, o.RadiusLarge)
         addShadow(card, true)
         addSurfaceGradient(card)
-        local stroke = addStroke(card, styleColor:Lerp(o.BorderStrong, 0.72), 0.78, 1, "NotificationStroke")
-        local scale = addScale(card)
-        scale.Scale = 0.985
 
+        -- Use blurnotif for premium look
+        local blur = Instance.new("ImageLabel")
+        blur.Name = "Blur"
+        blur.Size = UDim2.fromScale(1,1)
+        blur.BackgroundTransparency = 1
+        blur.Image = u("badscript/assets/new/blurnotif.png")
+        blur.ImageColor3 = o.Main
+        blur.ImageTransparency = 0.35
+        blur.ScaleType = Enum.ScaleType.Slice
+        blur.SliceCenter = Rect.new(52, 31, 261, 502)
+        blur.ZIndex = 129
+        blur.Parent = card
+
+        local stroke = addStroke(card, styleColor:Lerp(o.BorderStrong, 0.6), 0.65, 1, "NotificationStroke")
+        local scale = addScale(card)
+        scale.Scale = 0.92
+
+        -- Accent rail modern
         local rail = Instance.new("Frame")
         rail.Name = "Accent"
-        rail.Size = UDim2.new(0, 2, 1, -18)
-        rail.Position = UDim2.fromOffset(12, 9)
+        rail.Size = UDim2.new(0, 3, 1, -12)
+        rail.Position = UDim2.fromOffset(10, 6)
         rail.BackgroundColor3 = styleColor
-        rail.BackgroundTransparency = 0.12
+        rail.BackgroundTransparency = 0.1
         rail.BorderSizePixel = 0
         rail.ZIndex = 132
         rail.Parent = card
         addCorner(rail, UDim.new(1, 0))
-        local railGlow = Instance.new("UIGradient")
-        railGlow.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, styleColor:Lerp(Color3.new(1, 1, 1), 0.18)),
-            ColorSequenceKeypoint.new(0.5, styleColor),
-            ColorSequenceKeypoint.new(1, styleColor:Lerp(o.Main, 0.35)),
-        })
-        railGlow.Rotation = 90
-        railGlow.Parent = rail
 
         local iconBadge = Instance.new("Frame")
         iconBadge.Name = "IconBadge"
-        iconBadge.Size = UDim2.fromOffset(28, 28)
-        iconBadge.Position = UDim2.fromOffset(22, 12)
-        iconBadge.BackgroundColor3 = styleColor:Lerp(o.Surface, 0.55)
-        iconBadge.BackgroundTransparency = 0.42
+        iconBadge.Size = UDim2.fromOffset(26, 26)
+        iconBadge.Position = UDim2.fromOffset(20, 10)
+        iconBadge.BackgroundColor3 = styleColor:Lerp(o.Surface, 0.6)
+        iconBadge.BackgroundTransparency = 0.35
         iconBadge.BorderSizePixel = 0
         iconBadge.ZIndex = 132
         iconBadge.Parent = card
         addCorner(iconBadge, UDim.new(1, 0))
-        addStroke(iconBadge, styleColor:Lerp(o.BorderStrong, 0.5), 0.72, 1)
+        addStroke(iconBadge, styleColor:Lerp(o.BorderStrong, 0.4), 0.6, 1)
 
         local icon = Instance.new("ImageLabel")
         icon.Name = "Icon"
-        icon.Size = UDim2.fromOffset(14, 14)
-        icon.Position = UDim2.new(0.5, -7, 0.5, -7)
+        icon.Size = UDim2.fromOffset(13, 13)
+        icon.Position = UDim2.new(0.5, -6.5, 0.5, -6.5)
         icon.BackgroundTransparency = 1
         icon.Image = u("badscript/assets/new/" .. iconName .. ".png")
-        if icon.Image == "" then
-            icon.Image = u("badscript/assets/new/info.png")
+        if icon.Image == "" or not icon.IsLoaded then
+            icon.Image = u("badscript/assets/new/notification.png")
+        end
+        icon.ImageColor3 = styleColor:Lerp(Color3.new(1,1,1), 0.15)
+        icon.Parent = iconBadge
+
+        -- Click to dismiss (improvement)
+        card.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local dis = ag._NotificationDismissers[card]
+                if type(dis) == "function" then dis() else card:Destroy(); layout(true) end
+            end
+        end)
         end
         icon.ImageColor3 = styleColor:Lerp(o.TextStrong, 0.22)
         icon.ZIndex = 133
@@ -13809,12 +13839,18 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             setupMobileSwipeDismiss(swipe, dismiss)
         end
 
-        layout(true)
-        n:Tween(card, o.TweenSlow, {
+        layout(false)
+        card.Position = UDim2.new(1, width + 30, 1, card.Position.Y.Offset)
+        n:Tween(card, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = UDim2.new(1, d.isMobile and -8 or -14, 1, card.Position.Y.Offset),
             GroupTransparency = 0,
-        }, n.tweenstwo)
-        n:Spring(scale, o.SpringInteractive, { Scale = 1 })
+        })
+        n:Spring(scale, { Scale = 1 }, { Frequency = 4, Damping = 0.75 })
         n:Tween(progress, TweenInfo.new(aj, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(0, 1) }, n.tweenstwo)
+        -- subtle pop on new
+        task.delay(0.05, function()
+            if card.Parent then n:Spring(scale, { Scale = 1.02 }, { Frequency = 6 }); task.delay(0.12, function() if card.Parent then n:Spring(scale, { Scale = 1 }, { Frequency = 3 }) end end) end
+        end)
 
         local generation = card:GetAttribute("LifeGeneration")
         task.delay(aj, function()

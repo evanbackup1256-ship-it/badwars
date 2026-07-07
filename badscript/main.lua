@@ -317,6 +317,11 @@ local function setStatus(msg, isErr)
 end
 local function notify(title, text, dur)
     pcall(function()
+        local B = shared.Bad
+        if B and type(B.CreateNotification) == "function" then
+            B:CreateNotification(safeStr(title), safeStr(text), dur or 6, "info")
+            return
+        end
         game:GetService("StarterGui")
             :SetCore("SendNotification", { Title = safeStr(title), Text = safeStr(text), Duration = dur or 8 })
     end)

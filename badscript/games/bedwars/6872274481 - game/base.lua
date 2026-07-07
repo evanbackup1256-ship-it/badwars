@@ -269,7 +269,8 @@ Bad.remotes = remotes
 local BadEvents = Bad.BadEvents or {}
 for _, name in ipairs({
     "BedwarsBedBreak", "PlaceBlockEvent", "BreakBlockEvent", "InventoryChanged",
-    "InventoryAmountChanged", "CatPounce"
+    "InventoryAmountChanged", "CatPounce", "MatchEndEvent", "EntityDeathEvent",
+    "EntityDamageEvent", "AttributeChanged", "GrapplingHookFunctions", "BalloonPopped", "AngelProgress",
 }) do
     if type(BadEvents[name]) ~= "table" or BadEvents[name].Event == nil then
         BadEvents[name] = makeSignal()
@@ -582,6 +583,264 @@ task.defer(function()
     end
 end)
 
+-- V14 module runtime: legacy globals, game libraries, and safe helpers.
+local StarterGui = game:GetService("StarterGui")
+starterGui = StarterGui
+oldinvrender = oldinvrender
+
+local function safeRequireModule(module)
+    if not module or not module:IsA("ModuleScript") then
+        return nil
+    end
+    local ok, result = pcall(require, module)
+    if not ok then
+        return nil
+    end
+    if type(result) == "table" and result.default ~= nil then
+        return result.default
+    end
+    return result
+end
+
+local function safeRequirePath(root, pathParts)
+    if not root then
+        return nil
+    end
+    local current = root
+    for _, part in ipairs(pathParts) do
+        if type(part) ~= "string" or part == "" then
+            return nil
+        end
+        current = current:FindFirstChild(part)
+        if not current then
+            return nil
+        end
+    end
+    return safeRequireModule(current)
+end
+
+function getRoactRender(func)
+    if type(func) ~= "function" or not debug or type(debug.getupvalue) ~= "function" then
+        return function() end
+    end
+    local ok, result = pcall(function()
+        return debug.getupvalue(debug.getupvalue(debug.getupvalue(func, 3).render, 2).render, 1)
+    end)
+    return ok and type(result) == "function" and result or function() end
+end
+
+local function getBestArmor(slot)
+    local closest, bestReduction = nil, 0
+    for _, item in ipairs(store.inventory.inventory.items) do
+        local meta = item and bedwars.ItemMeta[item.itemType]
+        if meta and meta.armor and meta.armor.slot == slot then
+            local reduction = meta.armor.damageReductionMultiplier or 0
+            if reduction > bestReduction then
+                closest = item
+                bestReduction = reduction
+            end
+        end
+    end
+    return closest
+end
+
+local function getSpeed()
+    local sprint = bedwars.SprintController
+    if not sprint or isControllerFallback(sprint) or type(sprint.getMovementStatusModifier) ~= "function" then
+        return 20
+    end
+
+    local ok, modifiers = pcall(function()
+        return sprint:getMovementStatusModifier():getModifiers()
+    end)
+    if not ok or type(modifiers) ~= "table" then
+        return 20
+    end
+
+    local multi, increase = 0, true
+    for _, modifier in modifiers do
+        local constant = modifier.constantSpeedMultiplier or 0
+        if constant > math.max(multi, 1) then
+            increase = false
+            multi = constant - (0.06 * math.round(constant))
+        end
+    end
+    for _, modifier in modifiers do
+        multi += math.max((modifier.moveSpeedMultiplier or 0) - 1, 0)
+    end
+    if multi > 0 and increase then
+        multi += 0.16 + (0.02 * math.round(multi))
+    end
+    return 20 * (multi + 1)
+end
+
+Bad.getSpeed = getSpeed
+Bad.getItem = getItem
+Bad.getBestArmor = getBestArmor
+
+if type(bedwars.breakBlock) ~= "function" then
+    bedwars.breakBlock = function(block, effects, anim, customHealthbar, instantBreak)
+        if not block or not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart then
+            return
+        end
+
+        local denied = false
+        pcall(function()
+            denied = lplr:GetAttribute("DenyBlockBreak") == true
+        end)
+        if denied then
+            return
+        end
+
+        local blockController = bedwars.BlockController
+        if not blockController or isControllerFallback(blockController) then
+            return
+        end
+
+        local root = entitylib.character.RootPart
+        local worldPos = block.Position
+        if (root.Position - worldPos).Magnitude > 30 then
+            return
+        end
+
+        local blockPosition
+        pcall(function()
+            blockPosition = blockController:getBlockPosition(worldPos)
+        end)
+        if not blockPosition then
+            return
+        end
+
+        if bedwars.SwordController and not isControllerFallback(bedwars.SwordController) then
+            pcall(function()
+                if (workspace:GetServerTimeNow() - (bedwars.SwordController.lastAttack or 0)) > 0.4 then
+                    local meta = bedwars.ItemMeta[block.Name]
+                    local breakType = meta and meta.block and meta.block.breakType
+                    local tool = breakType and store.tools and store.tools[breakType]
+                    if tool then
+                        switchItem(tool.tool)
+                    end
+                end
+            end)
+        end
+
+        local damageRemote = bedwars.ClientDamageBlock
+        if damageRemote and type(damageRemote.Get) == "function" then
+            pcall(function()
+                damageRemote:Get("DamageBlock"):CallServerAsync({
+                    blockRef = {blockPosition = blockPosition},
+                    hitPosition = worldPos,
+                    hitNormal = Vector3.FromNormalId(Enum.NormalId.Top),
+                })
+            end)
+        elseif bedwars.BlockBreakController and not isControllerFallback(bedwars.BlockBreakController) then
+            pcall(function()
+                if bedwars.BlockBreakController.blockBreaker and type(bedwars.BlockBreakController.blockBreaker.breakBlock) == "function" then
+                    bedwars.BlockBreakController.blockBreaker:breakBlock(block)
+                end
+            end)
+        end
+
+        if effects then
+            return worldPos, {}, worldPos
+        end
+    end
+end
+
+local function resolveBedWarsGameLibraries()
+    local rbxtsInclude = ReplicatedStorage:FindFirstChild("rbxts_include")
+    if rbxtsInclude then
+        local gameCore = safeRequirePath(rbxtsInclude, {"node_modules", "@easy-games", "game-core", "out"})
+        if type(gameCore) == "table" then
+            bedwars.QueryUtil = bedwars.QueryUtil or gameCore.GameQueryUtil
+            bedwars.RuntimeLib = bedwars.RuntimeLib or rbxtsInclude:FindFirstChild("RuntimeLib") and safeRequireModule(rbxtsInclude.RuntimeLib) or gameCore.RuntimeLib
+            local clickHold = safeRequirePath(rbxtsInclude, {"node_modules", "@easy-games", "game-core", "out", "client", "ui", "lib", "util", "click-hold"})
+            if type(clickHold) == "table" then
+                bedwars.ClickHold = bedwars.ClickHold or clickHold.ClickHold
+            end
+            local roactModule = rbxtsInclude:FindFirstChild("node_modules")
+            roactModule = roactModule and roactModule:FindFirstChild("@rbxts")
+            roactModule = roactModule and roactModule:FindFirstChild("roact")
+            roactModule = roactModule and roactModule:FindFirstChild("src")
+            bedwars.Roact = bedwars.Roact or safeRequireModule(roactModule)
+            bedwars.ClientDamageBlock = bedwars.ClientDamageBlock or safeRequirePath(rbxtsInclude, {
+                "node_modules", "@easy-games", "block-engine", "out", "shared", "remotes",
+            })
+            if type(bedwars.ClientDamageBlock) == "table" and bedwars.ClientDamageBlock.BlockEngineRemotes then
+                bedwars.ClientDamageBlock = bedwars.ClientDamageBlock.BlockEngineRemotes.Client
+            end
+        end
+    end
+
+    local tsFolder = ReplicatedStorage:FindFirstChild("TS")
+    if tsFolder then
+        bedwars.WinEffectMeta = bedwars.WinEffectMeta or safeRequirePath(tsFolder, {"locker", "win-effect", "win-effect-meta"})
+        if type(bedwars.WinEffectMeta) == "table" and bedwars.WinEffectMeta.WinEffectMeta then
+            bedwars.WinEffectMeta = bedwars.WinEffectMeta.WinEffectMeta
+        end
+        bedwars.KillEffectMeta = bedwars.KillEffectMeta or safeRequirePath(tsFolder, {"locker", "kill-effect", "kill-effect-meta"})
+        if type(bedwars.KillEffectMeta) == "table" and bedwars.KillEffectMeta.KillEffectMeta then
+            bedwars.KillEffectMeta = bedwars.KillEffectMeta.KillEffectMeta
+        end
+    end
+
+    local playerScripts = lplr:FindFirstChild("PlayerScripts")
+    local tsScripts = playerScripts and playerScripts:FindFirstChild("TS")
+    if tsScripts then
+        local queueCard = safeRequirePath(tsScripts, {"controllers", "global", "queue", "ui", "queue-card"})
+        if type(queueCard) == "table" then
+            bedwars.QueueCard = bedwars.QueueCard or queueCard.QueueCard
+        end
+    end
+
+    if knit and type(knit.Controllers) == "table" then
+        local damageController = knit.Controllers.DamageIndicatorController
+        if damageController and type(damageController.spawnDamageIndicator) == "function" then
+            bedwars.DamageIndicator = bedwars.DamageIndicator or damageController.spawnDamageIndicator
+        end
+        bedwars.KillEffectController = bedwars.KillEffectController or knit.Controllers.KillEffectController
+        bedwars.KillFeedController = bedwars.KillFeedController or knit.Controllers.KillFeedController
+        bedwars.GuidedProjectileController = bedwars.GuidedProjectileController or knit.Controllers.GuidedProjectileController
+        bedwars.QueueController = bedwars.QueueController or knit.Controllers.QueueController
+    end
+
+    local flamework = rbxtsInclude and safeRequirePath(rbxtsInclude, {"node_modules", "@flamework", "core", "out"})
+    if type(flamework) == "table" and type(flamework.Flamework.resolveDependency) == "function" then
+        pcall(function()
+            bedwars.KillFeedController = bedwars.KillFeedController or flamework.Flamework.resolveDependency(
+                "client/controllers/game/kill-feed/kill-feed-controller@KillFeedController"
+            )
+        end)
+    end
+end
+
+task.spawn(function()
+    local deadline = os.clock() + 20
+    repeat
+        resolveBedWarsGameLibraries()
+        task.wait(0.35)
+    until os.clock() >= deadline or not Bad.Loaded
+
+    local wiredEvents = {
+        MatchEndEvent = "MatchEndEvent",
+        EntityDeathEvent = "EntityDeathEvent",
+    }
+    for signalName, remoteName in pairs(wiredEvents) do
+        local eventSignal = BadEvents[signalName]
+        if eventSignal and realClient and type(realClient.WaitFor) == "function" then
+            pcall(function()
+                realClient:WaitFor(remoteName):andThen(function(connection)
+                    if type(connection.Connect) == "function" and type(Bad.Clean) == "function" then
+                        Bad:Clean(connection:Connect(function(...)
+                            eventSignal:Fire(...)
+                        end))
+                    end
+                end)
+            end)
+        end
+    end
+end)
+
 -- V14 shared compatibility, runtime guards, and module health.
 local compatibility = Bad.BedWarsCompatibility or {}
 compatibility.Version = "19.0"
@@ -652,6 +911,50 @@ function compatibility:SafeCall(target, method, ...)
     end
 
     return xpcall(callback, traceError, target, ...)
+end
+
+function compatibility:SafeGetUpvalue(func, index)
+    if type(func) ~= "function" or not debug or type(debug.getupvalue) ~= "function" then
+        return false, nil
+    end
+    return pcall(debug.getupvalue, func, index)
+end
+
+function compatibility:SafeGetConstant(func, index)
+    if type(func) ~= "function" or not debug or type(debug.getconstant) ~= "function" then
+        return false, nil
+    end
+    return pcall(debug.getconstant, func, index)
+end
+
+function compatibility:SafeSetConstant(func, index, value)
+    if type(func) ~= "function" or not debug or type(debug.setconstant) ~= "function" then
+        return false
+    end
+    return pcall(debug.setconstant, func, index, value)
+end
+
+function compatibility:SafeSetupValue(func, index, value)
+    if type(func) ~= "function" or not debug or type(debug.setupvalue) ~= "function" then
+        return false
+    end
+    return pcall(debug.setupvalue, func, index, value)
+end
+
+function compatibility:SafeGetConnections(signal)
+    if type(getconnections) ~= "function" then
+        return {}
+    end
+    local ok, connections = pcall(getconnections, signal)
+    return ok and type(connections) == "table" and connections or {}
+end
+
+function compatibility:SafeGetConstants(func)
+    if type(func) ~= "function" or not debug or type(debug.getconstants) ~= "function" then
+        return {}
+    end
+    local ok, constants = pcall(debug.getconstants, func)
+    return ok and type(constants) == "table" and constants or {}
 end
 
 function compatibility:SafeConnect(signal, callback, maid)
@@ -1031,6 +1334,30 @@ function compatibility:Unavailable(module, reason)
 end
 
 Bad.BedWarsCompatibility = compatibility
+
+-- Export common helpers for modules (prevents bare global errors in modules)
+Bad.addBlur = addBlur
+Bad.collectionService = collectionService
+Bad.lplr = lplr
+Bad.RunService = RunService
+Bad.Players = Players
+Bad.ReplicatedStorage = ReplicatedStorage
+Bad.Workspace = Workspace
+Bad.tweenService = tweenService
+Bad.httpService = httpService
+
+-- Provide common globals used by modules for compatibility
+if type(getconnections) == "function" then
+	Bad.getconnections = getconnections
+end
+_G.getconnections = _G.getconnections or getconnections
+if not _G.lplr then _G.lplr = lplr end
+
+Bad.BadEvents = Bad.BadEvents or BadEvents
+Bad.remotes = Bad.remotes or remotes
+Bad.getPlacedBlock = Bad.getPlacedBlock or getPlacedBlock
+Bad.getNearGround = Bad.getNearGround or (function() return nil end)
+Bad.roundPos = Bad.roundPos or (function(p) return p end)
 
 -- Resolve controllers again after Knit finishes initializing.
 task.spawn(function()

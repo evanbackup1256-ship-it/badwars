@@ -1,3 +1,9 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
+local store = Bad.store or {}
+local entitylib = Bad.entitylib or {}
+local compat = Bad.BedWarsCompatibility or {}
+
 local ShopTierBypass
 local originalTiered = setmetatable({}, {__mode = "k"})
 local originalNextTier = setmetatable({}, {__mode = "k"})

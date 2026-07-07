@@ -1,3 +1,11 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
+local store = Bad.store or {}
+local entitylib = Bad.entitylib or {}
+local compat = Bad.BedWarsCompatibility or {}
+local collectionService = Bad.collectionService or game:GetService("CollectionService")
+local BadEvents = Bad.BadEvents or {}
+
 local BedPlates
 local Background
 local Color

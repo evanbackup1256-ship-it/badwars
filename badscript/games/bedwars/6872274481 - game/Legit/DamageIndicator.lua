@@ -1,23 +1,52 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
 local DamageIndicator
 local FontOption
 local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Size
 local Anchor
 local Stroke
-local suc, tab = pcall(function()
-	return debug.getupvalue(bedwars.DamageIndicator, 2)
-end)
-tab = suc and tab or {}
+local compat = Bad.BedWarsCompatibility or {}
+local indicatorFunc = bedwars.DamageIndicator or (compat and compat.DamageIndicator)
+local suc, tab = false, {}
+if type(indicatorFunc) == "function" then
+	if compat.SafeGetUpvalue then
+		suc, tab = compat:SafeGetUpvalue(indicatorFunc, 2)
+	else
+		suc, tab = pcall(debug.getupvalue, indicatorFunc, 2)
+	end
+end
+tab = (suc and type(tab) == "table") and tab or {}
 local oldvalues, oldfont = {}
+
+local function setFontConstant(fontName)
+	if not indicatorFunc or not compat then return end
+	local font = Enum.Font[fontName]
+	if font then
+		compat:SafeSetConstant(indicatorFunc, 86, font)
+	end
+end
+
+local function setStrokeConstant(enabled)
+	if not indicatorFunc or not compat then return end
+	compat:SafeSetConstant(indicatorFunc, 119, enabled and 'Thickness' or 'Enabled')
+end
 
 DamageIndicator = Bad.Legit:CreateModule({
 	Name = 'Damage Indicator',
 	Function = function(callback)
+		if not indicatorFunc then
+			if compat then
+				compat:Unavailable(DamageIndicator, 'Damage indicator API is unavailable in this BedWars build.')
+			end
+			return
+		end
 		if callback then
 			oldvalues = table.clone(tab)
-			oldfont = debug.getconstant(bedwars.DamageIndicator, 86)
-			debug.setconstant(bedwars.DamageIndicator, 86, Enum.Font[FontOption.Value])
-			debug.setconstant(bedwars.DamageIndicator, 119, Stroke.Enabled and 'Thickness' or 'Enabled')
+			local ok, font = compat:SafeGetConstant(indicatorFunc, 86)
+			oldfont = ok and font or nil
+			setFontConstant(FontOption.Value)
+			setStrokeConstant(Stroke.Enabled)
 			tab.strokeThickness = Stroke.Enabled and 1 or false
 			tab.textSize = Size.Value
 			tab.blowUpSize = Size.Value
@@ -29,8 +58,10 @@ DamageIndicator = Bad.Legit:CreateModule({
 			for i, v in oldvalues do
 				tab[i] = v
 			end
-			debug.setconstant(bedwars.DamageIndicator, 86, oldfont)
-			debug.setconstant(bedwars.DamageIndicator, 119, 'Thickness')
+			if oldfont ~= nil then
+				compat:SafeSetConstant(indicatorFunc, 86, oldfont)
+			end
+			compat:SafeSetConstant(indicatorFunc, 119, 'Thickness')
 		end
 	end,
 	Tooltip = 'Customize the damage indicator'
@@ -46,7 +77,7 @@ FontOption = DamageIndicator:CreateDropdown({
 	List = fontitems,
 	Function = function(val)
 		if DamageIndicator.Enabled then
-			debug.setconstant(bedwars.DamageIndicator, 86, Enum.Font[val])
+			setFontConstant(val)
 		end
 	end
 })
@@ -86,13 +117,8 @@ Stroke = DamageIndicator:CreateToggle({
 	Name = 'Stroke',
 	Function = function(callback)
 		if DamageIndicator.Enabled then
-			debug.setconstant(bedwars.DamageIndicator, 119, callback and 'Thickness' or 'Enabled')
+			setStrokeConstant(callback)
 			tab.strokeThickness = callback and 1 or false
 		end
 	end
 })
-
-
-
-
-

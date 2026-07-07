@@ -1,14 +1,26 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
+local collectionService = Bad.collectionService or game:GetService("CollectionService")
+local addBlur = Bad.addBlur or function(parent)
+	local f = Instance.new("Frame")
+	f.BackgroundTransparency = 1
+	f.Size = UDim2.fromScale(1, 1)
+	f.Parent = parent
+	return f
+end
+
 local StorageESP
 local List
 local Background
 local Color = {}
 local Reference = {}
 local Folder = Instance.new('Folder')
-Folder.Parent = Bad.gui
+Folder.Parent = Bad.gui or Instance.new("ScreenGui")
 
 local function nearStorageItem(item)
-	for _, v in List.ListEnabled do
-		if item:find(v) then return v end
+	local list = (List and List.ListEnabled) or {}
+	for _, v in ipairs(list) do
+		if type(v) == "string" and item:find(v, 1, true) then return v end
 	end
 end
 
@@ -36,7 +48,7 @@ local function refreshAdornee(v)
 			local blockimage = Instance.new('ImageLabel')
 			blockimage.Size = UDim2.fromOffset(32, 32)
 			blockimage.BackgroundTransparency = 1
-			blockimage.Image = bedwars.getIcon({itemType = item.Name}, true)
+			blockimage.Image = (bedwars.getIcon or function() return "" end)({itemType = item.Name}, true)
 			blockimage.Parent = v.Frame
 		end
 	end
@@ -75,13 +87,14 @@ local function Added(v)
 	corner.CornerRadius = UDim.new(0, 4)
 	corner.Parent = frame
 	Reference[v] = billboard
+	local listEnabled = List and List.ListEnabled or {}
 	StorageESP:Clean(chest.ChildAdded:Connect(function(item)
-		if table.find(List.ListEnabled, item.Name) or nearStorageItem(item.Name) then
+		if table.find(listEnabled, item.Name) or nearStorageItem(item.Name) then
 			refreshAdornee(billboard)
 		end
 	end))
 	StorageESP:Clean(chest.ChildRemoved:Connect(function(item)
-		if table.find(List.ListEnabled, item.Name) or nearStorageItem(item.Name) then
+		if table.find(listEnabled, item.Name) or nearStorageItem(item.Name) then
 			refreshAdornee(billboard)
 		end
 	end))
@@ -106,7 +119,8 @@ StorageESP = Bad.Categories.Render:CreateModule({
 List = StorageESP:CreateTextList({
 	Name = 'Item',
 	Function = function()
-		for _, v in Reference do
+		local listEnabled = List and List.ListEnabled or {}
+		for _, v in pairs(Reference) do
 			task.spawn(refreshAdornee, v)
 		end
 	end

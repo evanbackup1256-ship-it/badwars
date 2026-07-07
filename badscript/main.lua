@@ -625,7 +625,8 @@ local function isNotFoundBody(body)
 end
 
 local function isStaleGuiCache(path, body)
-    if path ~= "badscript/guis/new/gui.lua" then
+    -- WindUI adapter is intentionally lean and not part of the legacy cache-bust logic
+    if path:find("windui", 1, true) or path ~= "badscript/guis/new/gui.lua" then
         return false
     end
 
@@ -1559,18 +1560,32 @@ pcall(function()
     end)
 
 -- Stage 3: GUI Profile
-local defaultGui = "new"
+local defaultGui = "windui"
 local gui = defaultGui
 local savedGui = isfile("badscript/profiles/gui.txt") and readfile("badscript/profiles/gui.txt") or ""
 savedGui = tostring(savedGui):lower():gsub("%s+", "")
 setStatus("selecting interface")
 if savedGui ~= gui then
-    -- Production is fail-closed to the current UI generation. Legacy UI
-    -- selectors are overwritten before any presentation source is loaded.
-    writefile("badscript/profiles/gui.txt", "new")
+    -- Switch default to WindUI integration (modern tabs, notifications, dropdowns)
+    writefile("badscript/profiles/gui.txt", "windui")
 end
 if not isfolder("badscript/assets/" .. gui) then
     makefolder("badscript/assets/" .. gui)
+end
+if gui == "windui" then
+	-- Ensure the WindUI bundle is present alongside the adapter
+	local windFolder = "badscript/guis/windui"
+	if not isfolder(windFolder) then makefolder(windFolder) end
+	local windBundle = windFolder .. "/WindUI.lua"
+	if (not isfile(windBundle)) or (#(readfile(windBundle) or "") < 1000) then
+		setStatus("downloading WindUI library")
+		local bundleCode = downloadFile("badscript/guis/windui/WindUI.lua")
+		if type(bundleCode) == "string" and #bundleCode > 50000 then
+			if type(writefile) == "function" then
+				pcall(writefile, windBundle, bundleCode)
+			end
+		end
+	end
 end
 
 -- Stage 4: Load GUI

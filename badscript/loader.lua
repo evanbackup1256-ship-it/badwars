@@ -765,21 +765,26 @@ local function isCurrentGuiCache(contents)
         and contents:find("BADWARS_FUSION_DESIGN_RUNTIME_V21_BEGIN", 1, true) == nil
 end
 local function invalidateStaleGuiCache()
-	local guiPath='badscript/guis/new/gui.lua'
-	if isfile(guiPath) and not isCurrentGuiCache(readfile(guiPath)) then
-		setStatus('clearing stale GUI cache')
-		if __nativeDelfile then
-			pcall(delfile, guiPath)
-		end
-		if isfile(guiPath) and type(writefile)=='function' then
-			pcall(writefile, guiPath, '')
+	-- Legacy new/gui + also protect the new WindUI gui from aggressive wipes
+	local paths = {'badscript/guis/new/gui.lua'}
+	for _, p in ipairs(paths) do
+		if isfile(p) and not isCurrentGuiCache(readfile(p)) then
+			setStatus('clearing stale GUI cache')
+			if __nativeDelfile then
+				pcall(delfile, p)
+			end
+			if isfile(p) and type(writefile)=='function' then
+				pcall(writefile, p, '')
+			end
 		end
 	end
 end
 if (isfile(cacheFile) and readfile(cacheFile) or '') ~= cacheVersion then
 	setStatus('cache cleared (version mismatch)')
 	for _,f in {'badscript/main.lua','badscript/NewMainScript.lua'} do if isfile(f) then delfile(f) end end
-	wipeAny('badscript/assets');wipeGen('badscript/games');wipeGen('badscript/guis');wipeGen('badscript/libraries')
+	wipeAny('badscript/assets');wipeGen('badscript/games');wipeGen('badscript/libraries')
+	-- Keep windui gui (new modern UI). Only wipe legacy new/ if present.
+	if isfolder('badscript/guis/new') then wipeGen('badscript/guis/new') end
 	writefile(cacheFile,cacheVersion)
 end
 invalidateStaleGuiCache()

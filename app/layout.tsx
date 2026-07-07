@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     default: "BadWars — Premium Roblox Loader Console",
     template: "%s • BadWars"
   },
-  description: "The premium loader console. Live Roblox status, one-click latest loader, full game routing, and professional diagnostics.",
+  description: "The premium loader console. Live Roblox status, one-click latest loader, full game routing, and professional diagnostics. In-game UI now powered by WindUI (tabs, notifications, seamless module controls).",
   icons: {
     icon: "/logo.svg"
   },

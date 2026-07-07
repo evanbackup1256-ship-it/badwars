@@ -2,6 +2,10 @@
 
 BadWars is a premium Next.js website and runtime status console for the BadWars loader.
 
+**In-game UI:** Powered by [WindUI](https://github.com/Footagesus/WindUI) (adapted + extended for perfect sync with modules, notifications, dropdowns, keybinds, profiles, etc).
+
+Tabs include: General, Modules, Blatant, Combat, Render, Utility, World, Notifications, Settings + more.
+
 ## Stack
 
 - Next.js App Router

@@ -13687,7 +13687,6 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
                 if type(dis) == "function" then dis() else card:Destroy(); layout(true) end
             end
         end)
-        end
         icon.ImageColor3 = styleColor:Lerp(o.TextStrong, 0.22)
         icon.ZIndex = 133
         styleCrispImage(icon)

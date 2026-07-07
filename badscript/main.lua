@@ -1800,6 +1800,14 @@ if not shared.BadIndependent then
     showInterface(finalizedApi or api)
     setStatus("ready - " .. string.format("%.2f", el) .. "s")
 
+-- For WindUI adapter: open the main UI only after full loader/bootstrap is complete
+pcall(function()
+	local B = shared.Bad
+	if B and type(B.Show) == "function" then
+		B:Show()
+	end
+end)
+
     if totalErr > 0 and api and type(api.CreateNotification) == "function" then
         api:CreateNotification(
             "Compatibility",

@@ -360,8 +360,8 @@ local function createLoader()
     statusBackdrop = Instance.new("Frame")
     statusBackdrop.Name = "Backdrop"
     statusBackdrop.Size = UDim2.fromScale(1, 1)
-    statusBackdrop.BackgroundColor3 = Color3.fromRGB(2, 4, 7)
-    statusBackdrop.BackgroundTransparency = 1
+    statusBackdrop.BackgroundColor3 = Color3.fromRGB(10, 10, 12) -- match WindUI dark
+    statusBackdrop.BackgroundTransparency = 0.45
     statusBackdrop.BorderSizePixel = 0
     statusBackdrop.Parent = statusGui
 
@@ -373,13 +373,13 @@ local function createLoader()
     statusCard.AnchorPoint = Vector2.new(0.5, 0.5)
     statusCard.Position = UDim2.fromScale(0.5, 0.505)
     statusCard.Size = UDim2.fromOffset(loaderWidth, 232)
-    statusCard.BackgroundColor3 = Color3.fromRGB(6, 10, 14)
-    statusCard.BackgroundTransparency = 0.01
+    statusCard.BackgroundColor3 = Color3.fromRGB(16, 16, 16) -- WindUI Dark Background
+    statusCard.BackgroundTransparency = 0.02
     statusCard.BorderSizePixel = 0
     statusCard.GroupTransparency = 1
     statusCard.Parent = statusGui
-    loaderCorner(statusCard, 16)
-    loaderStroke(statusCard, Color3.fromRGB(70, 93, 109), 0.36)
+    loaderCorner(statusCard, 14)
+    loaderStroke(statusCard, Color3.fromRGB(40, 40, 45), 0.25)
 
     statusCardScale = Instance.new("UIScale")
     statusCardScale.Name = "MotionScale"
@@ -390,7 +390,7 @@ local function createLoader()
     accent.Name = "Accent"
     accent.Position = UDim2.fromOffset(18, 18)
     accent.Size = UDim2.fromOffset(4, 36)
-    accent.BackgroundColor3 = Color3.fromRGB(75, 222, 168)
+    accent.BackgroundColor3 = Color3.fromRGB(255, 51, 85) -- BadWars red accent to match WindUI branding
     accent.BorderSizePixel = 0
     accent.Parent = statusCard
     loaderCorner(accent, 99)
@@ -475,7 +475,7 @@ local function createLoader()
     progressFill = Instance.new("Frame")
     progressFill.Name = "Fill"
     progressFill.Size = UDim2.fromScale(statusProgress, 1)
-    progressFill.BackgroundColor3 = Color3.fromRGB(75, 222, 168)
+    progressFill.BackgroundColor3 = Color3.fromRGB(51, 199, 89) -- WindUI green for progress
     progressFill.BorderSizePixel = 0
     progressFill.Parent = track
     loaderCorner(progressFill, 99)
@@ -520,7 +520,7 @@ local function createLoader()
     openConsoleButton.AnchorPoint = Vector2.new(1, 1)
     openConsoleButton.Position = UDim2.new(1, -18, 1, -16)
     openConsoleButton.Size = UDim2.fromOffset(118, 30)
-    openConsoleButton.BackgroundColor3 = Color3.fromRGB(22, 30, 38)
+    openConsoleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 33) -- match WindUI element bg
     openConsoleButton.BackgroundTransparency = 0.03
     openConsoleButton.BorderSizePixel = 0
     openConsoleButton.AutoButtonColor = false

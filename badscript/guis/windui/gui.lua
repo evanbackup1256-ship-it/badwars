@@ -69,6 +69,15 @@ local Window = WindUI:CreateWindow({
 	},
 })
 
+-- Do NOT show the main control center until the loader has fully finished (modules registered, etc.)
+pcall(function()
+	if Window.Close then
+		Window:Close()
+	elseif Window.Toggle then
+		Window:Toggle()
+	end
+end)
+
 -- Add version tag
 pcall(function()
 	Window:Tag({
@@ -123,6 +132,32 @@ d.GUIColor = { Hue = 0.02, Sat = 0.95, Value = 0.98 } -- red-ish accent matching
 
 local notificationLog = {}
 local MAX_NOTIF_LOG = 60
+local notifParagraph
+
+-- Helper to refresh notifications tab content (define BEFORE CreateNotification to avoid nil upvalue issues)
+local function refreshNotifTab()
+	if not Tabs.Notifications then return end
+	local lines = {}
+	for i = 1, math.min(#notificationLog, 20) do
+		local n = notificationLog[i]
+		table.insert(lines, string.format("[%s] %s — %s", n.time, n.title, n.text))
+	end
+	local content = table.concat(lines, "\n")
+	if notifParagraph then
+		pcall(function()
+			if notifParagraph.SetDesc then
+				notifParagraph:SetDesc(content ~= "" and content or "Notifications stream here and as beautiful WindUI toasts.")
+			elseif notifParagraph.Set then
+				notifParagraph:Set({ Content = content ~= "" and content or "Notifications stream here and as beautiful WindUI toasts." })
+			end
+		end)
+	else
+		notifParagraph = Tabs.Notifications:Paragraph({
+			Title = "Event Log",
+			Desc = content ~= "" and content or "Notifications stream here and as beautiful WindUI toasts.",
+		})
+	end
+end
 
 -- Notification integration (seamless with WindUI + tab log)
 function d:CreateNotification(title, text, duration, ntype)
@@ -139,13 +174,14 @@ function d:CreateNotification(title, text, duration, ntype)
 		success = "check-circle",
 	}
 	pcall(function()
-		WindUI:Notify({
-			Title = title,
-			Content = text,
-			Icon = iconMap[ntype] or "bell",
-			Duration = duration,
-			-- Background can be customized further if needed
-		})
+		if WindUI and WindUI.Notify then
+			WindUI:Notify({
+				Title = title,
+				Content = text,
+				Icon = iconMap[ntype] or "bell",
+				Duration = duration,
+			})
+		end
 	end)
 
 	-- Also log into the Notifications tab for history / sync
@@ -167,26 +203,6 @@ end
 
 d.CreateNotification = d.CreateNotification
 
--- Helper to refresh notifications tab content
-local notifParagraph
-local function refreshNotifTab()
-	if not Tabs.Notifications then return end
-	local lines = {}
-	for i = 1, math.min(#notificationLog, 20) do
-		local n = notificationLog[i]
-		table.insert(lines, string.format("[%s] %s — %s", n.time, n.title, n.text))
-	end
-	local content = table.concat(lines, "\n")
-	if notifParagraph and notifParagraph.Set then
-		pcall(function() notifParagraph:Set({ Content = (content ~= "" and content) or "No notifications yet — they will appear here + as toasts." }) end)
-	elseif not notifParagraph then
-		notifParagraph = Tabs.Notifications:Paragraph({
-			Title = "Event Log",
-			Content = content ~= "" and content or "Notifications stream here and as beautiful WindUI toasts.",
-		})
-	end
-end
-
 Tabs.Notifications:Button({
 	Title = "Clear Notifications",
 	Icon = "trash",
@@ -197,11 +213,8 @@ Tabs.Notifications:Button({
 })
 Tabs.Notifications:Space({})
 
--- Live log paragraph (refreshed on new notifs)
-notifParagraph = Tabs.Notifications:Paragraph({
-	Title = "Event Log",
-	Content = "Notifications will stream here + show as toasts.",
-})
+-- Initial log paragraph (refresh will manage updates)
+refreshNotifTab()
 
 -- Helper exposed for other systems to push notifs programmatically
 d.PushNotification = function(title, text, ntype)
@@ -616,11 +629,21 @@ d.Version = "WindUI-Adapter-1.0"
 d.PremiumBuild = true
 d.Name = "BadWars-WindUI"
 
--- Seed a welcome notification
-task.defer(function()
-	d:CreateNotification("BadWars", "WindUI integrated. All modules, dropdowns, and notifications are now powered by WindUI.", 7, "success")
-	refreshNotifTab()
-end)
+-- Control visibility + welcome toast/log: loader/main calls :Show() ONLY after full bootstrap finishes
+function d:Show()
+	pcall(function()
+		if Window and Window.Open then
+			Window:Open()
+		elseif Window and Window.Toggle then
+			Window:Toggle()
+		end
+	end)
+	pcall(function()
+		d:CreateNotification("BadWars", "WindUI integrated. All modules, dropdowns, and notifications are now powered by WindUI.", 7, "success")
+		refreshNotifTab()
+	end)
+end
+d.Show = d.Show
 
 -- Expose a couple of useful things on shared for modules
 if shared then

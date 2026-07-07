@@ -1429,7 +1429,8 @@ local function finish()
             .. "repeat task.wait() until game:IsLoaded()\n"
             .. "local ok,src=pcall(function() return game:HttpGet('"
             .. loaderUrl
-            .. "?v=13&t='..tostring(os.time()),true) end)\n            .. "if ok and type(src)=='string' then local fn=loadstring(src,'badwars-loader'); if fn then fn() end end"
+            .. "?v=13&t='..tostring(os.time()),true) end)\n"
+            .. "if ok and type(src)=='string' then local fn=loadstring(src,'badwars-loader'); if fn then fn() end end"
     end
 
     local function queueReload()

@@ -13678,6 +13678,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             icon.Image = u("badscript/assets/new/notification.png")
         end
         icon.ImageColor3 = styleColor:Lerp(Color3.new(1,1,1), 0.15)
+        icon.ZIndex = 133
+        styleCrispImage(icon)
         icon.Parent = iconBadge
 
         -- Click to dismiss (improvement)

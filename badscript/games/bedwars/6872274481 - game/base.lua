@@ -10,8 +10,10 @@ local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local lplr = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local inputService = UserInputService
 local gameCamera = Workspace.CurrentCamera
 local collectionService = CollectionService
 local tweenService = TweenService
@@ -176,6 +178,19 @@ local function resolveDataModule(names)
     return type(value) == "table" and value or nil
 end
 
+local function resolveNamedExport(names, exportName)
+    local module = findModule(ReplicatedStorage, names)
+    local value = safeRequire(module)
+    if type(value) == "table" and value.default then value = value.default end
+    if type(value) ~= "table" then
+        return nil
+    end
+    if exportName and value[exportName] ~= nil then
+        return value[exportName]
+    end
+    return value
+end
+
 bedwars.ItemMeta = bedwars.ItemMeta or resolveDataModule({"item-meta", "itemmeta"}) or {}
 bedwars.ProjectileMeta = bedwars.ProjectileMeta or resolveDataModule({"projectile-meta", "projectilemeta"}) or {}
 bedwars.BedBreakEffectMeta = bedwars.BedBreakEffectMeta or resolveDataModule({"bed-break-effect-meta", "bedbreakeffectmeta"}) or {}
@@ -185,16 +200,31 @@ bedwars.KnockbackTable = bedwars.KnockbackTable or resolveDataModule({"knockback
 bedwars.QueueMeta = bedwars.QueueMeta or resolveDataModule({"queue-meta", "queuemeta"}) or {}
 bedwars.Shop = bedwars.Shop or resolveDataModule({"shop", "shop-items", "shopitems"}) or {}
 bedwars.UILayers = bedwars.UILayers or resolveDataModule({"ui-layers", "uilayers"}) or {MAIN = "MAIN"}
+bedwars.KnockbackUtil = bedwars.KnockbackUtil or resolveNamedExport({"knockback-util", "knockbackutil"}, "KnockbackUtil")
+bedwars.SoundList = bedwars.SoundList or resolveNamedExport({"game-sound", "gamesound"}, "GameSound")
+bedwars.BlockPlacer = bedwars.BlockPlacer or resolveNamedExport({"block-placer", "blockplacer"}, "BlockPlacer")
+bedwars.BlockEngine = bedwars.BlockEngine or resolveNamedExport({"block-engine", "blockengine"}, "BlockEngine")
 
-local controllerFallback = setmetatable({}, {
-    __index = function(_, key)
-        if key == "lastAttack" then return 0 end
-        return function() return nil end
-    end,
-})
+local function isControllerFallback(controller)
+    return type(controller) == "table" and controller.__IsBedWarsFallback == true
+end
+
+local function makeControllerFallback()
+    return setmetatable({
+        __IsBedWarsFallback = true,
+    }, {
+        __index = function(_, key)
+            if key == "lastAttack" or key == "lastSwing" then
+                return 0
+            end
+            return function() return nil end
+        end,
+    })
+end
+
 for _, name in ipairs(controllerNames) do
     if bedwars[name] == nil then
-        bedwars[name] = controllerFallback
+        bedwars[name] = makeControllerFallback()
         bedwars.Missing[name] = true
     end
 end
@@ -227,6 +257,8 @@ store.queueType = tostring(store.queueType or "")
 store.equippedKit = tostring(store.equippedKit or "")
 store.localInventory = store.localInventory or store.inventory.inventory
 store.KillauraTarget = store.KillauraTarget
+store.shop = store.shop or {}
+store.tools = store.tools or {}
 Bad.store = store
 
 local remotes = Bad.remotes or setmetatable({}, {
@@ -266,7 +298,8 @@ local function notif(title, text, duration, style)
 end
 
 local function dependencyAvailable(name)
-    return bedwars[name] ~= nil and bedwars[name] ~= controllerFallback and not bedwars.Missing[name]
+    local controller = bedwars[name]
+    return controller ~= nil and not isControllerFallback(controller) and not bedwars.Missing[name]
 end
 
 local function unavailable(module, reason)
@@ -341,11 +374,144 @@ local function hotbarSwitch(slot)
     end
     return false
 end
-local function switchItem() return false end
+
 local function getItem(itemType)
     for _, item in ipairs(store.inventory.inventory.items) do
         if item.itemType == itemType then return item end
     end
+end
+
+local function switchItem(tool, delayTime)
+    delayTime = delayTime or 0.05
+    local character = lplr.Character
+    local hand = character and character:FindFirstChild("HandInvItem")
+    if not hand or not tool or tool.Parent == nil then
+        return false
+    end
+    if hand.Value == tool then
+        return true
+    end
+    task.spawn(function()
+        local remote = remotes.EquipItem
+        if bedwars.Client and remote then
+            pcall(function()
+                bedwars.Client:Get(remote):CallServerAsync({hand = tool})
+            end)
+        end
+    end)
+    hand.Value = tool
+    if delayTime > 0 then
+        task.wait(delayTime)
+    end
+    return true
+end
+
+local function traceError(message)
+    if debug and type(debug.traceback) == "function" then
+        return debug.traceback(tostring(message), 2)
+    end
+    return tostring(message)
+end
+
+local function run(callback)
+    if type(callback) ~= "function" then
+        return
+    end
+    local ok, err = xpcall(callback, traceError)
+    if not ok then
+        warn("[BedWars] " .. tostring(err))
+    end
+end
+
+local function syncStoreFromState(newState, oldState)
+    if type(newState) ~= "table" then
+        return
+    end
+    oldState = type(oldState) == "table" and oldState or {}
+
+    local newBedwars = newState.Bedwars
+    local oldBedwars = oldState.Bedwars
+    if newBedwars ~= oldBedwars then
+        store.equippedKit = newBedwars and newBedwars.kit ~= "none" and newBedwars.kit or ""
+    end
+
+    local newGame = newState.Game
+    local oldGame = oldState.Game
+    if newGame ~= oldGame and type(newGame) == "table" then
+        store.matchState = tonumber(newGame.matchState) or store.matchState
+        store.queueType = tostring(newGame.queueType or store.queueType)
+    end
+
+    local newInventory = newState.Inventory
+    local oldInventory = oldState.Inventory
+    if newInventory ~= oldInventory then
+        local observed = newInventory and newInventory.observedInventory
+        if type(observed) == "table" then
+            store.inventory = observed
+            store.localInventory = observed.inventory or store.localInventory
+
+            local handItem = observed.inventory and observed.inventory.hand
+            local toolType = ""
+            if handItem and bedwars.ItemMeta[handItem.itemType] then
+                local meta = bedwars.ItemMeta[handItem.itemType]
+                toolType = meta.sword and "sword"
+                    or meta.block and "block"
+                    or (tostring(handItem.itemType):find("bow") and "bow")
+                    or ""
+            end
+            store.hand = {
+                tool = handItem and handItem.tool,
+                amount = handItem and handItem.amount or 0,
+                toolType = toolType,
+            }
+        end
+
+        if BadEvents.InventoryChanged and BadEvents.InventoryChanged.Event then
+            BadEvents.InventoryChanged:Fire()
+        end
+    end
+end
+
+local function ensureBlockPlacer(defaultType)
+    if store.blockPlacer and type(store.blockPlacer.placeBlock) == "function" then
+        return store.blockPlacer
+    end
+    if bedwars.BlockPlacer and bedwars.BlockEngine and type(bedwars.BlockPlacer.new) == "function" then
+        local ok, placer = pcall(bedwars.BlockPlacer.new, bedwars.BlockEngine, defaultType or "wool_white")
+        if ok and type(placer) == "table" then
+            store.blockPlacer = placer
+            return placer
+        end
+    end
+    return nil
+end
+
+bedwars.placeBlock = function(pos, itemType)
+    itemType = tostring(itemType or "")
+    if itemType == "" or not getItem(itemType) then
+        return false
+    end
+
+    local blockController = bedwars.BlockController
+    if not blockController or isControllerFallback(blockController) then
+        return false
+    end
+
+    local placer = ensureBlockPlacer(itemType)
+    if placer then
+        placer.blockType = itemType
+        if type(blockController.getBlockPosition) == "function" and type(placer.placeBlock) == "function" then
+            local ok = pcall(placer.placeBlock, placer, blockController:getBlockPosition(pos))
+            return ok
+        end
+    end
+
+    local placement = bedwars.BlockPlacementController
+    if placement and not isControllerFallback(placement) and type(placement.placeBlock) == "function" then
+        return pcall(placement.placeBlock, placement, pos, itemType)
+    end
+
+    return false
 end
 
 local uipallet = Bad.uipallet or {
@@ -381,6 +547,40 @@ local phaseConnection = RunService.Heartbeat:Connect(function()
 end)
 if type(Bad.Clean) == "function" then Bad:Clean(phaseConnection) end
 
+task.spawn(function()
+    local deadline = os.clock() + 15
+    repeat
+        if bedwars.Store and type(bedwars.Store.getState) == "function" then
+            local ok, state = pcall(bedwars.Store.getState, bedwars.Store)
+            if ok then
+                syncStoreFromState(state, {})
+            end
+            if type(bedwars.Store.changed) == "table" and type(bedwars.Store.changed.connect) == "function" then
+                local connection = bedwars.Store.changed:connect(function(newState, oldState)
+                    syncStoreFromState(newState, oldState)
+                end)
+                if type(Bad.Clean) == "function" then
+                    Bad:Clean(connection)
+                end
+                break
+            end
+        end
+        task.wait(0.35)
+    until os.clock() >= deadline or not Bad.Loaded
+end)
+
+task.defer(function()
+    if type(collection) == "function" then
+        store.shop = collection({"BedwarsItemShop", "TeamUpgradeShopkeeper"}, nil, function(list, object)
+            table.insert(list, {
+                Id = object.Name,
+                RootPart = object,
+                Shop = object:HasTag("BedwarsItemShop"),
+                Upgrades = object:HasTag("TeamUpgradeShopkeeper"),
+            })
+        end)
+    end
+end)
 
 -- V14 shared compatibility, runtime guards, and module health.
 local compatibility = Bad.BedWarsCompatibility or {}
@@ -393,13 +593,6 @@ compatibility.ControllerAliases = compatibility.ControllerAliases or {
     SoundManager = {"SoundManager", "SoundController"},
     Store = {"Store", "StoreController"},
 }
-
-local function traceError(message)
-    if debug and type(debug.traceback) == "function" then
-        return debug.traceback(tostring(message), 2)
-    end
-    return tostring(message)
-end
 
 local function shallowCopy(value)
     local result = {}
@@ -523,7 +716,7 @@ function compatibility:ResolveController(name)
     local aliases = self.ControllerAliases[name] or {name}
     for _, alias in ipairs(aliases) do
         local current = rawget(bedwars, alias)
-        if current and current ~= controllerFallback then
+        if current and not isControllerFallback(current) then
             bedwars[name] = current
             bedwars.Missing[name] = nil
             return current
@@ -554,7 +747,7 @@ function compatibility:Has(name)
     return self:ResolveController(name) ~= nil
         or (
             rawget(bedwars, name) ~= nil
-            and rawget(bedwars, name) ~= controllerFallback
+            and not isControllerFallback(rawget(bedwars, name))
         )
 end
 
@@ -584,6 +777,26 @@ function compatibility:GetMeta(item)
         and (item.itemType or (item.tool and item.tool.Name))
         or tostring(item or "")
     return bedwars.ItemMeta[itemType]
+end
+
+function compatibility:GetStoreState()
+    local redux = bedwars.Store
+    if redux and not isControllerFallback(redux) and type(redux.getState) == "function" then
+        local ok, state = pcall(redux.getState, redux)
+        if ok and type(state) == "table" then
+            return state
+        end
+    end
+    return {}
+end
+
+function compatibility:FireRemote(remoteName, method, ...)
+    method = method or "SendToServer"
+    local remote = self:ResolveRemote(remoteName)
+    if not remote or type(remote[method]) ~= "function" then
+        return false
+    end
+    return pcall(remote[method], remote, ...)
 end
 
 function compatibility:CleanupModule(module)

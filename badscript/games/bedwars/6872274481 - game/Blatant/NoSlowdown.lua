@@ -5,8 +5,10 @@ Bad.Categories.Blatant:CreateModule({
 	Name = 'NoSlowdown',
 	Function = function(callback)
 		if not bedwars.SprintController then return end
-		local modifier = pcall(function() return bedwars.SprintController:getMovementStatusModifier() end)
-		if not modifier then return end
+		local ok, modifier = pcall(function()
+			return bedwars.SprintController:getMovementStatusModifier()
+		end)
+		if not ok or not modifier then return end
 		if callback then
 			old = modifier.addModifier
 			modifier.addModifier = function(self, tab)

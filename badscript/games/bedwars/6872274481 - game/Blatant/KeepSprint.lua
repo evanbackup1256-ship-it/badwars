@@ -4,7 +4,7 @@ Bad.Categories.Blatant:CreateModule({
 	Name = 'KeepSprint',
 	Function = function(callback)
 		if bedwars.SprintController then
-			if bedwars.SprintController.startSprinting then
+			if bedwars.SprintController.startSprinting and debug and type(debug.setconstant) == 'function' then
 				pcall(function()
 					debug.setconstant(bedwars.SprintController.startSprinting, 5, callback and 'blockSprinting' or 'blockSprint')
 				end)

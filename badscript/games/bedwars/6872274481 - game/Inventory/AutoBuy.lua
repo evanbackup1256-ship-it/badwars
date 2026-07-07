@@ -12,6 +12,20 @@ local UpgradeToggles = {}
 local Functions, id = {}
 local Callbacks = {Custom, Functions, CustomPost}
 local npctick = tick()
+local compatibility = Bad.BedWarsCompatibility
+
+local function getStoreState()
+	if compatibility and type(compatibility.GetStoreState) == 'function' then
+		return compatibility:GetStoreState()
+	end
+	if bedwars.Store and type(bedwars.Store.getState) == 'function' then
+		local ok, state = pcall(bedwars.Store.getState, bedwars.Store)
+		if ok and type(state) == 'table' then
+			return state
+		end
+	end
+	return {}
+end
 
 local swords = {
 	'wood_sword',
@@ -49,7 +63,7 @@ local function getShopNPC()
 	local shop, items, upgrades, newid = nil, false, false, nil
 	if entitylib.isAlive then
 		local localPosition = entitylib.character.RootPart.Position
-		for _, v in store.shop do
+		for _, v in (store.shop or {}) do
 			if (v.RootPart.Position - localPosition).Magnitude <= 20 then
 				shop = v.Upgrades or v.Shop or nil
 				upgrades = upgrades or v.Upgrades
@@ -70,7 +84,8 @@ local function canBuy(item, currencytable, amount)
 	if item.ignoredByKit and table.find(item.ignoredByKit, store.equippedKit or '') then return false end
 	if item.lockedByForge or item.disabled then return false end
 	if item.require and item.require.teamUpgrade then
-		if (bedwars.Store:getState().Bedwars.teamUpgrades[item.require.teamUpgrade.upgradeId] or -1) < item.require.teamUpgrade.lowestTierIndex then
+		local state = getStoreState()
+		if ((state.Bedwars and state.Bedwars.teamUpgrades and state.Bedwars.teamUpgrades[item.require.teamUpgrade.upgradeId]) or -1) < item.require.teamUpgrade.lowestTierIndex then
 			return false
 		end
 	end
@@ -99,7 +114,8 @@ end
 local function buyUpgrade(upgradeType, currencytable)
 	if not Upgrades.Enabled then return end
 	local upgrade = bedwars.TeamUpgradeMeta[upgradeType]
-	local currentUpgrades = bedwars.Store:getState().Bedwars.teamUpgrades[lplr:GetAttribute('Team')] or {}
+	local state = getStoreState()
+	local currentUpgrades = (state.Bedwars and state.Bedwars.teamUpgrades and state.Bedwars.teamUpgrades[lplr:GetAttribute('Team')]) or {}
 	local currentTier = (currentUpgrades[upgradeType] or 0) + 1
 	local bought = false
 

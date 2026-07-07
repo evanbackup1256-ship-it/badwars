@@ -1,3 +1,4 @@
+-- BADWARS_V19_UI_REPAIR_V6
 -- BADWARS_V19_UI_REPAIR_V5_2
 -- BADWARS_V19_UI_REPAIR_V4_4
 -- BADWARS_UI_V19_OBSIDIAN_OVERHAUL
@@ -168,7 +169,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "19.0",
-    PremiumBuild = "2026.07.06-V19-OBSIDIAN-OVERHAUL",
+    PremiumBuild = "2026.07.06-V19-UI-REPAIR-V6",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -316,15 +317,15 @@ local o = {
     TweenPress = TweenInfo.new(0.032, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
     TweenFast = TweenInfo.new(0.055, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
     Tween = TweenInfo.new(0.085, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TweenSlow = TweenInfo.new(0.125, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenSlow = TweenInfo.new(0.09, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     TweenSpring = TweenInfo.new(0.105, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     TweenBack = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     SpringInteractive = { Damping = 1, Frequency = 26, Public = false, TweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) },
-    SpringPanel = { Damping = 1, Frequency = 22, Public = true },
+    SpringPanel = { Damping = 1, Frequency = 28, Public = true },
     SpringSoft = { Damping = 0.98, Frequency = 19, Public = true },
 }
 
-local UI_WINDOW_WIDTH = d.isMobile and 268 or 272 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 46 local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_WINDOW_GAP = d.isMobile and 12 or 10
+local UI_WINDOW_WIDTH = d.isMobile and 268 or 272 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 46 local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_WINDOW_GAP = d.isMobile and 12 or 10 local UI_SCROLL_BOTTOM_PADDING = 24
 
 local function getTableSize(p)
     if type(p) ~= "table" then
@@ -1411,22 +1412,34 @@ local function positionTooltip(smooth)
 
     if smooth then
         z.Position = UDim2.fromOffset(
-            z.Position.X.Offset
-                + ((targetPosition.X.Offset - z.Position.X.Offset) * 0.48),
-            z.Position.Y.Offset
-                + ((targetPosition.Y.Offset - z.Position.Y.Offset) * 0.48)
+            snapOffset(
+                z.Position.X.Offset
+                    + ((targetPosition.X.Offset - z.Position.X.Offset) * 0.72)
+            ),
+            snapOffset(
+                z.Position.Y.Offset
+                    + ((targetPosition.Y.Offset - z.Position.Y.Offset) * 0.72)
+            )
         )
     else
         z.Position = targetPosition
     end
 end
 
+local tooltipFollowAccumulator = 0
+
 local function ensureTooltipFollow()
     if tooltipFollowConnection then
         return
     end
 
-    tooltipFollowConnection = k.RenderStepped:Connect(function()
+    tooltipFollowConnection = k.Heartbeat:Connect(function(delta)
+        tooltipFollowAccumulator += delta
+        if tooltipFollowAccumulator < 1 / 90 then
+            return
+        end
+        tooltipFollowAccumulator = 0
+
         local target = tooltipTarget
 
         if
@@ -1974,6 +1987,57 @@ end
 
 getGuiScale = function()
     return math.max(A and A.Scale or 1, 0.05)
+end
+
+local function snapOffset(value)
+    return math.round(tonumber(value) or 0)
+end
+
+local function getLayoutContentHeight(layout, extraPadding)
+    if not layout or not layout.Parent then
+        return 0
+    end
+    return snapOffset(
+        layout.AbsoluteContentSize.Y / getGuiScale()
+            + (extraPadding or 0)
+    )
+end
+
+local function getCategoryViewportLimit()
+    return math.max(
+        220,
+        (B.AbsoluteSize.Y / getGuiScale()) - 80
+    )
+end
+
+local function syncScrollingFrame(scroller, contentHeight, preserveScroll)
+    if not scroller or not scroller.Parent or not scroller:IsA("ScrollingFrame") then
+        return
+    end
+
+    contentHeight = snapOffset(math.max(0, contentHeight or 0))
+    local targetCanvas = UDim2.fromOffset(0, contentHeight)
+    if scroller.CanvasSize ~= targetCanvas then
+        scroller.CanvasSize = targetCanvas
+    end
+
+    task.defer(function()
+        if not scroller.Parent then
+            return
+        end
+
+        local maxY = math.max(
+            0,
+            scroller.AbsoluteCanvasSize.Y - scroller.AbsoluteWindowSize.Y
+        )
+        scroller.ScrollingEnabled = maxY > 1
+
+        local currentY = preserveScroll and scroller.CanvasPosition.Y or 0
+        local targetY = math.clamp(currentY, 0, maxY)
+        if math.abs(scroller.CanvasPosition.Y - targetY) > 0.5 then
+            scroller.CanvasPosition = Vector2.new(0, targetY)
+        end
+    end)
 end
 
 clampGuiObjectToViewport = function(guiObject, desiredAbsolute)
@@ -6451,6 +6515,9 @@ local function premiumizeComponent(componentName, api)
             if descendant.ImageColor3 == Color3.new(1, 1, 1) then
                 descendant.ImageColor3 = o.MutedText
             end
+            pcall(function()
+                descendant.ResampleMode = Enum.ResampleMode.Default
+            end)
         end
     end
 
@@ -7338,11 +7405,13 @@ function d.CreateGUI(aa)
         children.Position = UDim2.fromOffset(6, 54)
         children.BackgroundTransparency = 1
         children.BorderSizePixel = 0
-        children.ScrollBarThickness = 2
+        children.ScrollBarThickness = d.isMobile and 6 or 3
         children.ScrollBarImageColor3 = o.BorderStrong
-        children.ScrollBarImageTransparency = 0.42
+        children.ScrollBarImageTransparency = d.isMobile and 0.28 or 0.42
         children.ScrollingDirection = Enum.ScrollingDirection.Y
         children.ElasticBehavior = Enum.ElasticBehavior.Never
+        children.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+        children.ScrollingEnabled = true
         children.CanvasSize = UDim2.new()
         children.ZIndex = 521
         children.Parent = aw
@@ -7551,12 +7620,12 @@ end
                 if not children or not children.Parent then
                     return
                 end
-                local contentHeight = layout.AbsoluteContentSize.Y
                 local padTop = padding.PaddingTop.Offset
                 local padBottom = padding.PaddingBottom.Offset
-                children.CanvasSize = UDim2.fromOffset(
-                    0,
-                    contentHeight + padTop + padBottom + 8
+                syncScrollingFrame(
+                    children,
+                    getLayoutContentHeight(layout, padTop + padBottom + UI_SCROLL_BOTTOM_PADDING),
+                    true
                 )
             end)
         end
@@ -8400,27 +8469,20 @@ end)
                 setthreadidentity(8)
             end
 
-            local scale = math.max(A.Scale, 0.01)
-            local contentHeight = math.max(
-                0,
-                ag.AbsoluteContentSize.Y / scale
+            local contentHeight = getLayoutContentHeight(
+                ag,
+                UI_SCROLL_BOTTOM_PADDING
             )
             local viewportHeight = math.max(
                 180,
-                (B.AbsoluteSize.Y / scale) - 148
+                (B.AbsoluteSize.Y / getGuiScale()) - 148
             )
             local visibleHeight = math.min(
-                contentHeight + 8,
+                contentHeight,
                 viewportHeight
             )
 
-            local targetCanvasSize = UDim2.fromOffset(
-                0,
-                contentHeight + 8
-            )
-            if af.CanvasSize ~= targetCanvasSize then
-                af.CanvasSize = targetCanvasSize
-            end
+            syncScrollingFrame(af, contentHeight, true)
 
             local targetScrollerSize = UDim2.fromOffset(
                 UI_WINDOW_WIDTH,
@@ -8436,18 +8498,6 @@ end)
             )
             if ac.Size ~= targetWindowSize then
                 ac.Size = targetWindowSize
-            end
-
-            local maxCanvasY = math.max(
-                0,
-                af.AbsoluteCanvasSize.Y - af.AbsoluteWindowSize.Y
-            )
-            local targetCanvasPosition = Vector2.new(
-                0,
-                math.clamp(af.CanvasPosition.Y, 0, maxCanvasY)
-            )
-            if af.CanvasPosition ~= targetCanvasPosition then
-                af.CanvasPosition = targetCanvasPosition
             end
 
             for _, buttonApi in ab.Buttons do
@@ -8590,7 +8640,7 @@ function d.CreateCategory(aa, ab)
     categorySub.BackgroundTransparency = 1
     categorySub.Text = ""
     categorySub.TextColor3 = o.FaintText
-    categorySub.TextSize = 8
+    categorySub.TextSize = 10
     categorySub.TextXAlignment = Enum.TextXAlignment.Left
     categorySub.FontFace = o.FontBold
     categorySub.Visible = false
@@ -9102,10 +9152,7 @@ function d.CreateCategory(aa, ab)
             optionsStroke.Transparency = 1
             ao.OptionsVisibilityChanged:Fire(true)
 
-            local targetHeight = math.max(
-                J.AbsoluteContentSize.Y / A.Scale,
-                0
-            )
+            local targetHeight = getLayoutContentHeight(J, 4)
 
             L = n:Tween(at, optionsTransition, {
                 Size = UDim2.new(1, -12, 0, targetHeight),
@@ -9119,6 +9166,15 @@ function d.CreateCategory(aa, ab)
                 L.Completed:Once(function()
                     if animationId == optionsAnimationId then
                         L = nil
+                        if ac.RefreshLayout then
+                            ac:RefreshLayout(true)
+                        end
+                    end
+                end)
+            else
+                task.defer(function()
+                    if ac.RefreshLayout then
+                        ac:RefreshLayout(true)
                     end
                 end)
             end
@@ -9180,10 +9236,18 @@ function d.CreateCategory(aa, ab)
                 M.Completed:Once(function(playbackState)
                     if playbackState == Enum.PlaybackState.Completed then
                         finishClose()
+                        if ac.RefreshLayout then
+                            ac:RefreshLayout(true)
+                        end
                     end
                 end)
             else
                 finishClose()
+                task.defer(function()
+                    if ac.RefreshLayout then
+                        ac:RefreshLayout(true)
+                    end
+                end)
             end
         end
 
@@ -9770,10 +9834,20 @@ function d.CreateCategory(aa, ab)
             if d.ThreadFix then
                 setthreadidentity(8)
             end
-            local targetSize = UDim2.new(1, -12, 0, J.AbsoluteContentSize.Y / A.Scale)
+            local targetSize = UDim2.new(
+                1,
+                -12,
+                0,
+                getLayoutContentHeight(J, 4)
+            )
             if at.Size ~= targetSize then
                 at.Size = targetSize
             end
+            task.defer(function()
+                if ac.RefreshLayout then
+                    ac:RefreshLayout(true)
+                end
+            end)
         end)
 
         function ao.SetVisible(N, O)
@@ -9815,20 +9889,15 @@ function d.CreateCategory(aa, ab)
     local renderedExpanded = ac.Expanded == true
 
     local function getExpandedCategoryHeight()
-        local scale = math.max(A.Scale, 0.01)
-        local contentHeight = math.max(
-            0,
-            al.AbsoluteContentSize.Y / scale
+        local contentHeight = getLayoutContentHeight(
+            al,
+            UI_SCROLL_BOTTOM_PADDING
         )
-        local viewportLimit = math.max(
-            160,
-            (B.AbsoluteSize.Y / scale) - 96
-        )
+        local viewportLimit = getCategoryViewportLimit()
 
         return math.min(
-            UI_HEADER_HEIGHT + contentHeight + 8,
-            viewportLimit,
-            606
+            UI_HEADER_HEIGHT + contentHeight,
+            viewportLimit
         )
     end
 
@@ -9842,20 +9911,11 @@ function d.CreateCategory(aa, ab)
             and getExpandedCategoryHeight()
             or UI_HEADER_HEIGHT
 
-        aj.CanvasSize = UDim2.fromOffset(
-            0,
-            math.max(
-                0,
-                al.AbsoluteContentSize.Y
-                    / math.max(A.Scale, 0.01)
-                    + 8
-            )
+        syncScrollingFrame(
+            aj,
+            getLayoutContentHeight(al, UI_SCROLL_BOTTOM_PADDING),
+            true
         )
-
-        aj.ScrollingEnabled =
-            ac.Expanded
-            and aj.CanvasSize.Y.Offset
-                > math.max(0, targetHeight - UI_HEADER_HEIGHT)
 
         local currentHeight = ad.Size.Y.Offset
         local needsResize =
@@ -9901,20 +9961,6 @@ function d.CreateCategory(aa, ab)
                 finishCategoryTransition()
             end
         end
-
-        local maxCanvasY = math.max(
-            0,
-            aj.AbsoluteCanvasSize.Y - aj.AbsoluteWindowSize.Y
-        )
-
-        aj.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(
-                aj.CanvasPosition.Y,
-                0,
-                maxCanvasY
-            )
-        )
 
         ak.Visible = aj.CanvasPosition.Y > 10 and aj.Visible
         updateCategoryVisual(false, instant or not d.Loaded)
@@ -9984,7 +10030,7 @@ function d.CreateCategory(aa, ab)
         if aa.ThreadFix then
             setthreadidentity(8)
         end
-        refreshCategoryLayout(not d._InitialLayoutReady)
+        refreshCategoryLayout(true)
     end)
 
     B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
@@ -10338,27 +10384,11 @@ local function refreshModuleCategory(force)
         ap.Position = UDim2.fromOffset(0, -targetHeight)
     end
 
-    local parentContentHeight = math.max(
-        0,
-        math.ceil(al.AbsoluteContentSize.Y / math.max(A.Scale, 0.05))
-    )
-
-    aj.CanvasSize = UDim2.fromOffset(0, parentContentHeight + 4)
-
-    if ac.Expanded then
-        local viewportLimit = math.max(
-            160,
-            (B.AbsoluteSize.Y / math.max(A.Scale, 0.05)) - 96
-        )
-        ad.Size = UDim2.fromOffset(
-            UI_WINDOW_WIDTH,
-            math.min(
-                UI_HEADER_HEIGHT + parentContentHeight + 8,
-                viewportLimit,
-                606
-            )
-        )
-    end
+    task.defer(function()
+        if ac.RefreshLayout then
+            ac:RefreshLayout(true)
+        end
+    end)
 end
 
 ao.Refresh = refreshModuleCategory
@@ -12333,11 +12363,12 @@ function d.CreateSearch(ag)
         if ag.ThreadFix then
             setthreadidentity(8)
         end
-        local targetCanvasSize = UDim2.fromOffset(0, ap.AbsoluteContentSize.Y / A.Scale)
-        if an.CanvasSize ~= targetCanvasSize then
-            an.CanvasSize = targetCanvasSize
-        end
-        local targetSize = UDim2.fromOffset(260, math.min(42 + ap.AbsoluteContentSize.Y / A.Scale, 462))
+        local contentHeight = getLayoutContentHeight(ap, UI_SCROLL_BOTTOM_PADDING)
+        syncScrollingFrame(an, contentHeight, true)
+        local targetSize = UDim2.fromOffset(
+            260,
+            math.min(42 + contentHeight, 462)
+        )
         if ah.Size ~= targetSize then
             ah.Size = targetSize
         end
@@ -13092,10 +13123,11 @@ function d.CreateLegit(ag)
             if d.ThreadFix then
                 setthreadidentity(8)
             end
-            local targetCanvasSize = UDim2.fromOffset(0, aH.AbsoluteContentSize.Y / A.Scale)
-            if aF.CanvasSize ~= targetCanvasSize then
-                aF.CanvasSize = targetCanvasSize
-            end
+            syncScrollingFrame(
+                aF,
+                getLayoutContentHeight(aH, UI_SCROLL_BOTTOM_PADDING),
+                true
+            )
         end)
 
         ar.Object = av
@@ -13145,10 +13177,11 @@ function d.CreateLegit(ag)
         if ag.ThreadFix then
             setthreadidentity(8)
         end
-        local targetCanvasSize = UDim2.fromOffset(0, ao.AbsoluteContentSize.Y / A.Scale)
-        if an.CanvasSize ~= targetCanvasSize then
-            an.CanvasSize = targetCanvasSize
-        end
+        syncScrollingFrame(
+            an,
+            getLayoutContentHeight(ao, UI_SCROLL_BOTTOM_PADDING),
+            true
+        )
     end)
 
     ag.Legit = ah
@@ -14874,18 +14907,18 @@ local function responsiveScale()
 
     local scale
     if width >= 2300 and height >= 1200 then
-        scale = 0.9
+        scale = 0.95
     elseif width >= 1700 and height >= 850 then
-        scale = 0.8
+        scale = 0.88
     elseif width >= 1280 and height >= 700 then
-        scale = 0.75
+        scale = 0.82
     else
-        scale = 0.7
+        scale = 0.78
     end
 
     local aspect = width / math.max(height, 1)
     if aspect < 1.4 then
-        scale = math.max(0.7, scale - 0.05)
+        scale = math.max(0.76, scale - 0.03)
     end
 
     local windowCount = 0
@@ -14965,7 +14998,7 @@ local function startCursorTracking()
         return
     end
 
-    cursorConnection = k.RenderStepped:Connect(function()
+    cursorConnection = k.Heartbeat:Connect(function()
         if not v.Visible or d.Loaded == nil then
             stopCursorTracking()
             return
@@ -14983,7 +15016,10 @@ local function startCursorTracking()
         aj.Visible = not h.MouseIconEnabled
         if aj.Visible then
             local mouse = h:GetMouseLocation()
-            aj.Position = UDim2.fromOffset(mouse.X - 31, mouse.Y - 32)
+            aj.Position = UDim2.fromOffset(
+                snapOffset(mouse.X - 31),
+                snapOffset(mouse.Y - 32)
+            )
         end
     end)
 end

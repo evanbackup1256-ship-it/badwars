@@ -251,7 +251,7 @@ local function ensureRuntimeCategories(api)
         return { Enabled = value == nil and false or value }
     end
     local function ensureEvent(owner, key)
-        if type(owner[key]) ~= "table" or not owner[key].Event or type(owner[key].Fire) ~= "function" then
+        if type(owner[key]) ~= "table" or not owner[key].Event or type(owner[key].Fire) == "function" then
             owner[key] = Instance.new("BindableEvent")
             if shared.BadwarsLoadingDebug then
                 mwarn(
@@ -1429,8 +1429,7 @@ local function finish()
             .. "repeat task.wait() until game:IsLoaded()\n"
             .. "local ok,src=pcall(function() return game:HttpGet('"
             .. loaderUrl
-            .. "?v=13&t='..tostring(os.time()),true) end)\n"
-            .. "if ok and type(src)=='string' then local fn=loadstring(src,'badwars-loader'); if fn then fn() end end"
+            .. "?v=13&t='..tostring(os.time()),true) end)\n            .. "if ok and type(src)=='string' then local fn=loadstring(src,'badwars-loader'); if fn then fn() end end"
     end
 
     local function queueReload()
@@ -1556,7 +1555,7 @@ end
 pcall(function()
     game:GetService("StarterGui")
         :SetCore("SendNotification", { Title = "BadWars", Text = "by usingINales | Dev Mode Active", Duration = 6 })
-end)
+    end)
 
 -- Stage 3: GUI Profile
 local defaultGui = "new"

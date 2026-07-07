@@ -1,3 +1,4 @@
+-- BADWARS_UI_V13_PREMIUM_OVERHAUL
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
 do
     shared = type(shared) == "table" and shared or {}
@@ -627,8 +628,8 @@ local function isStaleGuiCache(path, body)
         return true
     end
 
-    return body:find("BADWARS_V19_UI_REPAIR_V5_2", 1, true) == nil
-        or body:find("BADWARS_UI_QUALITY_RUNTIME_V4_BEGIN", 1, true) == nil
+    return body:find("BADWARS_UI_V13_PREMIUM_OVERHAUL", 1, true) == nil
+        or body:find("BADWARS_UI_QUALITY_RUNTIME_V5_BEGIN", 1, true) == nil
         or body:find("BADWARS_FUSION_DESIGN_RUNTIME_V21_BEGIN", 1, true) ~= nil
 end
 local function isStaleMotionCache(path, body)
@@ -1542,7 +1543,7 @@ setStatus("selecting interface")
 if savedGui ~= gui then
     -- Production is fail-closed to the current UI generation. Legacy UI
     -- selectors are overwritten before any presentation source is loaded.
-    writefile("badscript/profiles/gui.txt", gui)
+    writefile("badscript/profiles/gui.txt", "new")
 end
 if not isfolder("badscript/assets/" .. gui) then
     makefolder("badscript/assets/" .. gui)

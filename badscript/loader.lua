@@ -1,3 +1,4 @@
+-- BADWARS_UI_V13_PREMIUM_OVERHAUL
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
 do
     shared = type(shared) == "table" and shared or {}
@@ -755,12 +756,12 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
 
-local cacheVersion = 'badwars-v19-ui-repair-2026-07-06-05-2'
+local cacheVersion = 'badwars-v13-premium-2026-07-06-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"
-        and contents:find("BADWARS_V19_UI_REPAIR_V5_2", 1, true) ~= nil
-        and contents:find("BADWARS_UI_QUALITY_RUNTIME_V4_BEGIN", 1, true) ~= nil
+        and contents:find("BADWARS_UI_V13_PREMIUM_OVERHAUL", 1, true) ~= nil
+        and contents:find("BADWARS_UI_QUALITY_RUNTIME_V5_BEGIN", 1, true) ~= nil
         and contents:find("BADWARS_FUSION_DESIGN_RUNTIME_V21_BEGIN", 1, true) == nil
 end
 local function invalidateStaleGuiCache()

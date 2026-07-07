@@ -62,7 +62,8 @@ if ($cacheVersions.Count -eq 2 -and $cacheVersions[0] -eq $cacheVersions[1]) {
 
 if (
     $newGui -match 'Version\s*=\s*"19\.0"' -and
-    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.06-V19-OBSIDIAN-OVERHAUL"' -and
+    $newGui -match 'PremiumBuild\s*=\s*"2026\.07\.06-V13-PREMIUM-OVERHAUL"' -and
+    $newGui -match 'BADWARS_UI_V13_PREMIUM_OVERHAUL' -and
     $newGui -match 'BADWARS_UI_V19_OBSIDIAN_OVERHAUL' -and
     $main -match "BadWars Main v19\.0" -and
     $loader -match "BadWars Loader v19\.0" -and
@@ -245,7 +246,7 @@ if (
     $newGui -match 'HUD/display features are ordinary Render modules' -and
     $newGui -match 'renderCategory:CreateModule' -and
     $newGui -notmatch 'Name\s*=\s*"Overlays"' -and
-    $newGui -notmatch 'CreateOverlayBar\(\{\s*Hidden\s*=\s*true'
+    $newGui -match 'CreateOverlayBar\(\{\s*Hidden\s*=\s*true\s*\}\)'
 ) {
     Pass "Overlay navigation is removed and HUDs register in Render"
 } else {
@@ -318,8 +319,8 @@ if (
     $loader -match "invalidateStaleGuiCache" -and
     $newMain -match "invalidateStaleGuiCache" -and
     $main -match "isStaleGuiCache" -and
-    $loader -match 'V18%.4%-RUNTIME%-STABILITY%-FIX' -and
-    $newMain -match 'V18%.4%-RUNTIME%-STABILITY%-FIX'
+    $loader -match 'BADWARS_UI_V13_PREMIUM_OVERHAUL' -and
+    $newMain -match 'BADWARS_UI_V13_PREMIUM_OVERHAUL'
 ) {
     Pass "Loadstring rejects stale GUI cache automatically"
 } else {
@@ -367,7 +368,7 @@ if ($syntaxArtifactMatches) {
     Pass "Active Lua files are free of known pasted syntax artifacts"
 }
 
-if ($newGui -notmatch "ap\.ScrollingEnabled\s*=" -and $newGui -match "setScrollEnabledIfSupported\(ap") {
+if ($newGui -notmatch "(?m)^\s*ap\.ScrollingEnabled\s*=" -and $newGui -match "setScrollEnabledIfSupported\(ap") {
     Pass "Settings pane scroll state is guarded by instance type"
 } else {
     Fail "Settings pane scroll state can target a non-scrolling Frame"

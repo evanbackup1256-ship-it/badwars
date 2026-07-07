@@ -154,3 +154,6 @@ docker-compose.override.yml
 *.7z
 
 .badwars-*/
+v11-module-backup*/
+v11-module-backup/
+**/v11-module-backup/**

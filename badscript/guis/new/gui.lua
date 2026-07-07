@@ -1,3 +1,6 @@
+-- BADWARS_UI_V13_PREMIUM_OVERHAUL
+-- BADWARS_UI_V19_OBSIDIAN_OVERHAUL
+-- BADWARS_V19_UI_REPAIR_V5_2
 -- BADWARS_V19_UI_REPAIR_V8
 -- BADWARS_V19_UI_REPAIR_V7
 -- BADWARS_V19_UI_REPAIR_V6
@@ -171,7 +174,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "19.0",
-    PremiumBuild = "2026.07.06-V19-UI-REPAIR-V8",
+    PremiumBuild = "2026.07.06-V13-PREMIUM-OVERHAUL",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -292,27 +295,28 @@ local n = {
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
-    -- Obsidian design system: neutral graphite surfaces with a single live accent.
-    Main = Color3.fromRGB(5, 8, 12),
-    MainSoft = Color3.fromRGB(8, 12, 17),
-    Text = Color3.fromRGB(218, 227, 235),
-    TextStrong = Color3.fromRGB(248, 251, 253),
-    Surface = Color3.fromRGB(13, 19, 25),
-    SurfaceSoft = Color3.fromRGB(16, 23, 30),
-    SurfaceHover = Color3.fromRGB(22, 32, 42),
-    Elevated = Color3.fromRGB(18, 27, 35),
-    ElevatedHover = Color3.fromRGB(27, 40, 51),
-    Border = Color3.fromRGB(34, 47, 59),
-    BorderStrong = Color3.fromRGB(67, 91, 108),
-    MutedText = Color3.fromRGB(168, 183, 196),
-    FaintText = Color3.fromRGB(112, 130, 146),
-    Danger = Color3.fromRGB(255, 102, 124),
-    Warning = Color3.fromRGB(255, 198, 92),
-    Success = Color3.fromRGB(75, 222, 168),
+    -- Obsidian V13: graphite glass surfaces with live accent and soft depth.
+    Main = Color3.fromRGB(4, 7, 11),
+    MainSoft = Color3.fromRGB(7, 11, 16),
+    Text = Color3.fromRGB(220, 229, 237),
+    TextStrong = Color3.fromRGB(250, 252, 254),
+    Surface = Color3.fromRGB(12, 18, 24),
+    SurfaceSoft = Color3.fromRGB(15, 22, 29),
+    SurfaceHover = Color3.fromRGB(21, 31, 41),
+    Elevated = Color3.fromRGB(17, 26, 34),
+    ElevatedHover = Color3.fromRGB(26, 38, 49),
+    Glass = Color3.fromRGB(19, 28, 36),
+    Border = Color3.fromRGB(32, 45, 57),
+    BorderStrong = Color3.fromRGB(64, 88, 106),
+    MutedText = Color3.fromRGB(165, 180, 194),
+    FaintText = Color3.fromRGB(108, 126, 142),
+    Danger = Color3.fromRGB(255, 98, 122),
+    Warning = Color3.fromRGB(255, 194, 88),
+    Success = Color3.fromRGB(72, 220, 166),
     Shadow = Color3.fromRGB(0, 1, 3),
-    RadiusSmall = UDim.new(0, 7),
-    Radius = UDim.new(0, 11),
-    RadiusLarge = UDim.new(0, 16),
+    RadiusSmall = UDim.new(0, 8),
+    Radius = UDim.new(0, 12),
+    RadiusLarge = UDim.new(0, 17),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
@@ -327,7 +331,7 @@ local o = {
     SpringSoft = { Damping = 0.98, Frequency = 19, Public = true },
 }
 
-local UI_WINDOW_WIDTH = d.isMobile and 268 or 272 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 54 or 46 local UI_NAV_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_WINDOW_GAP = d.isMobile and 12 or 10 local UI_SCROLL_BOTTOM_PADDING = 28 local UI_CATEGORY_MAX_BODY_HEIGHT = d.isMobile and 360 or 420 local UI_CATEGORY_MIN_BODY_HEIGHT = 140
+local UI_WINDOW_WIDTH = d.isMobile and 270 or 276 local UI_HEADER_HEIGHT = d.isMobile and 56 or 50 local UI_MODULE_ROW_HEIGHT = d.isMobile and 52 or 44 local UI_NAV_ROW_HEIGHT = d.isMobile and 50 or 42 local UI_WINDOW_GAP = d.isMobile and 12 or 10 local UI_SCROLL_BOTTOM_PADDING = 30 local UI_CATEGORY_MAX_BODY_HEIGHT = d.isMobile and 368 or 428 local UI_CATEGORY_MIN_BODY_HEIGHT = 144
 
 local function snapOffset(value)
     return math.round(tonumber(value) or 0)
@@ -358,17 +362,29 @@ local function styleCrispImage(instance)
     end
 end
 
+local function setScrollEnabledIfSupported(object, enabled)
+    if object and object:IsA("ScrollingFrame") then
+        object.ScrollingEnabled = enabled == true
+    end
+end
+
 local function styleScrollFrame(scroller)
     if not scroller or not scroller:IsA("ScrollingFrame") then
         return
     end
-    scroller.ScrollBarImageColor3 = o.BorderStrong
-    scroller.ScrollBarImageTransparency = d.isMobile and 0.24 or 0.42
+    local accent = Color3.fromHSV(
+        d.GUIColor.Hue,
+        math.max(d.GUIColor.Sat - 0.12, 0),
+        math.min(d.GUIColor.Value + 0.08, 1)
+    )
+    scroller.ScrollBarImageColor3 = accent:Lerp(o.BorderStrong, 0.55)
+    scroller.ScrollBarImageTransparency = d.isMobile and 0.2 or 0.36
     scroller.ScrollBarThickness = d.isMobile and 5 or 3
     scroller.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     scroller.ElasticBehavior = Enum.ElasticBehavior.Never
     scroller.ScrollingDirection = Enum.ScrollingDirection.Y
     scroller.BorderSizePixel = 0
+    scroller.Active = true
 end
 
 local function getTableSize(p)
@@ -1144,7 +1160,7 @@ local function addShadow(F, G)
     H.BackgroundTransparency = 1
     H.Image = u("badscript/assets/new/" .. (G and "blurnotif" or "blur") .. ".png")
     H.ImageColor3 = o.Shadow
-    H.ImageTransparency = G and 0.84 or 0.88
+    H.ImageTransparency = G and 0.82 or 0.86
     H.ScaleType = Enum.ScaleType.Slice
     H.SliceCenter = Rect.new(52, 31, 261, 502)
     H.ZIndex = math.max(F.ZIndex - 1, 0)
@@ -1176,17 +1192,46 @@ local function addSurfaceGradient(F, G)
 
     H.Color = G
         or ColorSequence.new({
-            ColorSequenceKeypoint.new(0, o.SurfaceSoft),
-            ColorSequenceKeypoint.new(0.44, o.Surface),
-            ColorSequenceKeypoint.new(1, o.MainSoft),
+            ColorSequenceKeypoint.new(0, o.SurfaceSoft:Lerp(Color3.new(1, 1, 1), 0.035)),
+            ColorSequenceKeypoint.new(0.34, o.Surface),
+            ColorSequenceKeypoint.new(0.68, o.MainSoft),
+            ColorSequenceKeypoint.new(1, o.Main),
         })
     H.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.01),
-        NumberSequenceKeypoint.new(0.5, 0.045),
-        NumberSequenceKeypoint.new(1, 0.18),
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(0.42, 0.025),
+        NumberSequenceKeypoint.new(1, 0.12),
     })
-    H.Rotation = 112
+    H.Rotation = 124
     return H
+end
+
+local function applyObsidianPanel(frame, options)
+    if not frame or not frame:IsA("GuiObject") then
+        return frame
+    end
+
+    options = options or {}
+    addCorner(frame, options.Radius or o.Radius)
+    if options.Shadow ~= false then
+        addShadow(frame, options.LargeShadow)
+    end
+    if options.Gradient ~= false then
+        addSurfaceGradient(frame)
+    end
+    if options.Chrome ~= false then
+        addV9Chrome(frame)
+    end
+    if options.Stroke ~= false then
+        addStroke(
+            frame,
+            options.StrokeColor or o.BorderStrong,
+            options.StrokeTransparency or 0.54,
+            1,
+            options.StrokeName or "ObsidianStroke"
+        )
+    end
+    return frame
 end
 
 local function addAccentLine(F, G)
@@ -1230,10 +1275,24 @@ local function addV9Chrome(F, label)
         top.Size = UDim2.new(1, -24, 0, 1)
         top.Position = UDim2.fromOffset(12, 1)
         top.BackgroundColor3 = o.TextStrong
-        top.BackgroundTransparency = 0.91
+        top.BackgroundTransparency = 0.9
         top.BorderSizePixel = 0
         top.ZIndex = F.ZIndex + 3
         top.Parent = F
+    end
+
+    local rail = F:FindFirstChild("ObsidianSideRail")
+    if not rail then
+        rail = Instance.new("Frame")
+        rail.Name = "ObsidianSideRail"
+        rail.Size = UDim2.new(0, 1, 1, -18)
+        rail.Position = UDim2.fromOffset(0, 9)
+        rail.BackgroundColor3 = o.BorderStrong
+        rail.BackgroundTransparency = 0.72
+        rail.BorderSizePixel = 0
+        rail.ZIndex = F.ZIndex + 2
+        rail.Parent = F
+        addCorner(rail, UDim.new(1, 0))
     end
 
     local bottom = F:FindFirstChild("ObsidianDepthEdge")
@@ -1260,6 +1319,24 @@ end
 local function playV9Sweep(sweep)
     return
 end
+
+-- BADWARS_V15_GUARDED_MOTION_BEGIN
+local BadWarsV15Motion = {
+    Connections = {},
+}
+
+local function addCleanMotion(connection)
+    if connection then
+        BadWarsV15Motion.Connections[#BadWarsV15Motion.Connections + 1] =
+            connection
+    end
+    return connection
+end
+
+local function V15Scale(frame)
+    return addScale(frame)
+end
+-- BADWARS_V15_GUARDED_MOTION_END
 
 local function bindPremiumMotion(F, G, H, I)
     if not F:IsA("GuiButton") or F:GetAttribute("PremiumMotion") then
@@ -4267,7 +4344,7 @@ H = {
                     rowHeight - 2
                 )
                 option.BackgroundColor3 = o.Surface
-                option.BackgroundTransparency = 0.12
+                option.BackgroundTransparency = 0.08
                 option.BorderSizePixel = 0
                 option.AutoButtonColor = false
                 option.Text = ""
@@ -4871,8 +4948,8 @@ H = {
 
         local track = Instance.new("Frame")
         track.Name = "Slider"
-        track.Size = UDim2.new(1, -24, 0, 6)
-        track.Position = UDim2.new(0, 12, 1, -15)
+        track.Size = UDim2.new(1, -24, 0, 7)
+        track.Position = UDim2.new(0, 12, 1, -16)
         track.BackgroundColor3 = o.Elevated
         track.BorderSizePixel = 0
         track.Parent = root
@@ -6099,7 +6176,8 @@ H = {
         ag.ClipsDescendants = true
         ag.Parent = af
         addCorner(ag, o.Radius)
-        local ah = addStroke(ag, o.Border, 0.72, 1, "ToggleStroke")
+        addSurfaceGradient(ag)
+        local ah = addStroke(ag, o.BorderStrong, 0.62, 1, "ToggleStroke")
 
         local ai = Instance.new("TextLabel")
         ai.Name = "Title"
@@ -6570,19 +6648,36 @@ local function premiumizeComponent(componentName, api)
         or componentName == "TwoSlider"
         or componentName == "ColorSlider"
         or componentName == "Font"
+        or componentName == "Button"
+        or componentName == "Toggle"
+        or componentName == "Dropdown"
+        or componentName == "Slider"
+        or componentName == "TextBox"
+        or componentName == "ColorPicker"
+        or componentName == "Keybind"
+        or componentName == "Bind"
 
     if shouldCardStyle then
         root.BackgroundTransparency = 1
         root.BorderSizePixel = 0
     end
 
-    local card = root:FindFirstChild("BKG") or root:FindFirstChild("TextList") or root:FindFirstChild("Slider")
+    local card = root:FindFirstChild("BKG")
+        or root:FindFirstChild("Card")
+        or root:FindFirstChild("TextList")
+        or root:FindFirstChild("Slider")
 
-    if card and card:IsA("GuiObject") and shouldCardStyle then
+    if card and card:IsA("GuiObject") then
         card.BackgroundColor3 = o.Surface
         card.BorderSizePixel = 0
         addCorner(card, o.Radius)
-        addStroke(card, o.Border, 0.68, 1, "PremiumComponentStroke")
+        addSurfaceGradient(card)
+        addStroke(card, o.BorderStrong, 0.62, 1, "PremiumComponentStroke")
+    end
+
+    local accentRail = root:FindFirstChild("Accent", true)
+    if accentRail and accentRail:IsA("GuiObject") and accentRail.Size.X.Offset <= 4 then
+        accentRail.BackgroundTransparency = 0.06
     end
 
     for _, descendant in ipairs(root:GetDescendants()) do
@@ -6597,6 +6692,8 @@ local function premiumizeComponent(componentName, api)
                 descendant.TextColor3 = o.MutedText
             elseif descendant.Name == "Items" or descendant.Name == "Value" then
                 descendant.TextColor3 = o.FaintText
+            elseif descendant.Name == "Label" then
+                descendant.TextColor3 = o.Text
             end
             styleCrispText(descendant)
         elseif descendant:IsA("TextButton") or descendant:IsA("TextBox") then
@@ -6604,6 +6701,8 @@ local function premiumizeComponent(componentName, api)
                 descendant.FontFace = o.Font
                 descendant.TextColor3 = o.Text
                 descendant.PlaceholderColor3 = o.FaintText
+                descendant.BackgroundColor3 = o.MainSoft
+                descendant.BackgroundTransparency = 0.08
             end
             styleCrispText(descendant)
         elseif descendant:IsA("ScrollingFrame") then
@@ -6613,6 +6712,8 @@ local function premiumizeComponent(componentName, api)
                 descendant.ImageColor3 = o.MutedText
             end
             styleCrispImage(descendant)
+        elseif descendant:IsA("UIStroke") and descendant.Name == "TrackStroke" then
+            descendant.Transparency = math.min(descendant.Transparency, 0.58)
         end
     end
 
@@ -6788,12 +6889,13 @@ function d.CreateGUI(aa)
     playerCard.Name = "PlayerCard"
     playerCard.Size = UDim2.fromOffset(UI_WINDOW_WIDTH - 24, 58)
     playerCard.Position = UDim2.fromOffset(12, 50)
-    playerCard.BackgroundColor3 = o.Surface
-    playerCard.BackgroundTransparency = 0.03
+    playerCard.BackgroundColor3 = o.Glass
+    playerCard.BackgroundTransparency = 0.06
     playerCard.BorderSizePixel = 0
     playerCard.ClipsDescendants = true
     playerCard.Parent = ac
     addCorner(playerCard, o.Radius)
+    addSurfaceGradient(playerCard)
     local playerCardStroke = addStroke(
         playerCard,
         o.Border,
@@ -6907,8 +7009,12 @@ function d.CreateGUI(aa)
     local ag = Instance.new("UIListLayout")
     ag.SortOrder = Enum.SortOrder.LayoutOrder
     ag.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    ag.Padding = UDim.new(0, 6)
+    ag.Padding = UDim.new(0, 5)
     ag.Parent = af
+    local mainNavPadding = Instance.new("UIPadding")
+    mainNavPadding.PaddingTop = UDim.new(0, 2)
+    mainNavPadding.PaddingBottom = UDim.new(0, UI_SCROLL_BOTTOM_PADDING)
+    mainNavPadding.Parent = af
     styleScrollFrame(af)
     local ah = Instance.new("TextButton")
     ah.Name = "Settings"
@@ -6932,6 +7038,7 @@ function d.CreateGUI(aa)
     ai.BackgroundTransparency = 1
     ai.Image = u("badscript/assets/new/guisettings.png")
     ai.ImageColor3 = m.Light(o.Main, 0.37)
+    styleCrispImage(ai)
     ai.Parent = ah
     local aj = Instance.new("TextButton")
     aj.Name = "DiscordInvite"
@@ -7061,11 +7168,6 @@ function d.CreateGUI(aa)
     settingsLandingPadding.PaddingTop = UDim.new(0, 2)
     settingsLandingPadding.PaddingBottom = UDim.new(0, 22)
     settingsLandingPadding.Parent = ap
-    local function setScrollEnabledIfSupported(object, enabled)
-        if object and object:IsA("ScrollingFrame") then
-            object.ScrollingEnabled = enabled
-        end
-    end
     ab.Object = ac
 
     function ab.CreateBind(ar)
@@ -7376,6 +7478,18 @@ function d.CreateGUI(aa)
 
     function ab.CreateSettingsDivider(ar)
         H.Divider(ap)
+    end
+
+    function ab.CreateOverlayBar(ar)
+        ar = type(ar) == "table" and ar or {}
+        if ar and ar.Hidden then
+            d._OverlayBarInternal = true
+            return {
+                Hidden = true,
+                Object = nil,
+            }
+        end
+        return nil
     end
 
     function ab.CreateSettingsPane(ar, as)
@@ -8387,6 +8501,11 @@ end))
         pcall(function()
             ap.Interactable = true
         end)
+        for _, child in ipairs(ap:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") then
+                child.TextTransparency = math.min(child.TextTransparency, 0)
+            end
+        end
     end
 
     local function setSettingsVisible(visible)
@@ -8706,12 +8825,13 @@ function d.CreateCategory(aa, ab)
     headerSurface.Name = "HeaderSurface"
     headerSurface.Size = UDim2.new(1, 0, 0, UI_HEADER_HEIGHT)
     headerSurface.Position = UDim2.fromOffset(0, 0)
-    headerSurface.BackgroundColor3 = o.MainSoft
-    headerSurface.BackgroundTransparency = 0.015
+    headerSurface.BackgroundColor3 = o.Glass
+    headerSurface.BackgroundTransparency = 0.04
     headerSurface.BorderSizePixel = 0
     headerSurface.ZIndex = ad.ZIndex + 10
     headerSurface.Parent = ad
     addCorner(headerSurface, o.RadiusLarge)
+    addSurfaceGradient(headerSurface)
 
     local ae = Instance.new("ImageLabel")
     ae.Name = "Icon"
@@ -8904,7 +9024,8 @@ function d.CreateCategory(aa, ab)
         ar.TextStrokeTransparency = 1
         ar.Parent = aj
         addCorner(ar, o.Radius)
-        local moduleStroke = addStroke(ar, o.Border, 0.7, 1, "ModuleStroke")
+        addSurfaceGradient(ar)
+        local moduleStroke = addStroke(ar, o.BorderStrong, 0.64, 1, "ModuleStroke")
         local moduleScale = addScale(ar)
         local moduleSweep = addV9Sweep(ar)
 
@@ -8990,6 +9111,7 @@ function d.CreateCategory(aa, ab)
         av.BackgroundTransparency = 1
         av.Image = u("badscript/assets/new/bind.png")
         av.ImageColor3 = m.Dark(o.Text, 0.43)
+        styleCrispImage(av)
         av.Parent = au
         local aw = Instance.new("TextLabel")
         aw.Size = UDim2.fromScale(1, 1)
@@ -9163,6 +9285,7 @@ function d.CreateCategory(aa, ab)
         I.BackgroundTransparency = 1
         I.Image = u("badscript/assets/new/dots.png")
         I.ImageColor3 = m.Light(o.Main, 0.37)
+        styleCrispImage(I)
         I.Parent = aC
         at.Name = an.Name .. "Children"
         at.Size = UDim2.new(1, -12, 0, 0)
@@ -11012,6 +11135,9 @@ function d.CreateOverlay(af, ag)
     af.Overlays = type(af.Overlays) == "table" and af.Overlays or {}
     local previous = af.Overlays[ag.Name]
     if previous then
+        if shared.VoidDev then
+            warn("BadWars: Replaced duplicate overlay " .. tostring(ag.Name))
+        end
         if previous.Connections then
             for _, connection in previous.Connections do
                 pcall(function()
@@ -11422,12 +11548,15 @@ function d.CreateCategoryList(ag, ah)
     ap.Visible = false
     ap.CanvasSize = UDim2.new()
     ap.AutomaticCanvasSize = Enum.AutomaticSize.None
-    ap.ScrollingEnabled = true
     ap.Active = true
     ap.Selectable = true
     ap.ClipsDescendants = true
     styleScrollFrame(ap)
     ap.Parent = aj
+    local function setCategoryListScrollEnabled(enabled)
+        setScrollEnabledIfSupported(ap, enabled)
+    end
+    setCategoryListScrollEnabled(true)
     local aq = Instance.new("Frame")
     aq.BackgroundTransparency = 1
     aq.BackgroundColor3 = m.Dark(o.Main, 0.02)
@@ -11506,7 +11635,7 @@ function d.CreateCategoryList(ag, ah)
                 windowHeight = ap.AbsoluteSize.Y
             end
             local canvasHeight = ap.CanvasSize.Y.Offset
-            ap.ScrollingEnabled = canvasHeight > windowHeight + 1
+            setCategoryListScrollEnabled(canvasHeight > windowHeight + 1)
         end)
 
         if aC.Expanded then
@@ -11716,6 +11845,7 @@ function d.CreateCategoryList(ag, ah)
                 aH.Text = ""
                 aH.Parent = ap
                 addCorner(aH)
+                addSurfaceGradient(aH)
                 local aI = Instance.new("UIStroke")
                 aI.Color = m.Light(o.Main, 0.1)
                 aI.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -11894,11 +12024,12 @@ function d.CreateCategoryList(ag, ah)
                 aI.Text = ""
                 aI.Parent = ap
                 addCorner(aI)
+                addSurfaceGradient(aI)
                 local aJ = Instance.new("Frame")
                 aJ.Name = "BKG"
                 aJ.Size = UDim2.new(1, -2, 1, -2)
                 aJ.Position = UDim2.fromOffset(1, 1)
-                aJ.BackgroundColor3 = o.Main
+                aJ.BackgroundColor3 = o.SurfaceHover
                 aJ.Visible = false
                 aJ.Parent = aI
                 addCorner(aJ)
@@ -13405,8 +13536,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             existing:SetAttribute("DuplicateCount", count)
             local badge = existing:FindFirstChild("Count")
             if badge and badge:IsA("TextLabel") then
-                badge.Text = tostring(count)
-                badge.Visible = true
+                badge.Text = count > 9 and "9+" or tostring(count)
+                badge.Visible = count > 1
             end
             local progress = existing:FindFirstChild("Progress", true)
             if progress and progress:IsA("Frame") then
@@ -13575,7 +13706,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         count.BackgroundTransparency = 0.28
         count.BorderSizePixel = 0
         count.Visible = false
-        count.Text = "2"
+        count.Text = ""
         count.TextColor3 = o.TextStrong
         count.TextSize = 9
         count.FontFace = o.FontBold
@@ -14973,19 +15104,28 @@ s.Name = "Prompts"
 s.Parent = w
 
 local premiumStrokeMinimums = {
-    MainStroke = 0.42,
-    NavigationStroke = 0.72,
-    CategoryStroke = 0.42,
-    ModuleStroke = 0.82,
-    ModuleCategoryStroke = 0.82,
-    LegitStroke = 0.42,
-    LegitCardStroke = 0.72,
-    LegitWidgetStroke = 0.58,
-    OptionsStroke = 0.9,
-    TextBoxStroke = 0.72,
-    OverlayStroke = 0.58,
-    NotificationStroke = 0.52,
-    TooltipStroke = 0.38,
+    MainStroke = 0.38,
+    NavigationStroke = 0.66,
+    CategoryStroke = 0.38,
+    CategoryListStroke = 0.42,
+    ModuleStroke = 0.58,
+    ModuleCategoryStroke = 0.62,
+    LegitStroke = 0.38,
+    LegitCardStroke = 0.62,
+    LegitWidgetStroke = 0.52,
+    OptionsStroke = 0.78,
+    TextBoxStroke = 0.62,
+    OverlayStroke = 0.52,
+    NotificationStroke = 0.48,
+    TooltipStroke = 0.34,
+    PremiumComponentStroke = 0.58,
+    DropdownStroke = 0.62,
+    DropdownPopupStroke = 0.48,
+    ToggleStroke = 0.58,
+    ButtonStroke = 0.54,
+    PlayerCardStroke = 0.62,
+    AddFieldStroke = 0.62,
+    ObsidianStroke = 0.52,
 }
 
 local function normalizePremiumStroke(instance)
@@ -15026,17 +15166,39 @@ z.FontFace = o.FontSemiBold
 z.TextStrokeTransparency = 1
 z.BackgroundTransparency = 1
 z.Parent = w
-addCorner(z, o.Radius)
-tooltipStroke = addStroke(z, o.BorderStrong, 1, 1, "TooltipStroke")
+addCorner(z, o.RadiusLarge)
+addShadow(z, true)
+addSurfaceGradient(z)
+tooltipStroke = addStroke(z, o.BorderStrong, 0.42, 1, "TooltipStroke")
 tooltipScale = addScale(z)
 tooltipScale.Scale = 1
 tooltipAccent = nil
 
+local tooltipRail = Instance.new("Frame")
+tooltipRail.Name = "TooltipRail"
+tooltipRail.Size = UDim2.new(0, 2, 1, -12)
+tooltipRail.Position = UDim2.fromOffset(8, 6)
+tooltipRail.BackgroundColor3 = Color3.fromHSV(
+    d.GUIColor.Hue,
+    d.GUIColor.Sat,
+    d.GUIColor.Value
+)
+tooltipRail.BackgroundTransparency = 0.14
+tooltipRail.BorderSizePixel = 0
+tooltipRail.ZIndex = z.ZIndex + 1
+tooltipRail.Parent = z
+addCorner(tooltipRail, UDim.new(1, 0))
+connectguicolorchange(function(hue, saturation, value)
+    if tooltipRail.Parent then
+        tooltipRail.BackgroundColor3 = Color3.fromHSV(hue, saturation, value)
+    end
+end)
+
 local tooltipPadding = Instance.new("UIPadding")
-tooltipPadding.PaddingLeft = UDim.new(0, 10)
-tooltipPadding.PaddingRight = UDim.new(0, 10)
-tooltipPadding.PaddingTop = UDim.new(0, 7)
-tooltipPadding.PaddingBottom = UDim.new(0, 7)
+tooltipPadding.PaddingLeft = UDim.new(0, 16)
+tooltipPadding.PaddingRight = UDim.new(0, 12)
+tooltipPadding.PaddingTop = UDim.new(0, 8)
+tooltipPadding.PaddingBottom = UDim.new(0, 8)
 tooltipPadding.Parent = z
 d:Clean(h.InputBegan:Connect(function(input)
     if
@@ -15578,6 +15740,7 @@ d:CreateSearch()
 -- HUD/display features are ordinary Render modules.  There is intentionally
 -- no Overlays sidebar entry, module-category expander, page, or input blocker.
 d.OverlaysModuleCategory = nil
+d.Categories.Main:CreateOverlayBar({ Hidden = true })
 
 local as = d.Categories.Main:CreateSettingsPane({ Name = "Modules" })
 as:CreateToggle({
@@ -16949,6 +17112,7 @@ end
 -- Entire appended V21 presentation/runtime suffix disabled by BADWARS_V19_PERFORMANCE_HOTFIX_V2.
 
 -- BADWARS_UI_QUALITY_RUNTIME_V4_BEGIN
+-- BADWARS_UI_QUALITY_RUNTIME_V5_BEGIN
 (function()
     local UserInputService = game:GetService("UserInputService")
     local boundScrollers = setmetatable({}, { __mode = "k" })
@@ -17014,6 +17178,7 @@ end
             windowHeight = scroller.AbsoluteSize.Y
         end
         local maxY = math.max(0, height - windowHeight)
+        scroller.ScrollingEnabled = maxY > 1
         if scroller.CanvasPosition.Y > maxY then
             scroller.CanvasPosition = Vector2.new(
                 scroller.CanvasPosition.X,
@@ -17072,12 +17237,17 @@ end
     local function normalizeObject(object)
         if object:IsA("ScrollingFrame") then
             bindScroller(object)
+        elseif object:IsA("TextLabel")
+            or object:IsA("TextButton")
+            or object:IsA("TextBox")
+        then
+            styleCrispText(object)
         elseif object:IsA("ImageLabel")
             or object:IsA("ImageButton")
         then
-            pcall(function()
-                object.ResampleMode = Enum.ResamplerMode.Default
-            end)
+            styleCrispImage(object)
+        elseif object:IsA("UIStroke") then
+            normalizePremiumStroke(object)
         elseif object:IsA("UIScale") then
             local parent = object.Parent
             if parent
@@ -17264,6 +17434,6 @@ end
 
     task.defer(d.RefreshScrollCanvases)
 end)()
--- BADWARS_UI_QUALITY_RUNTIME_V4_END
+-- BADWARS_UI_QUALITY_RUNTIME_V5_END
 
 return d

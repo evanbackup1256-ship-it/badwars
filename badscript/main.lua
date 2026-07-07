@@ -798,7 +798,7 @@ local function repairKnownSourceDefects(path, source)
 
     -- Additional common Roblox deprecation repair
     repaired, changed = repaired:gsub(
-        "game:GetService%(["']RunService["']%)%.Heartbeat:Wait%(\)\s*game:GetService%(["']RunService["']%)%.Heartbeat:Wait\(\)\;",
+        "game:GetService%([\"']RunService[\"']%)%.Heartbeat:Wait%(%)\s*game:GetService%([\"']RunService[\"']%)%.Heartbeat:Wait%(%)\;",
         "local rs = game:GetService('RunService'); rs.Heartbeat:Wait(); rs.Heartbeat:Wait();"
     )
     fixes += changed

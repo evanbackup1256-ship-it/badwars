@@ -1416,7 +1416,7 @@ local function finish()
         end
     end)
 
-      local teleported = false
+    local teleported = false
     local playersService = cloneref(game:GetService("Players"))
     local teleportService = cloneref(game:GetService("TeleportService"))
     local localPlayer = playersService.LocalPlayer or playersService.PlayerAdded:Wait()

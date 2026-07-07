@@ -3882,6 +3882,7 @@ H = {
         arrow.Image = u("badscript/assets/new/expandright.png")
         arrow.ImageColor3 = o.FaintText
         arrow.Rotation = 90
+        styleCrispImage(arrow)
         arrow.Parent = button
 
         local popup
@@ -3891,7 +3892,7 @@ H = {
         local scroll
         local noResults
         local outsideConnection
-        local scrollConnection
+        local positionConnections = {}
         local popupGeneration = 0
         local popupOpen = false
         local rowHeight = d.isMobile and 44 or 34
@@ -4134,6 +4135,12 @@ H = {
 
             positionPopup(popupHeight)
             updateVirtualRows(false)
+
+            local maxScrollY = math.max(
+                0,
+                visibleCount * rowHeight - listHeight
+            )
+            scroll.ScrollingEnabled = maxScrollY > 1
         end
 
         local function ensurePopup()
@@ -4316,6 +4323,80 @@ H = {
             scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
                 updateVirtualRows(false)
             end)
+
+            scroll.InputChanged:Connect(function(input)
+                if input.UserInputType ~= Enum.UserInputType.MouseWheel
+                    or not popupOpen
+                then
+                    return
+                end
+
+                local before = scroll.CanvasPosition.Y
+                local wheelDelta = input.Position.Z
+                task.defer(function()
+                    if not scroll.Parent or scroll.CanvasPosition.Y ~= before then
+                        return
+                    end
+                    local maxY = math.max(
+                        0,
+                        scroll.CanvasSize.Y.Offset - scroll.AbsoluteWindowSize.Y
+                    )
+                    scroll.CanvasPosition = Vector2.new(
+                        0,
+                        math.clamp(before - (wheelDelta * 42), 0, maxY)
+                    )
+                end)
+            end)
+        end
+
+        local function clearPositionTracking()
+            for _, connection in ipairs(positionConnections) do
+                pcall(function()
+                    connection:Disconnect()
+                end)
+            end
+            table.clear(positionConnections)
+        end
+
+        local function bindPositionTracking()
+            clearPositionTracking()
+            if not popupOpen then
+                return
+            end
+
+            local function reposition()
+                if popupOpen and popup and popup.Parent then
+                    refreshPopup(search.Text, true)
+                end
+            end
+
+            local scrollingParent = parent
+            while
+                scrollingParent
+                and not scrollingParent:IsA("ScrollingFrame")
+            do
+                scrollingParent = scrollingParent.Parent
+            end
+
+            if scrollingParent then
+                positionConnections[#positionConnections + 1] =
+                    scrollingParent:GetPropertyChangedSignal(
+                        "CanvasPosition"
+                    ):Connect(reposition)
+                positionConnections[#positionConnections + 1] =
+                    scrollingParent:GetPropertyChangedSignal(
+                        "AbsoluteSize"
+                    ):Connect(reposition)
+            end
+
+            positionConnections[#positionConnections + 1] =
+                root:GetPropertyChangedSignal(
+                    "AbsolutePosition"
+                ):Connect(reposition)
+            positionConnections[#positionConnections + 1] =
+                root:GetPropertyChangedSignal(
+                    "AbsoluteSize"
+                ):Connect(reposition)
         end
 
         local function closeDropdown(instant)
@@ -4327,12 +4408,12 @@ H = {
                 outsideConnection:Disconnect()
                 outsideConnection = nil
             end
-            if scrollConnection then
-                scrollConnection:Disconnect()
-                scrollConnection = nil
-            end
+            clearPositionTracking()
             if d._OpenDropdown == closeDropdown then
                 d._OpenDropdown = nil
+            end
+            if d._RepositionDropdown then
+                d._RepositionDropdown = nil
             end
 
             if instant then
@@ -4415,6 +4496,11 @@ H = {
             popupGeneration += 1
             popupOpen = true
             d._OpenDropdown = closeDropdown
+            d._RepositionDropdown = function()
+                if popupOpen and popup and popup.Parent then
+                    refreshPopup(search.Text, true)
+                end
+            end
 
             refreshPopup(search.Text, false)
             popup.Visible = true
@@ -4454,22 +4540,7 @@ H = {
                 Transparency = 0.48,
             })
 
-            local scrollingParent = parent
-            while
-                scrollingParent
-                and not scrollingParent:IsA("ScrollingFrame")
-            do
-                scrollingParent = scrollingParent.Parent
-            end
-
-            if scrollingParent then
-                scrollConnection =
-                    scrollingParent:GetPropertyChangedSignal(
-                        "CanvasPosition"
-                    ):Connect(function()
-                        closeDropdown(true)
-                    end)
-            end
+            bindPositionTracking()
 
             outsideConnection = h.InputBegan:Connect(function(input)
                 if input.KeyCode == Enum.KeyCode.Escape then
@@ -9640,14 +9711,20 @@ function d.CreateCategory(aa, ab)
             local N = at.Visible
             if N then
                 if count(ao.Options) <= 0 then
-                    d:CreateNotification(
-                        "BadWars",
-                        `<font color="#ff8080"><b>No options found</b></font> for <font color="#7db8ff"><b>{tostring(
-                            an.Name
-                        )}</b></font> :c`,
-                        3
-                    )
+                    if not ao._NoOptionsNotified then
+                        ao._NoOptionsNotified = true
+                        d:CreateNotification(
+                            "BadWars",
+                            `<font color="#ff8080"><b>No options found</b></font> for <font color="#7db8ff"><b>{tostring(
+                                an.Name
+                            )}</b></font>`,
+                            3,
+                            "warning"
+                        )
+                    end
                     closeOptions(true)
+                else
+                    ao._NoOptionsNotified = false
                 end
             end
         end)
@@ -15001,20 +15078,16 @@ local function responsiveScale()
         return mobileScale
     end
 
-    local scale
-    if width >= 2300 and height >= 1200 then
-        scale = 0.95
-    elseif width >= 1700 and height >= 850 then
-        scale = 0.88
-    elseif width >= 1280 and height >= 700 then
-        scale = 0.82
-    else
-        scale = 0.78
-    end
+    local heightFactor = math.clamp((height - 520) / (1180 - 520), 0, 1)
+    local widthFactor = math.clamp((width - 1024) / (2200 - 1024), 0, 1)
+    local blend = math.max(heightFactor, widthFactor * 0.9)
+    local scale = 0.76 + (blend * 0.2)
 
     local aspect = width / math.max(height, 1)
-    if aspect < 1.4 then
-        scale = math.max(0.76, scale - 0.03)
+    if aspect < 1.35 then
+        scale = math.max(0.74, scale - 0.025)
+    elseif aspect > 2.2 then
+        scale = math.min(0.98, scale + 0.02)
     end
 
     local windowCount = 0
@@ -15025,12 +15098,12 @@ local function responsiveScale()
     end
 
     if windowCount >= 6 then
-        scale = math.min(scale, 0.75)
+        scale -= 0.06
     elseif windowCount >= 4 then
-        scale = math.min(scale, 0.8)
+        scale -= 0.035
     end
 
-    return quantizeGuiScale(scale)
+    return quantizeGuiScale(math.clamp(scale, 0.72, 1))
 end
 A.Scale = responsiveScale()
 A.Parent = w
@@ -15038,18 +15111,33 @@ d.guiscale = A
 w.Size = UDim2.fromScale(1 / A.Scale, 1 / A.Scale)
 
 local resizeGeneration = 0
+local lastResponsiveViewport = Vector2.zero
 
 d:Clean(B:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+    local viewport = B.AbsoluteSize
+    if viewport.X <= 0 or viewport.Y <= 0 then
+        return
+    end
+
+    local viewportDelta = (viewport - lastResponsiveViewport).Magnitude
+    if viewportDelta < 4 and lastResponsiveViewport ~= Vector2.zero then
+        return
+    end
+    lastResponsiveViewport = viewport
+
     resizeGeneration += 1
     local generation = resizeGeneration
 
-    task.delay(0.08, function()
+    task.delay(0.12, function()
         if generation ~= resizeGeneration then
             return
         end
 
         if d.Scale.Enabled then
-            A.Scale = responsiveScale()
+            local nextScale = responsiveScale()
+            if math.abs(nextScale - A.Scale) > 0.015 then
+                A.Scale = nextScale
+            end
         end
 
         if d._InitialLayoutReady and d.FinalizeInitialLayout then
@@ -15071,6 +15159,9 @@ d:Clean(A:GetPropertyChangedSignal("Scale"):Connect(function()
     task.defer(function()
         if not B or not B.Parent then
             return
+        end
+        if d._RepositionDropdown then
+            pcall(d._RepositionDropdown)
         end
         for _, window in d.Windows do
             if typeof(window) == "Instance" and window:IsA("GuiObject") and window.Parent then
@@ -15709,7 +15800,10 @@ end
 
 function d.FinalizeInitialLayout(self, resizeOnly)
     self._SuppressEntryAnimation = true
-    if self._OpenDropdown then pcall(self._OpenDropdown, true); self._OpenDropdown = nil end
+    if not resizeOnly and self._OpenDropdown then
+        pcall(self._OpenDropdown, true)
+        self._OpenDropdown = nil
+    end
     pcall(function() self:RepairModuleCategories() end)
     pcall(function() self:SortAllModules() end)
 
@@ -16904,9 +16998,14 @@ end
             return
         end
 
+        local scale = math.max(getGuiScale(), 0.05)
         local height = math.max(
             0,
-            math.ceil(layout.AbsoluteContentSize.Y + canvasPadding(scroller) + 4)
+            math.ceil(
+                (layout.AbsoluteContentSize.Y / scale)
+                    + canvasPadding(scroller)
+                    + 4
+            )
         )
         scroller.CanvasSize = UDim2.fromOffset(0, height)
 
@@ -17054,6 +17153,32 @@ end
         return best
     end
 
+    local function dropdownScrollerAt(point)
+        for _, child in ipairs(w:GetChildren()) do
+            if child:IsA("CanvasGroup")
+                and child.Name:find("DropdownPopup", 1, true)
+                and child.Visible
+                and pointInside(point, child)
+            then
+                local dropdownScroll = child:FindFirstChild("Scroll")
+                if dropdownScroll
+                    and dropdownScroll:IsA("ScrollingFrame")
+                    and dropdownScroll.ScrollingEnabled
+                then
+                    local contentHeight = dropdownScroll.CanvasSize.Y.Offset
+                    local windowHeight = dropdownScroll.AbsoluteWindowSize.Y
+                    if windowHeight <= 0 then
+                        windowHeight = dropdownScroll.AbsoluteSize.Y
+                    end
+                    if contentHeight > windowHeight + 1 then
+                        return dropdownScroll
+                    end
+                end
+            end
+        end
+        return nil
+    end
+
     d:Clean(UserInputService.InputChanged:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseWheel
             or not v.Visible
@@ -17061,9 +17186,9 @@ end
             return
         end
 
-        local scroller = visibleScrollerAt(
-            UserInputService:GetMouseLocation()
-        )
+        local mousePoint = UserInputService:GetMouseLocation()
+        local scroller = dropdownScrollerAt(mousePoint)
+            or visibleScrollerAt(mousePoint)
         if not scroller then
             return
         end

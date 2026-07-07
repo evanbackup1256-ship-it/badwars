@@ -1,3 +1,4 @@
+-- BADWARS_V19_UI_REPAIR_V8
 -- BADWARS_V19_UI_REPAIR_V7
 -- BADWARS_V19_UI_REPAIR_V6
 -- BADWARS_V19_UI_REPAIR_V5_2
@@ -170,7 +171,7 @@ local d = {
     FavoriteNotifications = {},
     BindNotifications = {},
     Version = "19.0",
-    PremiumBuild = "2026.07.06-V19-UI-REPAIR-V7",
+    PremiumBuild = "2026.07.06-V19-UI-REPAIR-V8",
     Windows = {},
     Indicators = {},
     _PendingModuleCallbacks = 0,
@@ -303,15 +304,15 @@ local o = {
     ElevatedHover = Color3.fromRGB(27, 40, 51),
     Border = Color3.fromRGB(34, 47, 59),
     BorderStrong = Color3.fromRGB(67, 91, 108),
-    MutedText = Color3.fromRGB(157, 174, 189),
-    FaintText = Color3.fromRGB(92, 110, 126),
+    MutedText = Color3.fromRGB(168, 183, 196),
+    FaintText = Color3.fromRGB(112, 130, 146),
     Danger = Color3.fromRGB(255, 102, 124),
     Warning = Color3.fromRGB(255, 198, 92),
     Success = Color3.fromRGB(75, 222, 168),
     Shadow = Color3.fromRGB(0, 1, 3),
-    RadiusSmall = UDim.new(0, 8),
-    Radius = UDim.new(0, 12),
-    RadiusLarge = UDim.new(0, 18),
+    RadiusSmall = UDim.new(0, 7),
+    Radius = UDim.new(0, 11),
+    RadiusLarge = UDim.new(0, 16),
     Font = baseFont,
     FontSemiBold = Font.new(baseFont.Family, Enum.FontWeight.SemiBold),
     FontBold = Font.new(baseFont.Family, Enum.FontWeight.Bold),
@@ -330,6 +331,44 @@ local UI_WINDOW_WIDTH = d.isMobile and 268 or 272 local UI_HEADER_HEIGHT = d.isM
 
 local function snapOffset(value)
     return math.round(tonumber(value) or 0)
+end
+
+local function uiTextSize(desktop, mobile)
+    return d.isMobile and (mobile or desktop) or desktop
+end
+
+local function styleCrispText(instance)
+    if
+        instance
+        and (
+            instance:IsA("TextLabel")
+            or instance:IsA("TextButton")
+            or instance:IsA("TextBox")
+        )
+    then
+        instance.TextStrokeTransparency = 1
+    end
+end
+
+local function styleCrispImage(instance)
+    if instance and (instance:IsA("ImageLabel") or instance:IsA("ImageButton")) then
+        pcall(function()
+            instance.ResampleMode = Enum.ResampleMode.Default
+        end)
+    end
+end
+
+local function styleScrollFrame(scroller)
+    if not scroller or not scroller:IsA("ScrollingFrame") then
+        return
+    end
+    scroller.ScrollBarImageColor3 = o.BorderStrong
+    scroller.ScrollBarImageTransparency = d.isMobile and 0.24 or 0.42
+    scroller.ScrollBarThickness = d.isMobile and 5 or 3
+    scroller.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    scroller.ElasticBehavior = Enum.ElasticBehavior.Never
+    scroller.ScrollingDirection = Enum.ScrollingDirection.Y
+    scroller.BorderSizePixel = 0
 end
 
 local function getTableSize(p)
@@ -1105,7 +1144,7 @@ local function addShadow(F, G)
     H.BackgroundTransparency = 1
     H.Image = u("badscript/assets/new/" .. (G and "blurnotif" or "blur") .. ".png")
     H.ImageColor3 = o.Shadow
-    H.ImageTransparency = G and 0.72 or 0.78
+    H.ImageTransparency = G and 0.84 or 0.88
     H.ScaleType = Enum.ScaleType.Slice
     H.SliceCenter = Rect.new(52, 31, 261, 502)
     H.ZIndex = math.max(F.ZIndex - 1, 0)
@@ -1289,10 +1328,10 @@ end
 local function addCloseButton(F, G)
     local H = Instance.new("ImageButton")
     H.Name = "Close"
-    H.Size = UDim2.fromOffset(27, 27)
-    H.Position = UDim2.new(1, -38, 0, G or 8)
+    H.Size = UDim2.fromOffset(24, 24)
+    H.Position = UDim2.new(1, -34, 0, G or 9)
     H.BackgroundColor3 = o.Danger
-    H.BackgroundTransparency = 0.88
+    H.BackgroundTransparency = 0.9
     H.BorderSizePixel = 0
     H.AutoButtonColor = false
     H.Image = u("badscript/assets/new/close.png")
@@ -1312,16 +1351,17 @@ local function addCloseButton(F, G)
 
     H.MouseEnter:Connect(function()
         n:Tween(H, o.TweenFast, {
-            BackgroundTransparency = 0.72,
+            BackgroundTransparency = 0.78,
             ImageColor3 = o.TextStrong,
         })
     end)
     H.MouseLeave:Connect(function()
         n:Tween(H, o.TweenFast, {
-            BackgroundTransparency = 0.88,
+            BackgroundTransparency = 0.9,
             ImageColor3 = o.MutedText,
         })
     end)
+    styleCrispImage(H)
 
     return H
 end
@@ -1978,6 +2018,7 @@ local function syncScrollingFrame(scroller, contentHeight, preserveScroll)
         return
     end
 
+    styleScrollFrame(scroller)
     contentHeight = snapOffset(math.max(0, contentHeight or 0))
     local targetCanvas = UDim2.fromOffset(0, contentHeight)
     if scroller.CanvasSize ~= targetCanvas then
@@ -3129,19 +3170,21 @@ H = {
         Q.Text = tostring(I.Name)
         Q.TextXAlignment = Enum.TextXAlignment.Left
         Q.TextColor3 = o.Text
-        Q.TextSize = d.isMobile and 15 or 14
+        Q.TextSize = uiTextSize(14, 15)
         Q.FontFace = o.FontSemiBold
+        Q.TextStrokeTransparency = 1
         Q.Parent = N
 
         local R = Instance.new("TextLabel")
         R.Name = "Arrow"
-        R.Size = UDim2.fromOffset(18, 18)
-        R.Position = UDim2.new(1, -27, 0.5, -9)
+        R.Size = UDim2.fromOffset(16, 16)
+        R.Position = UDim2.new(1, -24, 0.5, -8)
         R.BackgroundTransparency = 1
         R.Text = ">"
         R.TextColor3 = o.FaintText
-        R.TextSize = 20
+        R.TextSize = 16
         R.FontFace = o.FontSemiBold
+        R.TextStrokeTransparency = 1
         R.Parent = N
 
         I.Function = I.Function and wrap(I.Function) or function() end
@@ -4188,6 +4231,7 @@ H = {
                 Enum.ScrollingDirection.Y
             scroll.ZIndex = 20001
             scroll.Parent = popup
+            styleScrollFrame(scroll)
 
             noResults = Instance.new("TextLabel")
             noResults.Name = "NoResults"
@@ -4195,8 +4239,9 @@ H = {
             noResults.BackgroundTransparency = 1
             noResults.Text = "No matching options"
             noResults.TextColor3 = o.MutedText
-            noResults.TextSize = d.isMobile and 14 or 13
+            noResults.TextSize = uiTextSize(13, 14)
             noResults.FontFace = o.Font
+            noResults.TextStrokeTransparency = 1
             noResults.Visible = false
             noResults.ZIndex = 20002
             noResults.Parent = scroll
@@ -4211,14 +4256,15 @@ H = {
                     rowHeight - 2
                 )
                 option.BackgroundColor3 = o.Surface
-                option.BackgroundTransparency = 0.18
+                option.BackgroundTransparency = 0.12
                 option.BorderSizePixel = 0
                 option.AutoButtonColor = false
                 option.Text = ""
                 option.TextColor3 = o.MutedText
                 option.TextXAlignment = Enum.TextXAlignment.Left
-                option.TextSize = d.isMobile and 14 or 13
+                option.TextSize = uiTextSize(13, 14)
                 option.FontFace = o.Font
+                option.TextStrokeTransparency = 1
                 option.Visible = false
                 option.ZIndex = 20002
                 option.Parent = scroll
@@ -4712,8 +4758,9 @@ H = {
         title.Text = tostring(settings.Name)
         title.TextXAlignment = Enum.TextXAlignment.Left
         title.TextColor3 = o.MutedText
-        title.TextSize = d.isMobile and 13 or 12
+        title.TextSize = uiTextSize(12, 13)
         title.FontFace = o.FontSemiBold
+        title.TextStrokeTransparency = 1
         title.Parent = root
 
         local valueButton = Instance.new("TextButton")
@@ -4749,8 +4796,8 @@ H = {
 
         local track = Instance.new("Frame")
         track.Name = "Slider"
-        track.Size = UDim2.new(1, -24, 0, 5)
-        track.Position = UDim2.new(0, 12, 1, -14)
+        track.Size = UDim2.new(1, -24, 0, 6)
+        track.Position = UDim2.new(0, 12, 1, -15)
         track.BackgroundColor3 = o.Elevated
         track.BorderSizePixel = 0
         track.Parent = root
@@ -5268,9 +5315,10 @@ H = {
         af.BackgroundTransparency = 1
         af.Text = tostring(aa.Name)
         af.TextXAlignment = Enum.TextXAlignment.Left
-        af.TextColor3 = o.FaintText
-        af.TextSize = d.isMobile and 13 or 12
+        af.TextColor3 = o.MutedText
+        af.TextSize = uiTextSize(12, 13)
         af.FontFace = o.FontSemiBold
+        af.TextStrokeTransparency = 1
         af.Parent = ae
 
         local ag = Instance.new("Frame")
@@ -5281,7 +5329,7 @@ H = {
         ag.BorderSizePixel = 0
         ag.Parent = ae
         addCorner(ag, o.Radius)
-        local ah = addStroke(ag, o.Border, 0.82, 1, "TextBoxStroke")
+        local ah = addStroke(ag, o.Border, 0.72, 1, "TextBoxStroke")
 
         local ai = Instance.new("TextBox")
         ai.Name = "Input"
@@ -5293,8 +5341,9 @@ H = {
         ai.TextXAlignment = Enum.TextXAlignment.Left
         ai.TextColor3 = o.Text
         ai.PlaceholderColor3 = o.FaintText
-        ai.TextSize = d.isMobile and 14 or 13
+        ai.TextSize = uiTextSize(13, 14)
         ai.FontFace = o.Font
+        ai.TextStrokeTransparency = 1
         ai.ClearTextOnFocus = false
         ai.Parent = ag
 
@@ -5985,8 +6034,9 @@ H = {
         ai.Text = tostring(aa.Name)
         ai.TextXAlignment = Enum.TextXAlignment.Left
         ai.TextColor3 = o.MutedText
-        ai.TextSize = d.isMobile and 15 or 14
-        ai.FontFace = o.Font
+        ai.TextSize = uiTextSize(14, 15)
+        ai.FontFace = o.FontSemiBold
+        ai.TextStrokeTransparency = 1
         ai.Parent = ag
 
         local aj = Instance.new("Frame")
@@ -6473,21 +6523,21 @@ local function premiumizeComponent(componentName, api)
             elseif descendant.Name == "Items" or descendant.Name == "Value" then
                 descendant.TextColor3 = o.FaintText
             end
-        elseif descendant:IsA("TextBox") then
-            descendant.FontFace = o.Font
-            descendant.TextColor3 = o.Text
-            descendant.PlaceholderColor3 = o.FaintText
+            styleCrispText(descendant)
+        elseif descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+            if descendant:IsA("TextBox") then
+                descendant.FontFace = o.Font
+                descendant.TextColor3 = o.Text
+                descendant.PlaceholderColor3 = o.FaintText
+            end
+            styleCrispText(descendant)
         elseif descendant:IsA("ScrollingFrame") then
-            descendant.ScrollBarImageColor3 = o.BorderStrong
-            descendant.ScrollBarImageTransparency = 0.35
-            descendant.ScrollBarThickness = d.isMobile and 7 or 3
+            styleScrollFrame(descendant)
         elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
             if descendant.ImageColor3 == Color3.new(1, 1, 1) then
                 descendant.ImageColor3 = o.MutedText
             end
-            pcall(function()
-                descendant.ResampleMode = Enum.ResampleMode.Default
-            end)
+            styleCrispImage(descendant)
         end
     end
 
@@ -6611,7 +6661,7 @@ function d.CreateGUI(aa)
     ac.Parent = v
     addShadow(ac)
     addCorner(ac, o.RadiusLarge)
-    local mainStroke = addStroke(ac, o.BorderStrong, 0.46, 1, "MainStroke")
+    local mainStroke = addStroke(ac, o.BorderStrong, 0.5, 1, "MainStroke")
     addSurfaceGradient(ac)
     local mainAccent = addAccentLine(ac, 2)
     addV9Chrome(ac)
@@ -6639,9 +6689,10 @@ function d.CreateGUI(aa)
     ad.BackgroundTransparency = 1
     ad.Text = "BadWars"
     ad.TextColor3 = o.TextStrong
-    ad.TextSize = 19
+    ad.TextSize = 20
     ad.TextXAlignment = Enum.TextXAlignment.Left
     ad.FontFace = o.FontBold
+    ad.TextStrokeTransparency = 1
     ad.Parent = ac
 
     local brandSub = Instance.new("TextLabel")
@@ -6651,9 +6702,10 @@ function d.CreateGUI(aa)
     brandSub.BackgroundTransparency = 1
     brandSub.Text = "CONTROL CENTER"
     brandSub.TextColor3 = o.FaintText
-    brandSub.TextSize = 8
+    brandSub.TextSize = 9
     brandSub.TextXAlignment = Enum.TextXAlignment.Left
     brandSub.FontFace = o.FontBold
+    brandSub.TextStrokeTransparency = 1
     brandSub.Parent = ac
     local localPlayer = f.Players.LocalPlayer
 
@@ -6662,7 +6714,7 @@ function d.CreateGUI(aa)
     playerCard.Size = UDim2.fromOffset(UI_WINDOW_WIDTH - 24, 58)
     playerCard.Position = UDim2.fromOffset(12, 50)
     playerCard.BackgroundColor3 = o.Surface
-    playerCard.BackgroundTransparency = 0.05
+    playerCard.BackgroundTransparency = 0.03
     playerCard.BorderSizePixel = 0
     playerCard.ClipsDescendants = true
     playerCard.Parent = ac
@@ -6711,10 +6763,11 @@ function d.CreateGUI(aa)
     displayName.BackgroundTransparency = 1
     displayName.Text = localPlayer.DisplayName
     displayName.TextColor3 = o.TextStrong
-    displayName.TextSize = 13
+    displayName.TextSize = 14
     displayName.TextTruncate = Enum.TextTruncate.AtEnd
     displayName.TextXAlignment = Enum.TextXAlignment.Left
     displayName.FontFace = o.FontSemiBold
+    displayName.TextStrokeTransparency = 1
     displayName.Parent = playerCard
 
     local userName = Instance.new("TextLabel")
@@ -6779,8 +6832,9 @@ function d.CreateGUI(aa)
     local ag = Instance.new("UIListLayout")
     ag.SortOrder = Enum.SortOrder.LayoutOrder
     ag.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    ag.Padding = UDim.new(0, 5)
+    ag.Padding = UDim.new(0, 6)
     ag.Parent = af
+    styleScrollFrame(af)
     local ah = Instance.new("TextButton")
     ah.Name = "Settings"
     ah.Size = UDim2.fromOffset(40, 40)
@@ -6921,6 +6975,7 @@ function d.CreateGUI(aa)
     ap.ScrollBarImageTransparency = d.isMobile and 0.28 or 0.5
     ap.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     ap.Parent = ak
+    styleScrollFrame(ap)
     local aq = Instance.new("UIListLayout")
     aq.SortOrder = Enum.SortOrder.LayoutOrder
     aq.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -6928,7 +6983,7 @@ function d.CreateGUI(aa)
     aq.Parent = ap
     local settingsLandingPadding = Instance.new("UIPadding")
     settingsLandingPadding.PaddingTop = UDim.new(0, 2)
-    settingsLandingPadding.PaddingBottom = UDim.new(0, 18)
+    settingsLandingPadding.PaddingBottom = UDim.new(0, 22)
     settingsLandingPadding.Parent = ap
     local function setScrollEnabledIfSupported(object, enabled)
         if object and object:IsA("ScrollingFrame") then
@@ -6948,14 +7003,15 @@ function d.CreateGUI(aa)
         at.Text = "Rebind GUI"
         at.TextXAlignment = Enum.TextXAlignment.Left
         at.TextColor3 = o.MutedText
-        at.TextSize = 13
+        at.TextSize = uiTextSize(13, 14)
         at.FontFace = o.FontSemiBold
+        at.TextStrokeTransparency = 1
         at.Parent = ap
         addCorner(at, o.Radius)
         local bindRowStroke = addStroke(
             at,
             o.Border,
-            0.84,
+            0.76,
             1,
             "SettingsRowStroke"
         )
@@ -7353,8 +7409,10 @@ function d.CreateGUI(aa)
         title.TextColor3 = o.TextStrong
         title.TextSize = 14
         title.FontFace = o.FontSemiBold
+        title.TextStrokeTransparency = 1
         title.ZIndex = 522
         title.Parent = header
+        styleCrispImage(back)
 
         local close = addCloseButton(header, 10)
         close.ZIndex = 523
@@ -7385,6 +7443,7 @@ function d.CreateGUI(aa)
         children.CanvasSize = UDim2.new()
         children.ZIndex = 521
         children.Parent = aw
+        styleScrollFrame(children)
 
         local layout = Instance.new("UIListLayout")
         layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -8560,7 +8619,7 @@ function d.CreateCategory(aa, ab)
     ad.Parent = v
     addShadow(ad)
     addCorner(ad, o.RadiusLarge)
-    local categoryStroke = addStroke(ad, o.BorderStrong, 0.44, 1, "CategoryStroke")
+    local categoryStroke = addStroke(ad, o.BorderStrong, 0.5, 1, "CategoryStroke")
     addSurfaceGradient(ad)
     local categoryAccent = addAccentLine(ad, 2)
     addV9Chrome(ad)
@@ -8595,10 +8654,12 @@ function d.CreateCategory(aa, ab)
     af.Text = ab.Name
     af.TextXAlignment = Enum.TextXAlignment.Left
     af.TextColor3 = o.MutedText
-    af.TextSize = 14
+    af.TextSize = 15
     af.FontFace = o.FontSemiBold
+    af.TextStrokeTransparency = 1
     af.ZIndex = headerSurface.ZIndex + 2
     af.Parent = headerSurface
+    styleCrispImage(ae)
 
     local categorySub = Instance.new("TextLabel")
     categorySub.Name = "Subtitle"
@@ -8635,8 +8696,9 @@ function d.CreateCategory(aa, ab)
     ai.Position = UDim2.new(1, -24, 0, 21)
     ai.BackgroundTransparency = 1
     ai.Image = u("badscript/assets/new/expandup.png")
-    ai.ImageColor3 = Color3.fromRGB(140, 140, 140)
+    ai.ImageColor3 = o.FaintText
     ai.Rotation = 180
+    styleCrispImage(ai)
     ai.ZIndex = ag.ZIndex + 1
     ai.Parent = ag
     local aj = Instance.new("ScrollingFrame")
@@ -8672,8 +8734,9 @@ function d.CreateCategory(aa, ab)
     local al = Instance.new("UIListLayout")
     al.SortOrder = Enum.SortOrder.LayoutOrder
     al.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    al.Padding = UDim.new(0, 5)
+    al.Padding = UDim.new(0, 6)
     al.Parent = aj
+    styleScrollFrame(aj)
 
     local function updateCategoryVisual(hovered, instant)
         local accent = Color3.fromHSV(
@@ -8753,18 +8816,19 @@ function d.CreateCategory(aa, ab)
         ar.Name = an.Name
         ar.Size = UDim2.new(1, -14, 0, UI_MODULE_ROW_HEIGHT)
         ar.BackgroundColor3 = o.Surface
-        ar.BackgroundTransparency = 0.08
+        ar.BackgroundTransparency = 0.05
         ar.BorderSizePixel = 0
         ar.AutoButtonColor = false
         ar.ClipsDescendants = true
-        ar.Text = "     " .. ap
+        ar.Text = "      " .. ap
         ar.TextXAlignment = Enum.TextXAlignment.Left
         ar.TextColor3 = o.MutedText
-        ar.TextSize = d.isMobile and 15 or 14
+        ar.TextSize = uiTextSize(14, 15)
         ar.FontFace = o.FontSemiBold
+        ar.TextStrokeTransparency = 1
         ar.Parent = aj
         addCorner(ar, o.Radius)
-        local moduleStroke = addStroke(ar, o.Border, 0.76, 1, "ModuleStroke")
+        local moduleStroke = addStroke(ar, o.Border, 0.7, 1, "ModuleStroke")
         local moduleScale = addScale(ar)
         local moduleSweep = addV9Sweep(ar)
 
@@ -9542,7 +9606,7 @@ function d.CreateCategory(aa, ab)
                     })
                     n:Tween(moduleStroke, o.TweenFast, {
                         Color = o.Border,
-                        Transparency = 0.88,
+                        Transparency = 0.74,
                     })
                 elseif ao.Enabled then
                     n:Tween(ar, o.TweenFast, {
@@ -12038,7 +12102,7 @@ local function createHighlight(ag)
     local ah = Instance.new("Frame")
     ah.Size = UDim2.fromScale(1, 1)
     ah.BackgroundColor3 = Color3.new(1, 1, 1)
-    ah.BackgroundTransparency = 0.6
+    ah.BackgroundTransparency = 0.78
     ah.BorderSizePixel = 0
     ah.Parent = ag
     n:Tween(ah, TweenInfo.new(0.5), {
@@ -12050,8 +12114,8 @@ end
 function d.CreateSearch(ag)
     local ah = Instance.new("Frame")
     ah.Name = "Search"
-    ah.Size = UDim2.fromOffset(260, 42)
-    ah.Position = UDim2.new(0.5, 0, 0, 13)
+    ah.Size = UDim2.fromOffset(260, 44)
+    ah.Position = UDim2.new(0.5, 0, 0, 12)
     ah.AnchorPoint = Vector2.new(0.5, 0)
     ah.BackgroundColor3 = o.Surface
     ah.Parent = v
@@ -12094,7 +12158,7 @@ function d.CreateSearch(ag)
 
     if not d.isMobile then
         ah.MouseEnter:Connect(function()
-            n:Spring(ai, o.SpringInteractive, { Scale = 1.016 })
+            n:Spring(ai, o.SpringInteractive, { Scale = 1.008 })
             n:Tween(searchStroke, o.TweenFast, {
                 Color = o.BorderStrong,
                 Transparency = 0.2,
@@ -13314,6 +13378,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         rail.Size = UDim2.new(0, 3, 1, -14)
         rail.Position = UDim2.fromOffset(10, 7)
         rail.BackgroundColor3 = styleColor
+        rail.BackgroundTransparency = 0.04
         rail.BorderSizePixel = 0
         rail.ZIndex = 132
         rail.Parent = card
@@ -13449,12 +13514,14 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             n:Tween(close, o.TweenFast, { TextColor3 = o.FaintText })
         end)
         card.MouseEnter:Connect(function()
-            n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.03 })
-            n:Tween(stroke, o.TweenFast, { Transparency = 0.42, Color = styleColor:Lerp(o.BorderStrong, 0.5) })
+            n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.04 })
+            n:Tween(stroke, o.TweenFast, { Transparency = 0.48, Color = styleColor:Lerp(o.BorderStrong, 0.45) })
+            n:Tween(rail, o.TweenFast, { BackgroundTransparency = 0 })
         end)
         card.MouseLeave:Connect(function()
             n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.08 })
             n:Tween(stroke, o.TweenFast, { Transparency = 0.62, Color = o.BorderStrong })
+            n:Tween(rail, o.TweenFast, { BackgroundTransparency = 0.04 })
         end)
         if d.isMobile then
             local swipe = Instance.new("TextButton")
@@ -14806,12 +14873,13 @@ z.Visible = false
 z.Text = ""
 z.TextColor3 = o.TextStrong
 z.TextStrokeTransparency = 1
-z.TextSize = d.isMobile and 14 or 13
+z.TextSize = uiTextSize(13, 14)
 z.TextWrapped = true
 z.RichText = false
 z.TextXAlignment = Enum.TextXAlignment.Left
 z.TextYAlignment = Enum.TextYAlignment.Center
 z.FontFace = o.FontSemiBold
+z.TextStrokeTransparency = 1
 z.BackgroundTransparency = 1
 z.Parent = w
 addCorner(z, o.Radius)

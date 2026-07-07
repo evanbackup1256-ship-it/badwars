@@ -493,7 +493,7 @@ local function makeButton(parent, name, text, size)
     local button = Instance.new("TextButton")
     button.Name = name
     button.Size = size or UDim2.fromOffset(84, 30)
-    button.BackgroundColor3 = Color3.fromRGB(20, 27, 34)
+    button.BackgroundColor3 = Color3.fromRGB(16, 16, 16) -- synced to WindUI dark
     button.BorderSizePixel = 0
     button.AutoButtonColor = false
     button.Font = Enum.Font.GothamSemibold
@@ -502,7 +502,7 @@ local function makeButton(parent, name, text, size)
     button.TextColor3 = Color3.fromRGB(168, 181, 195)
     button.Parent = parent
     createCorner(button, 7)
-    createStroke(button, Color3.fromRGB(61, 83, 100), 0.68, 1)
+    createStroke(button, Color3.fromRGB(255, 51, 85), 0.5, 1) -- BadWars red for WindUI sync
     return button
 end
 

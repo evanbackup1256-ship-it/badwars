@@ -378,8 +378,8 @@ local function createLoader()
     statusCard.BorderSizePixel = 0
     statusCard.GroupTransparency = 1
     statusCard.Parent = statusGui
-    loaderCorner(statusCard, 14)
-    loaderStroke(statusCard, Color3.fromRGB(40, 40, 45), 0.25)
+    loaderCorner(statusCard, 12)
+    loaderStroke(statusCard, Color3.fromRGB(255, 51, 85), 0.3) -- BadWars red tint stroke for branding
 
     statusCardScale = Instance.new("UIScale")
     statusCardScale.Name = "MotionScale"
@@ -394,6 +394,18 @@ local function createLoader()
     accent.BorderSizePixel = 0
     accent.Parent = statusCard
     loaderCorner(accent, 99)
+
+    -- WindUI synced small version badge
+    local ver = Instance.new("TextLabel")
+    ver.Position = UDim2.new(1, -18, 0, 16)
+    ver.Size = UDim2.fromOffset(70, 14)
+    ver.BackgroundTransparency = 1
+    ver.Font = Enum.Font.Gotham
+    ver.Text = "v2 • WindUI"
+    ver.TextSize = 9
+    ver.TextColor3 = Color3.fromRGB(34, 197, 94)
+    ver.TextXAlignment = Enum.TextXAlignment.Right
+    ver.Parent = statusCard
 
     local brand = Instance.new("TextLabel")
     brand.Position = UDim2.fromOffset(34, 16)

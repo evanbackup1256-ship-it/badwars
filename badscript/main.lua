@@ -1478,6 +1478,27 @@ local function showInterface(api)
         return false
     end
 
+    -- Always attempt modern Show first for WindUI / new adapter
+    local isModern = api.WindUI ~= nil
+        or (api.gui and type(api.gui) == "table" and (api.gui.CreateWindow or api.Window or api.Show))
+        or type(api.Show) == "function"
+
+    if isModern or type(api.Show) == "function" then
+        pcall(function()
+            if type(api.Show) == "function" then
+                api:Show()
+            end
+        end)
+        -- ready notif
+        pcall(function()
+            if api.Categories and api.Categories.Main and api.Categories.Main.Options and api.Categories.Main.Options["GUI bind indicator"] and api.Categories.Main.Options["GUI bind indicator"].Enabled and type(api.CreateNotification) == "function" then
+                api:CreateNotification("BadWars", "The interface is ready.", 4, "success")
+            end
+        end)
+        return true
+    end
+
+    -- Legacy only for old gui
     if type(api.WaitForModuleReadiness) == "function" then
         pcall(api.WaitForModuleReadiness, api, 4)
     end
@@ -1492,16 +1513,24 @@ local function showInterface(api)
         pcall(api.FinalizeInitialLayout, api, false)
     end
 
-    local clickGui =
-        api.gui
-        and api.gui:FindFirstChild("ScaledGui")
-        and api.gui.ScaledGui:FindFirstChild("ClickGui")
+    local clickGui = nil
+    pcall(function()
+        if api.gui and typeof(api.gui) == "Instance" then
+            local scaled = api.gui:FindFirstChild("ScaledGui")
+            if scaled then
+                clickGui = scaled:FindFirstChild("ClickGui")
+            end
+        end
+    end)
 
     if not clickGui then
+        pcall(function()
+            if type(api.Show) == "function" then api:Show() end
+        end)
         return false
     end
 
-    clickGui.Visible = true
+    pcall(function() clickGui.Visible = true end)
 
     if
         api.Categories
@@ -1512,12 +1541,14 @@ local function showInterface(api)
         and type(api.CreateNotification) == "function"
     then
         task.defer(function()
-            api:CreateNotification(
-                "BadWars",
-                "The interface is ready.",
-                4,
-                "success"
-            )
+            pcall(function()
+                api:CreateNotification(
+                    "BadWars",
+                    "The interface is ready.",
+                    4,
+                    "success"
+                )
+            end)
         end)
     end
 
@@ -1797,15 +1828,35 @@ if not shared.BadIndependent then
             mwarn("BadWars: [RUNTIME] " .. tostring(e.module) .. ": " .. tostring(e.error))
         end
     end
-    showInterface(finalizedApi or api)
+    local shown = showInterface(finalizedApi or api)
     setStatus("ready - " .. string.format("%.2f", el) .. "s")
 
--- For WindUI adapter: open the main UI only after full loader/bootstrap is complete
+-- For WindUI (or any modern GUI): ensure main UI is visible after full bootstrap
 pcall(function()
-	local B = shared.Bad
-	if B and type(B.Show) == "function" then
-		B:Show()
-	end
+    local B = shared.Bad
+    if B and type(B.Show) == "function" then
+        B:Show()
+    end
+end)
+
+-- Dismiss the loader status overlay now that we're ready (prevents it lingering on top of WindUI)
+pcall(function()
+    if shared and shared.BadStatusGui and typeof(shared.BadStatusGui) == "Instance" then
+        shared.BadStatusGui:Destroy()
+        shared.BadStatusGui = nil
+    end
+    -- also try direct name in case (use safe parent lookup)
+    local parent = nil
+    pcall(function()
+        if type(gethui) == "function" then parent = gethui() end
+    end)
+    if not parent then
+        pcall(function() parent = game:GetService("CoreGui") end)
+    end
+    if parent then
+        local old = parent:FindFirstChild("BadWarsLoaderStatus")
+        if old then old:Destroy() end
+    end
 end)
 
     if totalErr > 0 and api and type(api.CreateNotification) == "function" then

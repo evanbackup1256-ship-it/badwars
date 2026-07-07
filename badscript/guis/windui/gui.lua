@@ -48,6 +48,9 @@ end
 WindUI.TransparencyValue = 0.08
 WindUI:SetTheme("Dark")
 
+-- spr for custom heavy animations (loaded by main)
+local spr = shared.BadWarsSpr
+
 local Window = WindUI:CreateWindow({
 	Title = "BadWars",
 	Author = "Premium • Roblox",
@@ -78,6 +81,28 @@ pcall(function()
 	end
 end)
 
+-- Extra hide to ensure UI does not appear until loader calls Show()
+pcall(function()
+	if Window and Window.UIElements and Window.UIElements.Main then
+		Window.UIElements.Main.Visible = false
+		Window.UIElements.Main.GroupTransparency = 1
+	end
+	-- Try to hide OpenButton if present
+	if Window and Window.UIElements then
+		for k, v in pairs(Window.UIElements) do
+			if v and typeof(v) == "Instance" and (k:lower():find("open") or (v.Name or ""):lower():find("open")) then
+				v.Visible = false
+			end
+		end
+	end
+end)
+
+-- Additional safety: many modules expect certain top level options to exist immediately
+pcall(function()
+	d.Categories = d.Categories or {}
+	d.Modules = d.Modules or {}
+end)
+
 -- Add version tag
 pcall(function()
 	Window:Tag({
@@ -95,9 +120,13 @@ Tabs.General = Window:Tab({ Title = "General", Icon = "home", Desc = "Core setti
 Tabs.Modules = Window:Tab({ Title = "Modules", Icon = "list", Desc = "All modules at a glance (search + toggle)" })
 Tabs.Modules:Paragraph({
 	Title = "Module Browser",
-	Content = "Use the top search bar or jump to the category tabs (Blatant / Combat / Render / etc). All toggles, dropdowns and options are live-synced.",
+	Content = "Use the top search bar or jump to the category tabs (Blatant / Combat / Render / etc). All toggles, dropdowns and options are live-synced. Sections group options per module for clarity.",
 })
 Tabs.Modules:Space()
+Tabs.Modules:Paragraph({
+	Title = "Tips",
+	Content = "Toggle modules on/off. Use keybinds, dropdowns for modes, sliders for values. Changes sync instantly to the script logic. Config saves via WindUI (Folder=BadWars).",
+})
 Tabs.Modules:Button({
 	Title = "Jump to Blatant (see sidebar tabs)",
 	Callback = function()
@@ -119,6 +148,13 @@ Tabs.Minigames = Window:Tab({ Title = "Minigames", Icon = "gamepad-2", Desc = "M
 Tabs.Legit = Window:Tab({ Title = "Legit", Icon = "user-check", Desc = "Semi-legit features" })
 Tabs.Notifications = Window:Tab({ Title = "Notifications", Icon = "bell", Desc = "Event log & alerts" })
 Tabs.Settings = Window:Tab({ Title = "Settings", Icon = "settings", Desc = "UI & profile management" })
+
+-- Ensure all expected category tabs exist early (for dynamic module registration)
+for _, catName in ipairs({"Combat", "Blatant", "Render", "Utility", "World", "Minigames", "Legit", "Friends", "Targets"}) do
+	if not Tabs[catName] then
+		Tabs[catName] = Window:Tab({ Title = catName, Icon = "folder", Desc = catName .. " modules" })
+	end
+end
 
 -- Internal state
 local d = {} -- the returned API object, mirrors old gui API
@@ -203,6 +239,10 @@ end
 
 d.CreateNotification = d.CreateNotification
 
+Tabs.Notifications:Paragraph({
+	Title = "Notification System",
+	Content = "All script notifications appear as WindUI toasts + logged here. Seamless with module events, errors, and status.",
+})
 Tabs.Notifications:Button({
 	Title = "Clear Notifications",
 	Icon = "trash",
@@ -210,6 +250,11 @@ Tabs.Notifications:Button({
 		notificationLog = {}
 		refreshNotifTab()
 	end,
+})
+Tabs.Notifications:Toggle({
+	Title = "Toggle Notifications",
+	Value = true,
+	Callback = function(v) end,
 })
 Tabs.Notifications:Space({})
 
@@ -230,7 +275,6 @@ Tabs.Settings:Toggle({
 	Value = true,
 	Callback = function(v)
 		WindUI.TransparencyValue = v and 0.08 or 0
-		-- WindUI will pick it up on next interactions; force a small recreate if needed
 	end,
 })
 
@@ -243,6 +287,24 @@ Tabs.Settings:Slider({
 		pcall(function() Window:SetUIScale(val) end)
 	end,
 })
+
+Tabs.Settings:Toggle({
+	Title = "Rainbow Mode",
+	Desc = "Global rainbow accents (if supported by visuals)",
+	Value = false,
+	Callback = function(v)
+		d:CreateNotification("Settings", "Rainbow " .. (v and "enabled" or "disabled"), 2)
+	end,
+})
+
+Tabs.Settings:Slider({
+	Title = "Rainbow Speed",
+	Value = { Min = 1, Max = 20, Default = 5 },
+	Step = 1,
+	Callback = function(v) end,
+})
+
+Tabs.Settings:Space()
 
 Tabs.Settings:Button({
 	Title = "Save Current Profile",
@@ -278,6 +340,12 @@ Tabs.Settings:Button({
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()
 		end
 	end,
+})
+
+Tabs.Settings:Space()
+Tabs.Settings:Paragraph({
+	Title = "Notifications",
+	Content = "Notification prefs live in the Notifications tab. All toasts use WindUI for modern look.",
 })
 
 -- Core category + module compatibility layer
@@ -327,14 +395,20 @@ local function createCategoryObj(name, iconName)
 			NoSave = settings.NoSave,
 		}
 
-		-- Main toggle for the module (appears in the category tab)
-		local modToggle = tab:Toggle({
+		-- Use a Section per module for much better organization and design
+		local modSection = tab:Section({
 			Title = modName,
 			Desc = settings.Tooltip or settings.Description or "",
+			Opened = true,
+		})
+
+		-- Main toggle for the module inside its section
+		local modToggle = modSection:Toggle({
+			Title = "Enabled",
+			Desc = "Toggle this module",
 			Value = false,
 			Callback = function(state)
 				mod.Enabled = state == true
-				-- Call user module function
 				task.spawn(function()
 					local ok, err = pcall(fn, mod.Enabled)
 					if not ok then
@@ -354,7 +428,7 @@ local function createCategoryObj(name, iconName)
 		d.Modules[modName] = mod
 		cat.Modules[modName] = mod
 
-		-- Attach creator helpers that modules expect
+		-- Attach creator helpers that modules expect. Now add to the module's Section
 		local function attachElementCreator(elementType)
 			return function(_, opt)
 				opt = opt or {}
@@ -362,7 +436,7 @@ local function createCategoryObj(name, iconName)
 
 				local created
 				if elementType == "Toggle" then
-					created = tab:Toggle({
+					created = modSection:Toggle({
 						Title = opt.Name or "Option",
 						Desc = opt.Desc or opt.Tooltip,
 						Value = (opt.Default ~= nil and opt.Default) or (opt.Value ~= nil and opt.Value) or false,
@@ -372,11 +446,25 @@ local function createCategoryObj(name, iconName)
 							if type(opt.Function) == "function" then pcall(opt.Function, v) end
 						end,
 					})
+					-- Add legacy .Toggle() method for compatibility with old module code that calls element:Toggle()
+					local origApi = makeOptionApi( (opt.Default ~= nil and opt.Default) or (opt.Value ~= nil and opt.Value) or false , opt.Function)
+					origApi.Object = created
+					origApi.Toggle = function(self)
+						local new = not (self.Value or false)
+						self.Value = new
+						pcall(function()
+							if created and created.Set then created:Set(new) end
+						end)
+						if type(opt.Function) == "function" then pcall(opt.Function, new) end
+						return self
+					end
+					mod.Options[elName] = origApi
+					return origApi
 				elseif elementType == "Slider" then
 					local minV = opt.Min or opt.MinValue or 0
 					local maxV = opt.Max or opt.MaxValue or 100
 					local defV = opt.Default or opt.Value or minV
-					created = tab:Slider({
+					created = modSection:Slider({
 						Title = opt.Name or "Slider",
 						Desc = opt.Desc,
 						Value = { Min = minV, Max = maxV, Default = defV },
@@ -388,11 +476,13 @@ local function createCategoryObj(name, iconName)
 						end,
 					})
 				elseif elementType == "Dropdown" then
-					created = tab:Dropdown({
+					created = modSection:Dropdown({
 						Title = opt.Name or "Dropdown",
 						Desc = opt.Desc,
-						Options = opt.List or opt.Options or { "Option1", "Option2" },
-						Multiple = opt.Multi or false,
+						Values = opt.List or opt.Options or { "Option1", "Option2" },
+						Value = opt.Default or opt.Value,
+						Multi = opt.Multi or false,
+						SearchBarEnabled = opt.Search or false,
 						Callback = function(v)
 							mod.Options[elName] = mod.Options[elName] or {}
 							mod.Options[elName].Value = v
@@ -400,7 +490,7 @@ local function createCategoryObj(name, iconName)
 						end,
 					})
 				elseif elementType == "Color" or elementType == "ColorSlider" then
-					created = tab:Colorpicker({
+					created = modSection:Colorpicker({
 						Title = opt.Name or "Color",
 						Default = opt.Default or Color3.fromRGB(255, 0, 80),
 						Callback = function(c)
@@ -410,7 +500,7 @@ local function createCategoryObj(name, iconName)
 						end,
 					})
 				elseif elementType == "Keybind" then
-					created = tab:Keybind({
+					created = modSection:Keybind({
 						Title = opt.Name or "Keybind",
 						Desc = opt.Desc,
 						Default = opt.Default or opt.Value,
@@ -421,7 +511,7 @@ local function createCategoryObj(name, iconName)
 						end,
 					})
 				elseif elementType == "Input" or elementType == "TextBox" then
-					created = tab:Input({
+					created = modSection:Input({
 						Title = opt.Name or "Input",
 						Placeholder = opt.Placeholder or "",
 						Default = opt.Default or "",
@@ -431,9 +521,79 @@ local function createCategoryObj(name, iconName)
 							if type(opt.Function) == "function" then pcall(opt.Function, v) end
 						end,
 					})
+				elseif elementType == "TwoSlider" then
+					-- Emulate TwoSlider with two Sliders for min/max (common for CPS, velocity, etc.)
+					local minV = opt.Min or opt.MinValue or 0
+					local maxV = opt.Max or opt.MaxValue or 100
+					local defMin = opt.DefaultMin or opt.Min or minV
+					local defMax = opt.DefaultMax or opt.Max or maxV
+					local minSlider = modSection:Slider({
+						Title = (opt.Name or "Range") .. " Min",
+						Value = { Min = minV, Max = maxV, Default = defMin },
+						Step = opt.Step or 1,
+						Callback = function(v)
+							mod.Options[elName] = mod.Options[elName] or {}
+							mod.Options[elName].ValueMin = v
+							if type(opt.Function) == "function" then pcall(opt.Function, v, mod.Options[elName].ValueMax) end
+						end,
+					})
+					local maxSlider = modSection:Slider({
+						Title = (opt.Name or "Range") .. " Max",
+						Value = { Min = minV, Max = maxV, Default = defMax },
+						Step = opt.Step or 1,
+						Callback = function(v)
+							mod.Options[elName] = mod.Options[elName] or {}
+							mod.Options[elName].ValueMax = v
+							if type(opt.Function) == "function" then pcall(opt.Function, mod.Options[elName].ValueMin, v) end
+						end,
+					})
+					created = { MinSlider = minSlider, MaxSlider = maxSlider } -- for object ref
+					mod.Options[elName] = {
+						ValueMin = defMin,
+						ValueMax = defMax,
+						Object = created,
+						SetValue = function(self, mn, mx)
+							self.ValueMin = mn
+							self.ValueMax = mx
+							pcall(function() minSlider:Set(mn) end)
+							pcall(function() maxSlider:Set(mx) end)
+						end
+					}
+					return mod.Options[elName]
+				elseif elementType == "TextList" then
+					-- Basic emulation for TextList (e.g. AutoToxic messages). Use Input + display
+					created = modSection:Input({
+						Title = opt.Name or "Add to list",
+						Placeholder = "Enter text and press enter (basic list)",
+						Default = "",
+						Callback = function(v)
+							if v and v ~= "" then
+								mod.Options[elName] = mod.Options[elName] or { Value = {} }
+								table.insert(mod.Options[elName].Value, v)
+								d:CreateNotification("List Updated", modName .. " added: " .. v, 3)
+								if type(opt.Function) == "function" then pcall(opt.Function, mod.Options[elName].Value) end
+							end
+						end,
+					})
+					mod.Options[elName] = makeOptionApi(opt.Default or {}, opt.Function)
+					mod.Options[elName].Object = created
+					mod.Options[elName].Value = mod.Options[elName].Value or {}
+					return mod.Options[elName]
+				elseif elementType == "Font" then
+					-- Emulate Font with dropdown of common Roblox fonts
+					local fonts = {"Gotham", "Arial", "SourceSans", "Roboto", "Ubuntu", "Fantasy", "Code", "Highway"}
+					created = modSection:Dropdown({
+						Title = opt.Name or "Font",
+						Options = fonts,
+						Callback = function(v)
+							mod.Options[elName] = mod.Options[elName] or {}
+							mod.Options[elName].Value = v
+							if type(opt.Function) == "function" then pcall(opt.Function, v) end
+						end,
+					})
 				else
-					-- Fallback paragraph / label
-					created = tab:Paragraph({
+					-- Fallback
+					created = modSection:Paragraph({
 						Title = opt.Name or elementType,
 						Content = opt.Desc or "",
 					})
@@ -446,7 +606,7 @@ local function createCategoryObj(name, iconName)
 			end
 		end
 
-		-- Attach all common creators used across the script
+		-- Attach all common creators
 		mod.CreateToggle = attachElementCreator("Toggle")
 		mod.CreateSlider = attachElementCreator("Slider")
 		mod.CreateDropdown = attachElementCreator("Dropdown")
@@ -455,18 +615,20 @@ local function createCategoryObj(name, iconName)
 		mod.CreateKeybind = attachElementCreator("Keybind")
 		mod.CreateInput = attachElementCreator("Input")
 		mod.CreateTextBox = attachElementCreator("Input")
+		mod.CreateTwoSlider = attachElementCreator("TwoSlider")
+		mod.CreateTextList = attachElementCreator("TextList")
+		mod.CreateFont = attachElementCreator("Font")
 		mod.CreateButton = function(_, opt)
-			return tab:Button({
+			return modSection:Button({
 				Title = opt.Name or "Action",
 				Icon = opt.Icon,
 				Callback = opt.Function or function() end,
 			})
 		end
 
-		-- Special Targets support (common in BadWars / Vape forks)
+		-- Improved Targets support
 		mod.CreateTargets = function(_, opt)
 			opt = opt or {}
-			-- Build list from provided flags or sensible defaults
 			local list = {}
 			if opt.Players ~= false then table.insert(list, "Players") end
 			if opt.NPCs or opt.NPC then table.insert(list, "NPCs") end
@@ -475,25 +637,32 @@ local function createCategoryObj(name, iconName)
 			if #list == 0 then list = {"Players", "NPCs", "Friends", "All"} end
 			local initial = {}
 			for _, k in ipairs(list) do initial[k] = true end
-			local dd = tab:Dropdown({
+			local dd = modSection:Dropdown({
 				Title = opt.Name or "Targets",
-				Options = list,
-				Multiple = true,
-				Callback = function(v)
+				Values = list,
+				Multi = true,
+				Callback = function(selected)
+					local val = {}
+					for _, s in ipairs(selected or {}) do val[s] = true end
 					mod.Options.Targets = mod.Options.Targets or {}
-					mod.Options.Targets.Value = v
-					if type(opt.Function) == "function" then pcall(opt.Function, v) end
+					mod.Options.Targets.Value = val
+					-- also expose flags directly for legacy module code
+					for _, k in ipairs(list) do mod.Options.Targets[k] = val[k] or false end
+					if type(opt.Function) == "function" then pcall(opt.Function, val) end
 				end,
 			})
-			mod.Options.Targets = makeOptionApi(opt.Default or initial, opt.Function)
-			mod.Options.Targets.Object = dd
-			return mod.Options.Targets
+			local api = makeOptionApi(initial, opt.Function)
+			api.Object = dd
+			-- expose flags
+			for _, k in ipairs(list) do api[k] = initial[k] end
+			mod.Options.Targets = api
+			return api
 		end
 
-		-- Allow modules to add extra text / info
 		mod.SetExtraText = function(_, txt)
 			mod.ExtraText = txt
-			-- Could append a small label if wanted
+			-- Could enhance section desc
+			pcall(function() modSection:SetDesc(txt or "") end)
 		end
 
 		return mod
@@ -558,6 +727,21 @@ d.Categories.Main = d.Categories.Main or {
 		["Use team color"] = { Enabled = true },
 	},
 }
+-- Legacy buttons on Main (e.g. Uninject in old GUI) route to General tab
+d.Categories.Main.CreateButton = function(_, opt)
+	return (Tabs.General or Tabs.Settings):Button({
+		Title = opt.Name or "Action",
+		Icon = opt.Icon,
+		Callback = opt.Function or function() end,
+	})
+end
+d.Categories.Main.CreateToggle = function(_, opt)
+	return (Tabs.General or Tabs.Settings):Toggle({
+		Title = opt.Name or "Option",
+		Value = opt.Default or false,
+		Callback = opt.Function or function() end,
+	})
+end
 d.Categories.Friends = d.Categories.Friends or createCategoryObj("Friends", "users")
 d.Categories.Targets = d.Categories.Targets or createCategoryObj("Targets", "crosshair")
 
@@ -585,9 +769,28 @@ Tabs.General:Toggle({
 	Title = "GUI Bind Indicator",
 	Value = true,
 	Callback = function(v)
-		-- Store for main.lua bootstrap
 		if d.Categories.Main and d.Categories.Main.Options then
 			d.Categories.Main.Options["GUI bind indicator"] = { Enabled = v }
+		end
+	end,
+})
+
+Tabs.General:Toggle({
+	Title = "Teams by server",
+	Value = false,
+	Callback = function(v)
+		if d.Categories.Main and d.Categories.Main.Options then
+			d.Categories.Main.Options["Teams by server"] = { Enabled = v }
+		end
+	end,
+})
+
+Tabs.General:Toggle({
+	Title = "Use team color",
+	Value = true,
+	Callback = function(v)
+		if d.Categories.Main and d.Categories.Main.Options then
+			d.Categories.Main.Options["Use team color"] = { Enabled = v }
 		end
 	end,
 })
@@ -598,6 +801,12 @@ if d.Categories.Main and type(d.Categories.Main) == "table" then
 	d.Categories.Main.Options["Teams by server"] = { Enabled = false }
 	d.Categories.Main.Options["Use team color"] = { Enabled = true }
 end
+
+Tabs.General:Space()
+Tabs.General:Paragraph({
+	Title = "Quick Info",
+	Content = "Use RightShift (or configured key) to toggle the UI. All module changes are live and profile-persisted.",
+})
 
 -- Profile / config helpers used by main
 function d.Save(self, target)
@@ -632,10 +841,28 @@ d.Name = "BadWars-WindUI"
 -- Control visibility + welcome toast/log: loader/main calls :Show() ONLY after full bootstrap finishes
 function d:Show()
 	pcall(function()
+		if Window and Window.UIElements and Window.UIElements.Main then
+			Window.UIElements.Main.Visible = true
+			Window.UIElements.Main.GroupTransparency = 0
+		end
 		if Window and Window.Open then
 			Window:Open()
 		elseif Window and Window.Toggle then
 			Window:Toggle()
+		end
+		-- Show any open button
+		if Window and Window.UIElements then
+			for k, v in pairs(Window.UIElements) do
+				if v and typeof(v) == "Instance" and (k:lower():find("open") or (v.Name or ""):lower():find("open")) then
+					v.Visible = true
+				end
+			end
+		end
+		-- Heavy custom animation using spr for open
+		if spr and Window and Window.UIElements and Window.UIElements.Main then
+			local main = Window.UIElements.Main
+			-- Spring the transparency and perhaps size for nice feel
+			spr.target(main, 0.7, 4, { GroupTransparency = 0 })
 		end
 	end)
 	pcall(function()
@@ -649,6 +876,15 @@ d.Show = d.Show
 if shared then
 	shared.Bad = shared.Bad or {}
 	shared.Bad.CreateNotification = function(...) return d:CreateNotification(...) end
+end
+
+-- Legacy shims so old bootstrap code in main.lua (showInterface etc.) doesn't explode on WindUI
+d.WaitForModuleReadiness = d.WaitForModuleReadiness or function() end
+d.FinalizeInitialLayout = d.FinalizeInitialLayout or function() end
+
+-- If some old code does api.gui:FindFirstChild etc., provide a safe no-op table
+if not d.gui or type(d.gui) ~= "table" then
+	d.gui = d.Window or {}
 end
 
 return d

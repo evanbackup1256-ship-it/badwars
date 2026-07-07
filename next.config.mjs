@@ -2,6 +2,14 @@
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // Disable optimizeCss experiment as it can sometimes leave non-critical CSS preloads
+  // that trigger "preloaded CSS not used within a few seconds" warnings in Chrome.
+  // The main CSS is still properly loaded via Next.js chunking.
+  // experimental: { optimizeCss: true },
+  turbopack: {
+    // Explicit root to avoid "inferred workspace root" errors during build
+    root: __dirname,
+  },
   async headers() {
     return [
       {

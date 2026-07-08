@@ -1,3 +1,5 @@
+"use client";
+
 import { ProfilePage } from "@/components/app-pages";
 
 export default function Page() {

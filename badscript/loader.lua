@@ -128,7 +128,7 @@ end
 
 local loaderStart=os.clock()
 
--- Polyfills
+-- Polyfills for all executors (including Solora, Arceus X, Delta, etc.)
 readfile=readfile or function()return''end
 writefile=writefile or function()end
 isfile=isfile or function(f)local s,r=pcall(readfile,f)return s and r~=nil and r~=''end
@@ -137,9 +137,42 @@ delfile=delfile or function()return false,'delfile unavailable'end
 isfolder=isfolder or function()return false end
 makefolder=makefolder or function()end
 listfiles=listfiles or function()return{}end
-cloneref=cloneref or function(o)return o end
+cloneref=cloneref or clonereference or function(o)return o end
 setthreadidentity=setthreadidentity or function()end
-queue_on_teleport=queue_on_teleport or function()end
+queue_on_teleport=queue_on_teleport or queueonteleport or function()end
+
+-- task library polyfill for older executors
+if not task then
+    task = {}
+    task.wait = wait or function(t) return wait(t) end
+    task.spawn = spawn or coroutine.wrap or function(f) coroutine.wrap(f)() end
+    task.delay = delay or function(t,f) spawn(function() wait(t) f() end) end
+    task.cancel = function() end -- no-op for older executors
+    task.defer = spawn or function(f) coroutine.wrap(f)() end
+end
+
+-- tick() fallback
+if not tick then
+    tick = os.clock
+end
+
+-- debug library safety
+if not debug then
+    debug = {}
+end
+if not debug.traceback then
+    debug.traceback = function(msg) return tostring(msg or "") end
+end
+
+-- getgenv fallback
+if not getgenv then
+    getgenv = function() return _G end
+end
+
+-- loadstring fallback
+if not loadstring then
+    loadstring = load or function(code) error("loadstring unavailable") end
+end
 
 -- Config
 local CFG={repo='evanbackup1256-ship-it',name='badwars',branch='main',folder='badscript',file='main.lua'}
@@ -362,7 +395,7 @@ local function createLoader()
     statusBackdrop = Instance.new("Frame")
     statusBackdrop.Name = "Backdrop"
     statusBackdrop.Size = UDim2.fromScale(1, 1)
-    statusBackdrop.BackgroundColor3 = Color3.fromRGB(10, 10, 12) -- match WindUI dark
+    statusBackdrop.BackgroundColor3 = Color3.fromRGB(10, 10, 12) -- WindUI dark backdrop
     statusBackdrop.BackgroundTransparency = 0.45
     statusBackdrop.BorderSizePixel = 0
     statusBackdrop.Parent = statusGui

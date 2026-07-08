@@ -370,7 +370,7 @@ makefolder = makefolder or function() end
 listfiles = listfiles or function()
     return {}
 end
-cloneref = cloneref or function(o)
+cloneref = cloneref or clonereference or function(o)
     return o
 end
 setthreadidentity = setthreadidentity or function() end
@@ -379,6 +379,39 @@ local queueTeleport = queue_on_teleport
     or (type(syn) == "table" and syn.queue_on_teleport)
     or (type(fluxus) == "table" and fluxus.queue_on_teleport)
     or function() end
+
+-- task library polyfill for older executors
+if not task then
+    task = {}
+    task.wait = wait or function(t) return wait(t) end
+    task.spawn = spawn or coroutine.wrap or function(f) coroutine.wrap(f)() end
+    task.delay = delay or function(t,f) spawn(function() wait(t) f() end) end
+    task.cancel = function() end
+    task.defer = spawn or function(f) coroutine.wrap(f)() end
+end
+
+-- tick() fallback
+if not tick then
+    tick = os.clock
+end
+
+-- debug library safety
+if not debug then
+    debug = {}
+end
+if not debug.traceback then
+    debug.traceback = function(msg) return tostring(msg or "") end
+end
+
+-- getgenv fallback
+if not getgenv then
+    getgenv = function() return _G end
+end
+
+-- loadstring fallback
+if not loadstring then
+    loadstring = load or function(code) error("loadstring unavailable") end
+end
 
 local BadwarsLoader
 local function createCustomSignal(key, delay)

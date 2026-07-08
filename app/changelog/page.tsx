@@ -1,5 +1,7 @@
-import { ChangelogPage } from "@/components/app-pages";
+"use client";
 
-export default function Page() {
-  return <ChangelogPage />;
+import { ChangelogPage as ChangelogPageClient } from "@/components/app-pages";
+
+export default function ChangelogPage() {
+  return <ChangelogPageClient />;
 }

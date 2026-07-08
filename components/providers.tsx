@@ -19,7 +19,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         {children}
-        <Toaster richColors position="bottom-right" closeButton />
+        <Toaster 
+          richColors 
+          position="bottom-right" 
+          closeButton
+          toastOptions={{
+            style: {
+              background: "hsl(var(--card))",
+              border: "1px solid hsl(var(--border))",
+              color: "hsl(var(--foreground))",
+            }
+          }}
+        />
       </QueryClientProvider>
     </ThemeProvider>
   );

@@ -7,7 +7,7 @@ const inter = Inter({
   subsets: ["latin"], 
   variable: "--font-sans",
   display: "swap",
-  preload: false,  // disable preload to avoid "preloaded CSS not used" browser warnings; display:swap handles FOUT
+  preload: false,
 });
 const spaceGrotesk = Space_Grotesk({ 
   subsets: ["latin"], 
@@ -15,7 +15,6 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
   preload: false,
 });
-// mono is only for code blocks, not critical on initial render
 const jetbrainsMono = JetBrains_Mono({ 
   subsets: ["latin"], 
   variable: "--font-mono",

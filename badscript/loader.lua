@@ -580,6 +580,7 @@ local function createLoader()
     appIcon.BorderSizePixel = 0
     appIcon.Parent = topbar
     loaderCorner(appIcon, 10)
+    loaderStroke(appIcon, COLORS.outline, 0.78, 1)
 
     local iconGlyph = Instance.new("TextLabel")
     iconGlyph.Name = "Glyph"
@@ -590,16 +591,6 @@ local function createLoader()
     iconGlyph.TextSize = 17
     iconGlyph.TextColor3 = COLORS.text
     iconGlyph.Parent = appIcon
-
-    local iconBar = Instance.new("Frame")
-    iconBar.Name = "Bar"
-    iconBar.AnchorPoint = Vector2.new(0.5, 1)
-    iconBar.Position = UDim2.new(0.5, 0, 1, -4)
-    iconBar.Size = UDim2.fromOffset(14, 2)
-    iconBar.BackgroundColor3 = COLORS.primary
-    iconBar.BorderSizePixel = 0
-    iconBar.Parent = appIcon
-    loaderCorner(iconBar, 99)
 
     local brand = Instance.new("TextLabel")
     brand.Name = "Title"
@@ -1134,7 +1125,7 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and c~='' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then pcall(delfile,f) end end end end end
 
-local cacheVersion = 'badwars-v14-windui-2026-07-08-01'
+local cacheVersion = 'badwars-v15-windui-2026-07-08-02'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"

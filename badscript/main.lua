@@ -640,7 +640,9 @@ local function httpGetMulti(urls)
         end)
         if type(fn) ~= "function" then
             local env = getgenv and type(getgenv) == "function" and getgenv()
-            fn = env and env.HttpGet
+            if type(env) == "table" then
+                fn = env.HttpGet
+            end
         end
         if type(fn) == "function" then
             local ok, res = callWithTimeout(function()
@@ -652,24 +654,38 @@ local function httpGetMulti(urls)
         end
         -- Try HttpService:GetAsync as fallback
         local ok, res = callWithTimeout(function()
-            return cloneref(game:GetService("HttpService")):GetAsync(url, true)
+            local svc = cloneref(game:GetService("HttpService"))
+            if svc and type(svc.GetAsync) == "function" then
+                return svc:GetAsync(url, true)
+            end
+            return nil
         end, 15)
         if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) then
             return res
         end
         -- Try request/http_request as last resort
-        local reqFn = (type(request) == "function" and request)
-            or (type(http_request) == "function" and http_request)
-            or (type(syn) == "table" and type(syn.request) == "function" and syn.request)
-            or (type(fluxus) == "table" and type(fluxus.request) == "function" and fluxus.request)
-        if reqFn then
+        local reqFn
+        if type(request) == "function" then
+            reqFn = request
+        elseif type(http_request) == "function" then
+            reqFn = http_request
+        elseif type(syn) == "table" and type(syn.request) == "function" then
+            reqFn = syn.request
+        elseif type(fluxus) == "table" and type(fluxus.request) == "function" then
+            reqFn = fluxus.request
+        end
+        if type(reqFn) == "function" then
             local reqOk, reqRes = callWithTimeout(function()
-                return reqFn({Url = url, Method = "GET"})
+                local result = reqFn({Url = url, Method = "GET"})
+                if type(result) == "table" and type(result.Body) == "string" then
+                    return result
+                elseif type(result) == "string" then
+                    return {Body = result}
+                end
+                return nil
             end, 15)
             if reqOk and type(reqRes) == "table" and type(reqRes.Body) == "string" and #reqRes.Body > 0 and not isNotFoundBody(reqRes.Body) then
                 return reqRes.Body
-            elseif reqOk and type(reqRes) == "string" and #reqRes > 0 and not isNotFoundBody(reqRes) then
-                return reqRes
             end
         end
     end

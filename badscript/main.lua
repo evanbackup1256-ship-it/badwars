@@ -614,11 +614,7 @@ local function callWithTimeout(callback, timeoutSeconds)
     local success = false
     local result
     local worker = task.spawn(function()
-        if shared.BadDiagnostics and type(shared.BadDiagnostics.Capture) == "function" then
-            success,result=pcall(function() return shared.BadDiagnostics:Capture(callback,{subsystem='TimeoutWorker',stage='http-timeout'}) end)
-        else
-            success,result=pcall(callback)
-        end
+        success,result=pcall(callback)
         finished = true
     end)
 
@@ -628,7 +624,7 @@ local function callWithTimeout(callback, timeoutSeconds)
     until finished or os.clock() >= deadline
 
     if not finished then
-        pcall(task.cancel, worker)
+        pcall(function() task.cancel(worker) end)
         return false, "request timed out"
     end
 
@@ -660,6 +656,21 @@ local function httpGetMulti(urls)
         end, 15)
         if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) then
             return res
+        end
+        -- Try request/http_request as last resort
+        local reqFn = (type(request) == "function" and request)
+            or (type(http_request) == "function" and http_request)
+            or (type(syn) == "table" and type(syn.request) == "function" and syn.request)
+            or (type(fluxus) == "table" and type(fluxus.request) == "function" and fluxus.request)
+        if reqFn then
+            local reqOk, reqRes = callWithTimeout(function()
+                return reqFn({Url = url, Method = "GET"})
+            end, 15)
+            if reqOk and type(reqRes) == "table" and type(reqRes.Body) == "string" and #reqRes.Body > 0 and not isNotFoundBody(reqRes.Body) then
+                return reqRes.Body
+            elseif reqOk and type(reqRes) == "string" and #reqRes > 0 and not isNotFoundBody(reqRes) then
+                return reqRes
+            end
         end
     end
     return nil

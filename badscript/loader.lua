@@ -200,7 +200,7 @@ local function callWithTimeout(callback, timeout)
 		task.wait(0.03)
 	end
 	if not done then
-		pcall(task.cancel,worker)
+		pcall(function() task.cancel(worker) end)
 		return false,'timeout'
 	end
 	return ok,result
@@ -217,13 +217,28 @@ local function httpGet(urls)
 			fn=env and env.HttpGet
 		end
 		if type(fn)=='function' then
-			local ok,res=callWithTimeout(function()return fn(game,url,true)end,12)
+			local ok,res=callWithTimeout(function()return fn(game,url,true)end,15)
 			if ok and type(res)=='string' and #res>0 and not isNotFoundBody(res) then return res,url end
 		end
 		local ok,res=callWithTimeout(function()
 			return cloneref(game:GetService('HttpService')):GetAsync(url,true)
-		end,12)
+		end,15)
 		if ok and type(res)=='string' and #res>0 and not isNotFoundBody(res) then return res,url end
+		-- Try request/http_request as last resort
+		local reqFn = (type(request) == "function" and request)
+			or (type(http_request) == "function" and http_request)
+			or (type(syn) == "table" and type(syn.request) == "function" and syn.request)
+			or (type(fluxus) == "table" and type(fluxus.request) == "function" and fluxus.request)
+		if reqFn then
+			local reqOk, reqRes = callWithTimeout(function()
+				return reqFn({Url = url, Method = "GET"})
+			end, 15)
+			if reqOk and type(reqRes) == "table" and type(reqRes.Body) == "string" and #reqRes.Body > 0 and not isNotFoundBody(reqRes.Body) then
+				return reqRes.Body, url
+			elseif reqOk and type(reqRes) == "string" and #reqRes > 0 and not isNotFoundBody(reqRes) then
+				return reqRes, url
+			end
+		end
 	end
 	return nil,nil
 end
@@ -559,21 +574,41 @@ local function createLoader()
 
     local appIcon = Instance.new("Frame")
     appIcon.Name = "Icon"
-    appIcon.Position = UDim2.fromOffset(18, 16)
-    appIcon.Size = UDim2.fromOffset(4, 30)
-    appIcon.BackgroundColor3 = COLORS.primary
+    appIcon.Position = UDim2.fromOffset(16, 14)
+    appIcon.Size = UDim2.fromOffset(36, 36)
+    appIcon.BackgroundColor3 = COLORS.element
     appIcon.BorderSizePixel = 0
     appIcon.Parent = topbar
-    loaderCorner(appIcon, 99)
+    loaderCorner(appIcon, 10)
+
+    local iconGlyph = Instance.new("TextLabel")
+    iconGlyph.Name = "Glyph"
+    iconGlyph.Size = UDim2.fromScale(1, 1)
+    iconGlyph.BackgroundTransparency = 1
+    iconGlyph.Font = Enum.Font.GothamBold
+    iconGlyph.Text = "B"
+    iconGlyph.TextSize = 17
+    iconGlyph.TextColor3 = COLORS.text
+    iconGlyph.Parent = appIcon
+
+    local iconBar = Instance.new("Frame")
+    iconBar.Name = "Bar"
+    iconBar.AnchorPoint = Vector2.new(0.5, 1)
+    iconBar.Position = UDim2.new(0.5, 0, 1, -4)
+    iconBar.Size = UDim2.fromOffset(14, 2)
+    iconBar.BackgroundColor3 = COLORS.primary
+    iconBar.BorderSizePixel = 0
+    iconBar.Parent = appIcon
+    loaderCorner(iconBar, 99)
 
     local brand = Instance.new("TextLabel")
     brand.Name = "Title"
-    brand.Position = UDim2.fromOffset(34, 10)
-    brand.Size = UDim2.fromOffset(220, 22)
+    brand.Position = UDim2.fromOffset(64, 13)
+    brand.Size = UDim2.new(1, -190, 0, 21)
     brand.BackgroundTransparency = 1
-    brand.Font = Enum.Font.GothamBold
+    brand.Font = Enum.Font.GothamSemibold
     brand.Text = "BadWars"
-    brand.TextSize = 16
+    brand.TextSize = 15
     brand.TextColor3 = COLORS.text
     brand.TextXAlignment = Enum.TextXAlignment.Left
     brand.TextTruncate = Enum.TextTruncate.AtEnd
@@ -581,12 +616,12 @@ local function createLoader()
 
     local subtitle = Instance.new("TextLabel")
     subtitle.Name = "Subtitle"
-    subtitle.Position = UDim2.fromOffset(34, 34)
-    subtitle.Size = UDim2.fromOffset(260, 16)
+    subtitle.Position = UDim2.fromOffset(64, 34)
+    subtitle.Size = UDim2.new(1, -190, 0, 16)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.Gotham
     subtitle.Text = "runtime loader"
-    subtitle.TextSize = 9
+    subtitle.TextSize = 10
     subtitle.TextColor3 = COLORS.placeholder
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.TextTruncate = Enum.TextTruncate.AtEnd
@@ -595,16 +630,18 @@ local function createLoader()
     local statusChip = Instance.new("Frame")
     statusChip.Name = "Status"
     statusChip.AnchorPoint = Vector2.new(1, 0.5)
-    statusChip.Position = UDim2.new(1, -52, 0.5, 0)
-    statusChip.Size = UDim2.fromOffset(250, 24)
-    statusChip.BackgroundTransparency = 1
+    statusChip.Position = UDim2.new(1, -16, 0.5, 0)
+    statusChip.Size = UDim2.fromOffset(96, 28)
+    statusChip.BackgroundColor3 = COLORS.accent
     statusChip.BorderSizePixel = 0
     statusChip.Parent = topbar
+    loaderCorner(statusChip, 9)
+    loaderStroke(statusChip, COLORS.outline, 0.78, 1)
 
     stateDot = Instance.new("Frame")
     stateDot.Name = "Dot"
     stateDot.AnchorPoint = Vector2.new(0, 0.5)
-    stateDot.Position = UDim2.new(0, 0, 0.5, 0)
+    stateDot.Position = UDim2.new(0, 11, 0.5, 0)
     stateDot.Size = UDim2.fromOffset(7, 7)
     stateDot.BackgroundColor3 = COLORS.primary
     stateDot.BorderSizePixel = 0
@@ -613,13 +650,13 @@ local function createLoader()
 
     statusChipText = Instance.new("TextLabel")
     statusChipText.Name = "Text"
-    statusChipText.Position = UDim2.fromOffset(14, 0)
-    statusChipText.Size = UDim2.new(1, -14, 1, 0)
+    statusChipText.Position = UDim2.fromOffset(25, 0)
+    statusChipText.Size = UDim2.new(1, -31, 1, 0)
     statusChipText.BackgroundTransparency = 1
-    statusChipText.Font = Enum.Font.GothamMedium
+    statusChipText.Font = Enum.Font.GothamSemibold
     statusChipText.Text = "LOADING"
-    statusChipText.TextSize = 9
-    statusChipText.TextColor3 = COLORS.icon
+    statusChipText.TextSize = 8
+    statusChipText.TextColor3 = COLORS.text
     statusChipText.TextXAlignment = Enum.TextXAlignment.Left
     statusChipText.Parent = statusChip
 

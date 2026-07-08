@@ -207,6 +207,8 @@ local function callWithTimeout(callback, timeout)
 	return ok,result
 end
 
+local isNotFoundBody
+
 local function httpGet(urls)
 	for _,url in ipairs(urls) do
 		local fn
@@ -227,14 +229,13 @@ local function httpGet(urls)
 	return nil,nil
 end
 
-local function isNotFoundBody(body)
+isNotFoundBody = function(body)
 	if type(body)~='string' then return false end
 	local trimmed=body:match('^%s*(.-)%s*$')
 	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
 end
 
--- BADWARS_LOADER_PRESENTATION_V1_BEGIN
--- Status GUI: restrained application-style loader.
+-- BADWARS_LOADER_PRESENTATION_V2_BEGIN
 local statusGui
 local statusCard
 local statusBackdrop
@@ -242,20 +243,46 @@ local statusTitle
 local statusMessage
 local statusMeta
 local progressFill
+local progressGlow
 local progressValue
 local elapsedLabel
 local stateDot
+local statusChipText
+local statusAccent
+local statusAccentGradient
+local progressGradient
 local openConsoleButton
 local statusCardScale
+local statusCardStroke
+local phaseMarkers = {}
 
 local statusProgress = 0.03
 local statusError = false
 local loaderCreatedAt = os.clock()
 local loaderStatusGeneration = 0
 local loaderDismissScheduled = false
-local MINIMUM_VISIBLE_SECONDS = 1.2
+local MINIMUM_VISIBLE_SECONDS = 1.35
 
 local loaderTweenService = cloneref(game:GetService("TweenService"))
+
+local COLORS = {
+    backdrop = Color3.fromRGB(7, 9, 13),
+    card = Color3.fromRGB(15, 18, 24),
+    cardSecondary = Color3.fromRGB(18, 22, 29),
+    surface = Color3.fromRGB(23, 28, 36),
+    surfaceHover = Color3.fromRGB(29, 35, 45),
+    border = Color3.fromRGB(57, 67, 82),
+    divider = Color3.fromRGB(42, 49, 61),
+    text = Color3.fromRGB(242, 245, 248),
+    textSoft = Color3.fromRGB(181, 190, 201),
+    textMuted = Color3.fromRGB(112, 123, 138),
+    textFaint = Color3.fromRGB(78, 88, 103),
+    accent = Color3.fromRGB(76, 217, 162),
+    accentBright = Color3.fromRGB(116, 238, 191),
+    accentDark = Color3.fromRGB(35, 133, 99),
+    warning = Color3.fromRGB(244, 183, 74),
+    warningSoft = Color3.fromRGB(255, 205, 116),
+}
 
 local function loaderTween(object, info, properties)
     if not object or not object.Parent then
@@ -276,6 +303,8 @@ local function loaderTween(object, info, properties)
             object[property] = value
         end)
     end
+
+    return nil
 end
 
 local function loaderCorner(parent, radius)
@@ -285,14 +314,22 @@ local function loaderCorner(parent, radius)
     return corner
 end
 
-local function loaderStroke(parent, color, transparency)
+local function loaderStroke(parent, color, transparency, thickness)
     local stroke = Instance.new("UIStroke")
     stroke.Color = color
     stroke.Transparency = transparency
-    stroke.Thickness = 1
+    stroke.Thickness = thickness or 1
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = parent
     return stroke
+end
+
+local function loaderGradient(parent, color, rotation)
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = color
+    gradient.Rotation = rotation or 0
+    gradient.Parent = parent
+    return gradient
 end
 
 local function isTerminalStatus(message)
@@ -300,6 +337,7 @@ local function isTerminalStatus(message)
     return lower == "ready"
         or string.sub(lower, 1, 7) == "ready -"
         or string.find(lower, "launch complete", 1, true) ~= nil
+        or string.find(lower, "loader complete", 1, true) ~= nil
 end
 
 local function resolveStatusProgress(message)
@@ -310,16 +348,21 @@ local function resolveStatusProgress(message)
     end
 
     local stages = {
-        { "cache", 0.12 },
-        { "self-test", 0.2 },
-        { "validating", 0.28 },
-        { "downloading", 0.36 },
-        { "interface", 0.55 },
-        { "core modules", 0.7 },
-        { "universal", 0.78 },
-        { "game module", 0.86 },
+        { "initialized", 0.06 },
+        { "cache setup", 0.13 },
+        { "cache cleared", 0.18 },
+        { "self-test", 0.24 },
+        { "validating orchestrator", 0.31 },
+        { "url validation passed", 0.39 },
+        { "compiled ok", 0.5 },
+        { "executing main", 0.59 },
+        { "interface", 0.67 },
+        { "core modules", 0.75 },
+        { "universal", 0.82 },
+        { "game module", 0.88 },
         { "profile", 0.93 },
-        { "finalizing", 0.97 },
+        { "validation passed", 0.98 },
+        { "finalizing", 0.98 },
     }
 
     for _, stage in ipairs(stages) do
@@ -328,10 +371,38 @@ local function resolveStatusProgress(message)
         end
     end
 
-    return math.min(statusProgress + 0.025, 0.98)
+    return math.min(statusProgress + 0.022, 0.98)
 end
 
 local function friendlyStage(message)
+    local lower = string.lower(tostring(message or ""))
+
+    if string.find(lower, "initialized", 1, true) then
+        return "Initializing"
+    elseif string.find(lower, "cache setup", 1, true) then
+        return "Preparing local cache"
+    elseif string.find(lower, "cache cleared", 1, true) then
+        return "Refreshing cached files"
+    elseif string.find(lower, "stale gui cache", 1, true) then
+        return "Refreshing interface files"
+    elseif string.find(lower, "self-test", 1, true) then
+        return "Running startup checks"
+    elseif string.find(lower, "validating orchestrator", 1, true) then
+        return "Verifying source"
+    elseif string.find(lower, "url validation passed", 1, true) then
+        return "Source verified"
+    elseif string.find(lower, "compiled ok", 1, true) then
+        return "Runtime prepared"
+    elseif string.find(lower, "executing main", 1, true) then
+        return "Launching BadWars"
+    elseif string.find(lower, "pipeline: validation", 1, true) then
+        return "Final verification"
+    elseif string.find(lower, "validation passed", 1, true) then
+        return "Startup verified"
+    elseif isTerminalStatus(lower) then
+        return "Ready"
+    end
+
     local text = tostring(message or "Working")
     text = text:gsub("^pipeline:%s*", "")
     text = text:gsub("^loading%s+", "Loading ")
@@ -339,6 +410,38 @@ local function friendlyStage(message)
     text = text:gsub("^validating%s+", "Checking ")
     text = text:gsub("^finalizing%s*", "Finishing")
     return text
+end
+
+local function statusDetail(message)
+    local lower = string.lower(tostring(message or ""))
+
+    if string.find(lower, "initialized", 1, true) then
+        return "Establishing the loader environment and compatibility services."
+    elseif string.find(lower, "cache setup", 1, true) then
+        return "Preparing local folders and checking saved components."
+    elseif string.find(lower, "cache cleared", 1, true) then
+        return "Outdated resources were removed so the newest build can load cleanly."
+    elseif string.find(lower, "stale gui cache", 1, true) then
+        return "Replacing an older interface build with the current version."
+    elseif string.find(lower, "self-test", 1, true) then
+        return "Checking required services before the main runtime starts."
+    elseif string.find(lower, "validating orchestrator", 1, true) then
+        return "Confirming that the main startup source is available and valid."
+    elseif string.find(lower, "url validation passed", 1, true) then
+        return "The startup source responded successfully and is ready to compile."
+    elseif string.find(lower, "compiled ok", 1, true) then
+        return "The main runtime compiled successfully with no blocking syntax errors."
+    elseif string.find(lower, "executing main", 1, true) then
+        return "Starting the interface, modules, profiles, and game-specific systems."
+    elseif string.find(lower, "pipeline: validation", 1, true) then
+        return "Reviewing module results and checking for startup issues."
+    elseif string.find(lower, "validation passed", 1, true) then
+        return "All required startup checks completed successfully."
+    elseif isTerminalStatus(lower) then
+        return "BadWars is loaded and ready to use."
+    end
+
+    return tostring(message or "Working")
 end
 
 local function getLoaderParent()
@@ -363,6 +466,27 @@ local function getLoaderParent()
     end
 
     return parent
+end
+
+local function updatePhaseMarkers(progress, isError)
+    local activeColor = isError and COLORS.warning or COLORS.accent
+    local activeText = isError and COLORS.warningSoft or COLORS.textSoft
+    local phaseThresholds = { 0.03, 0.36, 0.68, 0.96 }
+
+    for index, marker in ipairs(phaseMarkers) do
+        local active = progress >= phaseThresholds[index]
+        if marker.dot then
+            loaderTween(marker.dot, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                BackgroundColor3 = active and activeColor or COLORS.surface,
+                BackgroundTransparency = active and 0 or 0.1,
+            })
+        end
+        if marker.label then
+            loaderTween(marker.label, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                TextColor3 = active and activeText or COLORS.textFaint,
+            })
+        end
+    end
 end
 
 local function createLoader()
@@ -392,210 +516,418 @@ local function createLoader()
     statusGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     statusGui.Parent = parent
 
-    statusBackdrop = Instance.new("Frame")
+    statusBackdrop = Instance.new("CanvasGroup")
     statusBackdrop.Name = "Backdrop"
     statusBackdrop.Size = UDim2.fromScale(1, 1)
-    statusBackdrop.BackgroundColor3 = Color3.fromRGB(10, 10, 12) -- WindUI dark backdrop
-    statusBackdrop.BackgroundTransparency = 0.45
+    statusBackdrop.BackgroundColor3 = COLORS.backdrop
+    statusBackdrop.BackgroundTransparency = 0.28
     statusBackdrop.BorderSizePixel = 0
+    statusBackdrop.GroupTransparency = 1
     statusBackdrop.Parent = statusGui
 
+    loaderGradient(statusBackdrop, ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 11, 16)),
+        ColorSequenceKeypoint.new(0.55, Color3.fromRGB(10, 13, 18)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 7, 11)),
+    }), 115)
+
+    local ambientGlow = Instance.new("Frame")
+    ambientGlow.Name = "AmbientGlow"
+    ambientGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+    ambientGlow.Position = UDim2.fromScale(0.5, 0.5)
+    ambientGlow.Size = UDim2.fromOffset(620, 390)
+    ambientGlow.BackgroundColor3 = COLORS.accentDark
+    ambientGlow.BackgroundTransparency = 0.91
+    ambientGlow.BorderSizePixel = 0
+    ambientGlow.Parent = statusBackdrop
+    loaderCorner(ambientGlow, 999)
+
     local loaderViewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    local loaderWidth = math.clamp(loaderViewport.X - 28, 344, 504)
+    local loaderWidth = math.clamp(loaderViewport.X - 32, 352, 540)
+    local loaderHeight = math.clamp(loaderViewport.Y - 40, 286, 304)
+
+    local shadowBack = Instance.new("Frame")
+    shadowBack.Name = "ShadowBack"
+    shadowBack.AnchorPoint = Vector2.new(0.5, 0.5)
+    shadowBack.Position = UDim2.fromScale(0.5, 0.514)
+    shadowBack.Size = UDim2.fromOffset(loaderWidth + 22, loaderHeight + 22)
+    shadowBack.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    shadowBack.BackgroundTransparency = 0.72
+    shadowBack.BorderSizePixel = 0
+    shadowBack.Parent = statusBackdrop
+    loaderCorner(shadowBack, 22)
+
+    local shadowNear = Instance.new("Frame")
+    shadowNear.Name = "ShadowNear"
+    shadowNear.AnchorPoint = Vector2.new(0.5, 0.5)
+    shadowNear.Position = UDim2.fromScale(0.5, 0.507)
+    shadowNear.Size = UDim2.fromOffset(loaderWidth + 8, loaderHeight + 8)
+    shadowNear.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    shadowNear.BackgroundTransparency = 0.42
+    shadowNear.BorderSizePixel = 0
+    shadowNear.Parent = statusBackdrop
+    loaderCorner(shadowNear, 18)
 
     statusCard = Instance.new("CanvasGroup")
     statusCard.Name = "Loader"
     statusCard.AnchorPoint = Vector2.new(0.5, 0.5)
-    statusCard.Position = UDim2.fromScale(0.5, 0.505)
-    statusCard.Size = UDim2.fromOffset(loaderWidth, 232)
-    statusCard.BackgroundColor3 = Color3.fromRGB(16, 16, 16) -- WindUI Dark Background
-    statusCard.BackgroundTransparency = 0.02
+    statusCard.Position = UDim2.fromScale(0.5, 0.512)
+    statusCard.Size = UDim2.fromOffset(loaderWidth, loaderHeight)
+    statusCard.BackgroundColor3 = COLORS.card
+    statusCard.BackgroundTransparency = 0.01
     statusCard.BorderSizePixel = 0
     statusCard.GroupTransparency = 1
+    statusCard.ClipsDescendants = true
     statusCard.Parent = statusGui
-    loaderCorner(statusCard, 12)
-    loaderStroke(statusCard, Color3.fromRGB(255, 51, 85), 0.3) -- BadWars red tint stroke for branding
+    loaderCorner(statusCard, 16)
+    statusCardStroke = loaderStroke(statusCard, COLORS.border, 0.42, 1)
+
+    loaderGradient(statusCard, ColorSequence.new({
+        ColorSequenceKeypoint.new(0, COLORS.cardSecondary),
+        ColorSequenceKeypoint.new(0.55, COLORS.card),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(13, 16, 21)),
+    }), 105)
 
     statusCardScale = Instance.new("UIScale")
     statusCardScale.Name = "MotionScale"
-    statusCardScale.Scale = 0.975
+    statusCardScale.Scale = 0.965
     statusCardScale.Parent = statusCard
 
-    local accent = Instance.new("Frame")
-    accent.Name = "Accent"
-    accent.Position = UDim2.fromOffset(18, 18)
-    accent.Size = UDim2.fromOffset(4, 36)
-    accent.BackgroundColor3 = Color3.fromRGB(255, 51, 85) -- BadWars red accent to match WindUI branding
-    accent.BorderSizePixel = 0
-    accent.Parent = statusCard
-    loaderCorner(accent, 99)
+    statusAccent = Instance.new("Frame")
+    statusAccent.Name = "TopAccent"
+    statusAccent.Size = UDim2.new(1, 0, 0, 2)
+    statusAccent.BackgroundColor3 = COLORS.accent
+    statusAccent.BorderSizePixel = 0
+    statusAccent.Parent = statusCard
+    statusAccentGradient = loaderGradient(statusAccent, ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(42, 151, 113)),
+        ColorSequenceKeypoint.new(0.5, COLORS.accentBright),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(42, 151, 113)),
+    }), 0)
 
-    -- WindUI synced small version badge
-    local ver = Instance.new("TextLabel")
-    ver.Position = UDim2.new(1, -18, 0, 16)
-    ver.Size = UDim2.fromOffset(70, 14)
-    ver.BackgroundTransparency = 1
-    ver.Font = Enum.Font.Gotham
-    ver.Text = "v2 • WindUI"
-    ver.TextSize = 9
-    ver.TextColor3 = Color3.fromRGB(34, 197, 94)
-    ver.TextXAlignment = Enum.TextXAlignment.Right
-    ver.Parent = statusCard
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Position = UDim2.fromOffset(20, 19)
+    header.Size = UDim2.new(1, -40, 0, 48)
+    header.BackgroundTransparency = 1
+    header.Parent = statusCard
+
+    local logo = Instance.new("Frame")
+    logo.Name = "Logo"
+    logo.Size = UDim2.fromOffset(42, 42)
+    logo.Position = UDim2.fromOffset(0, 1)
+    logo.BackgroundColor3 = COLORS.surface
+    logo.BorderSizePixel = 0
+    logo.Parent = header
+    loaderCorner(logo, 12)
+    loaderStroke(logo, COLORS.border, 0.46, 1)
+    loaderGradient(logo, ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 39, 47)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 25, 32)),
+    }), 135)
+
+    local logoAccent = Instance.new("Frame")
+    logoAccent.Name = "Accent"
+    logoAccent.AnchorPoint = Vector2.new(0.5, 1)
+    logoAccent.Position = UDim2.new(0.5, 0, 1, -5)
+    logoAccent.Size = UDim2.fromOffset(18, 3)
+    logoAccent.BackgroundColor3 = COLORS.accent
+    logoAccent.BorderSizePixel = 0
+    logoAccent.Parent = logo
+    loaderCorner(logoAccent, 99)
+
+    local logoText = Instance.new("TextLabel")
+    logoText.Name = "Letter"
+    logoText.Size = UDim2.fromScale(1, 1)
+    logoText.BackgroundTransparency = 1
+    logoText.Font = Enum.Font.GothamBold
+    logoText.Text = "B"
+    logoText.TextSize = 20
+    logoText.TextColor3 = COLORS.text
+    logoText.Parent = logo
 
     local brand = Instance.new("TextLabel")
-    brand.Position = UDim2.fromOffset(34, 16)
-    brand.Size = UDim2.new(1, -92, 0, 24)
+    brand.Name = "Brand"
+    brand.Position = UDim2.fromOffset(54, 1)
+    brand.Size = UDim2.new(1, -176, 0, 24)
     brand.BackgroundTransparency = 1
     brand.Font = Enum.Font.GothamBold
     brand.Text = "BadWars"
     brand.TextSize = 18
-    brand.TextColor3 = Color3.fromRGB(244, 247, 250)
+    brand.TextColor3 = COLORS.text
     brand.TextXAlignment = Enum.TextXAlignment.Left
-    brand.Parent = statusCard
+    brand.TextTruncate = Enum.TextTruncate.AtEnd
+    brand.Parent = header
 
     local subtitle = Instance.new("TextLabel")
-    subtitle.Position = UDim2.fromOffset(34, 38)
-    subtitle.Size = UDim2.new(1, -92, 0, 16)
+    subtitle.Name = "Subtitle"
+    subtitle.Position = UDim2.fromOffset(54, 25)
+    subtitle.Size = UDim2.new(1, -176, 0, 17)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "Preparing your control center"
+    subtitle.Text = "Secure runtime initialization"
     subtitle.TextSize = 10
-    subtitle.TextColor3 = Color3.fromRGB(116, 130, 145)
+    subtitle.TextColor3 = COLORS.textMuted
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
-    subtitle.Parent = statusCard
+    subtitle.TextTruncate = Enum.TextTruncate.AtEnd
+    subtitle.Parent = header
+
+    local versionPill = Instance.new("Frame")
+    versionPill.Name = "VersionPill"
+    versionPill.AnchorPoint = Vector2.new(1, 0)
+    versionPill.Position = UDim2.new(1, 0, 0, 4)
+    versionPill.Size = UDim2.fromOffset(102, 28)
+    versionPill.BackgroundColor3 = COLORS.surface
+    versionPill.BackgroundTransparency = 0.08
+    versionPill.BorderSizePixel = 0
+    versionPill.Parent = header
+    loaderCorner(versionPill, 9)
+    loaderStroke(versionPill, COLORS.border, 0.56, 1)
 
     stateDot = Instance.new("Frame")
     stateDot.Name = "State"
-    stateDot.AnchorPoint = Vector2.new(1, 0.5)
-    stateDot.Position = UDim2.new(1, -20, 0, 35)
-    stateDot.Size = UDim2.fromOffset(8, 8)
-    stateDot.BackgroundColor3 = Color3.fromRGB(66, 214, 153)
+    stateDot.AnchorPoint = Vector2.new(0, 0.5)
+    stateDot.Position = UDim2.new(0, 10, 0.5, 0)
+    stateDot.Size = UDim2.fromOffset(7, 7)
+    stateDot.BackgroundColor3 = COLORS.accent
     stateDot.BorderSizePixel = 0
-    stateDot.Parent = statusCard
+    stateDot.Parent = versionPill
     loaderCorner(stateDot, 99)
 
+    statusChipText = Instance.new("TextLabel")
+    statusChipText.Name = "Label"
+    statusChipText.Position = UDim2.fromOffset(24, 0)
+    statusChipText.Size = UDim2.new(1, -30, 1, 0)
+    statusChipText.BackgroundTransparency = 1
+    statusChipText.Font = Enum.Font.GothamSemibold
+    statusChipText.Text = "STARTING"
+    statusChipText.TextSize = 9
+    statusChipText.TextColor3 = COLORS.textSoft
+    statusChipText.TextXAlignment = Enum.TextXAlignment.Left
+    statusChipText.Parent = versionPill
+
     local divider = Instance.new("Frame")
-    divider.Position = UDim2.fromOffset(18, 68)
-    divider.Size = UDim2.new(1, -36, 0, 1)
-    divider.BackgroundColor3 = Color3.fromRGB(43, 54, 65)
-    divider.BackgroundTransparency = 0.45
+    divider.Name = "Divider"
+    divider.Position = UDim2.fromOffset(20, 80)
+    divider.Size = UDim2.new(1, -40, 0, 1)
+    divider.BackgroundColor3 = COLORS.divider
+    divider.BackgroundTransparency = 0.28
     divider.BorderSizePixel = 0
     divider.Parent = statusCard
 
+    local contentTop = 98
+
     statusTitle = Instance.new("TextLabel")
     statusTitle.Name = "Stage"
-    statusTitle.Position = UDim2.fromOffset(18, 84)
-    statusTitle.Size = UDim2.new(1, -36, 0, 25)
+    statusTitle.Position = UDim2.fromOffset(20, contentTop)
+    statusTitle.Size = UDim2.new(1, -40, 0, 27)
     statusTitle.BackgroundTransparency = 1
     statusTitle.Font = Enum.Font.GothamSemibold
-    statusTitle.Text = "Starting"
-    statusTitle.TextSize = 15
-    statusTitle.TextColor3 = Color3.fromRGB(226, 232, 238)
+    statusTitle.Text = "Initializing"
+    statusTitle.TextSize = 16
+    statusTitle.TextColor3 = COLORS.text
     statusTitle.TextXAlignment = Enum.TextXAlignment.Left
     statusTitle.TextTruncate = Enum.TextTruncate.AtEnd
     statusTitle.Parent = statusCard
 
     statusMessage = Instance.new("TextLabel")
     statusMessage.Name = "Detail"
-    statusMessage.Position = UDim2.fromOffset(18, 112)
-    statusMessage.Size = UDim2.new(1, -36, 0, 30)
+    statusMessage.Position = UDim2.fromOffset(20, contentTop + 31)
+    statusMessage.Size = UDim2.new(1, -40, 0, 34)
     statusMessage.BackgroundTransparency = 1
     statusMessage.Font = Enum.Font.Gotham
-    statusMessage.Text = "Starting interface services"
+    statusMessage.Text = "Establishing the loader environment and compatibility services."
     statusMessage.TextSize = 10
-    statusMessage.TextColor3 = Color3.fromRGB(119, 132, 147)
+    statusMessage.TextColor3 = COLORS.textMuted
     statusMessage.TextXAlignment = Enum.TextXAlignment.Left
     statusMessage.TextYAlignment = Enum.TextYAlignment.Top
     statusMessage.TextWrapped = true
     statusMessage.TextTruncate = Enum.TextTruncate.AtEnd
     statusMessage.Parent = statusCard
 
+    local progressHeaderY = contentTop + 77
+
+    local progressCaption = Instance.new("TextLabel")
+    progressCaption.Name = "ProgressCaption"
+    progressCaption.Position = UDim2.fromOffset(20, progressHeaderY)
+    progressCaption.Size = UDim2.fromOffset(130, 17)
+    progressCaption.BackgroundTransparency = 1
+    progressCaption.Font = Enum.Font.GothamSemibold
+    progressCaption.Text = "STARTUP PROGRESS"
+    progressCaption.TextSize = 8
+    progressCaption.TextColor3 = COLORS.textFaint
+    progressCaption.TextXAlignment = Enum.TextXAlignment.Left
+    progressCaption.Parent = statusCard
+
+    progressValue = Instance.new("TextLabel")
+    progressValue.Name = "ProgressValue"
+    progressValue.AnchorPoint = Vector2.new(1, 0)
+    progressValue.Position = UDim2.new(1, -20, 0, progressHeaderY - 1)
+    progressValue.Size = UDim2.fromOffset(48, 18)
+    progressValue.BackgroundTransparency = 1
+    progressValue.Font = Enum.Font.GothamBold
+    progressValue.Text = "3%"
+    progressValue.TextSize = 10
+    progressValue.TextColor3 = COLORS.textSoft
+    progressValue.TextXAlignment = Enum.TextXAlignment.Right
+    progressValue.Parent = statusCard
+
     local track = Instance.new("Frame")
     track.Name = "ProgressTrack"
-    track.Position = UDim2.fromOffset(18, 154)
-    track.Size = UDim2.new(1, -78, 0, 6)
-    track.BackgroundColor3 = Color3.fromRGB(28, 37, 46)
+    track.Position = UDim2.fromOffset(20, progressHeaderY + 23)
+    track.Size = UDim2.new(1, -40, 0, 8)
+    track.BackgroundColor3 = Color3.fromRGB(25, 30, 38)
     track.BorderSizePixel = 0
+    track.ClipsDescendants = true
     track.Parent = statusCard
     loaderCorner(track, 99)
+    loaderStroke(track, COLORS.border, 0.72, 1)
 
     progressFill = Instance.new("Frame")
     progressFill.Name = "Fill"
     progressFill.Size = UDim2.fromScale(statusProgress, 1)
-    progressFill.BackgroundColor3 = Color3.fromRGB(51, 199, 89) -- WindUI green for progress
+    progressFill.BackgroundColor3 = COLORS.accent
     progressFill.BorderSizePixel = 0
+    progressFill.ClipsDescendants = true
     progressFill.Parent = track
     loaderCorner(progressFill, 99)
 
-    progressValue = Instance.new("TextLabel")
-    progressValue.AnchorPoint = Vector2.new(1, 0.5)
-    progressValue.Position = UDim2.new(1, -18, 0, 156)
-    progressValue.Size = UDim2.fromOffset(48, 20)
-    progressValue.BackgroundTransparency = 1
-    progressValue.Font = Enum.Font.GothamSemibold
-    progressValue.Text = "3%"
-    progressValue.TextSize = 10
-    progressValue.TextColor3 = Color3.fromRGB(144, 157, 170)
-    progressValue.TextXAlignment = Enum.TextXAlignment.Right
-    progressValue.Parent = statusCard
+    progressGradient = loaderGradient(progressFill, ColorSequence.new({
+        ColorSequenceKeypoint.new(0, COLORS.accentDark),
+        ColorSequenceKeypoint.new(0.55, COLORS.accent),
+        ColorSequenceKeypoint.new(1, COLORS.accentBright),
+    }), 0)
+
+    progressGlow = Instance.new("Frame")
+    progressGlow.Name = "Glow"
+    progressGlow.AnchorPoint = Vector2.new(1, 0.5)
+    progressGlow.Position = UDim2.new(1, 0, 0.5, 0)
+    progressGlow.Size = UDim2.fromOffset(22, 14)
+    progressGlow.BackgroundColor3 = COLORS.accentBright
+    progressGlow.BackgroundTransparency = 0.52
+    progressGlow.BorderSizePixel = 0
+    progressGlow.Parent = progressFill
+    loaderCorner(progressGlow, 99)
+
+    local phases = Instance.new("Frame")
+    phases.Name = "Phases"
+    phases.Position = UDim2.fromOffset(20, progressHeaderY + 40)
+    phases.Size = UDim2.new(1, -40, 0, 18)
+    phases.BackgroundTransparency = 1
+    phases.Parent = statusCard
+
+    local phaseNames = { "SETUP", "VERIFY", "LOAD", "READY" }
+    phaseMarkers = {}
+
+    for index, phaseName in ipairs(phaseNames) do
+        local holder = Instance.new("Frame")
+        holder.Name = phaseName
+        holder.Position = UDim2.new((index - 1) / 4, 0, 0, 0)
+        holder.Size = UDim2.new(0.25, 0, 1, 0)
+        holder.BackgroundTransparency = 1
+        holder.Parent = phases
+
+        local dot = Instance.new("Frame")
+        dot.Name = "Dot"
+        dot.Position = UDim2.fromOffset(0, 4)
+        dot.Size = UDim2.fromOffset(6, 6)
+        dot.BackgroundColor3 = index == 1 and COLORS.accent or COLORS.surface
+        dot.BackgroundTransparency = index == 1 and 0 or 0.1
+        dot.BorderSizePixel = 0
+        dot.Parent = holder
+        loaderCorner(dot, 99)
+
+        local label = Instance.new("TextLabel")
+        label.Name = "Label"
+        label.Position = UDim2.fromOffset(12, 0)
+        label.Size = UDim2.new(1, -14, 0, 14)
+        label.BackgroundTransparency = 1
+        label.Font = Enum.Font.GothamSemibold
+        label.Text = phaseName
+        label.TextSize = 7
+        label.TextColor3 = index == 1 and COLORS.textSoft or COLORS.textFaint
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = holder
+
+        phaseMarkers[index] = {
+            dot = dot,
+            label = label,
+        }
+    end
+
+    local footerY = loaderHeight - 38
+
+    local footerDivider = Instance.new("Frame")
+    footerDivider.Name = "FooterDivider"
+    footerDivider.Position = UDim2.fromOffset(20, footerY - 10)
+    footerDivider.Size = UDim2.new(1, -40, 0, 1)
+    footerDivider.BackgroundColor3 = COLORS.divider
+    footerDivider.BackgroundTransparency = 0.46
+    footerDivider.BorderSizePixel = 0
+    footerDivider.Parent = statusCard
 
     statusMeta = Instance.new("TextLabel")
-    statusMeta.Position = UDim2.fromOffset(18, 178)
-    statusMeta.Size = UDim2.new(1, -150, 0, 18)
+    statusMeta.Name = "Meta"
+    statusMeta.Position = UDim2.fromOffset(20, footerY)
+    statusMeta.Size = UDim2.new(1, -190, 0, 20)
     statusMeta.BackgroundTransparency = 1
     statusMeta.Font = Enum.Font.Gotham
-    statusMeta.Text = "Startup in progress"
+    statusMeta.Text = "Protected startup session"
     statusMeta.TextSize = 9
-    statusMeta.TextColor3 = Color3.fromRGB(83, 96, 109)
+    statusMeta.TextColor3 = COLORS.textFaint
     statusMeta.TextXAlignment = Enum.TextXAlignment.Left
     statusMeta.TextTruncate = Enum.TextTruncate.AtEnd
     statusMeta.Parent = statusCard
 
     elapsedLabel = Instance.new("TextLabel")
+    elapsedLabel.Name = "Elapsed"
     elapsedLabel.AnchorPoint = Vector2.new(1, 0)
-    elapsedLabel.Position = UDim2.new(1, -18, 0, 178)
-    elapsedLabel.Size = UDim2.fromOffset(72, 18)
+    elapsedLabel.Position = UDim2.new(1, -20, 0, footerY)
+    elapsedLabel.Size = UDim2.fromOffset(72, 20)
     elapsedLabel.BackgroundTransparency = 1
     elapsedLabel.Font = Enum.Font.Code
     elapsedLabel.Text = "0.0s"
     elapsedLabel.TextSize = 9
-    elapsedLabel.TextColor3 = Color3.fromRGB(83, 96, 109)
+    elapsedLabel.TextColor3 = COLORS.textFaint
     elapsedLabel.TextXAlignment = Enum.TextXAlignment.Right
     elapsedLabel.Parent = statusCard
 
     openConsoleButton = Instance.new("TextButton")
-    openConsoleButton.AnchorPoint = Vector2.new(1, 1)
-    openConsoleButton.Position = UDim2.new(1, -18, 1, -16)
-    openConsoleButton.Size = UDim2.fromOffset(118, 30)
-    openConsoleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 33) -- match WindUI element bg
-    openConsoleButton.BackgroundTransparency = 0.03
+    openConsoleButton.Name = "Diagnostics"
+    openConsoleButton.AnchorPoint = Vector2.new(1, 0)
+    openConsoleButton.Position = UDim2.new(1, -20, 0, footerY - 6)
+    openConsoleButton.Size = UDim2.fromOffset(124, 29)
+    openConsoleButton.BackgroundColor3 = COLORS.surface
+    openConsoleButton.BackgroundTransparency = 0.02
     openConsoleButton.BorderSizePixel = 0
     openConsoleButton.AutoButtonColor = false
     openConsoleButton.Font = Enum.Font.GothamSemibold
     openConsoleButton.Text = "Open diagnostics"
-    openConsoleButton.TextSize = 10
-    openConsoleButton.TextColor3 = Color3.fromRGB(220, 226, 232)
+    openConsoleButton.TextSize = 9
+    openConsoleButton.TextColor3 = COLORS.warningSoft
     openConsoleButton.Visible = false
     openConsoleButton.Parent = statusCard
-    loaderCorner(openConsoleButton, 8)
-    local consoleStroke = loaderStroke(openConsoleButton, Color3.fromRGB(78, 92, 107), 0.48)
+    loaderCorner(openConsoleButton, 9)
+    local consoleStroke = loaderStroke(openConsoleButton, COLORS.warning, 0.44, 1)
 
     openConsoleButton.MouseEnter:Connect(function()
-        loaderTween(openConsoleButton, TweenInfo.new(0.09, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            BackgroundColor3 = Color3.fromRGB(29, 40, 50),
+        loaderTween(openConsoleButton, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            BackgroundColor3 = COLORS.surfaceHover,
         })
-        loaderTween(consoleStroke, TweenInfo.new(0.09, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Transparency = 0.2,
+        loaderTween(consoleStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Transparency = 0.18,
         })
     end)
+
     openConsoleButton.MouseLeave:Connect(function()
-        loaderTween(openConsoleButton, TweenInfo.new(0.09, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            BackgroundColor3 = Color3.fromRGB(22, 30, 38),
+        loaderTween(openConsoleButton, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            BackgroundColor3 = COLORS.surface,
         })
-        loaderTween(consoleStroke, TweenInfo.new(0.09, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Transparency = 0.48,
+        loaderTween(consoleStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Transparency = 0.44,
         })
     end)
+
     openConsoleButton.Activated:Connect(function()
         local diagnostics = shared.BadDiagnostics
         if type(diagnostics) == "table" and type(diagnostics.Open) == "function" then
@@ -603,23 +935,36 @@ local function createLoader()
         end
     end)
 
-    loaderTween(statusBackdrop, TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-        BackgroundTransparency = 0.38,
+    loaderTween(statusBackdrop, TweenInfo.new(0.24, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        GroupTransparency = 0,
     })
-    loaderTween(statusCard, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+    loaderTween(statusCard, TweenInfo.new(0.26, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
         GroupTransparency = 0,
         Position = UDim2.fromScale(0.5, 0.5),
     })
-    loaderTween(statusCardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+    loaderTween(statusCardScale, TweenInfo.new(0.26, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
         Scale = 1,
     })
 
     task.spawn(function()
         while statusGui and statusGui.Parent do
-            if elapsedLabel then
+            if elapsedLabel and elapsedLabel.Parent then
                 elapsedLabel.Text = string.format("%.1fs", os.clock() - loaderCreatedAt)
             end
-            task.wait(0.25)
+            task.wait(0.2)
+        end
+    end)
+
+    task.spawn(function()
+        while statusGui and statusGui.Parent and stateDot and stateDot.Parent do
+            loaderTween(stateDot, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0.46,
+            })
+            task.wait(0.72)
+            loaderTween(stateDot, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0,
+            })
+            task.wait(0.72)
         end
     end)
 
@@ -650,47 +995,99 @@ shared.BadStatus = function(msg, isErr)
 
     statusGui.Enabled = true
 
-    local accent = statusError
-        and Color3.fromRGB(239, 105, 116)
-        or Color3.fromRGB(70, 196, 150)
+    local accent = statusError and COLORS.warning or COLORS.accent
+    local accentBright = statusError and COLORS.warningSoft or COLORS.accentBright
 
     if statusTitle then
-        statusTitle.Text = statusError and "Unable to finish loading" or friendlyStage(message)
-        statusTitle.TextColor3 = statusError
-            and Color3.fromRGB(239, 122, 132)
-            or Color3.fromRGB(217, 220, 226)
+        statusTitle.Text = statusError and "Startup needs attention" or friendlyStage(message)
+        statusTitle.TextColor3 = statusError and COLORS.warningSoft or COLORS.text
     end
 
     if statusMessage then
-        statusMessage.Text = message
-        statusMessage.TextColor3 = statusError
-            and Color3.fromRGB(211, 137, 144)
-            or Color3.fromRGB(111, 117, 129)
+        statusMessage.Text = statusError
+            and "BadWars could not finish startup. Open diagnostics to review the reported issue."
+            or statusDetail(message)
+        statusMessage.TextColor3 = statusError and COLORS.textSoft or COLORS.textMuted
     end
 
     if statusMeta then
-        statusMeta.Text = statusError and "Startup paused - open diagnostics for details" or "Startup in progress"
+        statusMeta.Text = statusError and "Startup paused for diagnostics" or "Protected startup session"
+    end
+
+    if statusChipText then
+        statusChipText.Text = statusError and "ATTENTION" or (terminal and "READY" or "STARTING")
+        statusChipText.TextColor3 = statusError and COLORS.warningSoft or COLORS.textSoft
     end
 
     if stateDot then
         stateDot.BackgroundColor3 = accent
     end
 
+    if statusAccent then
+        statusAccent.BackgroundColor3 = accent
+    end
+
+    if statusAccentGradient then
+        statusAccentGradient.Color = statusError
+            and ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(151, 103, 34)),
+                ColorSequenceKeypoint.new(0.5, COLORS.warningSoft),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(151, 103, 34)),
+            })
+            or ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(42, 151, 113)),
+                ColorSequenceKeypoint.new(0.5, COLORS.accentBright),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(42, 151, 113)),
+            })
+    end
+
+    if statusCardStroke then
+        loaderTween(statusCardStroke, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Color = statusError and COLORS.warning or COLORS.border,
+            Transparency = statusError and 0.28 or 0.42,
+        })
+    end
+
     if progressFill then
         progressFill.BackgroundColor3 = accent
         loaderTween(
             progressFill,
-            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
             { Size = UDim2.fromScale(math.clamp(statusProgress, 0.03, 1), 1) }
         )
     end
 
+    if progressGradient then
+        progressGradient.Color = statusError
+            and ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(151, 103, 34)),
+                ColorSequenceKeypoint.new(0.55, COLORS.warning),
+                ColorSequenceKeypoint.new(1, COLORS.warningSoft),
+            })
+            or ColorSequence.new({
+                ColorSequenceKeypoint.new(0, COLORS.accentDark),
+                ColorSequenceKeypoint.new(0.55, COLORS.accent),
+                ColorSequenceKeypoint.new(1, COLORS.accentBright),
+            })
+    end
+
+    if progressGlow then
+        progressGlow.BackgroundColor3 = accentBright
+    end
+
     if progressValue then
         progressValue.Text = tostring(math.floor(statusProgress * 100 + 0.5)) .. "%"
+        progressValue.TextColor3 = statusError and COLORS.warningSoft or COLORS.textSoft
     end
+
+    updatePhaseMarkers(statusProgress, statusError)
 
     if openConsoleButton then
         openConsoleButton.Visible = statusError
+    end
+
+    if elapsedLabel then
+        elapsedLabel.Visible = not statusError
     end
 
     if statusError then
@@ -705,11 +1102,11 @@ shared.BadStatus = function(msg, isErr)
         end
 
         if statusMessage then
-            statusMessage.Text = "Everything is ready."
+            statusMessage.Text = "BadWars is loaded and ready to use."
         end
 
         local visibleFor = os.clock() - loaderCreatedAt
-        local hold = math.max(MINIMUM_VISIBLE_SECONDS - visibleFor, 0) + 0.28
+        local hold = math.max(MINIMUM_VISIBLE_SECONDS - visibleFor, 0) + 0.4
 
         task.delay(hold, function()
             if generation ~= loaderStatusGeneration
@@ -723,26 +1120,27 @@ shared.BadStatus = function(msg, isErr)
 
             loaderTween(
                 statusCard,
-                TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+                TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
                 {
                     GroupTransparency = 1,
-                    Position = UDim2.fromScale(0.5, 0.494),
+                    Position = UDim2.fromScale(0.5, 0.49),
                 }
             )
             loaderTween(
                 statusCardScale,
-                TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
-                { Scale = 0.985 }
+                TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+                { Scale = 0.98 }
             )
             loaderTween(
                 statusBackdrop,
-                TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
-                { BackgroundTransparency = 1 }
+                TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
+                { GroupTransparency = 1 }
             )
 
-            task.delay(0.2, function()
+            task.delay(0.24, function()
                 if generation == loaderStatusGeneration and statusGui and statusGui.Parent then
                     statusGui:Destroy()
+                    shared.BadStatusGui = nil
                 end
             end)
         end)
@@ -751,7 +1149,7 @@ end
 
 local setStatus = shared.BadStatus
 setStatus("pipeline: initialized")
--- BADWARS_LOADER_PRESENTATION_V1_END
+-- BADWARS_LOADER_PRESENTATION_V2_END
 -- Error tracking
 local __rtErrs=shared.__badwars_runtime_errors
 if type(__rtErrs)~='table' then __rtErrs={};shared.__badwars_runtime_errors=__rtErrs end
@@ -907,16 +1305,4 @@ local el=os.clock()-loaderStart
 local final='Loader complete in '..string.format('%.2f',el)..'s'
 if #issues>0 then final=final..' ('..#issues..' issue(s))' end
  setStatus(final,#issues>0)
-if #issues == 0 and not shared.__badwars_fatal_error then
-	task.wait(0.22)
-	if statusCard and statusCard.Parent then
-		loaderTween(statusCard,TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1})
-	end
-	task.delay(0.22,function()
-		if statusGui and statusGui.Parent then
-			statusGui:Destroy()
-		end
-		shared.BadStatusGui = nil
-	end)
-end
 return result

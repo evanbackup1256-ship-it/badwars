@@ -351,6 +351,10 @@ if not _loadstring then
         error("loadstring unavailable")
     end
 end
+readfile = readfile or function()
+    return ""
+end
+writefile = writefile or function() end
 isfile = isfile or function(f)
     local s, r = pcall(readfile, f)
     return s and r ~= nil and r ~= ""
@@ -366,18 +370,14 @@ makefolder = makefolder or function() end
 listfiles = listfiles or function()
     return {}
 end
-readfile = readfile or function()
-    return ""
-end
-writefile = writefile or function() end
 cloneref = cloneref or function(o)
     return o
 end
 setthreadidentity = setthreadidentity or function() end
 local queueTeleport = queue_on_teleport
     or queueonteleport
-    or (syn and syn.queue_on_teleport)
-    or (fluxus and fluxus.queue_on_teleport)
+    or (type(syn) == "table" and syn.queue_on_teleport)
+    or (type(fluxus) == "table" and fluxus.queue_on_teleport)
     or function() end
 
 local BadwarsLoader
@@ -456,7 +456,15 @@ local signalApi = {
         self.__lastFire = tick()
         local remove = {}
         for i, conn in ipairs(self.__conns) do
-            if shared.BadDiagnostics then shared.BadDiagnostics:Capture(conn.func,{subsystem='Signal',module=key,stage='signal-callback'},unpack(args)) else pcall(conn.func,unpack(args)) end
+            local cbOk, cbErr
+            if shared.BadDiagnostics and type(shared.BadDiagnostics.Capture) == "function" then
+                cbOk, cbErr = pcall(shared.BadDiagnostics.Capture, shared.BadDiagnostics, conn.func, {subsystem='Signal',module=key,stage='signal-callback'}, unpack(args))
+            else
+                cbOk, cbErr = pcall(conn.func, unpack(args))
+            end
+            if not cbOk and type(shared.BadDiagnostics) == "table" and type(shared.BadDiagnostics.RecordRuntime) == "function" then
+                pcall(shared.BadDiagnostics.RecordRuntime, shared.BadDiagnostics, key, cbErr, {subsystem='Signal',stage='signal-callback'})
+            end
             if conn.once then
                 table.insert(remove, i)
             end
@@ -529,7 +537,7 @@ local function installBadWarsLoaderShim()
                 return func
             end
             return function(...)
-                local ok, res = xpcall(func, function(err) local d=shared.BadDiagnostics return d and d:Traceback(err,3) or ((debug and debug.traceback) and debug.traceback(tostring(err),3) or tostring(err)) end, ...)
+                local ok, res = xpcall(func, function(err) local d=shared.BadDiagnostics; local hasTraceback=type(debug)=="table" and type(debug.traceback)=="function" return d and d:Traceback(err,3) or (hasTraceback and debug.traceback(tostring(err),3) or tostring(err)) end, ...)
                 if not ok then
                     local report = { err = res }
                     if type(decorator) == "table" then
@@ -567,7 +575,7 @@ local function callWithTimeout(callback, timeoutSeconds)
     local success = false
     local result
     local worker = task.spawn(function()
-        if shared.BadDiagnostics then success,result=shared.BadDiagnostics:Capture(callback,{subsystem='TimeoutWorker',stage='http-timeout'}) else success,result=pcall(callback) end
+        if shared.BadDiagnostics and type(shared.BadDiagnostics.Capture) == "function" then success,result=pcall(shared.BadDiagnostics.Capture,shared.BadDiagnostics,callback,{subsystem='TimeoutWorker',stage='http-timeout'}) else success,result=pcall(callback) end
         finished = true
     end)
 
@@ -586,7 +594,10 @@ end
 
 local function httpGetMulti(urls)
     for _, url in ipairs(urls) do
-        local fn = (game and game.HttpGet)
+        local fn
+        pcall(function()
+            fn = (game and game.HttpGet)
+        end)
         if type(fn) ~= "function" then
             local env = getgenv and type(getgenv) == "function" and getgenv()
             fn = env and env.HttpGet
@@ -595,14 +606,14 @@ local function httpGetMulti(urls)
             local ok, res = callWithTimeout(function()
                 return fn(game, url, true)
             end, 12)
-            if ok and type(res) == "string" and #res > 0 then
+            if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) then
                 return res
             end
         end
         local ok, res = callWithTimeout(function()
             return cloneref(game:GetService("HttpService")):GetAsync(url, true)
         end, 12)
-        if ok and type(res) == "string" and #res > 0 then
+        if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) then
             return res
         end
     end
@@ -612,7 +623,7 @@ end
 local function httpGet(url)
     return httpGetMulti({ url })
 end
-HttpGet = httpGet
+local HttpGet = httpGet
 
 local function isNotFoundBody(body)
     if type(body) ~= "string" then
@@ -677,7 +688,7 @@ local function downloadFile(path)
     if isNotFoundBody(res) then
         return nil, "FILE NOT FOUND: " .. urls[1]
     end
-    if path:find(".lua") then
+    if path:sub(-4) == ".lua" then
         res = "-- BadWars by usingINales\n" .. res
     end
     pcall(function()
@@ -819,9 +830,12 @@ local function repoTreeFiles(prefix)
         local repo = CFG.repo .. "/" .. CFG.name
         local url = "https://api.github.com/repos/" .. repo .. "/git/trees/" .. CFG.branch .. "?recursive=1"
         local body = httpGetMulti({ url })
-        local ok, res = pcall(function()
-            return cloneref(game:GetService("HttpService")):JSONDecode(body or "")
-        end)
+        local ok, res = false, nil
+        if type(body) == "string" and #body > 0 then
+            ok, res = pcall(function()
+                return cloneref(game:GetService("HttpService")):JSONDecode(body)
+            end)
+        end
         __repoTree = ok and type(res) == "table" and type(res.tree) == "table" and res.tree or {}
     end
     local files = {}
@@ -1130,7 +1144,7 @@ local function runGameMod(path, label)
     if not fn then
         return false, err or "compile failed"
     end
-    local ok, runErr = xpcall(fn,function(err) local d=shared.BadDiagnostics return d and d:Traceback(err,2) or ((debug and debug.traceback) and debug.traceback(tostring(err),2) or tostring(err)) end)
+    local ok, runErr = xpcall(fn,function(err) local d=shared.BadDiagnostics; local hasTraceback=type(debug)=="table" and type(debug.traceback)=="function" return d and d:Traceback(err,2) or (hasTraceback and debug.traceback(tostring(err),2) or tostring(err)) end)
     local el = os_clock() - start
     if not ok then
         logMod("Game", path, el, false, runErr)
@@ -1249,7 +1263,7 @@ local function runUniversalCandidate(code, source)
         return false, "compile failure: " .. tostring(compileErr), registrationDelta(before, before)
     end
 
-    local trace = debug and debug.traceback or function(err)
+    local trace = (type(debug) == "table" and type(debug.traceback) == "function") and debug.traceback or function(err)
         return tostring(err)
     end
     local ok, runErr = xpcall(fn, trace)
@@ -1662,7 +1676,7 @@ local guiFn, guiErr = _loadstring(guiCode, "gui")
 if not guiFn then
     error("GUI compile: " .. tostring(guiErr), 0)
 end
-local traceback = debug and debug.traceback or function(message)
+local traceback = (type(debug) == "table" and type(debug.traceback) == "function") and debug.traceback or function(message)
     return tostring(message)
 end
 

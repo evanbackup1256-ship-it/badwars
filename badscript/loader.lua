@@ -129,14 +129,14 @@ end
 local loaderStart=os.clock()
 
 -- Polyfills
+readfile=readfile or function()return''end
+writefile=writefile or function()end
 isfile=isfile or function(f)local s,r=pcall(readfile,f)return s and r~=nil and r~=''end
 local __nativeDelfile=type(delfile)=='function'
 delfile=delfile or function()return false,'delfile unavailable'end
 isfolder=isfolder or function()return false end
 makefolder=makefolder or function()end
 listfiles=listfiles or function()return{}end
-readfile=readfile or function()return''end
-writefile=writefile or function()end
 cloneref=cloneref or function(o)return o end
 setthreadidentity=setthreadidentity or function()end
 queue_on_teleport=queue_on_teleport or function()end
@@ -159,7 +159,7 @@ local function callWithTimeout(callback, timeout)
 	local done=false
 	local ok=false
 	local result
-	task.spawn(function()
+	local worker=task.spawn(function()
 		ok,result=pcall(callback)
 		done=true
 	end)
@@ -168,6 +168,7 @@ local function callWithTimeout(callback, timeout)
 		task.wait(0.03)
 	end
 	if not done then
+		pcall(task.cancel,worker)
 		return false,'timeout'
 	end
 	return ok,result
@@ -175,19 +176,20 @@ end
 
 local function httpGet(urls)
 	for _,url in ipairs(urls) do
-		local fn=(game and game.HttpGet)
+		local fn
+		pcall(function()fn=game and game.HttpGet end)
 		if type(fn)~='function' then
 			local env=getgenv and type(getgenv)=='function' and getgenv()
 			fn=env and env.HttpGet
 		end
 		if type(fn)=='function' then
 			local ok,res=callWithTimeout(function()return fn(game,url,true)end,12)
-			if ok and type(res)=='string' and #res>0 then return res,url end
+			if ok and type(res)=='string' and #res>0 and not isNotFoundBody(res) then return res,url end
 		end
 		local ok,res=callWithTimeout(function()
 			return cloneref(game:GetService('HttpService')):GetAsync(url,true)
 		end,12)
-		if ok and type(res)=='string' and #res>0 then return res,url end
+		if ok and type(res)=='string' and #res>0 and not isNotFoundBody(res) then return res,url end
 	end
 	return nil,nil
 end
@@ -766,7 +768,7 @@ for _,d in {'badscript','badscript/games','badscript/profiles','badscript/assets
 	if not isfolder(d) then makefolder(d) end
 end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
-local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then delfile(f) end end end end end
+local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and c~='' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then pcall(delfile,f) end end end end end
 
 local cacheVersion = 'badwars-v13-premium-2026-07-06-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
@@ -793,9 +795,8 @@ local function invalidateStaleGuiCache()
 end
 if (isfile(cacheFile) and readfile(cacheFile) or '') ~= cacheVersion then
 	setStatus('cache cleared (version mismatch)')
-	for _,f in {'badscript/main.lua','badscript/NewMainScript.lua'} do if isfile(f) then delfile(f) end end
+	for _,f in {'badscript/main.lua','badscript/NewMainScript.lua'} do if isfile(f) then pcall(delfile,f) end end
 	wipeAny('badscript/assets');wipeGen('badscript/games');wipeGen('badscript/libraries')
-	-- Keep windui gui (new modern UI). Only wipe legacy new/ if present.
 	if isfolder('badscript/guis/new') then wipeGen('badscript/guis/new') end
 	writefile(cacheFile,cacheVersion)
 end
@@ -849,7 +850,7 @@ setStatus('main.lua compiled OK')
 
 -- Execute
 setStatus('pipeline: executing main orchestrator')
-local ok,result=xpcall(fn,function(err) local d=shared.BadDiagnostics return d and d:Traceback(err,2) or ((debug and debug.traceback) and debug.traceback(tostring(err),2) or tostring(err)) end)
+local ok,result=xpcall(fn,function(err) local d=shared.BadDiagnostics; local hasTraceback=type(debug)=="table" and type(debug.traceback)=="function" return d and d:Traceback(err,2) or (hasTraceback and debug.traceback(tostring(err),2) or tostring(err)) end)
 if not ok then local m='main.lua runtime: '..tostring(result);setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0) end
 
 -- Validation

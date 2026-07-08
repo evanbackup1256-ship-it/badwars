@@ -317,7 +317,8 @@ function Diagnostics:Capture(callback, context, ...)
     context = copyTable(context)
     if type(callback) ~= "function" then
         local message = "Capture expected a function, got " .. type(callback)
-        self:Error(message, self:Traceback(message, 3), context)
+        local ok, trace = pcall(function() return self:Traceback(message, 3) end)
+        self:Error(message, ok and trace or message, context)
         return false, message
     end
 
@@ -325,7 +326,8 @@ function Diagnostics:Capture(callback, context, ...)
     local results = packArgs(xpcall(function()
         return callback(unpackArgs(args, 1, args.n))
     end, function(err)
-        return self:Traceback(err, 3)
+        local ok, trace = pcall(function() return self:Traceback(err, 3) end)
+        return ok and trace or safeString(err)
     end))
 
     if not results[1] then

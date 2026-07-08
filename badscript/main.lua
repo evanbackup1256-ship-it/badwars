@@ -490,10 +490,16 @@ local signalApi = {
         local remove = {}
         for i, conn in ipairs(self.__conns) do
             local cbOk, cbErr
+            -- Safely execute callback with maximum protection
+            local function safeExecute()
+                return conn.func(unpack(args))
+            end
             if shared.BadDiagnostics and type(shared.BadDiagnostics.Capture) == "function" then
-                cbOk, cbErr = pcall(shared.BadDiagnostics.Capture, shared.BadDiagnostics, conn.func, {subsystem='Signal',module=key,stage='signal-callback'}, unpack(args))
+                cbOk, cbErr = pcall(function()
+                    return shared.BadDiagnostics:Capture(safeExecute, {subsystem='Signal',module=key,stage='signal-callback'})
+                end)
             else
-                cbOk, cbErr = pcall(conn.func, unpack(args))
+                cbOk, cbErr = pcall(safeExecute)
             end
             if not cbOk and type(shared.BadDiagnostics) == "table" and type(shared.BadDiagnostics.RecordRuntime) == "function" then
                 pcall(shared.BadDiagnostics.RecordRuntime, shared.BadDiagnostics, key, cbErr, {subsystem='Signal',stage='signal-callback'})
@@ -608,11 +614,15 @@ local function callWithTimeout(callback, timeoutSeconds)
     local success = false
     local result
     local worker = task.spawn(function()
-        if shared.BadDiagnostics and type(shared.BadDiagnostics.Capture) == "function" then success,result=pcall(shared.BadDiagnostics.Capture,shared.BadDiagnostics,callback,{subsystem='TimeoutWorker',stage='http-timeout'}) else success,result=pcall(callback) end
+        if shared.BadDiagnostics and type(shared.BadDiagnostics.Capture) == "function" then
+            success,result=pcall(function() return shared.BadDiagnostics:Capture(callback,{subsystem='TimeoutWorker',stage='http-timeout'}) end)
+        else
+            success,result=pcall(callback)
+        end
         finished = true
     end)
 
-    local deadline = os.clock() + (tonumber(timeoutSeconds) or 12)
+    local deadline = os.clock() + (tonumber(timeoutSeconds) or 15)
     repeat
         task.wait(0.05)
     until finished or os.clock() >= deadline
@@ -627,6 +637,7 @@ end
 
 local function httpGetMulti(urls)
     for _, url in ipairs(urls) do
+        -- Try game.HttpGet first
         local fn
         pcall(function()
             fn = (game and game.HttpGet)
@@ -638,14 +649,15 @@ local function httpGetMulti(urls)
         if type(fn) == "function" then
             local ok, res = callWithTimeout(function()
                 return fn(game, url, true)
-            end, 12)
+            end, 15)
             if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) then
                 return res
             end
         end
+        -- Try HttpService:GetAsync as fallback
         local ok, res = callWithTimeout(function()
             return cloneref(game:GetService("HttpService")):GetAsync(url, true)
-        end, 12)
+        end, 15)
         if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) then
             return res
         end
@@ -696,7 +708,8 @@ local function isStaleMotionCache(path, body)
     )
 end
 
-local function downloadFile(path)
+local function downloadFile(path, maxRetries)
+    maxRetries = maxRetries or 2
     if not HttpGet then
         return nil, "HttpGet nil"
     end
@@ -715,6 +728,12 @@ local function downloadFile(path)
     setStatus("downloading required files")
     local urls = rawUrls(path)
     local res = httpGetMulti(urls)
+    -- Retry logic for large files
+    if (type(res) ~= "string" or #res == 0) and maxRetries > 0 then
+        setStatus("retrying download: " .. path)
+        task.wait(1)
+        res = httpGetMulti(urls)
+    end
     if type(res) ~= "string" or #res == 0 then
         return nil, "ERROR empty file: empty response from " .. urls[1]
     end
@@ -1701,9 +1720,12 @@ do
 end
 
 local guiStart = os_clock()
-local guiCode = downloadFile("badscript/guis/" .. gui .. "/gui.lua")
+local guiPath = "badscript/guis/" .. gui .. "/gui.lua"
+local guiCode = downloadFile(guiPath, 3)
 if type(guiCode) ~= "string" or guiCode == "" then
-    error("GUI download failed", 0)
+    setStatus("ERROR: GUI download failed after retries", true)
+    recordErr("gui-download", "Failed to download " .. guiPath)
+    error("GUI download failed: " .. guiPath, 0)
 end
 local guiFn, guiErr = _loadstring(guiCode, "gui")
 if not guiFn then

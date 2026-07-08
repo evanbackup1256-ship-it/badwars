@@ -504,7 +504,7 @@ local function makeButton(parent, name, text, size)
     button.TextColor3 = Color3.fromRGB(168, 181, 195)
     button.Parent = parent
     createCorner(button, 7)
-    createStroke(button, Color3.fromRGB(255, 51, 85), 0.5, 1) -- BadWars red for WindUI sync
+    createStroke(button, Color3.fromRGB(73, 94, 110), 0.5, 1)
     return button
 end
 

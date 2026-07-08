@@ -1,4 +1,3 @@
--- BADWARS_UI_V13_PREMIUM_OVERHAUL
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_BEGIN
 do
     shared = type(shared) == "table" and shared or {}
@@ -123,7 +122,7 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
--- BadWars Loader v19.0 Obsidian Overhaul
+-- BadWars Loader
 -- Dual-format URL fallback + all diagnostics
 
 local loaderStart=os.clock()
@@ -263,22 +262,22 @@ local MINIMUM_VISIBLE_SECONDS = 1.25
 local loaderTweenService = cloneref(game:GetService("TweenService"))
 
 local COLORS = {
-    backdrop = Color3.fromRGB(0, 0, 0),
-    background = Color3.fromRGB(16, 16, 16),
-    dialog = Color3.fromRGB(26, 26, 26),
-    accent = Color3.fromRGB(24, 24, 27),
-    element = Color3.fromRGB(42, 42, 44),
-    elementHover = Color3.fromRGB(54, 54, 57),
-    button = Color3.fromRGB(82, 82, 91),
-    outline = Color3.fromRGB(255, 255, 255),
-    text = Color3.fromRGB(255, 255, 255),
-    placeholder = Color3.fromRGB(161, 161, 161),
-    icon = Color3.fromRGB(161, 161, 170),
-    sliderIcon = Color3.fromRGB(144, 143, 149),
-    primary = Color3.fromRGB(0, 145, 255),
-    primarySoft = Color3.fromRGB(77, 181, 255),
-    toggle = Color3.fromRGB(51, 199, 89),
-    warning = Color3.fromRGB(245, 158, 11),
+    backdrop = Color3.fromRGB(2, 4, 7),
+    background = Color3.fromRGB(5, 9, 13),
+    dialog = Color3.fromRGB(8, 13, 18),
+    accent = Color3.fromRGB(11, 17, 23),
+    element = Color3.fromRGB(12, 18, 24),
+    elementHover = Color3.fromRGB(19, 29, 38),
+    button = Color3.fromRGB(16, 16, 16),
+    outline = Color3.fromRGB(73, 94, 110),
+    text = Color3.fromRGB(241, 245, 248),
+    placeholder = Color3.fromRGB(103, 117, 131),
+    icon = Color3.fromRGB(116, 130, 143),
+    sliderIcon = Color3.fromRGB(86, 101, 114),
+    primary = Color3.fromRGB(66, 214, 153),
+    primarySoft = Color3.fromRGB(120, 230, 180),
+    toggle = Color3.fromRGB(66, 214, 153),
+    warning = Color3.fromRGB(239, 177, 72),
     warningSoft = Color3.fromRGB(251, 191, 36),
 }
 
@@ -538,12 +537,12 @@ local function createLoader()
     statusCard.Position = UDim2.fromScale(0.5, 0.514)
     statusCard.Size = UDim2.fromOffset(loaderWidth, loaderHeight)
     statusCard.BackgroundColor3 = COLORS.background
-    statusCard.BackgroundTransparency = 0
+    statusCard.BackgroundTransparency = 0.005
     statusCard.BorderSizePixel = 0
     statusCard.ClipsDescendants = true
     statusCard.Parent = statusGui
-    loaderCorner(statusCard, 14)
-    statusCardStroke = loaderStroke(statusCard, COLORS.outline, 0.9, 1)
+    loaderCorner(statusCard, 18)
+    statusCardStroke = loaderStroke(statusCard, COLORS.outline, 0.34, 1)
 
     statusCardScale = Instance.new("UIScale")
     statusCardScale.Name = "MotionScale"
@@ -553,49 +552,28 @@ local function createLoader()
     local topbar = Instance.new("Frame")
     topbar.Name = "Topbar"
     topbar.Size = UDim2.new(1, 0, 0, 64)
-    topbar.BackgroundColor3 = COLORS.background
+    topbar.BackgroundColor3 = Color3.fromRGB(8, 13, 18)
     topbar.BackgroundTransparency = 0
     topbar.BorderSizePixel = 0
     topbar.Parent = statusCard
 
     local appIcon = Instance.new("Frame")
     appIcon.Name = "Icon"
-    appIcon.Position = UDim2.fromOffset(16, 14)
-    appIcon.Size = UDim2.fromOffset(36, 36)
-    appIcon.BackgroundColor3 = COLORS.element
+    appIcon.Position = UDim2.fromOffset(18, 16)
+    appIcon.Size = UDim2.fromOffset(4, 30)
+    appIcon.BackgroundColor3 = COLORS.primary
     appIcon.BorderSizePixel = 0
     appIcon.Parent = topbar
-    loaderCorner(appIcon, 10)
-    loaderStroke(appIcon, COLORS.outline, 0.92, 1)
-
-    local iconText = Instance.new("TextLabel")
-    iconText.Name = "Glyph"
-    iconText.Size = UDim2.fromScale(1, 1)
-    iconText.BackgroundTransparency = 1
-    iconText.Font = Enum.Font.GothamBold
-    iconText.Text = "B"
-    iconText.TextSize = 17
-    iconText.TextColor3 = COLORS.text
-    iconText.Parent = appIcon
-
-    local iconIndicator = Instance.new("Frame")
-    iconIndicator.Name = "Indicator"
-    iconIndicator.AnchorPoint = Vector2.new(0.5, 1)
-    iconIndicator.Position = UDim2.new(0.5, 0, 1, -4)
-    iconIndicator.Size = UDim2.fromOffset(14, 2)
-    iconIndicator.BackgroundColor3 = COLORS.primary
-    iconIndicator.BorderSizePixel = 0
-    iconIndicator.Parent = appIcon
-    loaderCorner(iconIndicator, 99)
+    loaderCorner(appIcon, 99)
 
     local brand = Instance.new("TextLabel")
     brand.Name = "Title"
-    brand.Position = UDim2.fromOffset(64, 13)
-    brand.Size = UDim2.new(1, -190, 0, 21)
+    brand.Position = UDim2.fromOffset(34, 10)
+    brand.Size = UDim2.fromOffset(220, 22)
     brand.BackgroundTransparency = 1
-    brand.Font = Enum.Font.GothamSemibold
+    brand.Font = Enum.Font.GothamBold
     brand.Text = "BadWars"
-    brand.TextSize = 15
+    brand.TextSize = 16
     brand.TextColor3 = COLORS.text
     brand.TextXAlignment = Enum.TextXAlignment.Left
     brand.TextTruncate = Enum.TextTruncate.AtEnd
@@ -603,12 +581,12 @@ local function createLoader()
 
     local subtitle = Instance.new("TextLabel")
     subtitle.Name = "Subtitle"
-    subtitle.Position = UDim2.fromOffset(64, 34)
-    subtitle.Size = UDim2.new(1, -190, 0, 16)
+    subtitle.Position = UDim2.fromOffset(34, 34)
+    subtitle.Size = UDim2.fromOffset(260, 16)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "WindUI runtime loader"
-    subtitle.TextSize = 10
+    subtitle.Text = "runtime loader"
+    subtitle.TextSize = 9
     subtitle.TextColor3 = COLORS.placeholder
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.TextTruncate = Enum.TextTruncate.AtEnd
@@ -617,18 +595,16 @@ local function createLoader()
     local statusChip = Instance.new("Frame")
     statusChip.Name = "Status"
     statusChip.AnchorPoint = Vector2.new(1, 0.5)
-    statusChip.Position = UDim2.new(1, -16, 0.5, 0)
-    statusChip.Size = UDim2.fromOffset(96, 28)
-    statusChip.BackgroundColor3 = COLORS.accent
+    statusChip.Position = UDim2.new(1, -52, 0.5, 0)
+    statusChip.Size = UDim2.fromOffset(250, 24)
+    statusChip.BackgroundTransparency = 1
     statusChip.BorderSizePixel = 0
     statusChip.Parent = topbar
-    loaderCorner(statusChip, 9)
-    loaderStroke(statusChip, COLORS.outline, 0.92, 1)
 
     stateDot = Instance.new("Frame")
     stateDot.Name = "Dot"
     stateDot.AnchorPoint = Vector2.new(0, 0.5)
-    stateDot.Position = UDim2.new(0, 11, 0.5, 0)
+    stateDot.Position = UDim2.new(0, 0, 0.5, 0)
     stateDot.Size = UDim2.fromOffset(7, 7)
     stateDot.BackgroundColor3 = COLORS.primary
     stateDot.BorderSizePixel = 0
@@ -637,13 +613,13 @@ local function createLoader()
 
     statusChipText = Instance.new("TextLabel")
     statusChipText.Name = "Text"
-    statusChipText.Position = UDim2.fromOffset(25, 0)
-    statusChipText.Size = UDim2.new(1, -31, 1, 0)
+    statusChipText.Position = UDim2.fromOffset(14, 0)
+    statusChipText.Size = UDim2.new(1, -14, 1, 0)
     statusChipText.BackgroundTransparency = 1
-    statusChipText.Font = Enum.Font.GothamSemibold
+    statusChipText.Font = Enum.Font.GothamMedium
     statusChipText.Text = "LOADING"
-    statusChipText.TextSize = 8
-    statusChipText.TextColor3 = COLORS.text
+    statusChipText.TextSize = 9
+    statusChipText.TextColor3 = COLORS.icon
     statusChipText.TextXAlignment = Enum.TextXAlignment.Left
     statusChipText.Parent = statusChip
 
@@ -652,7 +628,7 @@ local function createLoader()
     topbarDivider.Position = UDim2.new(0, 0, 1, -1)
     topbarDivider.Size = UDim2.new(1, 0, 0, 1)
     topbarDivider.BackgroundColor3 = COLORS.outline
-    topbarDivider.BackgroundTransparency = 0.94
+    topbarDivider.BackgroundTransparency = 0.66
     topbarDivider.BorderSizePixel = 0
     topbarDivider.Parent = topbar
 
@@ -664,7 +640,7 @@ local function createLoader()
     content.BorderSizePixel = 0
     content.Parent = statusCard
     loaderCorner(content, 12)
-    loaderStroke(content, COLORS.outline, 0.93, 1)
+    loaderStroke(content, COLORS.outline, 0.66, 1)
 
     local statusPanel = Instance.new("Frame")
     statusPanel.Name = "CurrentStatus"
@@ -683,7 +659,7 @@ local function createLoader()
     statusIcon.BorderSizePixel = 0
     statusIcon.Parent = statusPanel
     loaderCorner(statusIcon, 10)
-    loaderStroke(statusIcon, COLORS.outline, 0.94, 1)
+    loaderStroke(statusIcon, COLORS.outline, 0.62, 1)
 
     statusAccent = Instance.new("Frame")
     statusAccent.Name = "Accent"
@@ -735,7 +711,7 @@ local function createLoader()
     progressCaption.Size = UDim2.new(1, -60, 0, 17)
     progressCaption.BackgroundTransparency = 1
     progressCaption.Font = Enum.Font.GothamSemibold
-    progressCaption.Text = "Loading BadWars"
+    progressCaption.Text = "Loading"
     progressCaption.TextSize = 10
     progressCaption.TextColor3 = COLORS.text
     progressCaption.TextXAlignment = Enum.TextXAlignment.Left
@@ -831,7 +807,7 @@ local function createLoader()
     footerDivider.Name = "Divider"
     footerDivider.Size = UDim2.new(1, 0, 0, 1)
     footerDivider.BackgroundColor3 = COLORS.outline
-    footerDivider.BackgroundTransparency = 0.94
+    footerDivider.BackgroundTransparency = 0.66
     footerDivider.BorderSizePixel = 0
     footerDivider.Parent = footer
 
@@ -841,7 +817,7 @@ local function createLoader()
     statusMeta.Size = UDim2.new(1, -150, 0, 18)
     statusMeta.BackgroundTransparency = 1
     statusMeta.Font = Enum.Font.Gotham
-    statusMeta.Text = "WindUI Dark • secure startup"
+    statusMeta.Text = "secure startup"
     statusMeta.TextSize = 9
     statusMeta.TextColor3 = COLORS.placeholder
     statusMeta.TextXAlignment = Enum.TextXAlignment.Left
@@ -876,23 +852,23 @@ local function createLoader()
     openConsoleButton.Visible = false
     openConsoleButton.Parent = footer
     loaderCorner(openConsoleButton, 8)
-    local consoleStroke = loaderStroke(openConsoleButton, COLORS.outline, 0.92, 1)
+    local consoleStroke = loaderStroke(openConsoleButton, COLORS.outline, 0.62, 1)
 
     openConsoleButton.MouseEnter:Connect(function()
-        loaderTween(openConsoleButton, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        loaderTween(openConsoleButton, TweenInfo.new(0.075, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
             BackgroundColor3 = COLORS.elementHover,
         })
-        loaderTween(consoleStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Transparency = 0.84,
+        loaderTween(consoleStroke, TweenInfo.new(0.075, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Transparency = 0.44,
         })
     end)
 
     openConsoleButton.MouseLeave:Connect(function()
-        loaderTween(openConsoleButton, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        loaderTween(openConsoleButton, TweenInfo.new(0.075, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
             BackgroundColor3 = COLORS.element,
         })
-        loaderTween(consoleStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Transparency = 0.92,
+        loaderTween(consoleStroke, TweenInfo.new(0.075, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Transparency = 0.62,
         })
     end)
 
@@ -975,7 +951,7 @@ shared.BadStatus = function(msg, isErr)
     end
 
     if statusMeta then
-        statusMeta.Text = statusError and "WindUI Dark • startup paused" or "WindUI Dark • secure startup"
+        statusMeta.Text = statusError and "startup paused" or "secure startup"
     end
 
     if statusChipText then
@@ -993,7 +969,7 @@ shared.BadStatus = function(msg, isErr)
 
     if statusCardStroke then
         statusCardStroke.Color = COLORS.outline
-        statusCardStroke.Transparency = 0.9
+        statusCardStroke.Transparency = 0.34
     end
 
     if progressFill then
@@ -1121,13 +1097,11 @@ end
 local function wipeAny(p) if isfolder(p) and __nativeDelfile then for _,f in listfiles(p) do if isfolder(f) then wipeAny(f) elseif isfile(f) then delfile(f) end end end end
 local function wipeGen(p) if isfolder(p) then for _,f in listfiles(p) do if f:find('loader') then continue end;if isfolder(f) then wipeGen(f) end;if isfile(f) then local c=readfile(f);if type(c)=='string' and c~='' and (c:find('-- BadWars',1,true)==1 or c:find('--This watermark',1,true)==1) and __nativeDelfile then pcall(delfile,f) end end end end end
 
-local cacheVersion = 'badwars-v13-premium-2026-07-06-01'
+local cacheVersion = 'badwars-v14-windui-2026-07-08-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"
-        and contents:find("BADWARS_UI_V13_PREMIUM_OVERHAUL", 1, true) ~= nil
-        and contents:find("BADWARS_UI_QUALITY_RUNTIME_V5_BEGIN", 1, true) ~= nil
-        and contents:find("BADWARS_FUSION_DESIGN_RUNTIME_V21_BEGIN", 1, true) == nil
+        and contents:find("BADWARS_WINDUI_INTEGRATION", 1, true) ~= nil
 end
 local function invalidateStaleGuiCache()
 	-- Legacy new/gui + also protect the new WindUI gui from aggressive wipes

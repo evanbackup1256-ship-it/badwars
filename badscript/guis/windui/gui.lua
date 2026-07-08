@@ -1,64 +1,287 @@
 -- BADWARS_WINDUI_INTEGRATION
--- Modern WindUI powered GUI adapter for seamless integration with BadWars modules.
--- Tabs: General, Blatant, Combat, Render, Utility, World, Minigames, Legit, Notifications, Settings
--- Full compatibility for CreateModule + CreateToggle / Dropdown / Slider / Color / Keybind / Targets etc.
--- Notifications, dropdowns, and state fully synced with backend modules + profiles.
+-- WindUI adapter with a centralized legacy compatibility layer.
+-- Existing module behavior is preserved; this file only translates GUI APIs and lifecycle state.
 
-local cloneref = cloneref or function(x) return x end
+local cloneref = cloneref or clonereference or function(value)
+	return value
+end
 
-local WindUI
-do
-	local success, result = pcall(function()
-		-- Prefer local bundled when available (via readfile in exploit env)
-		if type(readfile) == "function" and type(isfile) == "function" then
-			local p = "badscript/guis/windui/WindUI.lua"
-			if isfile(p) then
-				local src = readfile(p)
-				if src and #src > 10000 then
-					return loadstring(src, "WindUI")()
-				end
-			end
-		end
-		-- Fallback to GitHub dist (for first run / no filesystem)
-		local urls = {
-			"https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua",
-			"https://github.com/Footagesus/WindUI/raw/main/dist/main.lua",
-		}
-		for _, url in ipairs(urls) do
-			local ok, body = pcall(function()
-				if game and game.HttpGet then
-					return game:HttpGet(url, true)
-				end
-				return game:GetService("HttpService"):GetAsync(url, true)
-			end)
-			if ok and body and #body > 10000 then
-				return loadstring(body, "WindUI")()
-			end
-		end
-		error("Failed to load WindUI")
+local HttpService = cloneref(game:GetService("HttpService"))
+
+local d = {
+	Categories = {},
+	Modules = {},
+	Overlays = {},
+	Libraries = {},
+	Profiles = {},
+	Connections = {},
+	Resources = {},
+	GUIColor = { Hue = 0.02, Sat = 0.95, Value = 0.98 },
+	Version = "WindUI-Adapter-2.0",
+	PremiumBuild = true,
+	Name = "BadWars-WindUI",
+	Visible = false,
+	Destroyed = false,
+}
+
+local function pack(...)
+	return { n = select("#", ...), ... }
+end
+
+local function unpackPacked(values)
+	return table.unpack(values, 1, values.n)
+end
+
+local function safeCall(callback, ...)
+	if type(callback) ~= "function" then
+		return true
+	end
+	local args = pack(...)
+	return xpcall(function()
+		return callback(unpackPacked(args))
+	end, function(message)
+		return debug.traceback(tostring(message), 2)
 	end)
-	WindUI = result
 end
 
-if not WindUI or type(WindUI.CreateWindow) ~= "function" then
-	error("WindUI failed to initialize")
+local function firstNonNil(...)
+	for index = 1, select("#", ...) do
+		local value = select(index, ...)
+		if value ~= nil then
+			return value
+		end
+	end
+	return nil
 end
 
--- Branding + theme
-WindUI.TransparencyValue = 0.08
-WindUI:SetTheme("Dark")
+local function shallowCopy(source)
+	local result = {}
+	if type(source) == "table" then
+		for key, value in pairs(source) do
+			result[key] = value
+		end
+	end
+	return result
+end
 
--- spr for custom heavy animations (loaded by main)
-local spr = shared.BadWarsSpr
+local function cloneValue(value, seen)
+	if type(value) ~= "table" then
+		return value
+	end
+	seen = seen or {}
+	if seen[value] then
+		return seen[value]
+	end
+	local result = {}
+	seen[value] = result
+	for key, item in pairs(value) do
+		result[cloneValue(key, seen)] = cloneValue(item, seen)
+	end
+	return result
+end
+
+local function valuesEqual(left, right, seen)
+	if left == right then
+		return true
+	end
+	if type(left) ~= type(right) or type(left) ~= "table" then
+		return false
+	end
+	seen = seen or {}
+	seen[left] = seen[left] or {}
+	if seen[left][right] then
+		return true
+	end
+	seen[left][right] = true
+	for key, value in pairs(left) do
+		if not valuesEqual(value, right[key], seen) then
+			return false
+		end
+	end
+	for key in pairs(right) do
+		if left[key] == nil then
+			return false
+		end
+	end
+	return true
+end
+
+local function sanitizeName(value)
+	value = tostring(value or "unnamed")
+	value = value:gsub("[^%w%-%._/]", "_")
+	value = value:gsub("_+", "_")
+	return value:sub(1, 120)
+end
+
+local function normalizeDescription(settings)
+	return firstNonNil(settings.Desc, settings.Description, settings.Tooltip, "")
+end
+
+local function normalizeKey(value)
+	if typeof(value) == "EnumItem" then
+		return value.Name
+	end
+	return tostring(value or "F")
+end
+
+local function normalizeColor(value)
+	if typeof(value) == "Color3" then
+		return value
+	end
+	if type(value) == "string" then
+		local cleaned = value:gsub("#", "")
+		local ok, color = pcall(Color3.fromHex, cleaned)
+		if ok then
+			return color
+		end
+	end
+	if type(value) == "table" then
+		local hue = firstNonNil(value.Hue, value.H, value.h, value[1])
+		local sat = firstNonNil(value.Sat, value.Saturation, value.S, value.s, value[2])
+		local val = firstNonNil(value.Value, value.Brightness, value.V, value.v, value[3])
+		if type(hue) == "number" and type(sat) == "number" and type(val) == "number" then
+			return Color3.fromHSV(hue, sat, val)
+		end
+		local red = firstNonNil(value.R, value.r)
+		local green = firstNonNil(value.G, value.g)
+		local blue = firstNonNil(value.B, value.b)
+		if type(red) == "number" and type(green) == "number" and type(blue) == "number" then
+			if red > 1 or green > 1 or blue > 1 then
+				return Color3.fromRGB(red, green, blue)
+			end
+			return Color3.new(red, green, blue)
+		end
+	end
+	return Color3.fromRGB(255, 48, 88)
+end
+
+local function isConnection(value)
+	return typeof(value) == "RBXScriptConnection"
+		or (type(value) == "table" and type(value.Disconnect) == "function")
+end
+
+local function setObjectVisible(object, visible)
+	if typeof(object) == "Instance" then
+		pcall(function()
+			object.Visible = visible
+		end)
+	end
+end
+
+local function findWindowMain(window)
+	if type(window) ~= "table" or type(window.UIElements) ~= "table" then
+		return nil
+	end
+	return window.UIElements.Main
+end
+
+local function forEachOpenButton(window, callback)
+	if type(window) ~= "table" or type(window.UIElements) ~= "table" then
+		return
+	end
+	for key, value in pairs(window.UIElements) do
+		local keyText = tostring(key):lower()
+		local valueName = typeof(value) == "Instance" and value.Name:lower() or ""
+		if keyText:find("open", 1, true) or valueName:find("open", 1, true) then
+			callback(value)
+		end
+	end
+	if type(window.OpenButtonMain) == "table" then
+		callback(window.OpenButtonMain.Main)
+		callback(window.OpenButtonMain.Button)
+	end
+end
+
+local function compileSource(source, chunkName)
+	if type(loadstring) ~= "function" then
+		return nil, "loadstring is unavailable"
+	end
+	local compiled, compileError = loadstring(source, chunkName)
+	if not compiled then
+		return nil, compileError
+	end
+	local ok, result = pcall(compiled)
+	if not ok then
+		return nil, result
+	end
+	return result
+end
+
+local function loadWindUI()
+	local failures = {}
+	local localPaths = {
+		"badscript/guis/windui/WindUI.lua",
+		"badscript/guis/windui/WindUI_compat.lua",
+	}
+
+	if type(readfile) == "function" and type(isfile) == "function" then
+		for _, path in ipairs(localPaths) do
+			if isfile(path) then
+				local ok, source = pcall(readfile, path)
+				if ok and type(source) == "string" and #source > 10000 then
+					local library, loadError = compileSource(source, "@" .. path)
+					if type(library) == "table" then
+						return library
+					end
+					table.insert(failures, path .. ": " .. tostring(loadError))
+				else
+					table.insert(failures, path .. ": invalid or unreadable source")
+				end
+			end
+		end
+	end
+
+	local urls = {
+		"https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua",
+		"https://github.com/Footagesus/WindUI/raw/main/dist/main.lua",
+	}
+	for _, url in ipairs(urls) do
+		local ok, body = pcall(function()
+			if game and type(game.HttpGet) == "function" then
+				return game:HttpGet(url, true)
+			end
+			return HttpService:GetAsync(url, true)
+		end)
+		if ok and type(body) == "string" and #body > 10000 then
+			local library, loadError = compileSource(body, "@WindUI")
+			if type(library) == "table" then
+				return library
+			end
+			table.insert(failures, url .. ": " .. tostring(loadError))
+		else
+			table.insert(failures, url .. ": download failed")
+		end
+	end
+
+	error("Failed to load WindUI:\n" .. table.concat(failures, "\n"))
+end
+
+local WindUI = loadWindUI()
+if type(WindUI.CreateWindow) ~= "function" then
+	error("WindUI loaded, but CreateWindow is missing")
+end
+
+d.WindUI = WindUI
+
+pcall(function()
+	WindUI.TransparencyValue = 0.08
+	WindUI:SetTheme("Dark")
+end)
 
 local Window = WindUI:CreateWindow({
 	Title = "BadWars",
 	Author = "Premium • Roblox",
-	Icon = "swords", -- lucide icon or "target"
+	Icon = "swords",
 	Folder = "BadWars",
 	NewElements = true,
 	HideSearchBar = false,
-	ToggleKey = Enum.KeyCode.RightShift, -- common for these UIs, changeable in Settings later
+	ScrollBarEnabled = true,
+	AutoScale = false,
+	Resizable = true,
+	Size = UDim2.new(0, 680, 0, 500),
+	MinSize = Vector2.new(520, 340),
+	MaxSize = Vector2.new(920, 680),
+	ToggleKey = Enum.KeyCode.RightShift,
 	OpenButton = {
 		Title = "BadWars",
 		Enabled = true,
@@ -72,38 +295,43 @@ local Window = WindUI:CreateWindow({
 	},
 })
 
--- Do NOT show the main control center until the loader has fully finished (modules registered, etc.)
+if type(Window) ~= "table" then
+	error("WindUI failed to create the BadWars window")
+end
+
+d.Window = Window
+
 pcall(function()
-	if Window.Close then
-		Window:Close()
-	elseif Window.Toggle then
-		Window:Toggle()
-	end
+	Window:SetUIScale(0.9)
 end)
 
--- Extra hide to ensure UI does not appear until loader calls Show()
-pcall(function()
-	if Window and Window.UIElements and Window.UIElements.Main then
-		Window.UIElements.Main.Visible = false
-		Window.UIElements.Main.GroupTransparency = 1
-	end
-	-- Try to hide OpenButton if present
-	if Window and Window.UIElements then
-		for k, v in pairs(Window.UIElements) do
-			if v and typeof(v) == "Instance" and (k:lower():find("open") or (v.Name or ""):lower():find("open")) then
-				v.Visible = false
+d.gui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui
+	or (typeof(findWindowMain(Window)) == "Instance" and findWindowMain(Window))
+	or Window
+
+local function setWindowHidden(hidden)
+	local main = findWindowMain(Window)
+	if typeof(main) == "Instance" then
+		pcall(function()
+			main.Visible = not hidden
+			if main:IsA("CanvasGroup") then
+				main.GroupTransparency = hidden and 1 or 0
 			end
-		end
+		end)
+	end
+	forEachOpenButton(Window, function(object)
+		setObjectVisible(object, not hidden)
+	end)
+end
+
+setWindowHidden(true)
+task.defer(function()
+	task.wait()
+	if not d.Visible and not d.Destroyed then
+		setWindowHidden(true)
 	end
 end)
 
--- Additional safety: many modules expect certain top level options to exist immediately
-pcall(function()
-	d.Categories = d.Categories or {}
-	d.Modules = d.Modules or {}
-end)
-
--- Add version tag
 pcall(function()
 	Window:Tag({
 		Title = "v2 • WindUI",
@@ -113,778 +341,1490 @@ pcall(function()
 	})
 end)
 
--- Tabs definition (matches user request + common categories)
 local Tabs = {}
+d.Tabs = Tabs
 
-Tabs.General = Window:Tab({ Title = "General", Icon = "home", Desc = "Core settings & quick actions" })
-Tabs.Modules = Window:Tab({ Title = "Modules", Icon = "list", Desc = "All modules at a glance (search + toggle)" })
+local tabMetadata = {
+	General = { Icon = "home", Desc = "Core settings and quick actions" },
+	Modules = { Icon = "list", Desc = "Module browser and usage help" },
+	Blatant = { Icon = "flame", Desc = "High-visibility modules" },
+	Combat = { Icon = "sword", Desc = "Combat modules" },
+	Render = { Icon = "eye", Desc = "Visuals and overlays" },
+	Utility = { Icon = "wrench", Desc = "Helpers and automation" },
+	World = { Icon = "globe", Desc = "World and movement modules" },
+	Minigames = { Icon = "gamepad-2", Desc = "Minigame-specific modules" },
+	Legit = { Icon = "user-check", Desc = "Lower-profile modules" },
+	Friends = { Icon = "users", Desc = "Friend configuration" },
+	Targets = { Icon = "crosshair", Desc = "Target configuration" },
+	Notifications = { Icon = "bell", Desc = "Notification history" },
+	Settings = { Icon = "settings", Desc = "Interface and profile management" },
+}
+
+local function ensureTab(name, metadata)
+	name = tostring(name or "Misc")
+	if Tabs[name] then
+		return Tabs[name]
+	end
+	metadata = metadata or tabMetadata[name] or {}
+	local tab = Window:Tab({
+		Title = name,
+		Icon = metadata.Icon or "folder",
+		Desc = metadata.Desc or (name .. " modules"),
+	})
+	Tabs[name] = tab
+	return tab
+end
+
+for _, name in ipairs({
+	"General", "Modules", "Blatant", "Combat", "Render", "Utility", "World",
+	"Minigames", "Legit", "Friends", "Targets", "Notifications", "Settings",
+}) do
+	ensureTab(name)
+end
+
 Tabs.Modules:Paragraph({
 	Title = "Module Browser",
-	Content = "Use the top search bar or jump to the category tabs (Blatant / Combat / Render / etc). All toggles, dropdowns and options are live-synced. Sections group options per module for clarity.",
+	Desc = "Modules are grouped by category. Each module uses a collapsed section by default to reduce layout work and execution lag.",
 })
-Tabs.Modules:Space()
 Tabs.Modules:Paragraph({
-	Title = "Tips",
-	Content = "Toggle modules on/off. Use keybinds, dropdowns for modes, sliders for values. Changes sync instantly to the script logic. Config saves via WindUI (Folder=BadWars).",
+	Title = "Controls",
+	Desc = "RightShift toggles the window. Options are synchronized with their legacy module objects and can be persisted with profile flags.",
 })
-Tabs.Modules:Button({
-	Title = "Jump to Blatant (see sidebar tabs)",
-	Callback = function()
-		pcall(function() WindUI:Notify({ Title = "BadWars", Content = "Use the left sidebar or top tabs to switch to Blatant", Duration = 3 }) end)
-	end,
-})
-Tabs.Modules:Button({
-	Title = "Jump to Render",
-	Callback = function()
-		pcall(function() WindUI:Notify({ Title = "BadWars", Content = "Use the left sidebar or top tabs to switch to Render", Duration = 3 }) end)
-	end,
-})
-Tabs.Blatant = Window:Tab({ Title = "Blatant", Icon = "flame", Desc = "High visibility / strong modules" })
-Tabs.Combat = Window:Tab({ Title = "Combat", Icon = "sword", Desc = "PvP tools" })
-Tabs.Render = Window:Tab({ Title = "Render", Icon = "eye", Desc = "Visuals & ESP" })
-Tabs.Utility = Window:Tab({ Title = "Utility", Icon = "wrench", Desc = "Helpers & automation" })
-Tabs.World = Window:Tab({ Title = "World", Icon = "globe", Desc = "Environment & movement" })
-Tabs.Minigames = Window:Tab({ Title = "Minigames", Icon = "gamepad-2", Desc = "Minigame specific" })
-Tabs.Legit = Window:Tab({ Title = "Legit", Icon = "user-check", Desc = "Semi-legit features" })
-Tabs.Notifications = Window:Tab({ Title = "Notifications", Icon = "bell", Desc = "Event log & alerts" })
-Tabs.Settings = Window:Tab({ Title = "Settings", Icon = "settings", Desc = "UI & profile management" })
-
--- Ensure all expected category tabs exist early (for dynamic module registration)
-for _, catName in ipairs({"Combat", "Blatant", "Render", "Utility", "World", "Minigames", "Legit", "Friends", "Targets"}) do
-	if not Tabs[catName] then
-		Tabs[catName] = Window:Tab({ Title = catName, Icon = "folder", Desc = catName .. " modules" })
-	end
-end
-
--- Internal state
-local d = {} -- the returned API object, mirrors old gui API
-d.Categories = {}
-d.Modules = {}
-d.Overlays = {}
-d.Libraries = {}
-d.Profiles = {}
-d.Connections = {}
-d.GUIColor = { Hue = 0.02, Sat = 0.95, Value = 0.98 } -- red-ish accent matching BadWars
 
 local notificationLog = {}
-local MAX_NOTIF_LOG = 60
-local notifParagraph
+local MAX_NOTIFICATION_LOG = 60
+local notificationsEnabled = true
+local notificationParagraph
 
--- Helper to refresh notifications tab content (define BEFORE CreateNotification to avoid nil upvalue issues)
-local function refreshNotifTab()
-	if not Tabs.Notifications then return end
+local function formatNotificationLog()
 	local lines = {}
-	for i = 1, math.min(#notificationLog, 20) do
-		local n = notificationLog[i]
-		table.insert(lines, string.format("[%s] %s — %s", n.time, n.title, n.text))
+	for index = 1, math.min(#notificationLog, 20) do
+		local entry = notificationLog[index]
+		lines[index] = string.format("[%s] %s — %s", entry.time, entry.title, entry.text)
 	end
-	local content = table.concat(lines, "\n")
-	if notifParagraph then
-		pcall(function()
-			if notifParagraph.SetDesc then
-				notifParagraph:SetDesc(content ~= "" and content or "Notifications stream here and as beautiful WindUI toasts.")
-			elseif notifParagraph.Set then
-				notifParagraph:Set({ Content = content ~= "" and content or "Notifications stream here and as beautiful WindUI toasts." })
-			end
-		end)
-	else
-		notifParagraph = Tabs.Notifications:Paragraph({
-			Title = "Event Log",
-			Desc = content ~= "" and content or "Notifications stream here and as beautiful WindUI toasts.",
-		})
-	end
+	return #lines > 0 and table.concat(lines, "\n") or "No notifications yet."
 end
 
--- Notification integration (seamless with WindUI + tab log)
-function d:CreateNotification(title, text, duration, ntype)
-	title = tostring(title or "BadWars")
-	text = tostring(text or "")
-	duration = tonumber(duration) or 5
-	ntype = ntype or "info"
-
-	-- Native WindUI toast - beautiful and reliable
-	local iconMap = {
-		info = "info",
-		warning = "alert-triangle",
-		error = "x-octagon",
-		success = "check-circle",
-	}
-	pcall(function()
-		if WindUI and WindUI.Notify then
-			WindUI:Notify({
-				Title = title,
-				Content = text,
-				Icon = iconMap[ntype] or "bell",
-				Duration = duration,
-			})
+local function refreshNotificationTab()
+	local content = formatNotificationLog()
+	if notificationParagraph then
+		local ok = pcall(function()
+			if type(notificationParagraph.SetDesc) == "function" then
+				notificationParagraph:SetDesc(content)
+			elseif type(notificationParagraph.Set) == "function" then
+				notificationParagraph:Set(content)
+			end
+		end)
+		if ok then
+			return
 		end
-	end)
+	end
+	notificationParagraph = Tabs.Notifications:Paragraph({
+		Title = "Event Log",
+		Desc = content,
+	})
+end
 
-	-- Also log into the Notifications tab for history / sync
+local function normalizeNotificationArguments(self, title, text, duration, notificationType)
+	if self ~= d then
+		notificationType = duration
+		duration = text
+		text = title
+		title = self
+	end
+	return tostring(title or "BadWars"), tostring(text or ""), tonumber(duration) or 5, tostring(notificationType or "info")
+end
+
+function d.CreateNotification(self, title, text, duration, notificationType)
+	title, text, duration, notificationType = normalizeNotificationArguments(self, title, text, duration, notificationType)
 	local entry = {
 		time = os.date("%X"),
 		title = title,
 		text = text,
-		type = ntype,
+		type = notificationType,
 	}
 	table.insert(notificationLog, 1, entry)
-	if #notificationLog > MAX_NOTIF_LOG then
+	if #notificationLog > MAX_NOTIFICATION_LOG then
 		table.remove(notificationLog)
 	end
+	refreshNotificationTab()
 
-	refreshNotifTab()
-
+	if notificationsEnabled and not d.Destroyed then
+		local iconMap = {
+			info = "info",
+			warning = "alert-triangle",
+			error = "x-octagon",
+			success = "check-circle",
+		}
+		pcall(function()
+			WindUI:Notify({
+				Title = title,
+				Content = text,
+				Icon = iconMap[notificationType] or "bell",
+				Duration = duration,
+			})
+		end)
+	end
 	return entry
 end
 
-d.CreateNotification = d.CreateNotification
+function d.PushNotification(title, text, notificationType)
+	return d:CreateNotification(title, text, 5, notificationType)
+end
 
 Tabs.Notifications:Paragraph({
 	Title = "Notification System",
-	Content = "All script notifications appear as WindUI toasts + logged here. Seamless with module events, errors, and status.",
+	Desc = "Toasts and the persistent event log share one notification pipeline.",
 })
 Tabs.Notifications:Button({
 	Title = "Clear Notifications",
 	Icon = "trash",
 	Callback = function()
-		notificationLog = {}
-		refreshNotifTab()
+		table.clear(notificationLog)
+		refreshNotificationTab()
 	end,
 })
 Tabs.Notifications:Toggle({
-	Title = "Toggle Notifications",
+	Title = "Show Toast Notifications",
 	Value = true,
-	Callback = function(v) end,
+	Flag = "settings/notifications_enabled",
+	Callback = function(value)
+		notificationsEnabled = value == true
+	end,
 })
-Tabs.Notifications:Space({})
+Tabs.Notifications:Space()
+refreshNotificationTab()
 
--- Initial log paragraph (refresh will manage updates)
-refreshNotifTab()
-
--- Helper exposed for other systems to push notifs programmatically
-d.PushNotification = function(title, text, ntype)
-	return d:CreateNotification(title, text, 5, ntype)
+local function reportCallbackError(context, err)
+	d:CreateNotification("Module Error", tostring(context) .. ": " .. tostring(err), 7, "error")
 end
 
-refreshNotifTab()
+local function runUserCallback(context, callback, ...)
+	local ok, result = safeCall(callback, ...)
+	if not ok then
+		reportCallbackError(context, result)
+	end
+	return ok, result
+end
 
--- Settings tab basics
-Tabs.Settings:Toggle({
-	Title = "UI Transparency",
-	Desc = "Slight acrylic blur effect",
-	Value = true,
-	Callback = function(v)
-		WindUI.TransparencyValue = v and 0.08 or 0
-	end,
-})
-
-Tabs.Settings:Slider({
-	Title = "UI Scale",
-	Desc = "Adjust window scale",
-	Value = { Min = 0.6, Max = 1.4, Default = 1.0 },
-	Step = 0.05,
-	Callback = function(val)
-		pcall(function() Window:SetUIScale(val) end)
-	end,
-})
-
-Tabs.Settings:Toggle({
-	Title = "Rainbow Mode",
-	Desc = "Global rainbow accents (if supported by visuals)",
-	Value = false,
-	Callback = function(v)
-		d:CreateNotification("Settings", "Rainbow " .. (v and "enabled" or "disabled"), 2)
-	end,
-})
-
-Tabs.Settings:Slider({
-	Title = "Rainbow Speed",
-	Value = { Min = 1, Max = 20, Default = 5 },
-	Step = 1,
-	Callback = function(v) end,
-})
-
-Tabs.Settings:Space()
-
-Tabs.Settings:Button({
-	Title = "Save Current Profile",
-	Icon = "save",
-	Callback = function()
-		pcall(function()
-			Window:SaveConfig()
-			d:CreateNotification("BadWars", "Profile saved (WindUI + BadWars config)", 3, "success")
-		end)
-	end,
-})
-
-Tabs.Settings:Button({
-	Title = "Load Profile",
-	Icon = "folder-open",
-	Callback = function()
-		pcall(function()
-			Window:LoadConfig()
-			d:CreateNotification("BadWars", "Profile loaded", 3, "info")
-		end)
-	end,
-})
-
-Tabs.Settings:Button({
-	Title = "Reinject / Reload",
-	Icon = "refresh-cw",
-	Callback = function()
-		d:CreateNotification("BadWars", "Reloading...", 2)
-		shared.BadReload = true
-		if shared.BadDeveloper and readfile then
-			loadstring(readfile("badscript/loader.lua"))()
-		else
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()
+local function setControlValue(control, value, ...)
+	if type(control) ~= "table" then
+		return false
+	end
+	local args = pack(...)
+	local candidates = { "SetValue", "SetState", "Set", "Select", "Update" }
+	for _, methodName in ipairs(candidates) do
+		local method = control[methodName]
+		if type(method) == "function" then
+			local ok = pcall(function()
+				method(control, value, unpackPacked(args))
+			end)
+			if ok then
+				return true
+			end
 		end
-	end,
-})
+	end
+	return false
+end
 
-Tabs.Settings:Space()
-Tabs.Settings:Paragraph({
-	Title = "Notifications",
-	Content = "Notification prefs live in the Notifications tab. All toasts use WindUI for modern look.",
-})
+local function setControlVisible(control, visible)
+	if type(control) ~= "table" then
+		return
+	end
+	if type(control.SetVisible) == "function" then
+		pcall(control.SetVisible, control, visible)
+		return
+	end
+	local target = control.ElementFrame
+	if typeof(target) ~= "Instance" and type(control.UIElements) == "table" then
+		target = control.UIElements.Main
+	end
+	setObjectVisible(target, visible)
+end
 
--- Core category + module compatibility layer
--- This makes existing modules (Killaura etc) "just work"
+local function destroyControl(control)
+	if type(control) == "table" and type(control.Destroy) == "function" then
+		pcall(control.Destroy, control)
+	end
+end
 
-local function makeOptionApi(initialValue, onChange)
-	local api = { Value = initialValue }
-	function api:SetValue(v, ...)
-		api.Value = v
-		if type(onChange) == "function" then
-			pcall(onChange, v, ...)
+local function makeOptionApi(spec)
+	spec = spec or {}
+	local api = {
+		Name = tostring(spec.Name or "Option"),
+		Type = tostring(spec.Type or "Option"),
+		Value = cloneValue(spec.Value),
+		Default = cloneValue(spec.Value),
+		Object = nil,
+		Enabled = spec.Type == "Toggle" and spec.Value == true or nil,
+		Visible = true,
+		Destroyed = false,
+	}
+	local callback = spec.Callback
+	local callbackOnSet = spec.CallbackOnSet ~= false
+
+	local function assignValue(value)
+		api.Value = cloneValue(value)
+		if api.Type == "Toggle" then
+			api.Enabled = value == true
+		end
+	end
+
+	function api:_FromControl(value, ...)
+		if api.Destroyed then
+			return api
+		end
+		local changed = not valuesEqual(api.Value, value)
+		assignValue(value)
+		if changed or spec.AlwaysCallback then
+			runUserCallback(api.Name, callback, value, ...)
 		end
 		return api
 	end
-	function api:Save() end
-	function api:Load() end
-	api.SetCallback = function(_, cb) onChange = cb end
+
+	function api:SetValue(value, silent, ...)
+		if api.Destroyed then
+			return api
+		end
+		local changed = not valuesEqual(api.Value, value)
+		assignValue(value)
+		setControlValue(api.Object, value, ...)
+		if changed and silent ~= true and callbackOnSet then
+			runUserCallback(api.Name, callback, value, ...)
+		end
+		return api
+	end
+
+	api.Set = api.SetValue
+	api.SetState = api.SetValue
+	api.Update = api.SetValue
+
+	function api:GetValue()
+		return api.Value
+	end
+
+	function api:Toggle()
+		return api:SetValue(not (api.Value == true))
+	end
+
+	function api:SetCallback(newCallback)
+		if type(newCallback) == "function" then
+			callback = newCallback
+		end
+		return api
+	end
+
+	function api:SetVisible(visible)
+		api.Visible = visible ~= false
+		setControlVisible(api.Object, api.Visible)
+		return api
+	end
+
+	function api:Save()
+		return cloneValue(api.Value)
+	end
+
+	function api:Load(value, silent)
+		return api:SetValue(value, silent)
+	end
+
+	function api:Destroy()
+		if not api.Destroyed then
+			api.Destroyed = true
+			destroyControl(api.Object)
+			api.Object = nil
+		end
+	end
+
 	return api
 end
 
-local function createCategoryObj(name, iconName)
-	local tab = Tabs[name]
-	if not tab then
-		tab = Window:Tab({ Title = name, Icon = iconName or "folder" })
-		Tabs[name] = tab
+local function enableDotAndColon(object, methodName)
+	local original = object[methodName]
+	if type(original) ~= "function" then
+		return
+	end
+	object[methodName] = function(first, ...)
+		if first == object then
+			return original(object, ...)
+		end
+		return original(object, first, ...)
+	end
+end
+
+local function registerOption(module, name, option)
+	local baseName = tostring(name or option.Name or option.Type)
+	local uniqueName = baseName
+	local suffix = 2
+	while module.Options[uniqueName] and module.Options[uniqueName] ~= option do
+		uniqueName = baseName .. " " .. suffix
+		suffix += 1
+	end
+	option.Name = uniqueName
+	module.Options[uniqueName] = option
+	return option
+end
+
+local function makeFlag(categoryName, moduleName, optionName)
+	return sanitizeName(string.format("%s/%s/%s", categoryName, moduleName, optionName))
+end
+
+local function resolveFlag(module, settings, optionName)
+	if module.NoSave or settings.NoSave then
+		return nil
+	end
+	return settings.Flag or makeFlag(module.Category, module.Name, optionName)
+end
+
+local function createToggleOption(module, section, settings)
+	settings = settings or {}
+	local initial = firstNonNil(settings.Default, settings.Value, settings.Enabled, false) == true
+	local option = makeOptionApi({
+		Name = settings.Name or "Toggle",
+		Type = "Toggle",
+		Value = initial,
+		Callback = settings.Function or settings.Callback,
+	})
+	option.Object = section:Toggle({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Value = initial,
+		Flag = resolveFlag(module, settings, option.Name),
+		Callback = function(value)
+			option:_FromControl(value == true)
+		end,
+	})
+	return registerOption(module, option.Name, option)
+end
+
+local function createSliderOption(module, section, settings)
+	settings = settings or {}
+	local minimum = tonumber(firstNonNil(settings.Min, settings.MinValue, settings.Minimum, 0)) or 0
+	local maximum = tonumber(firstNonNil(settings.Max, settings.MaxValue, settings.Maximum, 100)) or 100
+	if maximum < minimum then
+		minimum, maximum = maximum, minimum
+	end
+	local initial = tonumber(firstNonNil(settings.Default, settings.Value, settings.Current, minimum)) or minimum
+	initial = math.clamp(initial, minimum, maximum)
+	local option = makeOptionApi({
+		Name = settings.Name or "Slider",
+		Type = "Slider",
+		Value = initial,
+		Callback = settings.Function or settings.Callback,
+	})
+	option.Min = minimum
+	option.Max = maximum
+	option.Step = tonumber(firstNonNil(settings.Step, settings.Increment, settings.Round, 1)) or 1
+	option.Object = section:Slider({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Value = { Min = minimum, Max = maximum, Default = initial },
+		Step = option.Step,
+		Flag = resolveFlag(module, settings, option.Name),
+		Callback = function(value)
+			option:_FromControl(value)
+		end,
+	})
+	function option:SetMin(value)
+		value = tonumber(value) or option.Min
+		option.Min = value
+		if type(option.Object) == "table" and type(option.Object.SetMin) == "function" then
+			pcall(option.Object.SetMin, option.Object, value)
+		end
+		return option
+	end
+	function option:SetMax(value)
+		value = tonumber(value) or option.Max
+		option.Max = value
+		if type(option.Object) == "table" and type(option.Object.SetMax) == "function" then
+			pcall(option.Object.SetMax, option.Object, value)
+		end
+		return option
+	end
+	return registerOption(module, option.Name, option)
+end
+
+local function createDropdownOption(module, section, settings)
+	settings = settings or {}
+	local values = shallowCopy(firstNonNil(settings.List, settings.Values, settings.Options, {}))
+	local multi = firstNonNil(settings.Multi, settings.Multiple, settings.Multiselect, false) == true
+	local initial = firstNonNil(settings.Default, settings.Value, settings.Selected)
+	if initial == nil then
+		initial = multi and {} or values[1]
+	end
+	local option = makeOptionApi({
+		Name = settings.Name or "Dropdown",
+		Type = "Dropdown",
+		Value = initial,
+		Callback = settings.Function or settings.Callback,
+	})
+	option.List = values
+	option.Values = values
+	option.Multi = multi
+	option.Object = section:Dropdown({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Values = values,
+		Value = initial,
+		Multi = multi,
+		AllowNone = settings.AllowNone,
+		SearchBarEnabled = firstNonNil(settings.Search, settings.Searchable, settings.SearchBarEnabled, false),
+		Flag = resolveFlag(module, settings, option.Name),
+		Callback = function(value)
+			option:_FromControl(value)
+		end,
+	})
+	function option:SetList(newValues, selected, silent)
+		newValues = type(newValues) == "table" and shallowCopy(newValues) or {}
+		option.List = newValues
+		option.Values = newValues
+		if type(option.Object) == "table" then
+			if type(option.Object.SetValues) == "function" then
+				pcall(option.Object.SetValues, option.Object, newValues, selected)
+			elseif type(option.Object.Refresh) == "function" then
+				pcall(option.Object.Refresh, option.Object, newValues)
+			end
+		end
+		if selected ~= nil then
+			option:SetValue(selected, silent)
+		end
+		return option
+	end
+	option.Refresh = option.SetList
+	return registerOption(module, option.Name, option)
+end
+
+local function createColorOption(module, section, settings, hsvCallback)
+	settings = settings or {}
+	local initialColor = normalizeColor(firstNonNil(settings.Default, settings.Value, settings.Color))
+	local initialTransparency = tonumber(firstNonNil(settings.Transparency, settings.Opacity and (1 - settings.Opacity), 0)) or 0
+	local hue, sat, val = initialColor:ToHSV()
+	local option = makeOptionApi({
+		Name = settings.Name or "Color",
+		Type = hsvCallback and "ColorSlider" or "Colorpicker",
+		Value = initialColor,
+		Callback = nil,
+		CallbackOnSet = false,
+	})
+	option.Hue = hue
+	option.Sat = sat
+	option.Saturation = sat
+	option.Brightness = val
+	option.Color = initialColor
+	option.Opacity = 1 - initialTransparency
+	option.Transparency = initialTransparency
+	local userCallback = settings.Function or settings.Callback
+
+	local function applyColor(color, transparency, silent, updateControl)
+		color = normalizeColor(color)
+		transparency = tonumber(transparency)
+		if transparency == nil then
+			transparency = option.Transparency or 0
+		end
+		local h, s, v = color:ToHSV()
+		local changed = not valuesEqual(option.Value, color) or option.Transparency ~= transparency
+		option.Value = color
+		option.Color = color
+		option.Hue = h
+		option.Sat = s
+		option.Saturation = s
+		option.Brightness = v
+		option.Transparency = transparency
+		option.Opacity = 1 - transparency
+		if updateControl then
+			setControlValue(option.Object, color, transparency)
+		end
+		if changed and silent ~= true then
+			if hsvCallback then
+				runUserCallback(option.Name, userCallback, h, s, v, option.Opacity)
+			else
+				runUserCallback(option.Name, userCallback, color, transparency)
+			end
+		end
+		return option
 	end
 
-	local cat = {
+	option.Object = section:Colorpicker({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Default = initialColor,
+		Transparency = initialTransparency,
+		Flag = resolveFlag(module, settings, option.Name),
+		Callback = function(color, transparency)
+			applyColor(color, transparency, false, false)
+		end,
+	})
+
+	function option:SetValue(value, satValue, brightnessValue, opacityOrSilent, silent)
+		if type(value) == "number" and type(satValue) == "number" and type(brightnessValue) == "number" then
+			local opacity = type(opacityOrSilent) == "number" and opacityOrSilent or option.Opacity
+			return applyColor(Color3.fromHSV(value, satValue, brightnessValue), 1 - opacity, silent == true, true)
+		end
+		local isSilent = opacityOrSilent == true
+		local transparency = type(satValue) == "number" and satValue or option.Transparency
+		return applyColor(value, transparency, isSilent, true)
+	end
+	option.Set = option.SetValue
+	return registerOption(module, option.Name, option)
+end
+
+local function createKeybindOption(module, section, settings)
+	settings = settings or {}
+	local initial = normalizeKey(firstNonNil(settings.Default, settings.Value, settings.Key, "F"))
+	local option = makeOptionApi({
+		Name = settings.Name or "Keybind",
+		Type = "Keybind",
+		Value = initial,
+		Callback = settings.Function or settings.Callback,
+		CallbackOnSet = false,
+		AlwaysCallback = true,
+	})
+	option.Object = section:Keybind({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Value = initial,
+		CanChange = settings.CanChange ~= false,
+		Blacklist = settings.Blacklist,
+		Flag = resolveFlag(module, settings, option.Name),
+		Callback = function(key)
+			-- WindUI invokes this when the bound key is pressed.
+			option.Value = normalizeKey(option.Object and option.Object.Value or key)
+			runUserCallback(option.Name, settings.Function or settings.Callback, key)
+		end,
+	})
+	pcall(function()
+		local label = option.Object.UIElements.Keybind.Frame.Frame.TextLabel
+		local connection = label:GetPropertyChangedSignal("Text"):Connect(function()
+			local text = tostring(label.Text or "")
+			if text ~= "" and text ~= "..." then
+				option.Value = normalizeKey(option.Object.Value or text)
+			end
+		end)
+		table.insert(d.Resources, connection)
+	end)
+	function option:SetValue(value, silent)
+		option.Value = normalizeKey(value)
+		setControlValue(option.Object, option.Value)
+		if silent ~= true and settings.OnChanged then
+			runUserCallback(option.Name .. " changed", settings.OnChanged, option.Value)
+		end
+		return option
+	end
+	option.Set = option.SetValue
+	return registerOption(module, option.Name, option)
+end
+
+local function createInputOption(module, section, settings)
+	settings = settings or {}
+	local initial = tostring(firstNonNil(settings.Default, settings.Value, settings.Text, ""))
+	local option = makeOptionApi({
+		Name = settings.Name or "Input",
+		Type = "Input",
+		Value = initial,
+		Callback = settings.Function or settings.Callback,
+	})
+	option.Object = section:Input({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Value = initial,
+		Placeholder = firstNonNil(settings.Placeholder, settings.PlaceholderText, "Enter text..."),
+		ClearTextOnFocus = settings.ClearTextOnFocus,
+		Type = settings.Type,
+		Flag = resolveFlag(module, settings, option.Name),
+		Callback = function(value)
+			option:_FromControl(value)
+		end,
+	})
+	return registerOption(module, option.Name, option)
+end
+
+local function createTwoSliderOption(module, section, settings)
+	settings = settings or {}
+	local minimum = tonumber(firstNonNil(settings.Min, settings.MinValue, 0)) or 0
+	local maximum = tonumber(firstNonNil(settings.Max, settings.MaxValue, 100)) or 100
+	if maximum < minimum then
+		minimum, maximum = maximum, minimum
+	end
+	local initialMin = math.clamp(tonumber(firstNonNil(settings.DefaultMin, settings.ValueMin, minimum)) or minimum, minimum, maximum)
+	local initialMax = math.clamp(tonumber(firstNonNil(settings.DefaultMax, settings.ValueMax, maximum)) or maximum, minimum, maximum)
+	if initialMax < initialMin then
+		initialMin, initialMax = initialMax, initialMin
+	end
+	local option = {
+		Name = tostring(settings.Name or "Range"),
+		Type = "TwoSlider",
+		ValueMin = initialMin,
+		ValueMax = initialMax,
+		Min = minimum,
+		Max = maximum,
+		Visible = true,
+		Destroyed = false,
+	}
+	local userCallback = settings.Function or settings.Callback
+	local setting = false
+	local minControl
+	local maxControl
+
+	local function emit(silent)
+		if silent ~= true then
+			runUserCallback(option.Name, userCallback, option.ValueMin, option.ValueMax)
+		end
+	end
+
+	minControl = section:Slider({
+		Title = option.Name .. " Min",
+		Desc = normalizeDescription(settings),
+		Value = { Min = minimum, Max = maximum, Default = initialMin },
+		Step = settings.Step or 1,
+		Flag = resolveFlag(module, settings, option.Name .. "_min"),
+		Callback = function(value)
+			if setting then return end
+			option.ValueMin = math.min(value, option.ValueMax)
+			emit(false)
+		end,
+	})
+	maxControl = section:Slider({
+		Title = option.Name .. " Max",
+		Value = { Min = minimum, Max = maximum, Default = initialMax },
+		Step = settings.Step or 1,
+		Flag = resolveFlag(module, settings, option.Name .. "_max"),
+		Callback = function(value)
+			if setting then return end
+			option.ValueMax = math.max(value, option.ValueMin)
+			emit(false)
+		end,
+	})
+	option.Object = { MinSlider = minControl, MaxSlider = maxControl }
+
+	function option:SetValue(valueMin, valueMax, silent)
+		valueMin = math.clamp(tonumber(valueMin) or option.ValueMin, minimum, maximum)
+		valueMax = math.clamp(tonumber(valueMax) or option.ValueMax, minimum, maximum)
+		if valueMax < valueMin then
+			valueMin, valueMax = valueMax, valueMin
+		end
+		local changed = valueMin ~= option.ValueMin or valueMax ~= option.ValueMax
+		option.ValueMin, option.ValueMax = valueMin, valueMax
+		setting = true
+		setControlValue(minControl, valueMin)
+		setControlValue(maxControl, valueMax)
+		setting = false
+		if changed then emit(silent) end
+		return option
+	end
+	option.Set = option.SetValue
+	function option:SetVisible(visible)
+		option.Visible = visible ~= false
+		setControlVisible(minControl, option.Visible)
+		setControlVisible(maxControl, option.Visible)
+		return option
+	end
+	function option:Save()
+		return { ValueMin = option.ValueMin, ValueMax = option.ValueMax }
+	end
+	function option:Load(value, silent)
+		if type(value) == "table" then
+			return option:SetValue(value.ValueMin or value[1], value.ValueMax or value[2], silent)
+		end
+		return option
+	end
+	function option:Destroy()
+		if not option.Destroyed then
+			option.Destroyed = true
+			destroyControl(minControl)
+			destroyControl(maxControl)
+		end
+	end
+	return registerOption(module, option.Name, option)
+end
+
+local function createTextListOption(module, section, settings)
+	settings = settings or {}
+	local initial = cloneValue(firstNonNil(settings.Default, settings.Value, settings.List, {}))
+	if type(initial) ~= "table" then
+		initial = {}
+	end
+	local option = makeOptionApi({
+		Name = settings.Name or "Text List",
+		Type = "TextList",
+		Value = initial,
+		Callback = settings.Function or settings.Callback,
+		CallbackOnSet = false,
+	})
+	option.List = option.Value
+	option.ObjectList = option.Value
+	option.Object = section:Input({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Placeholder = firstNonNil(settings.Placeholder, "Enter text and press Enter"),
+		Value = "",
+		Callback = function(value)
+			value = tostring(value or "")
+			if value ~= "" then
+				option:Add(value)
+				setControlValue(option.Object, "")
+			end
+		end,
+	})
+
+	local function syncList(silent)
+		option.List = option.Value
+		option.ObjectList = option.Value
+		if silent ~= true then
+			runUserCallback(option.Name, settings.Function or settings.Callback, option.Value)
+		end
+	end
+
+	function option:Add(value, silent)
+		value = tostring(value or "")
+		if value ~= "" and not table.find(option.Value, value) then
+			table.insert(option.Value, value)
+			syncList(silent)
+		end
+		return option
+	end
+	function option:Remove(value, silent)
+		local index = type(value) == "number" and value or table.find(option.Value, value)
+		if index and option.Value[index] ~= nil then
+			table.remove(option.Value, index)
+			syncList(silent)
+		end
+		return option
+	end
+	function option:Clear(silent)
+		table.clear(option.Value)
+		syncList(silent)
+		return option
+	end
+	function option:SetValue(values, silent)
+		option.Value = type(values) == "table" and cloneValue(values) or {}
+		syncList(silent)
+		return option
+	end
+	option.Set = option.SetValue
+	return registerOption(module, option.Name, option)
+end
+
+local function createFontOption(module, section, settings)
+	settings = settings or {}
+	local fonts = firstNonNil(settings.List, settings.Values, {
+		"Gotham", "Arial", "SourceSans", "Roboto", "Ubuntu", "Fantasy", "Code", "Highway",
+	})
+	settings.List = fonts
+	settings.Default = firstNonNil(settings.Default, settings.Value, fonts[1])
+	return createDropdownOption(module, section, settings)
+end
+
+local function createTargetsOption(module, section, settings)
+	settings = settings or {}
+	local labels = {}
+	local defaults = {}
+	local function addTarget(label, enabled)
+		table.insert(labels, label)
+		defaults[label] = enabled ~= false
+	end
+	if settings.Players ~= false then addTarget("Players", settings.Players) end
+	if settings.NPCs or settings.NPC then addTarget("NPCs", true) end
+	if settings.Friends ~= false then addTarget("Friends", settings.Friends) end
+	if settings.Walls ~= nil then addTarget("Walls", settings.Walls) end
+	if #labels == 0 then
+		addTarget("Players", true)
+		addTarget("NPCs", true)
+		addTarget("Friends", true)
+	end
+	local selected = {}
+	for _, label in ipairs(labels) do
+		if defaults[label] then table.insert(selected, label) end
+	end
+	local option = {
+		Name = tostring(settings.Name or "Targets"),
+		Type = "Targets",
+		Value = defaults,
+		Visible = true,
+		Destroyed = false,
+	}
+	for label, enabled in pairs(defaults) do
+		option[label] = enabled
+	end
+	local userCallback = settings.Function or settings.Callback
+
+	local function fromSelected(current, silent)
+		local map = {}
+		for _, label in ipairs(labels) do map[label] = false end
+		for _, value in ipairs(type(current) == "table" and current or {}) do
+			local label = type(value) == "table" and value.Title or value
+			if map[label] ~= nil then map[label] = true end
+		end
+		local changed = not valuesEqual(option.Value, map)
+		option.Value = map
+		for label, enabled in pairs(map) do option[label] = enabled end
+		if changed and silent ~= true then
+			runUserCallback(option.Name, userCallback, map)
+		end
+	end
+
+	option.Object = section:Dropdown({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Values = labels,
+		Value = selected,
+		Multi = true,
+		AllowNone = true,
+		Flag = resolveFlag(module, settings, option.Name),
+		Callback = function(current)
+			fromSelected(current, false)
+		end,
+	})
+
+	function option:SetValue(value, silent)
+		local newSelected = {}
+		if type(value) == "table" then
+			for _, label in ipairs(labels) do
+				if value[label] == true or table.find(value, label) then
+					table.insert(newSelected, label)
+				end
+			end
+		end
+		fromSelected(newSelected, silent)
+		setControlValue(option.Object, newSelected)
+		return option
+	end
+	option.Set = option.SetValue
+	function option:SetVisible(visible)
+		option.Visible = visible ~= false
+		setControlVisible(option.Object, option.Visible)
+		return option
+	end
+	function option:Save()
+		return cloneValue(option.Value)
+	end
+	function option:Load(value, silent)
+		return option:SetValue(value, silent)
+	end
+	function option:Destroy()
+		if not option.Destroyed then
+			option.Destroyed = true
+			destroyControl(option.Object)
+		end
+	end
+	return registerOption(module, option.Name, option)
+end
+
+local categoryIcons = {
+	Combat = "sword",
+	Blatant = "flame",
+	Render = "eye",
+	Utility = "wrench",
+	World = "globe",
+	Minigames = "gamepad-2",
+	Legit = "user-check",
+	Friends = "users",
+	Targets = "crosshair",
+}
+
+local function createCategoryObject(name, iconName, suppliedTab)
+	name = tostring(name or "Misc")
+	if d.Categories[name] and d.Categories[name].Type ~= "ServiceCategory" then
+		return d.Categories[name]
+	end
+	local tab = suppliedTab or ensureTab(name, { Icon = iconName or categoryIcons[name] or "folder" })
+	local category = {
 		Name = name,
+		Type = "Category",
 		Tab = tab,
 		Modules = {},
+		Options = {},
 	}
 
-	function cat:CreateModule(settings)
+	function category:CreateModule(settings)
 		settings = settings or {}
-		local modName = settings.Name or "Unnamed"
-		local fn = settings.Function or function() end
-
-		local mod = {
-			Name = modName,
-			Enabled = false,
-			Options = {},
-			Bind = settings.Bind or {},
-			Function = fn,
-			ExtraText = settings.ExtraText,
+		local moduleName = tostring(settings.Name or "Unnamed")
+		if category.Modules[moduleName] then
+			return category.Modules[moduleName]
+		end
+		local moduleCallback = settings.Function or settings.Callback or function() end
+		local module = {
+			Name = moduleName,
 			Category = name,
+			Enabled = firstNonNil(settings.Default, settings.Enabled, false) == true,
+			Options = {},
+			Connections = {},
+			Bind = type(settings.Bind) == "table" and settings.Bind or { Value = settings.Bind },
+			Function = moduleCallback,
+			ExtraText = settings.ExtraText,
 			NoSave = settings.NoSave,
+			Destroyed = false,
 		}
-
-		-- Use a Section per module for much better organization and design
-		local modSection = tab:Section({
-			Title = modName,
-			Desc = settings.Tooltip or settings.Description or "",
-			Opened = true,
+		local baseDescription = normalizeDescription(settings)
+		local section = tab:Section({
+			Title = moduleName,
+			Desc = baseDescription,
+			Opened = settings.Opened == true or settings.Expanded == true,
+			Box = settings.Box,
 		})
+		module.Section = section
 
-		-- Main toggle for the module inside its section
-		local modToggle = modSection:Toggle({
-			Title = "Enabled",
-			Desc = "Toggle this module",
-			Value = false,
-			Callback = function(state)
-				mod.Enabled = state == true
+		local function setEnabled(state, sourceIsControl, silent)
+			state = state == true
+			if module.Destroyed or module.Enabled == state then
+				return module
+			end
+			module.Enabled = state
+			if not sourceIsControl then
+				setControlValue(module.Object, state)
+			end
+			if silent ~= true then
 				task.spawn(function()
-					local ok, err = pcall(fn, mod.Enabled)
-					if not ok then
-						d:CreateNotification("Module Error", modName .. ": " .. tostring(err), 6, "error")
-					end
+					runUserCallback(moduleName, moduleCallback, state)
 				end)
+			end
+			return module
+		end
+
+		module.Object = section:Toggle({
+			Title = "Enabled",
+			Desc = "Enable or disable " .. moduleName,
+			Value = module.Enabled,
+			Flag = (settings.NoSave and nil or (settings.Flag or sanitizeName(name .. "/" .. moduleName .. "/enabled"))),
+			Callback = function(state)
+				setEnabled(state, true, false)
 			end,
 		})
 
-		mod.Object = modToggle
-		mod.SetEnabled = function(_, state)
-			mod.Enabled = state
-			pcall(function() modToggle:Set(state) end)
-			pcall(fn, state)
+		function module:SetEnabled(state, silent)
+			return setEnabled(state, false, silent)
 		end
-
-		d.Modules[modName] = mod
-		cat.Modules[modName] = mod
-
-		-- Attach creator helpers that modules expect. Now add to the module's Section
-		local function attachElementCreator(elementType)
-			return function(_, opt)
-				opt = opt or {}
-				local elName = opt.Name or (elementType .. "_" .. #mod.Options)
-
-				local created
-				if elementType == "Toggle" then
-					created = modSection:Toggle({
-						Title = opt.Name or "Option",
-						Desc = opt.Desc or opt.Tooltip,
-						Value = (opt.Default ~= nil and opt.Default) or (opt.Value ~= nil and opt.Value) or false,
-						Callback = function(v)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].Value = v
-							if type(opt.Function) == "function" then pcall(opt.Function, v) end
-						end,
-					})
-					-- Add legacy .Toggle() method for compatibility with old module code that calls element:Toggle()
-					local origApi = makeOptionApi( (opt.Default ~= nil and opt.Default) or (opt.Value ~= nil and opt.Value) or false , opt.Function)
-					origApi.Object = created
-					origApi.Toggle = function(self)
-						local new = not (self.Value or false)
-						self.Value = new
-						pcall(function()
-							if created and created.Set then created:Set(new) end
-						end)
-						if type(opt.Function) == "function" then pcall(opt.Function, new) end
-						return self
-					end
-					mod.Options[elName] = origApi
-					return origApi
-				elseif elementType == "Slider" then
-					local minV = opt.Min or opt.MinValue or 0
-					local maxV = opt.Max or opt.MaxValue or 100
-					local defV = opt.Default or opt.Value or minV
-					created = modSection:Slider({
-						Title = opt.Name or "Slider",
-						Desc = opt.Desc,
-						Value = { Min = minV, Max = maxV, Default = defV },
-						Step = opt.Step or 1,
-						Callback = function(v)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].Value = v
-							if type(opt.Function) == "function" then pcall(opt.Function, v) end
-						end,
-					})
-				elseif elementType == "Dropdown" then
-					created = modSection:Dropdown({
-						Title = opt.Name or "Dropdown",
-						Desc = opt.Desc,
-						Values = opt.List or opt.Options or { "Option1", "Option2" },
-						Value = opt.Default or opt.Value,
-						Multi = opt.Multi or false,
-						SearchBarEnabled = opt.Search or false,
-						Callback = function(v)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].Value = v
-							if type(opt.Function) == "function" then pcall(opt.Function, v) end
-						end,
-					})
-				elseif elementType == "Color" or elementType == "ColorSlider" then
-					created = modSection:Colorpicker({
-						Title = opt.Name or "Color",
-						Default = opt.Default or Color3.fromRGB(255, 0, 80),
-						Callback = function(c)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].Value = c
-							if type(opt.Function) == "function" then pcall(opt.Function, c) end
-						end,
-					})
-				elseif elementType == "Keybind" then
-					created = modSection:Keybind({
-						Title = opt.Name or "Keybind",
-						Desc = opt.Desc,
-						Default = opt.Default or opt.Value,
-						Callback = function(k)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].Value = k
-							if type(opt.Function) == "function" then pcall(opt.Function, k) end
-						end,
-					})
-				elseif elementType == "Input" or elementType == "TextBox" then
-					created = modSection:Input({
-						Title = opt.Name or "Input",
-						Placeholder = opt.Placeholder or "",
-						Default = opt.Default or "",
-						Callback = function(v)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].Value = v
-							if type(opt.Function) == "function" then pcall(opt.Function, v) end
-						end,
-					})
-				elseif elementType == "TwoSlider" then
-					-- Emulate TwoSlider with two Sliders for min/max (common for CPS, velocity, etc.)
-					local minV = opt.Min or opt.MinValue or 0
-					local maxV = opt.Max or opt.MaxValue or 100
-					local defMin = opt.DefaultMin or opt.Min or minV
-					local defMax = opt.DefaultMax or opt.Max or maxV
-					local minSlider = modSection:Slider({
-						Title = (opt.Name or "Range") .. " Min",
-						Value = { Min = minV, Max = maxV, Default = defMin },
-						Step = opt.Step or 1,
-						Callback = function(v)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].ValueMin = v
-							if type(opt.Function) == "function" then pcall(opt.Function, v, mod.Options[elName].ValueMax) end
-						end,
-					})
-					local maxSlider = modSection:Slider({
-						Title = (opt.Name or "Range") .. " Max",
-						Value = { Min = minV, Max = maxV, Default = defMax },
-						Step = opt.Step or 1,
-						Callback = function(v)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].ValueMax = v
-							if type(opt.Function) == "function" then pcall(opt.Function, mod.Options[elName].ValueMin, v) end
-						end,
-					})
-					created = { MinSlider = minSlider, MaxSlider = maxSlider } -- for object ref
-					mod.Options[elName] = {
-						ValueMin = defMin,
-						ValueMax = defMax,
-						Object = created,
-						SetValue = function(self, mn, mx)
-							self.ValueMin = mn
-							self.ValueMax = mx
-							pcall(function() minSlider:Set(mn) end)
-							pcall(function() maxSlider:Set(mx) end)
-						end
-					}
-					return mod.Options[elName]
-				elseif elementType == "TextList" then
-					-- Basic emulation for TextList (e.g. AutoToxic messages). Use Input + display
-					created = modSection:Input({
-						Title = opt.Name or "Add to list",
-						Placeholder = "Enter text and press enter (basic list)",
-						Default = "",
-						Callback = function(v)
-							if v and v ~= "" then
-								mod.Options[elName] = mod.Options[elName] or { Value = {} }
-								table.insert(mod.Options[elName].Value, v)
-								d:CreateNotification("List Updated", modName .. " added: " .. v, 3)
-								if type(opt.Function) == "function" then pcall(opt.Function, mod.Options[elName].Value) end
-							end
-						end,
-					})
-					mod.Options[elName] = makeOptionApi(opt.Default or {}, opt.Function)
-					mod.Options[elName].Object = created
-					mod.Options[elName].Value = mod.Options[elName].Value or {}
-					return mod.Options[elName]
-				elseif elementType == "Font" then
-					-- Emulate Font with dropdown of common Roblox fonts
-					local fonts = {"Gotham", "Arial", "SourceSans", "Roboto", "Ubuntu", "Fantasy", "Code", "Highway"}
-					created = modSection:Dropdown({
-						Title = opt.Name or "Font",
-						Options = fonts,
-						Callback = function(v)
-							mod.Options[elName] = mod.Options[elName] or {}
-							mod.Options[elName].Value = v
-							if type(opt.Function) == "function" then pcall(opt.Function, v) end
-						end,
-					})
-				else
-					-- Fallback
-					created = modSection:Paragraph({
-						Title = opt.Name or elementType,
-						Content = opt.Desc or "",
-					})
-				end
-
-				local optApi = makeOptionApi(opt.Default or opt.Value, opt.Function)
-				optApi.Object = created
-				mod.Options[elName] = optApi
-				return optApi
+		module.SetState = module.SetEnabled
+		function module:Toggle(silent)
+			return module:SetEnabled(not module.Enabled, silent)
+		end
+		function module:SetExtraText(text)
+			module.ExtraText = text
+			local description = baseDescription
+			if text ~= nil and tostring(text) ~= "" then
+				description = description ~= "" and (description .. " • " .. tostring(text)) or tostring(text)
 			end
+			pcall(function()
+				if type(section.SetDesc) == "function" then section:SetDesc(description) end
+			end)
+			return module
+		end
+		function module:Clean(resource)
+			if resource ~= nil then table.insert(module.Connections, resource) end
+			return resource
+		end
+		function module:Destroy()
+			if module.Destroyed then return end
+			module.Destroyed = true
+			if module.Enabled then
+				module.Enabled = false
+				runUserCallback(moduleName, moduleCallback, false)
+			end
+			for _, option in pairs(module.Options) do
+				if type(option) == "table" and type(option.Destroy) == "function" then
+					pcall(option.Destroy, option)
+				end
+			end
+			for index = #module.Connections, 1, -1 do
+				local resource = module.Connections[index]
+				if isConnection(resource) then
+					pcall(resource.Disconnect, resource)
+				elseif type(resource) == "function" then
+					pcall(resource)
+				elseif type(resource) == "table" and type(resource.Destroy) == "function" then
+					pcall(resource.Destroy, resource)
+				end
+			end
+			pcall(function() if type(section.Destroy) == "function" then section:Destroy() end end)
+			category.Modules[moduleName] = nil
+			if d.Modules[moduleName] == module then d.Modules[moduleName] = nil end
+			d.Modules[name .. "/" .. moduleName] = nil
 		end
 
-		-- Attach all common creators
-		mod.CreateToggle = attachElementCreator("Toggle")
-		mod.CreateSlider = attachElementCreator("Slider")
-		mod.CreateDropdown = attachElementCreator("Dropdown")
-		mod.CreateColorSlider = attachElementCreator("Color")
-		mod.CreateColorpicker = attachElementCreator("Color")
-		mod.CreateKeybind = attachElementCreator("Keybind")
-		mod.CreateInput = attachElementCreator("Input")
-		mod.CreateTextBox = attachElementCreator("Input")
-		mod.CreateTwoSlider = attachElementCreator("TwoSlider")
-		mod.CreateTextList = attachElementCreator("TextList")
-		mod.CreateFont = attachElementCreator("Font")
-		mod.CreateButton = function(_, opt)
-			return modSection:Button({
-				Title = opt.Name or "Action",
-				Icon = opt.Icon,
-				Callback = opt.Function or function() end,
-			})
+		function module:CreateToggle(optionSettings)
+			return createToggleOption(module, section, optionSettings)
 		end
-
-		-- Improved Targets support
-		mod.CreateTargets = function(_, opt)
-			opt = opt or {}
-			local list = {}
-			if opt.Players ~= false then table.insert(list, "Players") end
-			if opt.NPCs or opt.NPC then table.insert(list, "NPCs") end
-			if opt.Friends ~= false then table.insert(list, "Friends") end
-			if opt.Walls then table.insert(list, "Walls") end
-			if #list == 0 then list = {"Players", "NPCs", "Friends", "All"} end
-			local initial = {}
-			for _, k in ipairs(list) do initial[k] = true end
-			local dd = modSection:Dropdown({
-				Title = opt.Name or "Targets",
-				Values = list,
-				Multi = true,
-				Callback = function(selected)
-					local val = {}
-					for _, s in ipairs(selected or {}) do val[s] = true end
-					mod.Options.Targets = mod.Options.Targets or {}
-					mod.Options.Targets.Value = val
-					-- also expose flags directly for legacy module code
-					for _, k in ipairs(list) do mod.Options.Targets[k] = val[k] or false end
-					if type(opt.Function) == "function" then pcall(opt.Function, val) end
+		function module:CreateSlider(optionSettings)
+			return createSliderOption(module, section, optionSettings)
+		end
+		function module:CreateDropdown(optionSettings)
+			return createDropdownOption(module, section, optionSettings)
+		end
+		function module:CreateColorSlider(optionSettings)
+			return createColorOption(module, section, optionSettings, true)
+		end
+		function module:CreateColorpicker(optionSettings)
+			return createColorOption(module, section, optionSettings, false)
+		end
+		module.CreateColorPicker = module.CreateColorpicker
+		function module:CreateKeybind(optionSettings)
+			return createKeybindOption(module, section, optionSettings)
+		end
+		function module:CreateInput(optionSettings)
+			return createInputOption(module, section, optionSettings)
+		end
+		module.CreateTextBox = module.CreateInput
+		function module:CreateTwoSlider(optionSettings)
+			return createTwoSliderOption(module, section, optionSettings)
+		end
+		function module:CreateTextList(optionSettings)
+			return createTextListOption(module, section, optionSettings)
+		end
+		function module:CreateFont(optionSettings)
+			return createFontOption(module, section, optionSettings)
+		end
+		function module:CreateTargets(optionSettings)
+			return createTargetsOption(module, section, optionSettings)
+		end
+		function module:CreateButton(optionSettings)
+			optionSettings = optionSettings or {}
+			local button = section:Button({
+				Title = optionSettings.Name or "Action",
+				Desc = normalizeDescription(optionSettings),
+				Icon = optionSettings.Icon,
+				Callback = function()
+					runUserCallback(optionSettings.Name or moduleName, optionSettings.Function or optionSettings.Callback)
 				end,
 			})
-			local api = makeOptionApi(initial, opt.Function)
-			api.Object = dd
-			-- expose flags
-			for _, k in ipairs(list) do api[k] = initial[k] end
-			mod.Options.Targets = api
-			return api
+			return {
+				Name = optionSettings.Name or "Action",
+				Type = "Button",
+				Object = button,
+				Press = function()
+					runUserCallback(optionSettings.Name or moduleName, optionSettings.Function or optionSettings.Callback)
+				end,
+				Destroy = function()
+					destroyControl(button)
+				end,
+			}
+		end
+		function module:CreateParagraph(optionSettings)
+			optionSettings = optionSettings or {}
+			return section:Paragraph({
+				Title = optionSettings.Name or optionSettings.Title or "Info",
+				Desc = firstNonNil(optionSettings.Desc, optionSettings.Content, optionSettings.Text, ""),
+			})
+		end
+		module.CreateLabel = module.CreateParagraph
+		function module:CreateDivider()
+			return section:Divider({})
+		end
+		function module:CreateSpace()
+			return section:Space({})
 		end
 
-		mod.SetExtraText = function(_, txt)
-			mod.ExtraText = txt
-			-- Could enhance section desc
-			pcall(function() modSection:SetDesc(txt or "") end)
+		for _, methodName in ipairs({
+			"SetEnabled", "Toggle", "SetExtraText", "Clean", "Destroy",
+			"CreateToggle", "CreateSlider", "CreateDropdown", "CreateColorSlider",
+			"CreateColorpicker", "CreateKeybind", "CreateInput", "CreateTextBox",
+			"CreateTwoSlider", "CreateTextList", "CreateFont", "CreateTargets",
+			"CreateButton", "CreateParagraph", "CreateLabel", "CreateDivider", "CreateSpace",
+		}) do
+			enableDotAndColon(module, methodName)
 		end
+		module.SetState = module.SetEnabled
+		module.CreateColorPicker = module.CreateColorpicker
 
-		return mod
+		category.Modules[moduleName] = module
+		d.Modules[name .. "/" .. moduleName] = module
+		if d.Modules[moduleName] == nil then
+			d.Modules[moduleName] = module
+		end
+		return module
 	end
 
-	-- Support sub module categories (Inventory, Minigames under World etc.)
-	function cat:CreateModuleCategory(subSettings)
-		local subName = subSettings.Name
-		local subTab = Tabs[subName] or Window:Tab({ Title = subName, Icon = "folder" })
-		Tabs[subName] = subTab
-
-		local subCat = { Name = subName, Tab = subTab, Modules = {} }
-		function subCat:CreateModule(s)
-			-- delegate to same logic but on the sub tab
-			local m = cat:CreateModule(s)
-			-- also register under this sub
-			subCat.Modules[s.Name] = m
-			return m
-		end
-		return subCat
+	function category:CreateModuleCategory(settings)
+		settings = type(settings) == "table" and settings or { Name = settings }
+		local subName = tostring(settings.Name or (name .. " Subcategory"))
+		return createCategoryObject(subName, settings.Icon or "folder", ensureTab(subName, {
+			Icon = settings.Icon or "folder",
+			Desc = settings.Desc or settings.Description or (subName .. " modules"),
+		}))
 	end
 
-	function cat:CreateDivider() end -- no-op for WindUI
+	function category:CreateDivider()
+		return tab:Divider({})
+	end
+	function category:CreateSpace()
+		return tab:Space({})
+	end
+	function category:CreateButton(settings)
+		settings = settings or {}
+		return tab:Button({
+			Title = settings.Name or "Action",
+			Desc = normalizeDescription(settings),
+			Icon = settings.Icon,
+			Callback = function()
+				runUserCallback(settings.Name or name, settings.Function or settings.Callback)
+			end,
+		})
+	end
+	function category:CreateToggle(settings)
+		local serviceModule = category.Modules.__Options
+		if not serviceModule then
+			serviceModule = category:CreateModule({ Name = "Options", NoSave = true, Opened = true })
+			category.Modules.__Options = serviceModule
+		end
+		return serviceModule:CreateToggle(settings)
+	end
 
-	d.Categories[name] = cat
-	return cat
+	for _, methodName in ipairs({
+		"CreateModule", "CreateModuleCategory", "CreateDivider", "CreateSpace", "CreateButton", "CreateToggle",
+	}) do
+		enableDotAndColon(category, methodName)
+	end
+
+	d.Categories[name] = category
+	return category
 end
 
--- Create the primary categories expected by modules
-d.CreateCategory = function(self, cfg)
-	-- legacy path sometimes used
-	return createCategoryObj(cfg.Name, cfg.Icon and "folder" or nil)
+function d.CreateCategory(self, config)
+	if self ~= d then
+		config = self
+	end
+	config = type(config) == "table" and config or { Name = config }
+	return createCategoryObject(config.Name or "Misc", config.Icon)
 end
 
-createCategoryObj("Combat", "sword")
-createCategoryObj("Blatant", "flame")
-createCategoryObj("Render", "eye")
-createCategoryObj("Utility", "wrench")
-createCategoryObj("World", "globe")
-createCategoryObj("Minigames", "gamepad-2")
-createCategoryObj("Legit", "user-check")
-
--- Legacy structure some modules / bootstrap expect
-d.Legit = d.Legit or { Modules = {}, CreateModule = function(_, s) return d.Categories.Legit:CreateModule(s) end }
-d.Overlays = d.Overlays or {}
-
--- Optional: support Bad:CreateOverlay used in some modules
-function d:CreateOverlay(settings)
-	local name = (settings and settings.Name) or "Overlay"
-	local ov = d.Categories.Render:CreateModule(settings or { Name = name })
-	d.Overlays[name] = ov
-	return ov
+for _, categoryName in ipairs({ "Combat", "Blatant", "Render", "Utility", "World", "Minigames", "Legit", "Friends", "Targets" }) do
+	createCategoryObject(categoryName, categoryIcons[categoryName])
 end
 
--- Also ensure Main / Friends / Targets exist for the bootstrap code in main.lua
-d.Categories.Main = d.Categories.Main or {
+d.Legit = d.Categories.Legit
+
+function d.CreateOverlay(self, settings)
+	if self ~= d then settings = self end
+	settings = settings or {}
+	local name = tostring(settings.Name or "Overlay")
+	if d.Overlays[name] then
+		return d.Overlays[name]
+	end
+	local overlay = d.Categories.Render:CreateModule(settings)
+	d.Overlays[name] = overlay
+	return overlay
+end
+
+local mainCategory = {
 	Type = "ServiceCategory",
 	Name = "Main",
-	Options = {
-		["GUI bind indicator"] = { Enabled = true },
-		["Teams by server"] = { Enabled = false },
-		["Use team color"] = { Enabled = true },
-	},
+	Options = {},
+	Modules = {},
 }
--- Legacy buttons on Main (e.g. Uninject in old GUI) route to General tab
-d.Categories.Main.CreateButton = function(_, opt)
-	return (Tabs.General or Tabs.Settings):Button({
-		Title = opt.Name or "Action",
-		Icon = opt.Icon,
-		Callback = opt.Function or function() end,
-	})
-end
-d.Categories.Main.CreateToggle = function(_, opt)
-	return (Tabs.General or Tabs.Settings):Toggle({
-		Title = opt.Name or "Option",
-		Value = opt.Default or false,
-		Callback = opt.Function or function() end,
-	})
-end
-d.Categories.Friends = d.Categories.Friends or createCategoryObj("Friends", "users")
-d.Categories.Targets = d.Categories.Targets or createCategoryObj("Targets", "crosshair")
+d.Categories.Main = mainCategory
 
--- Minimal Clean support expected by some bootstrap paths
-d.Connections = d.Connections or {}
-function d:Clean(conn)
-	if conn and typeof(conn) == "RBXScriptConnection" or type(conn) == "table" and conn.Disconnect then
-		table.insert(d.Connections, conn)
+local generalModule = {
+	Name = "General",
+	Category = "Main",
+	Options = mainCategory.Options,
+}
+
+local function createMainToggle(name, default, callback)
+	local option = makeOptionApi({ Name = name, Type = "Toggle", Value = default, Callback = callback })
+	option.Object = Tabs.General:Toggle({
+		Title = name,
+		Value = default,
+		Flag = sanitizeName("main/" .. name),
+		Callback = function(value)
+			option:_FromControl(value == true)
+		end,
+	})
+	mainCategory.Options[name] = option
+	return option
+end
+
+mainCategory.Options["GUI bind indicator"] = createMainToggle("GUI Bind Indicator", true)
+mainCategory.Options["Teams by server"] = createMainToggle("Teams by server", false)
+mainCategory.Options["Use team color"] = createMainToggle("Use team color", true)
+-- Preserve exact legacy keys and casing.
+mainCategory.Options["GUI bind indicator"] = mainCategory.Options["GUI Bind Indicator"] or mainCategory.Options["GUI bind indicator"]
+
+function mainCategory:CreateButton(settings)
+	settings = settings or {}
+	return Tabs.General:Button({
+		Title = settings.Name or "Action",
+		Desc = normalizeDescription(settings),
+		Icon = settings.Icon,
+		Callback = function()
+			runUserCallback(settings.Name or "Main action", settings.Function or settings.Callback)
+		end,
+	})
+end
+
+function mainCategory:CreateToggle(settings)
+	settings = settings or {}
+	local name = tostring(settings.Name or "Option")
+	if mainCategory.Options[name] then
+		return mainCategory.Options[name]
 	end
+	local option = createMainToggle(name, firstNonNil(settings.Default, settings.Value, false) == true, settings.Function or settings.Callback)
+	mainCategory.Options[name] = option
+	return option
 end
-d.Clean = d.Clean
 
--- General quick actions
 Tabs.General:Button({
 	Title = "Uninject / Self Destruct",
 	Icon = "x",
 	Callback = function()
-		d:CreateNotification("BadWars", "Uninjecting...", 2)
-		pcall(function() Window:Destroy() end)
-		if d.Uninject then d:Uninject() end
+		d:CreateNotification("BadWars", "Uninjecting...", 2, "warning")
+		task.defer(function()
+			d:Uninject()
+		end)
 	end,
 })
-
-Tabs.General:Toggle({
-	Title = "GUI Bind Indicator",
-	Value = true,
-	Callback = function(v)
-		if d.Categories.Main and d.Categories.Main.Options then
-			d.Categories.Main.Options["GUI bind indicator"] = { Enabled = v }
-		end
-	end,
-})
-
-Tabs.General:Toggle({
-	Title = "Teams by server",
-	Value = false,
-	Callback = function(v)
-		if d.Categories.Main and d.Categories.Main.Options then
-			d.Categories.Main.Options["Teams by server"] = { Enabled = v }
-		end
-	end,
-})
-
-Tabs.General:Toggle({
-	Title = "Use team color",
-	Value = true,
-	Callback = function(v)
-		if d.Categories.Main and d.Categories.Main.Options then
-			d.Categories.Main.Options["Use team color"] = { Enabled = v }
-		end
-	end,
-})
-
--- Additional General options that main.lua expects
-if d.Categories.Main and type(d.Categories.Main) == "table" then
-	d.Categories.Main.Options = d.Categories.Main.Options or {}
-	d.Categories.Main.Options["Teams by server"] = { Enabled = false }
-	d.Categories.Main.Options["Use team color"] = { Enabled = true }
-end
-
 Tabs.General:Space()
 Tabs.General:Paragraph({
 	Title = "Quick Info",
-	Content = "Use RightShift (or configured key) to toggle the UI. All module changes are live and profile-persisted.",
+	Desc = "Use RightShift to toggle the interface. Module sections stay collapsed until opened, reducing startup layout cost.",
 })
 
--- Profile / config helpers used by main
+local currentProfileName = "default"
+local function getConfigManager()
+	return type(Window) == "table" and Window.ConfigManager or nil
+end
+
+local function saveProfile(name)
+	name = sanitizeName(name or currentProfileName)
+	currentProfileName = name
+	if type(Window.SaveConfig) == "function" then
+		local ok, success, result = pcall(Window.SaveConfig, Window, name)
+		if ok then return success ~= false, result end
+	end
+	local manager = getConfigManager()
+	if not manager then return false, "Config manager is unavailable" end
+	local config = manager:GetConfig(name)
+	if type(config) ~= "table" or type(config.Save) ~= "function" then
+		config = manager:CreateConfig(name, true)
+	end
+	if not config then return false, "Unable to create profile" end
+	config:SetAsCurrent()
+	return true, config:Save()
+end
+
+local function loadProfile(name)
+	name = sanitizeName(name or currentProfileName)
+	currentProfileName = name
+	if type(Window.LoadConfig) == "function" then
+		local ok, success, result = pcall(Window.LoadConfig, Window, name)
+		if ok then return success ~= false, result end
+	end
+	local manager = getConfigManager()
+	if not manager then return false, "Config manager is unavailable" end
+	local config = manager:GetConfig(name)
+	if type(config) ~= "table" or type(config.Load) ~= "function" then
+		config = manager:CreateConfig(name, true)
+	end
+	if not config then return false, "Unable to create profile" end
+	config:SetAsCurrent()
+	return config:Load()
+end
+
+Tabs.Settings:Toggle({
+	Title = "UI Transparency",
+	Desc = "Use WindUI's transparent surface treatment",
+	Value = true,
+	Flag = "settings/transparency",
+	Callback = function(value)
+		WindUI.TransparencyValue = value and 0.08 or 0
+		pcall(function()
+			if type(Window.ToggleTransparency) == "function" then
+				Window:ToggleTransparency(value)
+			end
+		end)
+	end,
+})
+Tabs.Settings:Slider({
+	Title = "UI Scale",
+	Desc = "Adjust the interface without automatic resize overrides",
+	Value = { Min = 0.65, Max = 1.25, Default = 0.9 },
+	Step = 0.05,
+	Flag = "settings/ui_scale",
+	Callback = function(value)
+		pcall(function() Window:SetUIScale(value) end)
+	end,
+})
+Tabs.Settings:Input({
+	Title = "Profile Name",
+	Value = currentProfileName,
+	Placeholder = "default",
+	Callback = function(value)
+		if tostring(value or "") ~= "" then
+			currentProfileName = sanitizeName(value)
+		end
+	end,
+})
+Tabs.Settings:Button({
+	Title = "Save Current Profile",
+	Icon = "save",
+	Callback = function()
+		local ok, result = saveProfile(currentProfileName)
+		d:CreateNotification("Profiles", ok and ("Saved '" .. currentProfileName .. "'") or tostring(result), 4, ok and "success" or "error")
+	end,
+})
+Tabs.Settings:Button({
+	Title = "Load Profile",
+	Icon = "folder-open",
+	Callback = function()
+		local ok, result = loadProfile(currentProfileName)
+		d:CreateNotification("Profiles", ok and ("Loaded '" .. currentProfileName .. "'") or tostring(result), 4, ok and "success" or "error")
+	end,
+})
+Tabs.Settings:Button({
+	Title = "Reinject / Reload",
+	Icon = "refresh-cw",
+	Callback = function()
+		d:CreateNotification("BadWars", "Reloading...", 2, "info")
+		shared.BadReload = true
+		task.defer(function()
+			local ok, err = pcall(function()
+				if shared.BadDeveloper and type(readfile) == "function" then
+					local source = readfile("badscript/loader.lua")
+					assert(type(source) == "string", "loader.lua could not be read")
+					assert(loadstring(source, "@badscript/loader.lua"))()
+				else
+					assert(loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true), "@BadWarsLoader"))()
+				end
+			end)
+			if not ok then
+				d:CreateNotification("Reload Error", tostring(err), 7, "error")
+			end
+		end)
+	end,
+})
+
 function d.Save(self, target)
-	pcall(function() Window:SaveConfig() end)
+	if self ~= d then target = self end
+	return saveProfile(type(target) == "string" and target or currentProfileName)
 end
 
 function d.Load(self, saved)
-	pcall(function() Window:LoadConfig() end)
+	if self ~= d then saved = self end
+	return loadProfile(type(saved) == "string" and saved or currentProfileName)
 end
 
-function d.Change() end
-
-function d.Uninject()
-	-- Best effort cleanup
-	pcall(function()
-		for _, c in pairs(d.Connections or {}) do pcall(function() c:Disconnect() end) end
-	end)
-	pcall(function() Window:Destroy() end)
-	if shared then shared.Bad = nil end
+function d.Change()
+	return d
 end
 
-d.RefreshScrollCanvases = function() end -- not needed
-
--- Finalize and return the API exactly like the old gui did
-d.gui = Window -- expose for debug
-d.Window = Window
-d.WindUI = WindUI
-d.Version = "WindUI-Adapter-1.0"
-d.PremiumBuild = true
-d.Name = "BadWars-WindUI"
-
--- Control visibility + welcome toast/log: loader/main calls :Show() ONLY after full bootstrap finishes
-function d:Show()
-	pcall(function()
-		if Window and Window.UIElements and Window.UIElements.Main then
-			Window.UIElements.Main.Visible = true
-			Window.UIElements.Main.GroupTransparency = 0
+function d.Clean(self, resource)
+	if self ~= d then resource = self end
+	if resource ~= nil then
+		table.insert(d.Resources, resource)
+		if isConnection(resource) then
+			table.insert(d.Connections, resource)
 		end
-		if Window and Window.Open then
-			Window:Open()
-		elseif Window and Window.Toggle then
-			Window:Toggle()
-		end
-		-- Show any open button
-		if Window and Window.UIElements then
-			for k, v in pairs(Window.UIElements) do
-				if v and typeof(v) == "Instance" and (k:lower():find("open") or (v.Name or ""):lower():find("open")) then
-					v.Visible = true
+	end
+	return resource
+end
+
+function d.RefreshScrollCanvases()
+	local roots = { WindUI.ScreenGui, WindUI.DropdownGui, WindUI.NotificationGui }
+	for _, root in ipairs(roots) do
+		if typeof(root) == "Instance" then
+			for _, descendant in ipairs(root:GetDescendants()) do
+				if descendant:IsA("ScrollingFrame") then
+					pcall(function()
+						if descendant.AutomaticCanvasSize == Enum.AutomaticSize.None then
+							descendant.AutomaticCanvasSize = Enum.AutomaticSize.Y
+						end
+					end)
 				end
 			end
 		end
-		-- Heavy custom animation using spr for open
-		if spr and Window and Window.UIElements and Window.UIElements.Main then
-			local main = Window.UIElements.Main
-			-- Spring the transparency and perhaps size for nice feel
-			spr.target(main, 0.7, 4, { GroupTransparency = 0 })
-		end
-	end)
+	end
+	return true
+end
+
+function d.WaitForModuleReadiness()
+	return not d.Destroyed
+end
+
+function d.FinalizeInitialLayout()
+	d:RefreshScrollCanvases()
+	return true
+end
+
+local welcomeShown = false
+function d.Show(self)
+	if self ~= d then return d:Show() end
+	if d.Destroyed then return false end
+	d.Visible = true
 	pcall(function()
-		d:CreateNotification("BadWars", "WindUI integrated. All modules, dropdowns, and notifications are now powered by WindUI.", 7, "success")
-		refreshNotifTab()
+		if type(Window.Open) == "function" then Window:Open() end
 	end)
+	setWindowHidden(false)
+	task.defer(function()
+		if d.Visible and not d.Destroyed then setWindowHidden(false) end
+	end)
+	if not welcomeShown then
+		welcomeShown = true
+		d:CreateNotification("BadWars", "WindUI compatibility layer initialized successfully.", 5, "success")
+	end
+	return true
 end
-d.Show = d.Show
 
--- Expose a couple of useful things on shared for modules
+function d.Hide(self)
+	if self ~= d then return d:Hide() end
+	if d.Destroyed then return false end
+	d.Visible = false
+	pcall(function()
+		if type(Window.Close) == "function" then Window:Close() end
+	end)
+	setWindowHidden(true)
+	return true
+end
+
+function d.Toggle(self)
+	if self ~= d then return d:Toggle() end
+	if d.Visible then return d:Hide() end
+	return d:Show()
+end
+
+function d.Uninject(self)
+	if self ~= d then return d:Uninject() end
+	if d.Destroyed then return false end
+	d.Destroyed = true
+	d.Visible = false
+
+	for _, module in pairs(d.Modules) do
+		if type(module) == "table" and module.Enabled and type(module.SetEnabled) == "function" then
+			pcall(module.SetEnabled, module, false)
+		end
+	end
+
+	for index = #d.Resources, 1, -1 do
+		local resource = d.Resources[index]
+		if isConnection(resource) then
+			pcall(resource.Disconnect, resource)
+		elseif type(resource) == "function" then
+			pcall(resource)
+		elseif type(resource) == "table" and type(resource.Destroy) == "function" then
+			pcall(resource.Destroy, resource)
+		elseif typeof(resource) == "Instance" then
+			pcall(resource.Destroy, resource)
+		end
+		d.Resources[index] = nil
+	end
+	table.clear(d.Connections)
+
+	pcall(function()
+		if type(Window.Destroy) == "function" then Window:Destroy() end
+	end)
+	if shared then
+		if shared.Bad == d then shared.Bad = nil end
+		if shared.BadGUI == d then shared.BadGUI = nil end
+	end
+	return true
+end
+
 if shared then
-	shared.Bad = shared.Bad or {}
-	shared.Bad.CreateNotification = function(...) return d:CreateNotification(...) end
-end
-
--- Legacy shims so old bootstrap code in main.lua (showInterface etc.) doesn't explode on WindUI
-d.WaitForModuleReadiness = d.WaitForModuleReadiness or function() end
-d.FinalizeInitialLayout = d.FinalizeInitialLayout or function() end
-
--- If some old code does api.gui:FindFirstChild etc., provide a safe no-op table
-if not d.gui or type(d.gui) ~= "table" then
-	d.gui = d.Window or {}
+	shared.BadGUI = d
+	if shared.Bad == nil then
+		shared.Bad = d
+	elseif type(shared.Bad) == "table" then
+		shared.Bad.CreateNotification = function(...)
+			return d:CreateNotification(...)
+		end
+		shared.Bad.GUI = d
+	end
 end
 
 return d

@@ -391,6 +391,36 @@ Tabs.Modules:Paragraph({
 	Desc = "RightShift toggles the window. Options are synchronized with their legacy module objects and can be persisted with profile flags.",
 })
 
+local moduleHealthProgress
+local function updateModuleHealthProgress(ready, total)
+	if moduleHealthProgress then
+		local pct = total > 0 and math.floor((ready / total) * 100 + 0.5) or 0
+		if type(moduleHealthProgress.Set) == "function" then
+			pcall(moduleHealthProgress.Set, moduleHealthProgress, pct)
+		end
+	end
+end
+
+moduleHealthProgress = Tabs.Modules:ProgressBar({
+	Title = "Module Health",
+	Desc = "Percentage of modules loaded successfully",
+	Value = { Min = 0, Max = 100, Default = 0 },
+	DisplayMode = "Percent",
+	Animate = true,
+})
+
+-- Update health progress after modules load
+task.defer(function()
+	task.wait(2)
+	local B = shared.Bad
+	if B and type(B.GetBedWarsModuleHealth) == "function" then
+		local report = B:GetBedWarsModuleHealth()
+		if type(report) == "table" and report.Total then
+			updateModuleHealthProgress(report.Ready or 0, report.Total)
+		end
+	end
+end)
+
 local notificationLog = {}
 local MAX_NOTIFICATION_LOG = 60
 local notificationsEnabled = true
@@ -1411,6 +1441,107 @@ local function createCategoryObject(name, iconName, suppliedTab)
 		function module:CreateSpace()
 			return section:Space({})
 		end
+		function module:CreateProgressBar(optionSettings)
+			optionSettings = optionSettings or {}
+			local minimum = tonumber(firstNonNil(optionSettings.Min, optionSettings.MinValue, 0)) or 0
+			local maximum = tonumber(firstNonNil(optionSettings.Max, optionSettings.MaxValue, 100)) or 100
+			if maximum < minimum then minimum, maximum = maximum, minimum end
+			local initial = tonumber(firstNonNil(optionSettings.Default, optionSettings.Value, optionSettings.Current, minimum)) or minimum
+			initial = math.clamp(initial, minimum, maximum)
+			local option = makeOptionApi({
+				Name = optionSettings.Name or "Progress",
+				Type = "ProgressBar",
+				Value = initial,
+				Callback = nil,
+				CallbackOnSet = false,
+			})
+			option.Min = minimum
+			option.Max = maximum
+			option.Object = section:ProgressBar({
+				Title = option.Name,
+				Desc = normalizeDescription(optionSettings),
+				Value = { Min = minimum, Max = maximum, Default = initial },
+				ShowValue = optionSettings.ShowValue,
+				DisplayMode = optionSettings.DisplayMode or "Percent",
+				Format = optionSettings.Format,
+				Animate = optionSettings.Animate ~= false,
+				Indeterminate = optionSettings.Indeterminate == true,
+				IndeterminateText = optionSettings.IndeterminateText,
+				Speed = optionSettings.Speed,
+				Width = optionSettings.Width,
+				ValueWidth = optionSettings.ValueWidth,
+			})
+			function option:SetValue(value)
+				value = math.clamp(tonumber(value) or option.Value, minimum, maximum)
+				option.Value = value
+				if type(option.Object) == "table" and type(option.Object.Set) == "function" then
+					pcall(option.Object.Set, option.Object, value)
+				end
+				return option
+			end
+			option.Set = option.SetValue
+			function option:GetValue()
+				if type(option.Object) == "table" and type(option.Object.Get) == "function" then
+					return option.Object:Get()
+				end
+				return option.Value
+			end
+			function option:GetPercentage()
+				if type(option.Object) == "table" and type(option.Object.GetPercentage) == "function" then
+					return option.Object:GetPercentage()
+				end
+				return ((option.Value - minimum) / (maximum - minimum)) * 100
+			end
+			function option:SetRange(min, max)
+				option.Min = min
+				option.Max = max
+				if type(option.Object) == "table" and type(option.Object.SetRange) == "function" then
+					pcall(option.Object.SetRange, option.Object, min, max)
+				end
+				return option
+			end
+			return registerOption(module, option.Name, option)
+		end
+		function module:CreateCode(optionSettings)
+			optionSettings = optionSettings or {}
+			local codeObj = section:Code({
+				Title = optionSettings.Name or optionSettings.Title,
+				Code = tostring(optionSettings.Code or optionSettings.Content or ""),
+				CodeSize = optionSettings.CodeSize,
+				CanCopied = optionSettings.CanCopied ~= false,
+				Height = optionSettings.Height,
+				OnCopy = optionSettings.OnCopy,
+			})
+			return {
+				Name = optionSettings.Name or optionSettings.Title or "Code",
+				Type = "Code",
+				Object = codeObj,
+				SetCode = function(self, code)
+					if type(codeObj) == "table" and type(codeObj.SetCode) == "function" then
+						pcall(codeObj.SetCode, codeObj, code)
+					end
+				end,
+				Destroy = function()
+					destroyControl(codeObj)
+				end,
+			}
+		end
+		function module:CreateImage(optionSettings)
+			optionSettings = optionSettings or {}
+			local imageObj = section:Image({
+				Image = tostring(optionSettings.Image or optionSettings.Url or ""),
+				AspectRatio = optionSettings.AspectRatio or "16:9",
+				Radius = optionSettings.Radius,
+			})
+			return {
+				Name = optionSettings.Name or "Image",
+				Type = "Image",
+				Object = imageObj,
+				Destroy = function()
+					destroyControl(imageObj)
+				end,
+			}
+		end
 
 		for _, methodName in ipairs({
 			"SetEnabled", "Toggle", "SetExtraText", "Clean", "Destroy",
@@ -1418,6 +1549,7 @@ local function createCategoryObject(name, iconName, suppliedTab)
 			"CreateColorpicker", "CreateKeybind", "CreateInput", "CreateTextBox",
 			"CreateTwoSlider", "CreateTextList", "CreateFont", "CreateTargets",
 			"CreateButton", "CreateParagraph", "CreateLabel", "CreateDivider", "CreateSpace",
+			"CreateProgressBar", "CreateCode", "CreateImage",
 		}) do
 			enableDotAndColon(module, methodName)
 		end
@@ -1466,9 +1598,57 @@ local function createCategoryObject(name, iconName, suppliedTab)
 		end
 		return serviceModule:CreateToggle(settings)
 	end
+	function category:CreateProgressBar(settings)
+		settings = settings or {}
+		local minimum = tonumber(firstNonNil(settings.Min, settings.MinValue, 0)) or 0
+		local maximum = tonumber(firstNonNil(settings.Max, settings.MaxValue, 100)) or 100
+		if maximum < minimum then minimum, maximum = maximum, minimum end
+		local initial = tonumber(firstNonNil(settings.Default, settings.Value, minimum)) or minimum
+		initial = math.clamp(initial, minimum, maximum)
+		return tab:ProgressBar({
+			Title = settings.Name or "Progress",
+			Desc = normalizeDescription(settings),
+			Value = { Min = minimum, Max = maximum, Default = initial },
+			ShowValue = settings.ShowValue,
+			DisplayMode = settings.DisplayMode or "Percent",
+			Format = settings.Format,
+			Animate = settings.Animate ~= false,
+			Indeterminate = settings.Indeterminate == true,
+			IndeterminateText = settings.IndeterminateText,
+			Speed = settings.Speed,
+			Width = settings.Width,
+			ValueWidth = settings.ValueWidth,
+		})
+	end
+	function category:CreateCode(settings)
+		settings = settings or {}
+		return tab:Code({
+			Title = settings.Name or settings.Title,
+			Code = tostring(settings.Code or settings.Content or ""),
+			CodeSize = settings.CodeSize,
+			CanCopied = settings.CanCopied ~= false,
+			Height = settings.Height,
+			OnCopy = settings.OnCopy,
+		})
+	end
+	function category:CreateImage(settings)
+		settings = settings or {}
+		return tab:Image({
+			Image = tostring(settings.Image or settings.Url or ""),
+			AspectRatio = settings.AspectRatio or "16:9",
+			Radius = settings.Radius,
+		})
+	end
+	function category:CreateHStack()
+		return tab:HStack()
+	end
+	function category:CreateVStack()
+		return tab:VStack()
+	end
 
 	for _, methodName in ipairs({
 		"CreateModule", "CreateModuleCategory", "CreateDivider", "CreateSpace", "CreateButton", "CreateToggle",
+		"CreateProgressBar", "CreateCode", "CreateImage", "CreateHStack", "CreateVStack",
 	}) do
 		enableDotAndColon(category, methodName)
 	end
@@ -1564,16 +1744,43 @@ Tabs.General:Button({
 	Title = "Uninject / Self Destruct",
 	Icon = "x",
 	Callback = function()
-		d:CreateNotification("BadWars", "Uninjecting...", 2, "warning")
-		task.defer(function()
-			d:Uninject()
-		end)
+		local dialog = Window:Dialog({
+			Title = "Uninject BadWars?",
+			Content = "This will remove all modules and close the interface. This action cannot be undone.",
+			Buttons = {
+				{
+					Title = "Cancel",
+					Variant = "Secondary",
+					Callback = function() end,
+				},
+				{
+					Title = "Uninject",
+					Variant = "Primary",
+					Callback = function()
+						d:CreateNotification("BadWars", "Uninjecting...", 2, "warning")
+						task.defer(function()
+							d:Uninject()
+						end)
+					end,
+				},
+			},
+		})
+		if type(dialog) == "table" and type(dialog.Show) == "function" then
+			dialog:Show()
+		end
 	end,
 })
 Tabs.General:Space()
 Tabs.General:Paragraph({
 	Title = "Quick Info",
 	Desc = "Use RightShift to toggle the interface. Module sections stay collapsed until opened, reducing startup layout cost.",
+})
+
+-- Loader script display
+Tabs.General:Code({
+	Title = "Loader Script",
+	Code = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()',
+	CanCopied = true,
 })
 
 local currentProfileName = "default"
@@ -1641,6 +1848,33 @@ Tabs.Settings:Slider({
 		pcall(function() Window:SetUIScale(value) end)
 	end,
 })
+
+-- UI Scale progress indicator
+local uiScaleProgress = Tabs.Settings:ProgressBar({
+	Title = "UI Scale",
+	Desc = "Current interface scale",
+	Value = { Min = 65, Max = 125, Default = 90 },
+	DisplayMode = "Value",
+	Format = function(value)
+		return string.format("%.0f%%", value)
+	end,
+	Width = 200,
+	Animate = true,
+})
+
+-- Sync slider to progress bar
+local uiScaleSlider = Tabs.Settings:Slider({
+	Title = "Adjust Scale",
+	Value = { Min = 65, Max = 125, Default = 90 },
+	Step = 5,
+	Callback = function(value)
+		local scale = value / 100
+		pcall(function() Window:SetUIScale(scale) end)
+		if uiScaleProgress and type(uiScaleProgress.Set) == "function" then
+			pcall(uiScaleProgress.Set, uiScaleProgress, value)
+		end
+	end,
+})
 Tabs.Settings:Input({
 	Title = "Profile Name",
 	Value = currentProfileName,
@@ -1665,6 +1899,54 @@ Tabs.Settings:Button({
 	Callback = function()
 		local ok, result = loadProfile(currentProfileName)
 		d:CreateNotification("Profiles", ok and ("Loaded '" .. currentProfileName .. "'") or tostring(result), 4, ok and "success" or "error")
+	end,
+})
+
+-- Profile management HStack
+local profileHStack = Tabs.Settings:HStack()
+profileHStack:Button({
+	Title = "Save",
+	Icon = "save",
+	Callback = function()
+		local ok, result = saveProfile(currentProfileName)
+		d:CreateNotification("Profiles", ok and "Saved" or tostring(result), 3, ok and "success" or "error")
+	end,
+})
+profileHStack:Button({
+	Title = "Load",
+	Icon = "folder-open",
+	Callback = function()
+		local ok, result = loadProfile(currentProfileName)
+		d:CreateNotification("Profiles", ok and "Loaded" or tostring(result), 3, ok and "success" or "error")
+	end,
+})
+profileHStack:Button({
+	Title = "Reset",
+	Icon = "trash",
+	Callback = function()
+		local dialog = Window:Dialog({
+			Title = "Reset Profile?",
+			Content = "This will clear all saved settings for '" .. currentProfileName .. "'.",
+			Buttons = {
+				{ Title = "Cancel", Variant = "Secondary", Callback = function() end },
+				{
+					Title = "Reset",
+					Variant = "Primary",
+					Callback = function()
+						if type(readfile) == "function" and type(delfile) == "function" then
+							local configPath = "BadWars/" .. sanitizeName(currentProfileName) .. ".json"
+							if isfile(configPath) then
+								pcall(delfile, configPath)
+								d:CreateNotification("Profiles", "Profile reset", 3, "success")
+							end
+						end
+					end,
+				},
+			},
+		})
+		if type(dialog) == "table" and type(dialog.Show) == "function" then
+			dialog:Show()
+		end
 	end,
 })
 Tabs.Settings:Button({
@@ -1713,6 +1995,31 @@ function d.Clean(self, resource)
 		end
 	end
 	return resource
+end
+
+function d.CreateDialog(self, settings)
+	if self ~= d then settings = self end
+	settings = settings or {}
+	local dialog = Window:Dialog({
+		Title = settings.Title or "Dialog",
+		Icon = settings.Icon,
+		IconThemed = settings.IconThemed,
+		Content = settings.Content or settings.Desc or "",
+		Buttons = settings.Buttons or {},
+	})
+	return dialog
+end
+
+function d.CreatePopup(self, settings)
+	if self ~= d then settings = self end
+	settings = settings or {}
+	local popup = WindUI:Popup({
+		Title = settings.Title or "Popup",
+		Icon = settings.Icon,
+		Content = settings.Content or settings.Desc or "",
+		Buttons = settings.Buttons or {},
+	})
+	return popup
 end
 
 function d.RefreshScrollCanvases()
@@ -1773,6 +2080,19 @@ function d.Show(self)
 	if not welcomeShown then
 		welcomeShown = true
 		d:CreateNotification("BadWars", "Interface ready. RightShift to toggle.", 4, "success")
+
+		-- Show welcome popup on first load
+		local popup = WindUI:Popup({
+			Title = "Welcome to BadWars",
+			Content = "Your loader is ready. Use RightShift to toggle the interface. Check the Modules tab for a health overview of all loaded features.",
+			Buttons = {
+				{
+					Title = "Got it",
+					Variant = "Primary",
+					Callback = function() end,
+				},
+			},
+		})
 	end
 	return true
 end

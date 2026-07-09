@@ -648,7 +648,7 @@ local function httpGetMulti(urls)
             local ok, res = callWithTimeout(function()
                 return fn(game, url, true)
             end, 15)
-            if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) and not isRateLimited(res) then
+            if ok and type(res) == "string" and #res >= 50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then
                 return res
             end
         end
@@ -660,7 +660,7 @@ local function httpGetMulti(urls)
             end
             return nil
         end, 15)
-        if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) and not isRateLimited(res) then
+        if ok and type(res) == "string" and #res >= 50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then
             return res
         end
         -- Try request/http_request as last resort
@@ -690,7 +690,7 @@ local function httpGetMulti(urls)
                 end
                 return nil
             end, 15)
-            if reqOk and type(reqRes) == "table" and type(reqRes.Body) == "string" and #reqRes.Body > 0 and not isNotFoundBody(reqRes.Body) and not isRateLimited(reqRes.Body) then
+            if reqOk and type(reqRes) == "table" and type(reqRes.Body) == "string" and #reqRes.Body >= 50 and not isNotFoundBody(reqRes.Body) and not isRateLimited(reqRes.Body) and not isCorruptedBody(reqRes.Body) then
                 return reqRes.Body
             end
         end
@@ -736,6 +736,23 @@ local function isRateLimited(body)
     if #trimmed < 200 and trimmed:find('"message"%s*:') and not trimmed:find('"message"%s*:%s*"Not Found"') then
         return true
     end
+    return false
+end
+
+local function isCorruptedBody(body)
+    if type(body) ~= "string" or #body < 50 then return true end
+    local trimmed = body:match("^%s*(.-)%s*$")
+    -- Reject HTML pages
+    if trimmed:find("<!DOCTYPE", 1, true) or trimmed:find("<html", 1, true) then return true end
+    -- Reject if contains too many non-printable characters (likely binary/corrupted)
+    local nonPrintable = 0
+    for i = 1, math.min(#body, 200) do
+        local c = body:byte(i)
+        if c and (c < 32 and c ~= 10 and c ~= 13 and c ~= 9) then
+            nonPrintable = nonPrintable + 1
+        end
+    end
+    if nonPrintable > 10 then return true end
     return false
 end
 

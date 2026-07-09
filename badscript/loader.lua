@@ -58,10 +58,16 @@ do
                     local service = game:GetService("HttpService")
                     return service:GetAsync(url, true)
                 end)
-                if ok and type(result) == "string" and result ~= "" and result ~= "404: Not Found" then
-                    source = result
-                    sourceName = url
-                    break
+                if ok and type(result) == "string" and #result >= 50 and result ~= "404: Not Found" then
+                    -- Validate it's actually Lua content, not an HTML error page
+                    local trimmed = result:match("^%s*(.-)%s*$")
+                    local isValid = trimmed:find("function", 1, true) or trimmed:find("local ", 1, true) or trimmed:find("--", 1, true)
+                    local isHtml = trimmed:find("<!DOCTYPE", 1, true) or trimmed:find("<html", 1, true)
+                    if isValid and not isHtml then
+                        source = result
+                        sourceName = url
+                        break
+                    end
                 elseif not ok then
                     __badwarsBuffer("WARN", result, {
                         subsystem = "BootstrapHTTP",
@@ -219,10 +225,10 @@ local function httpGet(urls)
 		end
 		if type(fn)=='function' then
 			local ok,res=callWithTimeout(function()
-				if game then return fn(game,url,true) end
+				if game and fn then return fn(game,url,true) end
 				return nil
 			end,15)
-			if ok and type(res)=='string' and #res>0 and not isNotFoundBody(res) and not isRateLimited(res) then return res,url end
+			if ok and type(res)=='string' and #res>=50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then return res,url end
 		end
 		local ok,res=callWithTimeout(function()
 			local svc
@@ -232,9 +238,31 @@ local function httpGet(urls)
 			end
 			return nil
 		end,15)
-		if ok and type(res)=='string' and #res>0 and not isNotFoundBody(res) and not isRateLimited(res) then return res,url end
+		if ok and type(res)=='string' and #res>=50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then return res,url end
 	end
 	return nil,nil
+end
+
+local function isCorruptedBody(body)
+	if type(body) ~= 'string' or #body < 50 then return true end
+	local trimmed = body:match('^%s*(.-)%s*$')
+	-- Reject HTML pages
+	if trimmed:find('<!DOCTYPE', 1, true) or trimmed:find('<html', 1, true) then return true end
+	-- Reject pages that are clearly not Lua (no valid Lua content)
+	if not trimmed:find('function', 1, true) and not trimmed:find('local ', 1, true) and not trimmed:find('--', 1, true) then
+		-- Check for common non-Lua error indicators
+		if trimmed:find('<', 1, true) and trimmed:find('>', 1, true) then return true end
+	end
+	-- Reject if contains too many non-printable characters (likely binary/corrupted)
+	local nonPrintable = 0
+	for i = 1, math.min(#body, 200) do
+		local c = body:byte(i)
+		if c and (c < 32 and c ~= 10 and c ~= 13 and c ~= 9) then
+			nonPrintable = nonPrintable + 1
+		end
+	end
+	if nonPrintable > 10 then return true end
+	return false
 end
 
 isNotFoundBody = function(body)

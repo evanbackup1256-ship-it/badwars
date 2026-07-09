@@ -281,12 +281,11 @@ do
 		if ok and type(result) == "table" then
 			d = result
 		else
-			-- Fallback: create a basic icon table for BadWars
-			d = {
-				Icons = {},
-				Spritesheets = {},
-			}
+			d = {}
 		end
+
+		d.Icons = type(d.Icons) == "table" and d.Icons or {}
+		d.Spritesheets = type(d.Spritesheets) == "table" and d.Spritesheets or {}
 
 		local function parseIconString(e)
 			if type(e) == "string" then
@@ -376,11 +375,13 @@ do
 			local p = d.Icons[l]
 
 			if p and p.Icons and p.Icons[m] then
+				local icon = p.Icons[m]
+				local image = p.Spritesheets and p.Spritesheets[tostring(icon.Image)] or icon.Image
 				return {
-					p.Spritesheets[tostring(p.Icons[m].Image)],
-					p.Icons[m],
+					image,
+					icon,
 				}
-			elseif p and p[m] and string.find(p[m], "rbxassetid://") then
+			elseif p and p[m] and string.find(p[m], "rbxassetid://", 1, true) then
 				return h
 						and {
 							p[m],
@@ -388,6 +389,33 @@ do
 						}
 					or p[m]
 			end
+
+			if type(f) == "string" and string.match(f, "^rbxassetid://%d+$") then
+				return h
+						and {
+							f,
+							{ ImageRectSize = Vector2.new(0, 0), ImageRectPosition = Vector2.new(0, 0) },
+						}
+					or f
+			end
+
+			if
+				h
+				and type(f) == "string"
+				and f ~= ""
+				and not string.find(f, "://", 1, true)
+				and string.sub(f, 1, 6) ~= "video:"
+			then
+				return {
+					"rbxassetid://0",
+					{
+						ImageRectSize = Vector2.new(0, 0),
+						ImageRectPosition = Vector2.new(0, 0),
+						Missing = true,
+					},
+				}
+			end
+
 			return nil
 		end
 
@@ -683,7 +711,11 @@ do
 			UIScale = 1,
 			FontObjects = {},
 			Language = string.match(g.SystemLocaleId, "^[a-z]+"),
-			Request = http_request or (syn and syn.request) or request,
+			Request = (type(http_request) == "function" and http_request)
+				or (type(request) == "function" and request)
+				or (type(syn) == "table" and type(syn.request) == "function" and syn.request)
+				or (type(fluxus) == "table" and type(fluxus.request) == "function" and fluxus.request)
+				or nil,
 			DefaultProperties = {
 				ScreenGui = {
 					ResetOnSpawn = false,
@@ -1307,10 +1339,14 @@ do
 			return z
 		end
 
+
 		function r.Image(x, z, A, B, C, F, G, H)
 			B = B or "Temp"
-			z = r.SanitizeFilename(z)
+			local source = type(x) == "string" and x or ""
+			z = r.SanitizeFilename(tostring(z or source or "asset"))
+			A = tonumber(A) or 0
 
+			local iconData = r.Icon(source)
 			local J = u("Frame", {
 				Size = UDim2.new(0, 0, 0, 0),
 				BackgroundTransparency = 1,
@@ -1319,7 +1355,7 @@ do
 					Size = UDim2.new(1, 0, 1, 0),
 					BackgroundTransparency = 1,
 					ScaleType = "Crop",
-					ThemeTag = (r.Icon(x) or G) and {
+					ThemeTag = (iconData or G) and {
 						ImageColor3 = F and (H or "Icon") or nil,
 					} or nil,
 				}, {
@@ -1328,62 +1364,111 @@ do
 					}),
 				}),
 			})
-			if r.Icon(x) then
+
+			if iconData then
 				J.ImageLabel:Destroy()
 
-				local L = m.Image({
-					Icon = x,
+				local iconObject = m.Image({
+					Icon = source,
 					Size = UDim2.new(1, 0, 1, 0),
 					Colors = {
 						(F and (H or "Icon") or false),
 						"Button",
 					},
-				}).IconFrame
-				L.Parent = J
-			elseif string.find(x, "http") and not string.find(x, "roblox.com") then
-				local L = "WindUI/" .. B .. "/assets/." .. C .. "-" .. z .. ".png"
-				local M, N = pcall(function()
-					task.spawn(function()
-						local M = r.Request
-								and r.Request({
-									Url = x,
-									Method = "GET",
-								}).Body
-							or {}
+				})
 
-						if not d:IsStudio() and writefile then
-							writefile(L, M)
-						end
-
-						local N, O = pcall(getcustomasset, L)
-						if N then
-							J.ImageLabel.Image = O
-						else
-							warn(
-								string.format(
-									"[ WindUI.Creator ] Failed to load custom asset '%s': %s",
-									L,
-									tostring(O)
-								)
-							)
-							J:Destroy()
-
-							return
-						end
-					end)
-				end)
-				if not M then
-					warn(
-						"[ WindUI.Creator ]  '" .. identifyexecutor()
-							or "Studio" .. "' doesnt support the URL Images. Error: " .. N
-					)
-
-					J:Destroy()
+				if iconObject and iconObject.IconFrame then
+					iconObject.IconFrame.Parent = J
+				else
+					local fallback = u("ImageLabel", {
+						Size = UDim2.new(1, 0, 1, 0),
+						BackgroundTransparency = 1,
+						Image = iconData[1] or "rbxassetid://0",
+						ImageRectSize = iconData[2] and iconData[2].ImageRectSize or Vector2.new(0, 0),
+						ImageRectOffset = iconData[2] and iconData[2].ImageRectPosition or Vector2.new(0, 0),
+					})
+					fallback.Parent = J
 				end
-			elseif x == "" then
+			elseif string.match(source, "^https?://") and not string.find(source, "roblox.com", 1, true) then
+				local fileName = "WindUI/"
+					.. tostring(B)
+					.. "/assets/."
+					.. tostring(C or "asset")
+					.. "-"
+					.. z
+					.. ".png"
+
+				task.spawn(function()
+					local body
+					local requestError
+
+					if type(r.Request) == "function" then
+						local ok, response = pcall(r.Request, {
+							Url = source,
+							Method = "GET",
+							Headers = {
+								["Cache-Control"] = "no-cache",
+								["User-Agent"] = "WindUI",
+							},
+						})
+						if ok then
+							if type(response) == "string" then
+								body = response
+							elseif type(response) == "table" then
+								body = response.Body or response.body or response.Data or response.data
+							end
+						else
+							requestError = response
+						end
+					end
+
+					if type(body) ~= "string" then
+						local ok, response = pcall(function()
+							return game:HttpGet(source, true)
+						end)
+						if ok and type(response) == "string" then
+							body = response
+						elseif not requestError then
+							requestError = response
+						end
+					end
+
+					if type(body) ~= "string" or body == "" then
+						warn("[ WindUI.Creator ] Failed to download image: " .. tostring(requestError or "empty response"))
+						J.Visible = false
+						return
+					end
+
+					if not d:IsStudio() and type(writefile) == "function" then
+						pcall(writefile, fileName, body)
+					end
+
+					if type(getcustomasset) ~= "function" then
+						warn("[ WindUI.Creator ] getcustomasset is unavailable; URL image was skipped")
+						J.Visible = false
+						return
+					end
+
+					local ok, asset = pcall(getcustomasset, fileName)
+					if ok and type(asset) == "string" then
+						if J.Parent and J:FindFirstChild("ImageLabel") then
+							J.ImageLabel.Image = asset
+						end
+					else
+						warn(
+							string.format(
+								"[ WindUI.Creator ] Failed to load custom asset '%s': %s",
+								fileName,
+								tostring(asset)
+							)
+						)
+						J.Visible = false
+					end
+				end)
+			elseif source == "" then
 				J.Visible = false
 			else
-				J.ImageLabel.Image = x
+				J.ImageLabel.Image = source
 			end
 
 			return J
@@ -1445,6 +1530,9 @@ do
 				B = B + G.Value.B
 			end
 			local F = #C
+			if F == 0 then
+				return Color3.new(1, 1, 1)
+			end
 			return Color3.new(z / F, A / F, B / F)
 		end
 
@@ -1614,11 +1702,12 @@ do
 				d("UIListLayout", {
 					HorizontalAlignment = "Center",
 					SortOrder = "LayoutOrder",
-					VerticalAlignment = "Bottom",
+					VerticalAlignment = "Top",
 					Padding = UDim.new(0, 8),
 				}),
 				d("UIPadding", {
-					PaddingBottom = UDim.new(0, 29),
+					PaddingTop = UDim.new(0, 12),
+					PaddingBottom = UDim.new(0, 12),
 				}),
 			})
 			return h
@@ -2417,7 +2506,7 @@ do
 				ar = "https://api.platoboost.net"
 			end
 
-			function cacheLink()
+			local function cacheLink()
 				if aq + 600 < al() then
 					local at = ah({
 						Url = ar .. "/public/start",
@@ -2659,7 +2748,7 @@ do
 				end
 			local af, ag = request or http_request or syn_request, setclipboard or toclipboard
 
-			function ValidateKey(ah)
+			local function ValidateKey(ah)
 				local ai = "https://api.pandauth.com/api/v1/keys/validate"
 
 				local aj = {
@@ -2711,14 +2800,14 @@ do
 				end
 			end
 
-			function GetKeyLink()
+			local function GetKeyLink()
 				return "https://new.pandadevelopment.net/getkey/"
 					.. tostring(ad)
 					.. "?hwid="
 					.. tostring(ae())
 			end
 
-			function CopyLink()
+			local function CopyLink()
 				return ag(GetKeyLink())
 			end
 
@@ -2742,7 +2831,7 @@ do
 
 			ae.script_id = ab
 
-			function ValidateKey(ag)
+			local function ValidateKey(ag)
 				local ah = ae.check_key(ag)
 
 				if ah.code == "KEY_VALID" then
@@ -2756,7 +2845,7 @@ do
 				end
 			end
 
-			function CopyLink()
+			local function CopyLink()
 				af(tostring(ac))
 			end
 
@@ -4281,106 +4370,151 @@ do
 				Dark = {
 					Name = "Dark",
 
-					-- BadWars premium theme (crimson/red with refined dark palette)
-					Accent = Color3.fromHex("#141418"),
-					Dialog = Color3.fromHex("#18181d"),
-					Outline = Color3.fromHex("#FFFFFF"),
-					Text = Color3.fromHex("#FFFFFF"),
-					Placeholder = Color3.fromHex("#8a8a96"),
-					Background = Color3.fromHex("#0a0a0c"),
-					Button = Color3.fromHex("#4a4a54"),
-					Icon = Color3.fromHex("#a1a1aa"),
-					Toggle = Color3.fromHex("#FF2D4A"),
-					Slider = Color3.fromHex("#FF2D4A"),
-					Checkbox = Color3.fromHex("#FF2D4A"),
+					Accent = Color3.fromHex("#10151C"),
+					Dialog = Color3.fromHex("#141A22"),
+					Outline = Color3.fromHex("#33404D"),
+					Text = Color3.fromHex("#F4F7FA"),
+					Placeholder = Color3.fromHex("#8B98A7"),
+					Background = Color3.fromHex("#090C11"),
+					Button = Color3.fromHex("#252D38"),
+					Icon = Color3.fromHex("#A7B2BE"),
+					Toggle = Color3.fromHex("#E64B62"),
+					Slider = Color3.fromHex("#E64B62"),
+					Checkbox = Color3.fromHex("#E64B62"),
+					Primary = Color3.fromHex("#E64B62"),
 
-					PanelBackground = Color3.fromHex("#FFFFFF"),
-					PanelBackgroundTransparency = 0.95,
+					PanelBackground = Color3.fromHex("#111821"),
+					PanelBackgroundTransparency = 0.08,
 
-					SliderIcon = Color3.fromHex("#8a8a96"),
-					Primary = Color3.fromHex("#FF2D4A"),
+					SliderIcon = Color3.fromHex("#7F8B98"),
 
-					LabelBackground = Color3.fromHex("#000000"),
-					LabelBackgroundTransparency = 0.83,
+					LabelBackground = Color3.fromHex("#121820"),
+					LabelBackgroundTransparency = 0.08,
 
-					ElementBackground = Color3.fromHex("#1e1e24"),
-					ElementBackgroundTransparency = 0,
+					ElementBackground = Color3.fromHex("#151C25"),
+					ElementBackgroundTransparency = 0.04,
+
+					TabBackground = Color3.fromHex("#111720"),
+					TabBackgroundHover = Color3.fromHex("#1A232E"),
+					TabBackgroundHoverTransparency = 0.08,
+					TabBackgroundActive = Color3.fromHex("#202A36"),
+					TabBackgroundActiveTransparency = 0.02,
+					TabText = Color3.fromHex("#E8EDF2"),
+					TabTextTransparency = 0.25,
+					TabTextTransparencyActive = 0,
+					TabTitle = Color3.fromHex("#F4F7FA"),
+					TabIcon = Color3.fromHex("#A7B2BE"),
+					TabIconTransparency = 0.22,
+					TabIconTransparencyActive = 0,
+					TabBorder = Color3.fromHex("#3C4A58"),
+					TabBorderTransparency = 0.82,
+					TabBorderTransparencyActive = 0.42,
+
+					SectionBox = Color3.fromHex("#27313D"),
+					SectionBoxTransparency = 0.25,
+					SectionBoxBorder = Color3.fromHex("#3A4653"),
+					SectionBoxBorderTransparency = 0.55,
+					SectionBoxBackground = Color3.fromHex("#121923"),
+					SectionBoxBackgroundTransparency = 0.08,
+
+					Notification = Color3.fromHex("#111821"),
+					Notification2 = Color3.fromHex("#1B2530"),
+					Notification2Transparency = 0.08,
+					NotificationTitle = Color3.fromHex("#F4F7FA"),
+					NotificationTitleTransparency = 0,
+					NotificationContent = Color3.fromHex("#BAC4CE"),
+					NotificationContentTransparency = 0.08,
+					NotificationDuration = Color3.fromHex("#E64B62"),
+					NotificationDurationTransparency = 0,
+					NotificationBorder = Color3.fromHex("#3A4653"),
+					NotificationBorderTransparency = 0.48,
+
+					DropdownTabBorder = Color3.fromHex("#3A4653"),
+					DropdownTabBackground = Color3.fromHex("#18212B"),
+					DropdownBackground = Color3.fromHex("#10161E"),
+
+					SearchBarBorder = Color3.fromHex("#3A4653"),
+					SearchBarBorderTransparency = 0.55,
+
+					Tooltip = Color3.fromHex("#202A35"),
+					TooltipText = Color3.fromHex("#F4F7FA"),
+					TooltipSecondary = Color3.fromHex("#E64B62"),
+					TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
 				},
 
 				BadWars = {
 					Name = "BadWars",
 
-					-- Premium BadWars theme with crimson accent
-					Accent = Color3.fromHex("#12121a"),
-					Dialog = Color3.fromHex("#16161f"),
-					Outline = Color3.fromHex("#FFFFFF"),
-					Text = Color3.fromHex("#FFFFFF"),
-					Placeholder = Color3.fromHex("#7a7a88"),
-					Background = Color3.fromHex("#08080a"),
-					Button = Color3.fromHex("#3a3a44"),
-					Icon = Color3.fromHex("#9a9aa8"),
-					Toggle = Color3.fromHex("#FF2D4A"),
-					Slider = Color3.fromHex("#FF2D4A"),
-					Checkbox = Color3.fromHex("#FF2D4A"),
+					Accent = Color3.fromHex("#11151C"),
+					Dialog = Color3.fromHex("#161B23"),
+					Outline = Color3.fromHex("#3A414C"),
+					Text = Color3.fromHex("#F7F8FA"),
+					Placeholder = Color3.fromHex("#9098A5"),
+					Background = Color3.fromHex("#080A0E"),
+					Button = Color3.fromHex("#262B34"),
+					Icon = Color3.fromHex("#AEB5BF"),
+					Toggle = Color3.fromHex("#F0445D"),
+					Slider = Color3.fromHex("#F0445D"),
+					Checkbox = Color3.fromHex("#F0445D"),
+					Primary = Color3.fromHex("#F0445D"),
 
-					PanelBackground = Color3.fromHex("#FFFFFF"),
-					PanelBackgroundTransparency = 0.95,
+					PanelBackground = Color3.fromHex("#12171E"),
+					PanelBackgroundTransparency = 0.06,
 
-					SliderIcon = Color3.fromHex("#8a8a96"),
-					Primary = Color3.fromHex("#FF2D4A"),
+					SliderIcon = Color3.fromHex("#89929E"),
 
-					LabelBackground = Color3.fromHex("#000000"),
-					LabelBackgroundTransparency = 0.85,
+					LabelBackground = Color3.fromHex("#12161C"),
+					LabelBackgroundTransparency = 0.06,
 
-					ElementBackground = Color3.fromHex("#1a1a22"),
-					ElementBackgroundTransparency = 0,
+					ElementBackground = Color3.fromHex("#171C24"),
+					ElementBackgroundTransparency = 0.03,
 
-					-- Tab styling
-					TabBackground = Color3.fromHex("#12121a"),
-					TabBackgroundHover = Color3.fromHex("#1a1a24"),
-					TabBackgroundHoverTransparency = 0.97,
-					TabBackgroundActive = Color3.fromHex("#1e1e28"),
-					TabBackgroundActiveTransparency = 0.93,
-					TabText = Color3.fromHex("#FFFFFF"),
-					TabTextTransparency = 0.3,
+					TabBackground = Color3.fromHex("#11161D"),
+					TabBackgroundHover = Color3.fromHex("#1B222C"),
+					TabBackgroundHoverTransparency = 0.06,
+					TabBackgroundActive = Color3.fromHex("#222A35"),
+					TabBackgroundActiveTransparency = 0,
+					TabText = Color3.fromHex("#E9EDF2"),
+					TabTextTransparency = 0.22,
 					TabTextTransparencyActive = 0,
-					TabTitle = Color3.fromHex("#FFFFFF"),
-					TabIcon = Color3.fromHex("#a1a1aa"),
-					TabIconTransparency = 0.4,
-					TabIconTransparencyActive = 0.1,
-					TabBorderTransparency = 1,
-					TabBorderTransparencyActive = 0.75,
-					TabBorder = Color3.fromHex("#FFFFFF"),
+					TabTitle = Color3.fromHex("#F7F8FA"),
+					TabIcon = Color3.fromHex("#AEB5BF"),
+					TabIconTransparency = 0.2,
+					TabIconTransparencyActive = 0,
+					TabBorder = Color3.fromHex("#414B58"),
+					TabBorderTransparency = 0.8,
+					TabBorderTransparencyActive = 0.38,
 
-					-- Section styling
-					SectionBox = Color3.fromHex("#FFFFFF"),
-					SectionBoxTransparency = 0.95,
-					SectionBoxBorder = Color3.fromHex("#FFFFFF"),
-					SectionBoxBorderTransparency = 0.75,
-					SectionBoxBackground = Color3.fromHex("#FFFFFF"),
-					SectionBoxBackgroundTransparency = 0.97,
+					SectionBox = Color3.fromHex("#2B333E"),
+					SectionBoxTransparency = 0.2,
+					SectionBoxBorder = Color3.fromHex("#424C59"),
+					SectionBoxBorderTransparency = 0.5,
+					SectionBoxBackground = Color3.fromHex("#141A22"),
+					SectionBoxBackgroundTransparency = 0.04,
 
-					-- Notification styling
-					Notification = Color3.fromHex("#12121a"),
-					Notification2 = Color3.fromHex("#FFFFFF"),
-					Notification2Transparency = 0.92,
-					NotificationTitle = Color3.fromHex("#FFFFFF"),
+					Notification = Color3.fromHex("#121820"),
+					Notification2 = Color3.fromHex("#1D2530"),
+					Notification2Transparency = 0.05,
+					NotificationTitle = Color3.fromHex("#F7F8FA"),
 					NotificationTitleTransparency = 0,
-					NotificationContent = Color3.fromHex("#FFFFFF"),
-					NotificationContentTransparency = 0.4,
-					NotificationDuration = Color3.fromHex("#FFFFFF"),
-					NotificationDurationTransparency = 0.95,
-					NotificationBorder = Color3.fromHex("#FFFFFF"),
-					NotificationBorderTransparency = 0.75,
+					NotificationContent = Color3.fromHex("#C0C7D0"),
+					NotificationContentTransparency = 0.05,
+					NotificationDuration = Color3.fromHex("#F0445D"),
+					NotificationDurationTransparency = 0,
+					NotificationBorder = Color3.fromHex("#424C59"),
+					NotificationBorderTransparency = 0.45,
 
-					-- Dropdown styling
-					DropdownTabBorder = Color3.fromHex("#FFFFFF"),
-					DropdownTabBackground = Color3.fromHex("#1e1e24"),
-					DropdownBackground = Color3.fromHex("#0a0a0c"),
+					DropdownTabBorder = Color3.fromHex("#424C59"),
+					DropdownTabBackground = Color3.fromHex("#1A2029"),
+					DropdownBackground = Color3.fromHex("#0F141B"),
 
-					-- Search bar
-					SearchBarBorder = Color3.fromHex("#FFFFFF"),
-					SearchBarBorderTransparency = 0.75,
+					SearchBarBorder = Color3.fromHex("#424C59"),
+					SearchBarBorderTransparency = 0.5,
+
+					Tooltip = Color3.fromHex("#232A34"),
+					TooltipText = Color3.fromHex("#F7F8FA"),
+					TooltipSecondary = Color3.fromHex("#F0445D"),
+					TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
 				},
 
 				Light = {
@@ -6105,7 +6239,7 @@ do
 			local aq = CreateText(ah.Title, "Title")
 			local ar = CreateText(ah.Desc, "Desc")
 			if not ah.Title or ah.Title == "" then
-				ar.Visible = false
+				aq.Visible = false
 			end
 			if not ah.Desc or ah.Desc == "" then
 				ar.Visible = false
@@ -6396,16 +6530,17 @@ do
 			ah.UIElements.Locked = av
 
 			if ah.Hover then
+				aa.AddSignal(d.MouseMoved, function(g)
+					if am and d.AbsoluteSize.X > 0 then
+						local offset = math.clamp(((g - d.AbsolutePosition.X) / d.AbsoluteSize.X) - 0.5, -0.5, 0.5)
+						aB.HoverGradient.Offset = Vector2.new(offset, 0)
+						aA.HoverGradient.Offset = Vector2.new(offset, 0)
+					end
+				end)
 				aa.AddSignal(d.MouseEnter, function()
 					if am then
 						ad(aB, 0.12, { ImageTransparency = 0.9 }):Play()
 						ad(aA, 0.12, { ImageTransparency = 0.8 }):Play()
-						aa.AddSignal(d.MouseMoved, function(g, h)
-							aB.HoverGradient.Offset =
-								Vector2.new(((g - d.AbsolutePosition.X) / d.AbsoluteSize.X) - 0.5, 0)
-							aA.HoverGradient.Offset =
-								Vector2.new(((g - d.AbsolutePosition.X) / d.AbsoluteSize.X) - 0.5, 0)
-						end)
 					end
 				end)
 				aa.AddSignal(d.InputEnded, function()
@@ -6418,17 +6553,14 @@ do
 
 			function ah.SetTitle(g, h)
 				ah.Title = h
-				aq.Text = h
+				aq.Text = h or ""
+				aq.Visible = h ~= nil and h ~= ""
 			end
 
 			function ah.SetDesc(g, h)
 				ah.Desc = h
 				ar.Text = h or ""
-				if not h then
-					ar.Visible = false
-				elseif not ar.Visible then
-					ar.Visible = true
-				end
+				ar.Visible = h ~= nil and h ~= ""
 			end
 
 			function ah.Colorize(g, h, i)
@@ -6546,7 +6678,7 @@ do
 					end
 				else
 					if ap then
-						ap.Visible = true
+						ap.Visible = false
 					end
 					an = 0
 				end
@@ -7466,7 +7598,7 @@ do
 				ThumbSize = 13,
 				IconSize = 26,
 			}
-			if al.Icons == {} then
+			if type(al.Icons) == "table" and next(al.Icons) == nil then
 				al.Icons = {
 					From = "sfsymbols:sunMinFill",
 					To = "sfsymbols:sunMaxFill",
@@ -7484,7 +7616,15 @@ do
 			local ap = al.Value.Default or al.Value.Min or 0
 
 			local aq = ap
-			local ar = (ap - (al.Value.Min or 0)) / ((al.Value.Max or 100) - (al.Value.Min or 0))
+			local minimum = tonumber(al.Value.Min) or 0
+			local maximum = tonumber(al.Value.Max) or 100
+			if maximum < minimum then
+				minimum, maximum = maximum, minimum
+				al.Value.Min = minimum
+				al.Value.Max = maximum
+			end
+			local range = maximum - minimum
+			local ar = range ~= 0 and math.clamp((ap - minimum) / range, 0, 1) or 0
 
 			local as = true
 			local at = al.Step % 1 ~= 0
@@ -8558,43 +8698,70 @@ do
 			end
 
 			local function RecalculateListSize()
-				local at = ao.WindUI.DropdownGui.AbsoluteSize.Y
-
-				local au = ap.UIElements.UIListLayout.AbsoluteContentSize.Y / ao.UIScale
-				local av = ap.SearchBarEnabled and (aq.SearchBarHeight + (aq.MenuPadding * 3))
-					or (aq.MenuPadding * 2)
-				local aw = au + av
-
-				if aw > at then
-					ap.UIElements.MenuCanvas.Size =
-						UDim2.fromOffset(ap.UIElements.MenuCanvas.AbsoluteSize.X, at)
-				else
-					ap.UIElements.MenuCanvas.Size =
-						UDim2.fromOffset(ap.UIElements.MenuCanvas.AbsoluteSize.X, aw)
+				local viewport = ao.WindUI.DropdownGui.AbsoluteSize
+				if viewport.X <= 0 or viewport.Y <= 0 then
+					viewport = ah and ah.ViewportSize or Vector2.new(1280, 720)
 				end
+
+				local contentHeight = ap.UIElements.UIListLayout.AbsoluteContentSize.Y / math.max(ao.UIScale, 0.01)
+				local chromeHeight = ap.SearchBarEnabled and (aq.SearchBarHeight + (aq.MenuPadding * 3))
+					or (aq.MenuPadding * 2)
+				local desiredHeight = contentHeight + chromeHeight
+				local desiredWidth = math.clamp(
+					tonumber(ap.MenuWidth) or 220,
+					math.min(170, math.max(viewport.X - 20, 1)),
+					math.max(math.min(320, viewport.X - 20), 1)
+				)
+
+				ap.UIElements.MenuCanvas.Size = UDim2.fromOffset(
+					desiredWidth,
+					math.clamp(desiredHeight, 70, math.max(viewport.Y - 20, 70))
+				)
 			end
 
-			function UpdatePosition()
-				local at = ap.UIElements.Dropdown or ap.DropdownFrame.UIElements.Main
-				local au = ap.UIElements.MenuCanvas
-
-				local av = ah.ViewportSize.Y
-					- (at.AbsolutePosition.Y + at.AbsoluteSize.Y)
-					- aq.MenuPadding
-					- 54
-				local aw = au.AbsoluteSize.Y + aq.MenuPadding
-
-				local ax = -54
-				if av < aw then
-					ax = aw - av - 54
+			local function UpdatePosition()
+				local anchor = ap.UIElements.Dropdown or ap.DropdownFrame.UIElements.Main
+				local menu = ap.UIElements.MenuCanvas
+				if not anchor or not menu then
+					return
 				end
 
-				au.Position = UDim2.new(
-					0,
-					at.AbsolutePosition.X + at.AbsoluteSize.X,
-					0,
-					at.AbsolutePosition.Y + at.AbsoluteSize.Y - ax + (aq.MenuPadding * 2)
-				)
+				local viewport = ao.WindUI.DropdownGui.AbsoluteSize
+				if viewport.X <= 0 or viewport.Y <= 0 then
+					viewport = ah and ah.ViewportSize or Vector2.new(1280, 720)
+				end
+
+				RecalculateListSize()
+
+				local margin = math.max(8, aq.MenuPadding)
+				local menuSize = menu.AbsoluteSize
+				if menuSize.X <= 0 or menuSize.Y <= 0 then
+					menuSize = Vector2.new(menu.Size.X.Offset, menu.Size.Y.Offset)
+				end
+
+				local anchorPosition = anchor.AbsolutePosition
+				local anchorSize = anchor.AbsoluteSize
+				local belowY = anchorPosition.Y + anchorSize.Y + margin
+				local aboveY = anchorPosition.Y - menuSize.Y - margin
+				local availableBelow = viewport.Y - belowY - margin
+				local availableAbove = anchorPosition.Y - margin
+
+				local y = belowY
+				if menuSize.Y > availableBelow and availableAbove > availableBelow then
+					y = aboveY
+				end
+
+				y = math.clamp(y, margin, math.max(margin, viewport.Y - menuSize.Y - margin))
+
+				local rightAlignedX = anchorPosition.X + anchorSize.X
+				local x = rightAlignedX
+				if x - menuSize.X < margin then
+					x = anchorPosition.X + menuSize.X
+				end
+				x = math.clamp(x, menuSize.X + margin, math.max(menuSize.X + margin, viewport.X - margin))
+
+				menu.AnchorPoint = Vector2.new(1, 0)
+				menu.Position = UDim2.fromOffset(x, y)
 			end
 
 			local at
@@ -9011,12 +9178,7 @@ do
 					end
 				end
 
-				ap.UIElements.MenuCanvas.Size = UDim2.new(
-					0,
-					ap.MenuWidth + 6 + 6 + 5 + 5 + 18 + 6 + 6,
-					ap.UIElements.MenuCanvas.Size.Y.Scale,
-					ap.UIElements.MenuCanvas.Size.Y.Offset
-				)
+				RecalculateListSize()
 				Callback()
 
 				ap.Values = av
@@ -9042,6 +9204,11 @@ do
 
 			function as.Open(au)
 				if not ap.Locked then
+					local activeDropdown = ao.WindUI.ActiveDropdown
+					if activeDropdown and activeDropdown ~= as and type(activeDropdown.Close) == "function" then
+						activeDropdown:Close()
+					end
+					ao.WindUI.ActiveDropdown = as
 					ap.UIElements.Menu.Visible = true
 					ap.UIElements.MenuCanvas.Visible = true
 					ap.UIElements.MenuCanvas.Active = true
@@ -9065,6 +9232,9 @@ do
 
 			function as.Close(au)
 				ap.Opened = false
+				if ao.WindUI.ActiveDropdown == as then
+					ao.WindUI.ActiveDropdown = nil
+				end
 
 				am(ap.UIElements.Menu, 0.25, {
 					Size = UDim2.new(1, 0, 0, 0),
@@ -9089,7 +9259,11 @@ do
 					or ap.DropdownFrame.UIElements.Main.MouseButton1Click
 				),
 				function()
-					as:Open()
+					if ap.Opened then
+						as:Close()
+					else
+						as:Open()
+					end
 				end
 			)
 
@@ -11689,6 +11863,8 @@ do
 
 		local am = a.load("B").New
 		local an = a.load("x").New
+		local Window
+		local WindUI
 
 		local ao = {
 
@@ -12016,9 +12192,21 @@ do
 							aw.Container.AnchorPoint = Vector2.new(0.5, 0.5)
 
 							local function updatePosition()
-								if aw then
-									aw.Container.Position = UDim2.new(0, ai.X, 0, ai.Y - 4)
+								if not aw or not aw.Container then
+									return
 								end
+
+								local viewport = ao.ToolTipParent.AbsoluteSize
+								if viewport.X <= 0 or viewport.Y <= 0 then
+									local camera = workspace.CurrentCamera
+									viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+								end
+
+								local size = aw.Container.AbsoluteSize
+								local margin = 10
+								local x = math.clamp(ai.X, margin + (size.X / 2), math.max(margin + (size.X / 2), viewport.X - margin - (size.X / 2)))
+								local y = math.clamp(ai.Y + 18, margin, math.max(margin, viewport.Y - margin - size.Y))
+								aw.Container.Position = UDim2.fromOffset(x, y)
 							end
 
 							updatePosition()
@@ -12335,7 +12523,8 @@ do
 						BackgroundTransparency = 1,
 						TextTransparency = 0.7,
 
-						TextWrapped = true,
+						TextWrapped = false,
+						TextTruncate = "AtEnd",
 					}),
 					ai("UIListLayout", {
 						FillDirection = "Horizontal",
@@ -12946,6 +13135,10 @@ do
 		local ak = aa(game:GetService("Players"))
 
 		local al = workspace.CurrentCamera
+		if not al then
+			workspace:GetPropertyChangedSignal("CurrentCamera"):Wait()
+			al = workspace.CurrentCamera
+		end
 
 		local am = a.load("t")
 
@@ -12988,7 +13181,7 @@ do
 				ElementsRadius = av.ElementsRadius,
 				Radius = av.Radius or 16,
 				Transparent = av.Transparent or false,
-				HideSearchBar = av.HideSearchBar ~= false,
+				HideSearchBar = av.HideSearchBar == true,
 				ScrollBarEnabled = av.ScrollBarEnabled or false,
 				SideBarWidth = av.SideBarWidth or 200,
 				Acrylic = av.Acrylic or false,
@@ -13052,9 +13245,11 @@ do
 				math.clamp(ax.Y.Offset, aw.MinSize.Y, aw.MaxSize.Y)
 			)
 
-			if aw.Topbar == {} then
-				aw.Topbar = { Height = 52, ButtonsType = "Default" }
+			if type(aw.Topbar) ~= "table" then
+				aw.Topbar = {}
 			end
+			aw.Topbar.Height = math.clamp(tonumber(aw.Topbar.Height) or 52, 44, 72)
+			aw.Topbar.ButtonsType = aw.Topbar.ButtonsType == "Mac" and "Mac" or "Default"
 
 			if not ai:IsStudio() and aw.Folder and writefile then
 				if not isfolder("WindUI/" .. aw.Folder) then
@@ -13201,7 +13396,7 @@ do
 			end
 
 			aw.UIElements.MainBar = ao("Frame", {
-				Size = UDim2.new(1, -aw.UIElements.SideBarContainer.AbsoluteSize.X, 1, -aw.Topbar.Height),
+				Size = UDim2.new(1, -aw.SideBarWidth, 1, -aw.Topbar.Height),
 				Position = UDim2.new(1, 0, 1, 0),
 				AnchorPoint = Vector2.new(1, 1),
 				BackgroundTransparency = 1,
@@ -13262,7 +13457,7 @@ do
 				d = ao("TextButton", {
 					Size = UDim2.new(
 						0,
-						aw.UIElements.SideBarContainer.AbsoluteSize.X - (aw.UIPadding / 2),
+						aw.SideBarWidth - (aw.UIPadding / 2),
 						0,
 						42 + aw.UIPadding
 					),
@@ -13270,6 +13465,7 @@ do
 					AnchorPoint = Vector2.new(0, 1),
 					BackgroundTransparency = 1,
 					Visible = aw.User.Enabled or false,
+					Name = "UserCard",
 				}, {
 					an.NewRoundFrame(aw.UICorner - (aw.UIPadding / 2), "SquircleOutline", {
 						Size = UDim2.new(1, 0, 1, 0),
@@ -13575,7 +13771,7 @@ do
 				}),
 			})
 
-			function createAuthor(u)
+			local function createAuthor(u)
 				return ao("TextLabel", {
 					Text = u,
 					FontFace = Font.new(an.Font, Enum.FontWeight.Medium),
@@ -14034,7 +14230,12 @@ do
 			end
 
 			function aw.SetBackgroundImage(A, B)
-				aw.UIElements.Main.Background.ImageLabel.Image = B
+				if i and i:IsA("ImageLabel") then
+					i.Image = tostring(B or "")
+				elseif aw.UIElements.Main.Background:FindFirstChild("ImageLabel") then
+					aw.UIElements.Main.Background.ImageLabel.Image = tostring(B or "")
+				end
+				return aw
 			end
 			function aw.SetBackgroundImageTransparency(A, B)
 				if i and i:IsA("ImageLabel") then
@@ -14044,9 +14245,11 @@ do
 			end
 
 			function aw.SetBackgroundTransparency(A, B)
-				local C = math.floor(tonumber(B) * 10 + 0.5) / 10
+				local C = math.clamp(tonumber(B) or 0, 0, 1)
+				C = math.floor(C * 100 + 0.5) / 100
 				av.WindUI.TransparencyValue = C
 				aw:ToggleTransparency(C > 0)
+				return aw
 			end
 
 			local A
@@ -14163,7 +14366,7 @@ do
 
 					aw.UIElements.Main.Size = UDim2.new(aw.Size.X.Scale, aw.Size.X.Offset, 0, 100)
 
-					ap(aw.UIElements.Main, 0.8, {
+					ap(aw.UIElements.Main, 0.34, {
 
 						Size = aw.Size,
 					}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
@@ -14252,7 +14455,7 @@ do
 				aw.CanDropdown = false
 				aw.Closed = true
 
-				ap(aw.UIElements.Main, 0.9, {
+				ap(aw.UIElements.Main, 0.32, {
 
 					Size = UDim2.new(aw.Size.X.Scale, aw.Size.X.Offset, 0, 0),
 				}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
@@ -14411,8 +14614,10 @@ do
 			end
 
 			function aw.SetUIScale(C, F)
+				F = math.clamp(tonumber(F) or 1, 0.5, 1.25)
 				av.WindUI.UIScale = F
-				ap(av.WindUI.UIScaleObj, 0.2, { Scale = F }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+				an.UIScale = F
+				ap(av.WindUI.UIScaleObj, 0.16, { Scale = F }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
 				return aw
 			end
 
@@ -14512,29 +14717,28 @@ do
 			end
 
 			function aw.IsResizable(H, J)
-				aw.Resizable = J
-				aw.CanResize = J
+				aw.Resizable = J ~= false
+				aw.CanResize = aw.Resizable and not aw.IsFullscreen and not aw.Closed
+				az.Visible = aw.Resizable
+				return aw
 			end
 
 			function aw.SetPanelBackground(H, J)
 				if typeof(J) == "boolean" then
-					aw.HidePanelBackground = J
-
+					aw.HidePanelBackground = not J
 					aw.UIElements.MainBar.Background.Visible = J
 
 					if G then
 						for L, M in next, G.Containers do
-							M.ScrollingFrame.UIPadding.PaddingTop =
-								UDim.new(0, aw.HidePanelBackground and 20 or 10)
-							M.ScrollingFrame.UIPadding.PaddingLeft =
-								UDim.new(0, aw.HidePanelBackground and 20 or 10)
-							M.ScrollingFrame.UIPadding.PaddingRight =
-								UDim.new(0, aw.HidePanelBackground and 20 or 10)
-							M.ScrollingFrame.UIPadding.PaddingBottom =
-								UDim.new(0, aw.HidePanelBackground and 20 or 10)
+							local padding = J and 20 or 10
+							M.ScrollingFrame.UIPadding.PaddingTop = UDim.new(0, padding)
+							M.ScrollingFrame.UIPadding.PaddingLeft = UDim.new(0, padding)
+							M.ScrollingFrame.UIPadding.PaddingRight = UDim.new(0, padding)
+							M.ScrollingFrame.UIPadding.PaddingBottom = UDim.new(0, padding)
 						end
 					end
 				end
+				return aw
 			end
 
 			function aw.Divider(H)
@@ -14666,15 +14870,22 @@ do
 					})
 				end
 
+				local buttonCount = #M.Buttons
+				local verticalButtons = buttonCount > 2
 				local R = ao("UIListLayout", {
 					Padding = UDim.new(0, 6),
-					FillDirection = "Horizontal",
+					FillDirection = verticalButtons and "Vertical" or "Horizontal",
 					HorizontalAlignment = "Center",
-					HorizontalFlex = "Fill",
+					HorizontalFlex = verticalButtons and "None" or "Fill",
 				})
 
 				local S = ao("Frame", {
-					Size = UDim2.new(1, 0, 0, 36),
+					Size = UDim2.new(
+						1,
+						0,
+						0,
+						verticalButtons and math.max(36, buttonCount * 36 + math.max(buttonCount - 1, 0) * 6) or 36
+					),
 					AutomaticSize = "None",
 					BackgroundTransparency = 1,
 					Parent = N.UIElements.Main,
@@ -14688,7 +14899,7 @@ do
 				for U, V in next, M.Buttons do
 					local W = ar(V.Title, V.Icon, V.Callback, V.Variant, S, N, true)
 					table.insert(T, W)
-					W.Size = UDim2.new(1, 0, 1, 0)
+					W.Size = verticalButtons and UDim2.new(1, 0, 0, 36) or UDim2.new(1, 0, 1, 0)
 				end
 
 				N:Open()
@@ -14742,12 +14953,17 @@ do
 			end
 
 			local L = av.WindUI.GenerateGUID()
+			local isResizing = false
+			local initialSize
+			local initialPosition
+			local initialInputPosition
 
 			local function startResizing(M)
 				if aw.CanResize then
 					isResizing = true
 					aA.Active = true
 					initialSize = aw.UIElements.Main.Size
+					initialPosition = aw.UIElements.Main.Position
 					initialInputPosition = M.Position
 
 					ap(az.ImageLabel, 0.1, { ImageTransparency = 0.35 }):Play()
@@ -14790,23 +15006,26 @@ do
 					M.UserInputType == Enum.UserInputType.MouseMovement
 					or M.UserInputType == Enum.UserInputType.Touch
 				then
-					if isResizing and aw.CanResize then
-						local N = M.Position - initialInputPosition
-						local O =
-							UDim2.new(0, initialSize.X.Offset + N.X * 2, 0, initialSize.Y.Offset + N.Y * 2)
+					if isResizing and aw.CanResize and initialSize and initialPosition and initialInputPosition then
+						local scale = math.max(tonumber(av.WindUI.UIScale) or 1, 0.01)
+						local delta = (M.Position - initialInputPosition) / scale
+						local width = math.clamp(initialSize.X.Offset + delta.X, aw.MinSize.X, aw.MaxSize.X)
+						local height = math.clamp(initialSize.Y.Offset + delta.Y, aw.MinSize.Y, aw.MaxSize.Y)
+						local widthDelta = width - initialSize.X.Offset
+						local heightDelta = height - initialSize.Y.Offset
 
-						O = UDim2.new(
-							O.X.Scale,
-							math.clamp(O.X.Offset, aw.MinSize.X, aw.MaxSize.X),
-							O.Y.Scale,
-							math.clamp(O.Y.Offset, aw.MinSize.Y, aw.MaxSize.Y)
+						local newSize = UDim2.new(initialSize.X.Scale, width, initialSize.Y.Scale, height)
+						local newPosition = UDim2.new(
+							initialPosition.X.Scale,
+							initialPosition.X.Offset + (widthDelta / 2),
+							initialPosition.Y.Scale,
+							initialPosition.Y.Offset + (heightDelta / 2)
 						)
 
-						ap(aw.UIElements.Main, 0.08, {
-							Size = O,
-						}, Enum.EasingStyle.Quad, Enum.EasingDirection.Out):Play()
-
-						aw.Size = O
+						aw.UIElements.Main.Size = newSize
+						aw.UIElements.Main.Position = newPosition
+						aw.Size = newSize
+						aw.Position = newPosition
 					end
 				end
 			end)
@@ -14833,7 +15052,7 @@ do
 			local O
 			local P = 0
 
-			function onDoubleClick()
+			local function onDoubleClick()
 				aw:SetToTheCenter()
 			end
 
@@ -15004,7 +15223,7 @@ aa.AddGlobalSignal(an.InputEnded, function(ap, aq)
 	end
 end)
 
-local ap = ak.LocalPlayer or nil
+local ap = ak.LocalPlayer or ak.PlayerAdded:Wait()
 
 local aq = ai:JSONDecode(a.load("l"))
 if aq then
@@ -15019,9 +15238,37 @@ local at = as.New
 
 local au = a.load("t")
 
-local av = protectgui or (syn and syn.protect_gui) or function() end
+local av = type(protectgui) == "function" and protectgui
+	or (type(syn) == "table" and type(syn.protect_gui) == "function" and syn.protect_gui)
+	or function() end
 
-local aw = gethui and gethui() or (al or ap:WaitForChild("PlayerGui"))
+local aw
+if type(gethui) == "function" then
+	pcall(function()
+		aw = gethui()
+	end)
+end
+if not aw then
+	aw = al
+end
+if not aw and ap then
+	aw = ap:WaitForChild("PlayerGui")
+end
+assert(aw, "WindUI could not resolve a GUI parent")
+
+for _, guiName in ipairs({
+	"WindUI",
+	"WindUI/Notifications",
+	"WindUI/Dropdowns",
+	"WindUI/Tooltips",
+}) do
+	local existing = aw:FindFirstChild(guiName)
+	if existing then
+		pcall(function()
+			existing:Destroy()
+		end)
+	end
+end
 
 local ax = at("UIScale", {
 	Scale = aa.UIScale,
@@ -15034,7 +15281,9 @@ aa.ScreenGui = at("ScreenGui", {
 	Parent = aw,
 	IgnoreGuiInset = true,
 	ScreenInsets = "None",
-	DisplayOrder = -99999,
+	ResetOnSpawn = false,
+	ZIndexBehavior = "Sibling",
+	DisplayOrder = 100000,
 }, {
 
 	at("Folder", {
@@ -15056,16 +15305,28 @@ aa.NotificationGui = at("ScreenGui", {
 	Name = "WindUI/Notifications",
 	Parent = aw,
 	IgnoreGuiInset = true,
+	ScreenInsets = "None",
+	ResetOnSpawn = false,
+	ZIndexBehavior = "Sibling",
+	DisplayOrder = 100030,
 })
 aa.DropdownGui = at("ScreenGui", {
 	Name = "WindUI/Dropdowns",
 	Parent = aw,
 	IgnoreGuiInset = true,
+	ScreenInsets = "None",
+	ResetOnSpawn = false,
+	ZIndexBehavior = "Sibling",
+	DisplayOrder = 100020,
 })
 aa.TooltipGui = at("ScreenGui", {
 	Name = "WindUI/Tooltips",
 	Parent = aw,
 	IgnoreGuiInset = true,
+	ScreenInsets = "None",
+	ResetOnSpawn = false,
+	ZIndexBehavior = "Sibling",
+	DisplayOrder = 100040,
 })
 av(aa.ScreenGui)
 av(aa.NotificationGui)
@@ -15230,7 +15491,7 @@ aa.Themes = a.load("v")(aa, as)
 
 as.Themes = aa.Themes
 
-aa:SetTheme("Dark")
+aa:SetTheme("BadWars")
 aa:SetLanguage(as.Language)
 
 function aa.CreateWindow(az, aA)
@@ -15772,5 +16033,567 @@ do
 	}
 	aa.CompatibilityVersion = COMPAT_VERSION
 end
+
+
+-- BADWARS_SMART_UI_RUNTIME_V3_BEGIN
+do
+	local SMART_UI_VERSION = "3.0.0"
+	local userInputService = game:GetService("UserInputService")
+	local guiService = game:GetService("GuiService")
+	local workspaceService = game:GetService("Workspace")
+	local activeNotifications = {}
+	local enhancedWindows = setmetatable({}, { __mode = "k" })
+
+	local function getViewportSize()
+		if aa.ScreenGui and aa.ScreenGui.Parent then
+			local size = aa.ScreenGui.AbsoluteSize
+			if size.X > 0 and size.Y > 0 then
+				return size
+			end
+		end
+
+		local camera = workspaceService.CurrentCamera
+		if camera then
+			return camera.ViewportSize
+		end
+
+		return Vector2.new(1280, 720)
+	end
+
+	local function getScale()
+		local scale = tonumber(aa.UIScale) or 1
+		if aa.UIScaleObj then
+			scale = tonumber(aa.UIScaleObj.Scale) or scale
+		end
+		return math.max(scale, 0.01)
+	end
+
+	local function setScale(scale)
+		scale = math.clamp(tonumber(scale) or 1, 0.5, 1.25)
+		aa.UIScale = scale
+		as.UIScale = scale
+		if aa.UIScaleObj then
+			aa.UIScaleObj.Scale = scale
+		end
+	end
+
+	local function safeConnect(signal, callback)
+		if typeof(signal) ~= "RBXScriptSignal" or type(callback) ~= "function" then
+			return nil
+		end
+		return as.AddSignal(signal, callback)
+	end
+
+	local function clampGuiObject(object, margin, scaleOverride)
+		if typeof(object) ~= "Instance" or not object:IsA("GuiObject") or not object.Parent then
+			return
+		end
+
+		task.defer(function()
+			if not object.Parent or not object.Visible then
+				return
+			end
+
+			local viewport = getViewportSize()
+			margin = tonumber(margin) or 8
+			local constraint = object:FindFirstChildOfClass("UISizeConstraint")
+			if constraint then
+				constraint.MaxSize = Vector2.new(
+					math.max(120, viewport.X - margin * 2),
+					math.max(60, viewport.Y - margin * 2)
+				)
+			end
+			local position = object.AbsolutePosition
+			local size = object.AbsoluteSize
+			if size.X <= 0 or size.Y <= 0 then
+				return
+			end
+			local left = position.X
+			local top = position.Y
+			local right = left + size.X
+			local bottom = top + size.Y
+			local deltaX = 0
+			local deltaY = 0
+
+			if size.X >= viewport.X - margin * 2 then
+				deltaX = margin - left
+			elseif left < margin then
+				deltaX = margin - left
+			elseif right > viewport.X - margin then
+				deltaX = viewport.X - margin - right
+			end
+
+			if size.Y >= viewport.Y - margin * 2 then
+				deltaY = margin - top
+			elseif top < margin then
+				deltaY = margin - top
+			elseif bottom > viewport.Y - margin then
+				deltaY = viewport.Y - margin - bottom
+			end
+
+			if deltaX ~= 0 or deltaY ~= 0 then
+				local scale = math.max(tonumber(scaleOverride) or 1, 0.01)
+				object.Position = UDim2.new(
+					object.Position.X.Scale,
+					object.Position.X.Offset + deltaX / scale,
+					object.Position.Y.Scale,
+					object.Position.Y.Offset + deltaY / scale
+				)
+			end
+		end)
+	end
+
+	local function styleTopbar(window, logicalWidth, compactOverride)
+		local main = window.UIElements and window.UIElements.Main
+		local topbar = main and main:FindFirstChild("Main") and main.Main:FindFirstChild("Topbar")
+		if not topbar then
+			return
+		end
+
+		local left = topbar:FindFirstChild("Left")
+		local right = topbar:FindFirstChild("Right")
+		local center = topbar:FindFirstChild("Center")
+		local titleHolder = left and left:FindFirstChild("Title")
+		local compact = compactOverride == nil and logicalWidth < 540 or compactOverride
+		local veryCompact = logicalWidth < 440
+		local rightWidth = right and right.AbsoluteSize.X / getScale() or 0
+		local maxTitleWidth = math.max(88, math.min(logicalWidth * (veryCompact and 0.28 or 0.4), logicalWidth - rightWidth - 84))
+
+		if titleHolder then
+			titleHolder.AutomaticSize = Enum.AutomaticSize.None
+			titleHolder.Size = UDim2.new(0, maxTitleWidth, 1, 0)
+
+			local title = titleHolder:FindFirstChild("Title")
+			local author = titleHolder:FindFirstChild("Author")
+
+			if title and title:IsA("TextLabel") then
+				title.AutomaticSize = Enum.AutomaticSize.None
+				title.Size = UDim2.new(1, 0, 0, compact and 18 or 20)
+				title.TextTruncate = Enum.TextTruncate.AtEnd
+				title.TextWrapped = false
+				title.TextSize = compact and 14 or 16
+			end
+
+			if author and author:IsA("TextLabel") then
+				author.Visible = not compact
+				author.AutomaticSize = Enum.AutomaticSize.None
+				author.Size = UDim2.new(1, 0, 0, 16)
+				author.TextTruncate = Enum.TextTruncate.AtEnd
+				author.TextWrapped = false
+			end
+		end
+
+		if center then
+			local holder = center:FindFirstChild("Holder")
+			local hasTags = holder and #holder:GetChildren() > 1
+			local leftWidth = left and left.AbsoluteSize.X / getScale() or 0
+			local available = logicalWidth - leftWidth - rightWidth - window.UIPadding * 3
+			center.Visible = hasTags and available >= 110 and not veryCompact
+			if center.Visible then
+				center.Position = UDim2.new(0, leftWidth + window.UIPadding, 0.5, 0)
+				center.Size = UDim2.new(0, math.max(available, 0), 1, 0)
+			end
+		end
+	end
+
+	local function styleSidebarTabs(window)
+		local tabModule = window.TabModule
+		if type(tabModule) ~= "table" or type(tabModule.Tabs) ~= "table" then
+			return
+		end
+
+		for _, tab in pairs(tabModule.Tabs) do
+			local main = type(tab) == "table" and tab.UIElements and tab.UIElements.Main
+			local frame = main and main:FindFirstChild("Frame")
+			local label = frame and frame:FindFirstChildOfClass("TextLabel")
+			if label then
+				label.TextWrapped = false
+				label.TextTruncate = Enum.TextTruncate.AtEnd
+				label.AutomaticSize = Enum.AutomaticSize.None
+				label.Size = UDim2.new(label.Size.X.Scale, label.Size.X.Offset, 0, 22)
+			end
+		end
+	end
+
+	local function refreshScrolling(root, window)
+		if typeof(root) ~= "Instance" then
+			return
+		end
+
+		for _, object in ipairs(root:GetDescendants()) do
+			if object:IsA("ScrollingFrame") then
+				object.ElasticBehavior = Enum.ElasticBehavior.Never
+				object.ScrollingEnabled = true
+
+				local layout = object:FindFirstChildOfClass("UIListLayout")
+					or object:FindFirstChildOfClass("UIGridLayout")
+					or object:FindFirstChildOfClass("UIPageLayout")
+
+				if layout and not layout:IsA("UIPageLayout") then
+					local horizontal = layout:IsA("UIListLayout")
+						and layout.FillDirection == Enum.FillDirection.Horizontal
+					object.AutomaticCanvasSize = horizontal and Enum.AutomaticSize.X or Enum.AutomaticSize.Y
+					object.CanvasSize = UDim2.fromOffset(0, 0)
+				end
+
+				if window and window.ScrollBarEnabled and object.ScrollingDirection ~= Enum.ScrollingDirection.X then
+					object.ScrollBarThickness = math.max(object.ScrollBarThickness, 2)
+					object.ScrollBarImageTransparency = 0.35
+				end
+			end
+		end
+	end
+
+	local function updateNotificationLayout()
+		if not aa.NotificationGui or not aa.NotificationGui.Parent then
+			return
+		end
+
+		local viewport = getViewportSize()
+		local topInset = 12
+		pcall(function()
+			local inset = guiService:GetGuiInset()
+			topInset = math.max(12, inset.Y + 8)
+		end)
+
+		for _, object in ipairs(aa.NotificationGui:GetChildren()) do
+			if object:IsA("Frame") then
+				local width = math.clamp(viewport.X - 24, 250, 360)
+				local top = viewport.Y < 520 and 12 or math.max(56, topInset)
+				object.Position = UDim2.new(1, -12, 0, top)
+				object.Size = UDim2.new(0, width, 1, -(top + 12))
+			end
+		end
+	end
+
+	local function clampWindow(window)
+		if not window or window.Destroyed or window.IsFullscreen then
+			return
+		end
+
+		local main = window.UIElements and window.UIElements.Main
+		if not main or not main.Parent or not main.Visible then
+			return
+		end
+
+		clampGuiObject(main, 10, getScale())
+		task.defer(function()
+			if main.Parent then
+				window.Position = main.Position
+			end
+		end)
+	end
+
+	local function computeResponsiveScale(window)
+		local viewport = getViewportSize()
+		local baseSize = rawget(window, "__SmartBaseSize") or window.Size
+		local width = math.max(baseSize and baseSize.X.Offset or 580, 1)
+		local height = math.max(baseSize and baseSize.Y.Offset or 460, 1)
+		local availableWidth = math.max(viewport.X - 20, 1)
+		local availableHeight = math.max(viewport.Y - 20, 1)
+		local desired = math.min(1, availableWidth / width, availableHeight / height)
+		return math.clamp(desired, 0.5, 1)
+	end
+
+	local function applyResponsiveLayout(window)
+		if not window or window.Destroyed then
+			return
+		end
+
+		local main = window.UIElements and window.UIElements.Main
+		local sidebar = window.UIElements and window.UIElements.SideBarContainer
+		local mainBar = window.UIElements and window.UIElements.MainBar
+		if not main or not sidebar or not mainBar then
+			return
+		end
+
+		if window.AutoScale and not window.IsFullscreen then
+			local desiredScale = computeResponsiveScale(window)
+			if math.abs(desiredScale - getScale()) >= 0.015 then
+				setScale(desiredScale)
+			end
+		end
+
+		local scale = getScale()
+		local viewport = getViewportSize()
+		local logicalWidth = main.AbsoluteSize.X > 0 and main.AbsoluteSize.X / scale or window.Size.X.Offset
+		local logicalHeight = main.AbsoluteSize.Y > 0 and main.AbsoluteSize.Y / scale or window.Size.Y.Offset
+		local baseSidebar = rawget(window, "__SmartBaseSidebar") or window.SideBarWidth or 200
+		local minimumSidebar = logicalWidth < 470 and 118 or logicalWidth < 560 and 132 or 150
+		local maximumSidebar = math.min(baseSidebar, logicalWidth * 0.36)
+		local sidebarWidth = math.floor(math.clamp(logicalWidth * 0.28, minimumSidebar, math.max(minimumSidebar, maximumSidebar)) + 0.5)
+
+		local forcedCompact = rawget(window, "__SmartForcedCompact")
+		window.CompactMode = forcedCompact == nil and logicalWidth < 540 or forcedCompact
+		window.SideBarWidth = sidebarWidth
+
+		sidebar.Size = UDim2.new(0, sidebarWidth, sidebar.Size.Y.Scale, sidebar.Size.Y.Offset)
+		mainBar.Size = UDim2.new(1, -sidebarWidth, 1, -window.Topbar.Height)
+
+		local userCard = main:FindFirstChild("Main") and main.Main:FindFirstChild("UserCard")
+		if userCard then
+			userCard.Size = UDim2.new(0, math.max(sidebarWidth - window.UIPadding / 2, 1), 0, 42 + window.UIPadding)
+		end
+
+		local maxWidth = math.max(280, viewport.X / scale - 20)
+		local maxHeight = math.max(240, viewport.Y / scale - 20)
+		window.MaxSize = Vector2.new(
+			math.max(math.min(rawget(window, "__SmartBaseMaxSize").X, maxWidth), 280),
+			math.max(math.min(rawget(window, "__SmartBaseMaxSize").Y, maxHeight), 240)
+		)
+		window.MinSize = Vector2.new(
+			math.min(rawget(window, "__SmartBaseMinSize").X, window.MaxSize.X),
+			math.min(rawget(window, "__SmartBaseMinSize").Y, window.MaxSize.Y)
+		)
+
+		styleTopbar(window, logicalWidth, window.CompactMode)
+		styleSidebarTabs(window)
+		refreshScrolling(main, window)
+		updateNotificationLayout()
+		clampWindow(window)
+
+		window.LayoutState = {
+			Compact = window.CompactMode,
+			Scale = scale,
+			SidebarWidth = sidebarWidth,
+			WindowSize = Vector2.new(logicalWidth, logicalHeight),
+			ViewportSize = viewport,
+		}
+	end
+
+	local function scheduleLayout(window)
+		if not window or window.Destroyed or rawget(window, "__SmartLayoutPending") then
+			return
+		end
+
+		rawset(window, "__SmartLayoutPending", true)
+		task.defer(function()
+			rawset(window, "__SmartLayoutPending", nil)
+			pcall(applyResponsiveLayout, window)
+		end)
+	end
+
+	local function enhanceWindow(window)
+		if type(window) ~= "table" or enhancedWindows[window] then
+			return window
+		end
+
+		enhancedWindows[window] = true
+		window.SmartUIVersion = SMART_UI_VERSION
+		rawset(window, "__SmartBaseSize", window.Size)
+		rawset(window, "__SmartBaseSidebar", window.SideBarWidth or 200)
+		rawset(window, "__SmartBaseMinSize", window.MinSize or Vector2.new(560, 350))
+		rawset(window, "__SmartBaseMaxSize", window.MaxSize or Vector2.new(850, 560))
+
+		local main = window.UIElements and window.UIElements.Main
+		if main then
+			safeConnect(main:GetPropertyChangedSignal("AbsoluteSize"), function()
+				scheduleLayout(window)
+			end)
+			safeConnect(main:GetPropertyChangedSignal("AbsolutePosition"), function()
+				if not window.Dragging then
+					return
+				end
+				clampWindow(window)
+			end)
+			safeConnect(main.DescendantAdded, function(object)
+				task.defer(function()
+					if object.Parent then
+						scheduleLayout(window)
+					end
+				end)
+			end)
+		end
+
+		local originalOpen = window.Open
+		if type(originalOpen) == "function" then
+			window.Open = function(self, ...)
+				local result = originalOpen(self, ...)
+				task.delay(0.05, function()
+					scheduleLayout(self)
+				end)
+				task.delay(0.38, function()
+					scheduleLayout(self)
+				end)
+				return result
+			end
+			window.Show = window.Open
+		end
+
+		local originalClose = window.Close
+		if type(originalClose) == "function" then
+			window.Close = function(self, ...)
+				if aa.ActiveDropdown and type(aa.ActiveDropdown.Close) == "function" then
+					pcall(aa.ActiveDropdown.Close, aa.ActiveDropdown)
+				end
+				return originalClose(self, ...)
+			end
+			window.Hide = window.Close
+		end
+
+		local originalSetSize = window.SetSize
+		if type(originalSetSize) == "function" then
+			window.SetSize = function(self, size)
+				if typeof(size) == "UDim2" then
+					local width = math.clamp(size.X.Offset, self.MinSize.X, self.MaxSize.X)
+					local height = math.clamp(size.Y.Offset, self.MinSize.Y, self.MaxSize.Y)
+					size = UDim2.new(size.X.Scale, width, size.Y.Scale, height)
+				end
+				local result = originalSetSize(self, size)
+				scheduleLayout(self)
+				return result
+			end
+		end
+
+		function window.RefreshLayout(self)
+			scheduleLayout(self)
+			return self
+		end
+
+		function window.GetLayoutState(self)
+			return self.LayoutState
+		end
+
+		function window.SetCompactMode(self, enabled)
+			if enabled == nil then
+				rawset(self, "__SmartForcedCompact", nil)
+			else
+				rawset(self, "__SmartForcedCompact", enabled == true)
+			end
+			scheduleLayout(self)
+			return self
+		end
+
+		function window.CloseAllPopups(self)
+			if aa.ActiveDropdown and type(aa.ActiveDropdown.Close) == "function" then
+				pcall(aa.ActiveDropdown.Close, aa.ActiveDropdown)
+			end
+			return self
+		end
+
+		safeConnect(aa.ScreenGui:GetPropertyChangedSignal("AbsoluteSize"), function()
+			scheduleLayout(window)
+		end)
+
+		scheduleLayout(window)
+		task.delay(0.1, function()
+			scheduleLayout(window)
+		end)
+
+		return window
+	end
+
+	local function watchOverlayGui(screenGui, margin)
+		if not screenGui then
+			return
+		end
+
+		local function watch(object)
+			if not object:IsA("GuiObject") then
+				return
+			end
+
+			safeConnect(object:GetPropertyChangedSignal("Visible"), function()
+				if object.Visible then
+					clampGuiObject(object, margin)
+				end
+			end)
+			safeConnect(object:GetPropertyChangedSignal("AbsoluteSize"), function()
+				clampGuiObject(object, margin)
+			end)
+			clampGuiObject(object, margin)
+		end
+
+		for _, child in ipairs(screenGui:GetChildren()) do
+			watch(child)
+		end
+		safeConnect(screenGui.ChildAdded, watch)
+	end
+
+	local originalCreateWindow = aa.CreateWindow
+	function aa.CreateWindow(self, config)
+		local window = originalCreateWindow(self, config)
+		return enhanceWindow(window)
+	end
+
+	local originalNotify = aa.Notify
+	function aa.Notify(self, ...)
+		for index = #activeNotifications, 1, -1 do
+			local notification = activeNotifications[index]
+			if type(notification) ~= "table" or notification.Closed then
+				table.remove(activeNotifications, index)
+			end
+		end
+
+		while #activeNotifications >= 5 do
+			local oldest = table.remove(activeNotifications, 1)
+			if oldest and type(oldest.Close) == "function" then
+				task.spawn(function()
+					pcall(oldest.Close, oldest)
+				end)
+			end
+		end
+
+		local notification = originalNotify(self, ...)
+		if type(notification) == "table" then
+			table.insert(activeNotifications, notification)
+		end
+		updateNotificationLayout()
+		return notification
+	end
+	aa.CreateNotification = aa.Notify
+
+	function aa.RefreshLayout(self)
+		if aa.Window then
+			scheduleLayout(aa.Window)
+		end
+		updateNotificationLayout()
+	end
+
+	function aa.CloseAllPopups(self)
+		if aa.ActiveDropdown and type(aa.ActiveDropdown.Close) == "function" then
+			pcall(aa.ActiveDropdown.Close, aa.ActiveDropdown)
+		end
+	end
+
+	safeConnect(userInputService.InputBegan, function(input, processed)
+		if processed then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.Escape and aa.ActiveDropdown then
+			local dropdown = aa.ActiveDropdown
+			if type(dropdown.Close) == "function" then
+				pcall(dropdown.Close, dropdown)
+			end
+		end
+	end)
+
+	safeConnect(userInputService.InputEnded, function(input)
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			if aa.Window then
+				clampWindow(aa.Window)
+			end
+		end
+	end)
+
+	safeConnect(aa.NotificationGui:GetPropertyChangedSignal("AbsoluteSize"), updateNotificationLayout)
+	watchOverlayGui(aa.DropdownGui, 8)
+	watchOverlayGui(aa.TooltipGui, 8)
+	updateNotificationLayout()
+
+	aa.SmartUI = {
+		Version = SMART_UI_VERSION,
+		Refresh = function()
+			aa:RefreshLayout()
+		end,
+		CloseAllPopups = function()
+			aa:CloseAllPopups()
+		end,
+	}
+end
+-- BADWARS_SMART_UI_RUNTIME_V3_END
 
 return aa

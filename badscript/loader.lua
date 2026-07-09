@@ -1298,18 +1298,20 @@ local function isRateLimited(body)
     if type(body) ~= "string" then
         return false
     end
+    -- Real rate limit responses are SHORT (under 500 chars).
+    -- If the body is longer, it's valid content (Lua code, etc.)
+    if #body > 500 then
+        return false
+    end
     local trimmed = body:match("^%s*(.-)%s*$")
-    -- Only match actual HTTP error responses, not valid Lua containing "429"
-    -- Real 429 responses are JSON error objects or HTML error pages
     if trimmed == "429: Too Many Requests" then return true end
     if trimmed == '{"error":"Too Many Requests"}' then return true end
-    if #trimmed < 300 and trimmed:find('"error"%s*:%s*"Too Many Requests"', 1, false) then return true end
-    if #trimmed < 300 and trimmed:find('"error"%s*:%s*"rate limit', 1, false) then return true end
-    if #trimmed < 500 and trimmed:find('"message"%s*:%s*"rate limit', 1, false) then return true end
-    -- Check for HTML rate limit pages (not valid Lua)
+    if trimmed:find('"error"%s*:%s*"Too Many Requests"', 1, false) then return true end
+    if trimmed:find('"error"%s*:%s*"rate limit', 1, false) then return true end
+    if trimmed:find('"message"%s*:%s*"rate limit', 1, false) then return true end
     local lower = string.lower(trimmed)
-    if #trimmed < 500 and lower:find("<!doctype", 1, true) and lower:find("rate limit", 1, true) then return true end
-    if lower:find("abuse detection", 1, true) and lower:find("<", 1, true) then return true end
+    if lower:find("<!doctype", 1, true) and lower:find("rate limit", 1, true) then return true end
+    if lower:find("abuse detection", 1, true) then return true end
     return false
 end
 

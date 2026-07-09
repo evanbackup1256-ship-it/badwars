@@ -197,6 +197,40 @@ if not loadstring then
     loadstring = load or function(code) error("loadstring unavailable") end
 end
 
+-- Aggressive cache clearing: always wipe old cached files before any HTTP requests
+-- This ensures the latest code is always downloaded, even if old loader is cached
+pcall(function()
+    local oldCacheVersion = isfile('badscript/profiles/cache-version.txt') and readfile('badscript/profiles/cache-version.txt') or ''
+    if oldCacheVersion ~= 'badwars-v23-windui-2026-07-08-10' then
+        -- Clear old main.lua and diagnostics to force fresh download
+        local filesToClear = {
+            'badscript/main.lua',
+            'badscript/libraries/diagnostics.lua',
+            'badscript/profiles/cache-version.txt',
+        }
+        for _, f in ipairs(filesToClear) do
+            if isfile(f) then pcall(delfile, f) end
+        end
+        -- Clear old game bundles and libraries
+        local foldersToWipe = {
+            'badscript/games',
+            'badscript/libraries',
+            'badscript/guis/new',
+        }
+        for _, folder in ipairs(foldersToWipe) do
+            if isfolder(folder) then
+                for _, f in ipairs(listfiles(folder)) do
+                    if isfile(f) and not f:find('windui', 1, true) then
+                        pcall(delfile, f)
+                    end
+                end
+            end
+        end
+        -- Write new cache version
+        pcall(writefile, 'badscript/profiles/cache-version.txt', 'badwars-v23-windui-2026-07-08-10')
+    end
+end)
+
 -- Multi-signal executor fingerprinting.
 -- Direct identity APIs are treated as strongest evidence, but the result is
 -- cross-checked against unique namespaces, marker globals, and capabilities.
@@ -2214,7 +2248,7 @@ if isfile(ORCH_PATH) then
     end
 end
 
-local cacheVersion = 'badwars-v22-windui-2026-07-08-09'
+local cacheVersion = 'badwars-v23-windui-2026-07-08-10'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"

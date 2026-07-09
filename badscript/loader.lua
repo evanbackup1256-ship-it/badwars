@@ -2331,7 +2331,7 @@ if isfile(ORCH_PATH) then
     end
 end
 
-local cacheVersion = 'badwars-v21-windui-2026-07-08-08'
+local cacheVersion = 'badwars-v22-windui-2026-07-08-09'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"

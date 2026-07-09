@@ -4281,14 +4281,14 @@ do
 				Dark = {
 					Name = "Dark",
 
-					-- BadWars branding colors (crimson/red theme)
-					Accent = Color3.fromHex("#1a1a1e"),
-					Dialog = Color3.fromHex("#1c1c20"),
+					-- BadWars premium theme (crimson/red with refined dark palette)
+					Accent = Color3.fromHex("#141418"),
+					Dialog = Color3.fromHex("#18181d"),
 					Outline = Color3.fromHex("#FFFFFF"),
 					Text = Color3.fromHex("#FFFFFF"),
-					Placeholder = Color3.fromHex("#a1a1a1"),
-					Background = Color3.fromHex("#0d0d0f"),
-					Button = Color3.fromHex("#52525b"),
+					Placeholder = Color3.fromHex("#8a8a96"),
+					Background = Color3.fromHex("#0a0a0c"),
+					Button = Color3.fromHex("#4a4a54"),
 					Icon = Color3.fromHex("#a1a1aa"),
 					Toggle = Color3.fromHex("#FF2D4A"),
 					Slider = Color3.fromHex("#FF2D4A"),
@@ -4297,14 +4297,90 @@ do
 					PanelBackground = Color3.fromHex("#FFFFFF"),
 					PanelBackgroundTransparency = 0.95,
 
-					SliderIcon = Color3.fromHex("#908F95"),
+					SliderIcon = Color3.fromHex("#8a8a96"),
 					Primary = Color3.fromHex("#FF2D4A"),
 
 					LabelBackground = Color3.fromHex("#000000"),
 					LabelBackgroundTransparency = 0.83,
 
-					ElementBackground = Color3.fromHex("#2A2A2C"),
+					ElementBackground = Color3.fromHex("#1e1e24"),
 					ElementBackgroundTransparency = 0,
+				},
+
+				BadWars = {
+					Name = "BadWars",
+
+					-- Premium BadWars theme with crimson accent
+					Accent = Color3.fromHex("#12121a"),
+					Dialog = Color3.fromHex("#16161f"),
+					Outline = Color3.fromHex("#FFFFFF"),
+					Text = Color3.fromHex("#FFFFFF"),
+					Placeholder = Color3.fromHex("#7a7a88"),
+					Background = Color3.fromHex("#08080a"),
+					Button = Color3.fromHex("#3a3a44"),
+					Icon = Color3.fromHex("#9a9aa8"),
+					Toggle = Color3.fromHex("#FF2D4A"),
+					Slider = Color3.fromHex("#FF2D4A"),
+					Checkbox = Color3.fromHex("#FF2D4A"),
+
+					PanelBackground = Color3.fromHex("#FFFFFF"),
+					PanelBackgroundTransparency = 0.95,
+
+					SliderIcon = Color3.fromHex("#8a8a96"),
+					Primary = Color3.fromHex("#FF2D4A"),
+
+					LabelBackground = Color3.fromHex("#000000"),
+					LabelBackgroundTransparency = 0.85,
+
+					ElementBackground = Color3.fromHex("#1a1a22"),
+					ElementBackgroundTransparency = 0,
+
+					-- Tab styling
+					TabBackground = Color3.fromHex("#12121a"),
+					TabBackgroundHover = Color3.fromHex("#1a1a24"),
+					TabBackgroundHoverTransparency = 0.97,
+					TabBackgroundActive = Color3.fromHex("#1e1e28"),
+					TabBackgroundActiveTransparency = 0.93,
+					TabText = Color3.fromHex("#FFFFFF"),
+					TabTextTransparency = 0.3,
+					TabTextTransparencyActive = 0,
+					TabTitle = Color3.fromHex("#FFFFFF"),
+					TabIcon = Color3.fromHex("#a1a1aa"),
+					TabIconTransparency = 0.4,
+					TabIconTransparencyActive = 0.1,
+					TabBorderTransparency = 1,
+					TabBorderTransparencyActive = 0.75,
+					TabBorder = Color3.fromHex("#FFFFFF"),
+
+					-- Section styling
+					SectionBox = Color3.fromHex("#FFFFFF"),
+					SectionBoxTransparency = 0.95,
+					SectionBoxBorder = Color3.fromHex("#FFFFFF"),
+					SectionBoxBorderTransparency = 0.75,
+					SectionBoxBackground = Color3.fromHex("#FFFFFF"),
+					SectionBoxBackgroundTransparency = 0.97,
+
+					-- Notification styling
+					Notification = Color3.fromHex("#12121a"),
+					Notification2 = Color3.fromHex("#FFFFFF"),
+					Notification2Transparency = 0.92,
+					NotificationTitle = Color3.fromHex("#FFFFFF"),
+					NotificationTitleTransparency = 0,
+					NotificationContent = Color3.fromHex("#FFFFFF"),
+					NotificationContentTransparency = 0.4,
+					NotificationDuration = Color3.fromHex("#FFFFFF"),
+					NotificationDurationTransparency = 0.95,
+					NotificationBorder = Color3.fromHex("#FFFFFF"),
+					NotificationBorderTransparency = 0.75,
+
+					-- Dropdown styling
+					DropdownTabBorder = Color3.fromHex("#FFFFFF"),
+					DropdownTabBackground = Color3.fromHex("#1e1e24"),
+					DropdownBackground = Color3.fromHex("#0a0a0c"),
+
+					-- Search bar
+					SearchBarBorder = Color3.fromHex("#FFFFFF"),
+					SearchBarBorderTransparency = 0.75,
 				},
 
 				Light = {

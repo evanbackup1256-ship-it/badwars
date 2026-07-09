@@ -264,7 +264,7 @@ d.WindUI = WindUI
 
 pcall(function()
 	WindUI.TransparencyValue = 0.08
-	WindUI:SetTheme("Dark")
+	WindUI:SetTheme("BadWars")
 end)
 
 local Window = WindUI:CreateWindow({
@@ -277,9 +277,9 @@ local Window = WindUI:CreateWindow({
 	ScrollBarEnabled = true,
 	AutoScale = false,
 	Resizable = true,
-	Size = UDim2.new(0, 740, 0, 530),
-	MinSize = Vector2.new(540, 360),
-	MaxSize = Vector2.new(980, 740),
+	Size = UDim2.new(0, 760, 0, 540),
+	MinSize = Vector2.new(560, 380),
+	MaxSize = Vector2.new(1000, 760),
 	ToggleKey = Enum.KeyCode.RightShift,
 	OpenButton = {
 		Title = "BadWars",
@@ -289,7 +289,7 @@ local Window = WindUI:CreateWindow({
 		Color = ColorSequence.new(Color3.fromHex("#FF2D4A"), Color3.fromHex("#FF6B35")),
 	},
 	Topbar = {
-		Height = 48,
+		Height = 50,
 		ButtonsType = "Mac",
 	},
 })
@@ -301,7 +301,7 @@ end
 d.Window = Window
 
 pcall(function()
-	Window:SetUIScale(0.92)
+	Window:SetUIScale(0.94)
 end)
 
 d.gui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui
@@ -329,7 +329,7 @@ pcall(function()
 	Window:Tag({
 		Title = "v2.1",
 		Icon = "badge-check",
-		Color = Color3.fromHex("#22c55e"),
+		Color = Color3.fromHex("#FF2D4A"),
 		Border = true,
 	})
 end)
@@ -338,19 +338,19 @@ local Tabs = {}
 d.Tabs = Tabs
 
 local tabMetadata = {
-	General = { Icon = "home", Desc = "Core settings and quick actions" },
-	Modules = { Icon = "list", Desc = "Module browser and health overview" },
+	General = { Icon = "home", Desc = "Quick actions and loader script" },
+	Modules = { Icon = "list", Desc = "Module health and status" },
 	Blatant = { Icon = "flame", Desc = "High-visibility modules" },
 	Combat = { Icon = "sword", Desc = "Combat enhancements" },
-	Render = { Icon = "eye", Desc = "Visuals and overlays" },
-	Utility = { Icon = "wrench", Desc = "Helpers and automation" },
-	World = { Icon = "globe", Desc = "World and movement" },
-	Minigames = { Icon = "gamepad-2", Desc = "Minigame-specific modules" },
-	Legit = { Icon = "user-check", Desc = "Lower-profile modules" },
-	Friends = { Icon = "users", Desc = "Friend configuration" },
-	Targets = { Icon = "crosshair", Desc = "Target configuration" },
-	Notifications = { Icon = "bell", Desc = "Notification history" },
-	Settings = { Icon = "settings", Desc = "Interface and profiles" },
+	Render = { Icon = "eye", Desc = "Visuals and ESP" },
+	Utility = { Icon = "wrench", Desc = "Automation tools" },
+	World = { Icon = "globe", Desc = "Movement and world" },
+	Minigames = { Icon = "gamepad-2", Desc = "Minigame modules" },
+	Legit = { Icon = "user-check", Desc = "Legit modules" },
+	Friends = { Icon = "users", Desc = "Friend settings" },
+	Targets = { Icon = "crosshair", Desc = "Target config" },
+	Notifications = { Icon = "bell", Desc = "Event history" },
+	Settings = { Icon = "settings", Desc = "Appearance and profiles" },
 }
 
 local function ensureTab(name, metadata)
@@ -1769,7 +1769,7 @@ end
 -- ─── General Tab ───
 Tabs.General:Paragraph({
 	Title = "BadWars v2.1",
-	Desc = "Runtime loader for Roblox. RightShift to toggle. Modules are sandboxed — failures are isolated.",
+	Desc = "Runtime loader for Roblox. RightShift to toggle.",
 })
 
 Tabs.General:Divider()
@@ -1782,7 +1782,7 @@ Tabs.General:Code({
 
 Tabs.General:Divider()
 
--- Quick actions row
+-- Quick actions section
 local quickActionsSection = Tabs.General:Section({
 	Title = "Quick Actions",
 	Opened = true,
@@ -1792,25 +1792,25 @@ local quickActionsSection = Tabs.General:Section({
 quickActionsSection:Button({
 	Title = "Copy Loader",
 	Icon = "copy",
-	Desc = "Copy the loader script to clipboard",
+	Desc = "Copy loader to clipboard",
 	Callback = function()
 		local loader = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()'
 		pcall(function()
 			if type(setclipboard) == "function" then setclipboard(loader)
 			elseif type(toclipboard) == "function" then toclipboard(loader) end
 		end)
-		d:CreateNotification("BadWars", "Loader copied to clipboard", 3, "success")
+		d:CreateNotification("BadWars", "Loader copied", 3, "success")
 	end,
 })
 
 quickActionsSection:Button({
 	Title = "Uninject",
 	Icon = "x",
-	Desc = "Remove all modules and close the interface",
+	Desc = "Remove all modules and close",
 	Callback = function()
 		local dialog = Window:Dialog({
 			Title = "Uninject BadWars?",
-			Content = "This will remove all modules and close the interface. This action cannot be undone.",
+			Content = "This will remove all modules and close the interface.",
 			Buttons = {
 				{ Title = "Cancel", Variant = "Secondary", Callback = function() end },
 				{
@@ -1832,7 +1832,7 @@ quickActionsSection:Button({
 quickActionsSection:Button({
 	Title = "Reload",
 	Icon = "refresh-cw",
-	Desc = "Restart BadWars from scratch",
+	Desc = "Restart BadWars",
 	Callback = function()
 		d:CreateNotification("BadWars", "Reloading...", 2, "info")
 		shared.BadReload = true
@@ -1867,7 +1867,7 @@ local function saveProfile(name)
 		if ok then return success ~= false, result end
 	end
 	local manager = getConfigManager()
-	if not manager then return false, "Config manager is unavailable" end
+	if not manager then return false, "Config manager unavailable" end
 	local config = manager:GetConfig(name)
 	if type(config) ~= "table" or type(config.Save) ~= "function" then
 		config = manager:CreateConfig(name, true)
@@ -1885,7 +1885,7 @@ local function loadProfile(name)
 		if ok then return success ~= false, result end
 	end
 	local manager = getConfigManager()
-	if not manager then return false, "Config manager is unavailable" end
+	if not manager then return false, "Config manager unavailable" end
 	local config = manager:GetConfig(name)
 	if type(config) ~= "table" or type(config.Load) ~= "function" then
 		config = manager:CreateConfig(name, true)
@@ -1904,7 +1904,7 @@ local appearanceSection = Tabs.Settings:Section({
 
 appearanceSection:Toggle({
 	Title = "UI Transparency",
-	Desc = "Transparent surface treatment",
+	Desc = "Glass effect",
 	Value = true,
 	Flag = "settings/transparency",
 	Callback = function(value)
@@ -1920,8 +1920,8 @@ appearanceSection:Toggle({
 -- UI Scale with progress indicator
 local uiScaleProgress = appearanceSection:ProgressBar({
 	Title = "UI Scale",
-	Desc = "Current interface scale",
-	Value = { Min = 65, Max = 125, Default = 92 },
+	Desc = "Current scale",
+	Value = { Min = 65, Max = 125, Default = 94 },
 	DisplayMode = "Value",
 	Format = function(value)
 		return string.format("%.0f%%", value)
@@ -1932,7 +1932,7 @@ local uiScaleProgress = appearanceSection:ProgressBar({
 
 appearanceSection:Slider({
 	Title = "Adjust Scale",
-	Value = { Min = 65, Max = 125, Default = 92 },
+	Value = { Min = 65, Max = 125, Default = 94 },
 	Step = 5,
 	Callback = function(value)
 		local scale = value / 100
@@ -1964,7 +1964,7 @@ profileSection:Input({
 profileSection:Button({
 	Title = "Save Profile",
 	Icon = "save",
-	Desc = "Save current settings to profile",
+	Desc = "Save current settings",
 	Callback = function()
 		local ok, result = saveProfile(currentProfileName)
 		d:CreateNotification("Profiles", ok and ("Saved '" .. currentProfileName .. "'") or tostring(result), 4, ok and "success" or "error")
@@ -1974,7 +1974,7 @@ profileSection:Button({
 profileSection:Button({
 	Title = "Load Profile",
 	Icon = "folder-open",
-	Desc = "Load settings from profile",
+	Desc = "Load settings",
 	Callback = function()
 		local ok, result = loadProfile(currentProfileName)
 		d:CreateNotification("Profiles", ok and ("Loaded '" .. currentProfileName .. "'") or tostring(result), 4, ok and "success" or "error")
@@ -1984,11 +1984,11 @@ profileSection:Button({
 profileSection:Button({
 	Title = "Reset Profile",
 	Icon = "trash",
-	Desc = "Delete saved settings for current profile",
+	Desc = "Delete saved settings",
 	Callback = function()
 		local dialog = Window:Dialog({
 			Title = "Reset Profile?",
-			Content = "This will clear all saved settings for '" .. currentProfileName .. "'.",
+			Content = "Clear all saved settings for '" .. currentProfileName .. "'.",
 			Buttons = {
 				{ Title = "Cancel", Variant = "Secondary", Callback = function() end },
 				{
@@ -2001,7 +2001,7 @@ profileSection:Button({
 								pcall(delfile, configPath)
 								d:CreateNotification("Profiles", "Profile reset", 3, "success")
 							else
-								d:CreateNotification("Profiles", "No saved profile found", 3, "warning")
+								d:CreateNotification("Profiles", "No saved profile", 3, "warning")
 							end
 						end
 					end,

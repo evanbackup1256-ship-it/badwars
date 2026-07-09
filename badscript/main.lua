@@ -648,7 +648,7 @@ local function httpGetMulti(urls)
             local ok, res = callWithTimeout(function()
                 return fn(game, url, true)
             end, 15)
-            if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) then
+            if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) and not isRateLimited(res) then
                 return res
             end
         end
@@ -660,31 +660,37 @@ local function httpGetMulti(urls)
             end
             return nil
         end, 15)
-        if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) then
+        if ok and type(res) == "string" and #res > 0 and not isNotFoundBody(res) and not isRateLimited(res) then
             return res
         end
         -- Try request/http_request as last resort
         local reqFn
-        if type(request) == "function" then
-            reqFn = request
-        elseif type(http_request) == "function" then
-            reqFn = http_request
-        elseif type(syn) == "table" and type(syn.request) == "function" then
-            reqFn = syn.request
-        elseif type(fluxus) == "table" and type(fluxus.request) == "function" then
-            reqFn = fluxus.request
-        end
+        pcall(function()
+            if type(request) == "function" then
+                reqFn = request
+            elseif type(http_request) == "function" then
+                reqFn = http_request
+            elseif type(syn) == "table" and type(syn.request) == "function" then
+                reqFn = syn.request
+            elseif type(fluxus) == "table" and type(fluxus.request) == "function" then
+                reqFn = fluxus.request
+            end
+        end)
         if type(reqFn) == "function" then
             local reqOk, reqRes = callWithTimeout(function()
                 local result = reqFn({Url = url, Method = "GET"})
-                if type(result) == "table" and type(result.Body) == "string" then
-                    return result
+                if type(result) == "table" then
+                    if type(result.Body) == "string" then
+                        return result
+                    elseif type(result.body) == "string" then
+                        return {Body = result.body}
+                    end
                 elseif type(result) == "string" then
                     return {Body = result}
                 end
                 return nil
             end, 15)
-            if reqOk and type(reqRes) == "table" and type(reqRes.Body) == "string" and #reqRes.Body > 0 and not isNotFoundBody(reqRes.Body) then
+            if reqOk and type(reqRes) == "table" and type(reqRes.Body) == "string" and #reqRes.Body > 0 and not isNotFoundBody(reqRes.Body) and not isRateLimited(reqRes.Body) then
                 return reqRes.Body
             end
         end
@@ -705,6 +711,32 @@ local function isNotFoundBody(body)
     return trimmed == "404: Not Found"
         or trimmed == '{"message":"Not Found"}'
         or (#trimmed < 200 and trimmed:find('"message"%s*:%s*"Not Found"') ~= nil)
+end
+
+local function isRateLimited(body)
+    if type(body) ~= "string" then
+        return false
+    end
+    local trimmed = body:match("^%s*(.-)%s*$")
+    -- Check for GitHub rate limit responses
+    if trimmed:find("429", 1, true) and #trimmed < 300 then
+        return true
+    end
+    if trimmed:find("rate limit", 1, true) and #trimmed < 500 then
+        return true
+    end
+    if trimmed:find("abuse detection", 1, true) then
+        return true
+    end
+    -- Check for generic error pages that aren't valid Lua
+    if trimmed:find("<!DOCTYPE", 1, true) or trimmed:find("<html", 1, true) then
+        return true
+    end
+    -- Check for JSON error responses
+    if #trimmed < 200 and trimmed:find('"message"%s*:') and not trimmed:find('"message"%s*:%s*"Not Found"') then
+        return true
+    end
+    return false
 end
 
 local function isStaleGuiCache(path, body)
@@ -736,7 +768,7 @@ local function isStaleMotionCache(path, body)
 end
 
 local function downloadFile(path, maxRetries)
-    maxRetries = maxRetries or 2
+    maxRetries = maxRetries or 3
     if not HttpGet then
         return nil, "HttpGet nil"
     end
@@ -755,10 +787,14 @@ local function downloadFile(path, maxRetries)
     setStatus("downloading required files")
     local urls = rawUrls(path)
     local res = httpGetMulti(urls)
-    -- Retry logic for large files
-    if (type(res) ~= "string" or #res == 0) and maxRetries > 0 then
-        setStatus("retrying download: " .. path)
-        task.wait(1)
+    -- Retry logic with backoff to avoid rate limiting
+    local retryDelay = 2
+    local attempts = 0
+    while (type(res) ~= "string" or #res == 0 or isRateLimited(res)) and attempts < maxRetries do
+        attempts = attempts + 1
+        setStatus("retrying download: " .. path .. " (attempt " .. (attempts + 1) .. ")")
+        task.wait(retryDelay)
+        retryDelay = retryDelay * 2
         res = httpGetMulti(urls)
     end
     if type(res) ~= "string" or #res == 0 then
@@ -766,6 +802,9 @@ local function downloadFile(path, maxRetries)
     end
     if isNotFoundBody(res) then
         return nil, "FILE NOT FOUND: " .. urls[1]
+    end
+    if isRateLimited(res) then
+        return nil, "RATE LIMITED: GitHub is throttling requests"
     end
     if path:sub(-4) == ".lua" then
         res = "-- BadWars by usingINales\n" .. res

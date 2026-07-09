@@ -1,6 +1,5 @@
 -- BADWARS_WINDUI_INTEGRATION
--- WindUI adapter with a centralized legacy compatibility layer.
--- Existing module behavior is preserved; this file only translates GUI APIs and lifecycle state.
+-- WindUI adapter with centralized legacy compatibility layer.
 
 local cloneref = cloneref or clonereference or function(value)
 	return value
@@ -17,7 +16,7 @@ local d = {
 	Connections = {},
 	Resources = {},
 	GUIColor = { Hue = 0.02, Sat = 0.95, Value = 0.98 },
-	Version = "WindUI-Adapter-2.0",
+	Version = "WindUI-Adapter-2.1",
 	PremiumBuild = false,
 	Name = "BadWars-WindUI",
 	Visible = false,
@@ -152,7 +151,7 @@ local function normalizeColor(value)
 			return Color3.new(red, green, blue)
 		end
 	end
-	return Color3.fromRGB(255, 48, 88)
+	return Color3.fromRGB(255, 45, 74)
 end
 
 local function isConnection(value)
@@ -278,9 +277,9 @@ local Window = WindUI:CreateWindow({
 	ScrollBarEnabled = true,
 	AutoScale = false,
 	Resizable = true,
-	Size = UDim2.new(0, 720, 0, 520),
+	Size = UDim2.new(0, 740, 0, 530),
 	MinSize = Vector2.new(540, 360),
-	MaxSize = Vector2.new(960, 720),
+	MaxSize = Vector2.new(980, 740),
 	ToggleKey = Enum.KeyCode.RightShift,
 	OpenButton = {
 		Title = "BadWars",
@@ -325,12 +324,6 @@ local function setWindowHidden(hidden)
 end
 
 setWindowHidden(true)
-task.defer(function()
-	task.wait()
-	if not d.Visible and not d.Destroyed then
-		setWindowHidden(true)
-	end
-end)
 
 pcall(function()
 	Window:Tag({
@@ -382,6 +375,7 @@ for _, name in ipairs({
 	ensureTab(name)
 end
 
+-- ─── Modules Tab ───
 Tabs.Modules:Paragraph({
 	Title = "Module Browser",
 	Desc = "Modules are grouped by category. Each module is sandboxed — failures are isolated and recorded.",
@@ -392,12 +386,14 @@ Tabs.Modules:Paragraph({
 })
 
 local moduleHealthProgress
-local function updateModuleHealthProgress(ready, total)
-	if moduleHealthProgress then
+local moduleHealthLabel
+local function updateModuleHealth(ready, total)
+	if moduleHealthProgress and type(moduleHealthProgress.Set) == "function" then
 		local pct = total > 0 and math.floor((ready / total) * 100 + 0.5) or 0
-		if type(moduleHealthProgress.Set) == "function" then
-			pcall(moduleHealthProgress.Set, moduleHealthProgress, pct)
-		end
+		pcall(moduleHealthProgress.Set, moduleHealthProgress, pct)
+	end
+	if moduleHealthLabel and type(moduleHealthLabel.SetDesc) == "function" then
+		pcall(moduleHealthLabel.SetDesc, moduleHealthLabel, string.format("%d / %d modules healthy", ready, total))
 	end
 end
 
@@ -409,18 +405,28 @@ moduleHealthProgress = Tabs.Modules:ProgressBar({
 	Animate = true,
 })
 
--- Update health progress after modules load
-task.defer(function()
-	task.wait(2)
-	local B = shared.Bad
-	if B and type(B.GetBedWarsModuleHealth) == "function" then
-		local report = B:GetBedWarsModuleHealth()
-		if type(report) == "table" and report.Total then
-			updateModuleHealthProgress(report.Ready or 0, report.Total)
+moduleHealthLabel = Tabs.Modules:Paragraph({
+	Title = "Status",
+	Desc = "Waiting for modules to load...",
+})
+
+-- Update health after modules load (retry a few times to catch late registrations)
+task.spawn(function()
+	for attempt = 1, 5 do
+		task.wait(1.5 * attempt)
+		if d.Destroyed then return end
+		local B = shared.Bad
+		if B and type(B.GetBedWarsModuleHealth) == "function" then
+			local report = B:GetBedWarsModuleHealth()
+			if type(report) == "table" and report.Total and report.Total > 0 then
+				updateModuleHealth(report.Ready or 0, report.Total)
+				return
+			end
 		end
 	end
 end)
 
+-- ─── Notifications Tab ───
 local notificationLog = {}
 local MAX_NOTIFICATION_LOG = 60
 local notificationsEnabled = true
@@ -448,6 +454,13 @@ local function refreshNotificationTab()
 		if ok then
 			return
 		end
+		-- Old paragraph is broken, destroy it and recreate
+		pcall(function()
+			if type(notificationParagraph.Destroy) == "function" then
+				notificationParagraph:Destroy()
+			end
+		end)
+		notificationParagraph = nil
 	end
 	notificationParagraph = Tabs.Notifications:Paragraph({
 		Title = "Event Log",
@@ -525,6 +538,7 @@ Tabs.Notifications:Toggle({
 Tabs.Notifications:Space()
 refreshNotificationTab()
 
+-- ─── Core helpers ───
 local function reportCallbackError(context, err)
 	d:CreateNotification("Module Error", tostring(context) .. ": " .. tostring(err), 7, "error")
 end
@@ -578,6 +592,7 @@ local function destroyControl(control)
 	end
 end
 
+-- ─── Option API ───
 local function makeOptionApi(spec)
 	spec = spec or {}
 	local api = {
@@ -706,6 +721,7 @@ local function resolveFlag(module, settings, optionName)
 	return settings.Flag or makeFlag(module.Category, module.Name, optionName)
 end
 
+-- ─── Control creators ───
 local function createToggleOption(module, section, settings)
 	settings = settings or {}
 	local initial = firstNonNil(settings.Default, settings.Value, settings.Enabled, false) == true
@@ -917,13 +933,24 @@ local function createKeybindOption(module, section, settings)
 		Blacklist = settings.Blacklist,
 		Flag = resolveFlag(module, settings, option.Name),
 		Callback = function(key)
-			-- WindUI invokes this when the bound key is pressed.
 			option.Value = normalizeKey(option.Object and option.Object.Value or key)
 			runUserCallback(option.Name, settings.Function or settings.Callback, key)
 		end,
 	})
+	-- Safe keybind label tracking — wrapped in deep pcall to survive WindUI structure changes
 	pcall(function()
-		local label = option.Object.UIElements.Keybind.Frame.Frame.TextLabel
+		if type(option.Object) ~= "table" or type(option.Object.UIElements) ~= "table" then
+			return
+		end
+		local kb = option.Object.UIElements.Keybind
+		if type(kb) ~= "table" or type(kb.Frame) ~= "table" then
+			return
+		end
+		local inner = kb.Frame.Frame or kb.Frame
+		if type(inner) ~= "table" or typeof(inner.TextLabel) ~= "Instance" then
+			return
+		end
+		local label = inner.TextLabel
 		local connection = label:GetPropertyChangedSignal("Text"):Connect(function()
 			local text = tostring(label.Text or "")
 			if text ~= "" and text ~= "..." then
@@ -1239,6 +1266,7 @@ local function createTargetsOption(module, section, settings)
 	return registerOption(module, option.Name, option)
 end
 
+-- ─── Category system ───
 local categoryIcons = {
 	Combat = "sword",
 	Blatant = "flame",
@@ -1331,7 +1359,7 @@ local function createCategoryObject(name, iconName, suppliedTab)
 			module.ExtraText = text
 			local description = baseDescription
 			if text ~= nil and tostring(text) ~= "" then
-				description = description ~= "" and (description .. " • " .. tostring(text)) or tostring(text)
+				description = description ~= "" and (description .. " \u{2022} " .. tostring(text)) or tostring(text)
 			end
 			pcall(function()
 				if type(section.SetDesc) == "function" then section:SetDesc(description) end
@@ -1366,8 +1394,12 @@ local function createCategoryObject(name, iconName, suppliedTab)
 			end
 			pcall(function() if type(section.Destroy) == "function" then section:Destroy() end end)
 			category.Modules[moduleName] = nil
-			if d.Modules[moduleName] == module then d.Modules[moduleName] = nil end
+			-- Remove from d.Modules using both keys
 			d.Modules[name .. "/" .. moduleName] = nil
+			-- Only remove short key if it still points to this module
+			if d.Modules[moduleName] == module then
+				d.Modules[moduleName] = nil
+			end
 		end
 
 		function module:CreateToggle(optionSettings)
@@ -1557,10 +1589,8 @@ local function createCategoryObject(name, iconName, suppliedTab)
 		module.CreateColorPicker = module.CreateColorpicker
 
 		category.Modules[moduleName] = module
+		-- Store under qualified key only (no duplicate short key to prevent double-processing)
 		d.Modules[name .. "/" .. moduleName] = module
-		if d.Modules[moduleName] == nil then
-			d.Modules[moduleName] = module
-		end
 		return module
 	end
 
@@ -1683,6 +1713,7 @@ function d.CreateOverlay(self, settings)
 	return overlay
 end
 
+-- ─── Main category (legacy compat) ───
 local mainCategory = {
 	Type = "ServiceCategory",
 	Name = "Main",
@@ -1690,12 +1721,6 @@ local mainCategory = {
 	Modules = {},
 }
 d.Categories.Main = mainCategory
-
-local generalModule = {
-	Name = "General",
-	Category = "Main",
-	Options = mainCategory.Options,
-}
 
 local function createMainToggle(name, default, callback)
 	local option = makeOptionApi({ Name = name, Type = "Toggle", Value = default, Callback = callback })
@@ -1707,15 +1732,16 @@ local function createMainToggle(name, default, callback)
 			option:_FromControl(value == true)
 		end,
 	})
+	-- Store under BOTH keys so legacy code finds it regardless of casing
 	mainCategory.Options[name] = option
+	mainCategory.Options[string.lower(name)] = option
 	return option
 end
 
+-- Legacy keys: main.lua references "GUI bind indicator" (lowercase b, i)
 mainCategory.Options["GUI bind indicator"] = createMainToggle("GUI Bind Indicator", true)
 mainCategory.Options["Teams by server"] = createMainToggle("Teams by server", false)
 mainCategory.Options["Use team color"] = createMainToggle("Use team color", true)
--- Preserve exact legacy keys and casing.
-mainCategory.Options["GUI bind indicator"] = mainCategory.Options["GUI Bind Indicator"] or mainCategory.Options["GUI bind indicator"]
 
 function mainCategory:CreateButton(settings)
 	settings = settings or {}
@@ -1740,27 +1766,59 @@ function mainCategory:CreateToggle(settings)
 	return option
 end
 
-Tabs.General:Button({
-	Title = "Uninject / Self Destruct",
+-- ─── General Tab ───
+Tabs.General:Paragraph({
+	Title = "BadWars v2.1",
+	Desc = "Runtime loader for Roblox. RightShift to toggle. Modules are sandboxed — failures are isolated.",
+})
+
+Tabs.General:Divider()
+
+Tabs.General:Code({
+	Title = "Loader Script",
+	Code = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()',
+	CanCopied = true,
+})
+
+Tabs.General:Divider()
+
+-- Quick actions row
+local quickActionsSection = Tabs.General:Section({
+	Title = "Quick Actions",
+	Opened = true,
+	Box = true,
+})
+
+quickActionsSection:Button({
+	Title = "Copy Loader",
+	Icon = "copy",
+	Desc = "Copy the loader script to clipboard",
+	Callback = function()
+		local loader = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()'
+		pcall(function()
+			if type(setclipboard) == "function" then setclipboard(loader)
+			elseif type(toclipboard) == "function" then toclipboard(loader) end
+		end)
+		d:CreateNotification("BadWars", "Loader copied to clipboard", 3, "success")
+	end,
+})
+
+quickActionsSection:Button({
+	Title = "Uninject",
 	Icon = "x",
+	Desc = "Remove all modules and close the interface",
 	Callback = function()
 		local dialog = Window:Dialog({
 			Title = "Uninject BadWars?",
 			Content = "This will remove all modules and close the interface. This action cannot be undone.",
 			Buttons = {
-				{
-					Title = "Cancel",
-					Variant = "Secondary",
-					Callback = function() end,
-				},
+				{ Title = "Cancel", Variant = "Secondary", Callback = function() end },
 				{
 					Title = "Uninject",
 					Variant = "Primary",
 					Callback = function()
 						d:CreateNotification("BadWars", "Uninjecting...", 2, "warning")
-						task.defer(function()
-							d:Uninject()
-						end)
+						task.defer(function() d:Uninject() end)
 					end,
 				},
 			},
@@ -1770,30 +1828,32 @@ Tabs.General:Button({
 		end
 	end,
 })
-Tabs.General:Space()
-Tabs.General:Paragraph({
-	Title = "Quick Info",
-	Desc = "RightShift toggles the interface. Modules are sandboxed — failures are isolated and recorded.",
+
+quickActionsSection:Button({
+	Title = "Reload",
+	Icon = "refresh-cw",
+	Desc = "Restart BadWars from scratch",
+	Callback = function()
+		d:CreateNotification("BadWars", "Reloading...", 2, "info")
+		shared.BadReload = true
+		task.defer(function()
+			local ok, err = pcall(function()
+				if shared.BadDeveloper and type(readfile) == "function" then
+					local source = readfile("badscript/loader.lua")
+					assert(type(source) == "string", "loader.lua could not be read")
+					assert(loadstring(source, "@badscript/loader.lua"))()
+				else
+					assert(loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true), "@BadWarsLoader"))()
+				end
+			end)
+			if not ok then
+				d:CreateNotification("Reload Error", tostring(err), 7, "error")
+			end
+		end)
+	end,
 })
 
--- Loader script display
-Tabs.General:Code({
-	Title = "Loader Script",
-	Code = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()',
-	CanCopied = true,
-})
-
--- Quick stats
-local quickStatsHStack = Tabs.General:HStack()
-quickStatsHStack:Paragraph({
-	Title = "Version",
-	Desc = "v2.1 • WindUI",
-})
-quickStatsHStack:Paragraph({
-	Title = "Status",
-	Desc = "Operational",
-})
-
+-- ─── Settings Tab ───
 local currentProfileName = "default"
 local function getConfigManager()
 	return type(Window) == "table" and Window.ConfigManager or nil
@@ -1835,7 +1895,14 @@ local function loadProfile(name)
 	return config:Load()
 end
 
-Tabs.Settings:Toggle({
+-- Appearance section
+local appearanceSection = Tabs.Settings:Section({
+	Title = "Appearance",
+	Opened = true,
+	Box = true,
+})
+
+appearanceSection:Toggle({
 	Title = "UI Transparency",
 	Desc = "Transparent surface treatment",
 	Value = true,
@@ -1851,7 +1918,7 @@ Tabs.Settings:Toggle({
 })
 
 -- UI Scale with progress indicator
-local uiScaleProgress = Tabs.Settings:ProgressBar({
+local uiScaleProgress = appearanceSection:ProgressBar({
 	Title = "UI Scale",
 	Desc = "Current interface scale",
 	Value = { Min = 65, Max = 125, Default = 92 },
@@ -1863,7 +1930,7 @@ local uiScaleProgress = Tabs.Settings:ProgressBar({
 	Animate = true,
 })
 
-Tabs.Settings:Slider({
+appearanceSection:Slider({
 	Title = "Adjust Scale",
 	Value = { Min = 65, Max = 125, Default = 92 },
 	Step = 5,
@@ -1875,7 +1942,15 @@ Tabs.Settings:Slider({
 		end
 	end,
 })
-Tabs.Settings:Input({
+
+-- Profile section
+local profileSection = Tabs.Settings:Section({
+	Title = "Profiles",
+	Opened = true,
+	Box = true,
+})
+
+profileSection:Input({
 	Title = "Profile Name",
 	Value = currentProfileName,
 	Placeholder = "default",
@@ -1885,44 +1960,31 @@ Tabs.Settings:Input({
 		end
 	end,
 })
-Tabs.Settings:Button({
-	Title = "Save Current Profile",
+
+profileSection:Button({
+	Title = "Save Profile",
 	Icon = "save",
+	Desc = "Save current settings to profile",
 	Callback = function()
 		local ok, result = saveProfile(currentProfileName)
 		d:CreateNotification("Profiles", ok and ("Saved '" .. currentProfileName .. "'") or tostring(result), 4, ok and "success" or "error")
 	end,
 })
-Tabs.Settings:Button({
+
+profileSection:Button({
 	Title = "Load Profile",
 	Icon = "folder-open",
+	Desc = "Load settings from profile",
 	Callback = function()
 		local ok, result = loadProfile(currentProfileName)
 		d:CreateNotification("Profiles", ok and ("Loaded '" .. currentProfileName .. "'") or tostring(result), 4, ok and "success" or "error")
 	end,
 })
 
--- Profile management HStack
-local profileHStack = Tabs.Settings:HStack()
-profileHStack:Button({
-	Title = "Save",
-	Icon = "save",
-	Callback = function()
-		local ok, result = saveProfile(currentProfileName)
-		d:CreateNotification("Profiles", ok and "Saved" or tostring(result), 3, ok and "success" or "error")
-	end,
-})
-profileHStack:Button({
-	Title = "Load",
-	Icon = "folder-open",
-	Callback = function()
-		local ok, result = loadProfile(currentProfileName)
-		d:CreateNotification("Profiles", ok and "Loaded" or tostring(result), 3, ok and "success" or "error")
-	end,
-})
-profileHStack:Button({
-	Title = "Reset",
+profileSection:Button({
+	Title = "Reset Profile",
 	Icon = "trash",
+	Desc = "Delete saved settings for current profile",
 	Callback = function()
 		local dialog = Window:Dialog({
 			Title = "Reset Profile?",
@@ -1938,6 +2000,8 @@ profileHStack:Button({
 							if isfile(configPath) then
 								pcall(delfile, configPath)
 								d:CreateNotification("Profiles", "Profile reset", 3, "success")
+							else
+								d:CreateNotification("Profiles", "No saved profile found", 3, "warning")
 							end
 						end
 					end,
@@ -1949,29 +2013,8 @@ profileHStack:Button({
 		end
 	end,
 })
-Tabs.Settings:Button({
-	Title = "Reinject / Reload",
-	Icon = "refresh-cw",
-	Callback = function()
-		d:CreateNotification("BadWars", "Reloading...", 2, "info")
-		shared.BadReload = true
-		task.defer(function()
-			local ok, err = pcall(function()
-				if shared.BadDeveloper and type(readfile) == "function" then
-					local source = readfile("badscript/loader.lua")
-					assert(type(source) == "string", "loader.lua could not be read")
-					assert(loadstring(source, "@badscript/loader.lua"))()
-				else
-					assert(loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true), "@BadWarsLoader"))()
-				end
-			end)
-			if not ok then
-				d:CreateNotification("Reload Error", tostring(err), 7, "error")
-			end
-		end)
-	end,
-})
 
+-- ─── API methods ───
 function d.Save(self, target)
 	if self ~= d then target = self end
 	return saveProfile(type(target) == "string" and target or currentProfileName)
@@ -2049,13 +2092,14 @@ function d.FinalizeInitialLayout()
 	return true
 end
 
-local welcomeShown = false
+-- ── Show / Hide / Toggle / Uninject ───
+local firstLoadDone = false
+
 function d.Show(self)
 	if self ~= d then return d:Show() end
 	if d.Destroyed then return false end
 	d.Visible = true
 
-	-- Try multiple methods to open the WindUI window
 	pcall(function()
 		if type(Window.Open) == "function" then Window:Open() end
 	end)
@@ -2065,11 +2109,9 @@ function d.Show(self)
 
 	setWindowHidden(false)
 
-	-- Ensure visibility after a frame
 	task.defer(function()
 		if d.Visible and not d.Destroyed then
 			setWindowHidden(false)
-			-- Also try direct instance visibility
 			local main = findWindowMain(Window)
 			if typeof(main) == "Instance" then
 				pcall(function() main.Visible = true end)
@@ -2077,22 +2119,19 @@ function d.Show(self)
 		end
 	end)
 
-	if not welcomeShown then
-		welcomeShown = true
+	if not firstLoadDone then
+		firstLoadDone = true
 		d:CreateNotification("BadWars", "Interface ready. RightShift to toggle.", 4, "success")
-
-		-- Show welcome popup on first load
-		local popup = WindUI:Popup({
-			Title = "Welcome to BadWars",
-			Content = "Your loader is ready. Use RightShift to toggle the interface. Check the Modules tab for a health overview of all loaded features.",
-			Buttons = {
-				{
-					Title = "Got it",
-					Variant = "Primary",
-					Callback = function() end,
+		task.defer(function()
+			if d.Destroyed then return end
+			local popup = WindUI:Popup({
+				Title = "Welcome to BadWars",
+				Content = "Your loader is ready. Use RightShift to toggle the interface. Check the Modules tab for a health overview of all loaded features.",
+				Buttons = {
+					{ Title = "Got it", Variant = "Primary", Callback = function() end },
 				},
-			},
-		})
+			})
+		end)
 	end
 	return true
 end
@@ -2103,6 +2142,9 @@ function d.Hide(self)
 	d.Visible = false
 	pcall(function()
 		if type(Window.Close) == "function" then Window:Close() end
+	end)
+	pcall(function()
+		if type(Window.Hide) == "function" then Window:Hide() end
 	end)
 	setWindowHidden(true)
 	return true
@@ -2120,12 +2162,18 @@ function d.Uninject(self)
 	d.Destroyed = true
 	d.Visible = false
 
-	for _, module in pairs(d.Modules) do
-		if type(module) == "table" and module.Enabled and type(module.SetEnabled) == "function" then
-			pcall(module.SetEnabled, module, false)
+	-- Disable all modules (iterate unique entries only)
+	local processed = {}
+	for key, module in pairs(d.Modules) do
+		if type(module) == "table" and not processed[module] then
+			processed[module] = true
+			if module.Enabled and type(module.SetEnabled) == "function" then
+				pcall(module.SetEnabled, module, false)
+			end
 		end
 	end
 
+	-- Clean all resources
 	for index = #d.Resources, 1, -1 do
 		local resource = d.Resources[index]
 		if isConnection(resource) then
@@ -2141,9 +2189,23 @@ function d.Uninject(self)
 	end
 	table.clear(d.Connections)
 
+	-- Destroy categories and their modules
+	for _, category in pairs(d.Categories) do
+		if type(category) == "table" then
+			for _, module in pairs(category.Modules or {}) do
+				if type(module) == "table" and type(module.Destroy) == "function" then
+					pcall(module.Destroy, module)
+				end
+			end
+		end
+	end
+
+	-- Destroy the window
 	pcall(function()
 		if type(Window.Destroy) == "function" then Window:Destroy() end
 	end)
+
+	-- Clean up shared references
 	if shared then
 		if shared.Bad == d then shared.Bad = nil end
 		if shared.BadGUI == d then shared.BadGUI = nil end
@@ -2151,6 +2213,7 @@ function d.Uninject(self)
 	return true
 end
 
+-- ─── Shared registration ───
 if shared then
 	shared.BadGUI = d
 	if shared.Bad == nil then

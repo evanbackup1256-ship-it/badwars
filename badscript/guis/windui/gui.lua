@@ -18,7 +18,7 @@ local d = {
 	Resources = {},
 	GUIColor = { Hue = 0.02, Sat = 0.95, Value = 0.98 },
 	Version = "WindUI-Adapter-2.0",
-	PremiumBuild = true,
+	PremiumBuild = false,
 	Name = "BadWars-WindUI",
 	Visible = false,
 	Destroyed = false,
@@ -270,7 +270,7 @@ end)
 
 local Window = WindUI:CreateWindow({
 	Title = "BadWars",
-	Author = "Premium • Roblox",
+	Author = "Roblox",
 	Icon = "swords",
 	Folder = "BadWars",
 	NewElements = true,

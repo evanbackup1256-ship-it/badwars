@@ -211,9 +211,8 @@ pcall(function()
         for _, f in ipairs(filesToClear) do
             if isfile(f) then pcall(delfile, f) end
         end
-        -- Clear old game bundles and libraries
+        -- Clear old libraries and GUI cache (preserve game modules as fallback)
         local foldersToWipe = {
-            'badscript/games',
             'badscript/libraries',
             'badscript/guis/new',
         }
@@ -1298,20 +1297,18 @@ local function isRateLimited(body)
     if type(body) ~= "string" then
         return false
     end
-    -- Real rate limit responses are SHORT (under 500 chars).
-    -- If the body is longer, it's valid content (Lua code, etc.)
-    if #body > 500 then
+    if #body > 2000 then
         return false
     end
     local trimmed = body:match("^%s*(.-)%s*$")
     if trimmed == "429: Too Many Requests" then return true end
     if trimmed == '{"error":"Too Many Requests"}' then return true end
-    if trimmed:find('"error"%s*:%s*"Too Many Requests"', 1, false) then return true end
-    if trimmed:find('"error"%s*:%s*"rate limit', 1, false) then return true end
-    if trimmed:find('"message"%s*:%s*"rate limit', 1, false) then return true end
     local lower = string.lower(trimmed)
-    if lower:find("<!doctype", 1, true) and lower:find("rate limit", 1, true) then return true end
+    if lower:find("rate limit", 1, true) then return true end
+    if lower:find("too many requests", 1, true) then return true end
     if lower:find("abuse detection", 1, true) then return true end
+    if lower:find("<!doctype", 1, true) and lower:find("rate limit", 1, true) then return true end
+    if trimmed:find("^429", 1, true) then return true end
     return false
 end
 

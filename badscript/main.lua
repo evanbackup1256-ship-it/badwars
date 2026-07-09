@@ -1576,18 +1576,18 @@ local function isRateLimited(body)
     if type(body) ~= "string" then
         return false
     end
-    if #body > 500 then
+    if #body > 2000 then
         return false
     end
     local trimmed = body:match("^%s*(.-)%s*$")
     if trimmed == "429: Too Many Requests" then return true end
     if trimmed == '{"error":"Too Many Requests"}' then return true end
-    if trimmed:find('"error"%s*:%s*"Too Many Requests"', 1, false) then return true end
-    if trimmed:find('"error"%s*:%s*"rate limit', 1, false) then return true end
-    if trimmed:find('"message"%s*:%s*"rate limit', 1, false) then return true end
     local lower = string.lower(trimmed)
-    if lower:find("<!doctype", 1, true) and lower:find("rate limit", 1, true) then return true end
+    if lower:find("rate limit", 1, true) then return true end
+    if lower:find("too many requests", 1, true) then return true end
     if lower:find("abuse detection", 1, true) then return true end
+    if lower:find("<!doctype", 1, true) and lower:find("rate limit", 1, true) then return true end
+    if trimmed:find("^429", 1, true) then return true end
     return false
 end
 
@@ -1718,7 +1718,12 @@ local function downloadFile(path, maxRetries)
         cached = nil
     end
     if type(cached) == "string" and #cached > 0 then
-        return cached
+        if isRateLimited(cached) or isNotFoundBody(cached) then
+            pcall(function() delfile(path) end)
+            cached = nil
+        else
+            return cached
+        end
     end
     setStatus("downloading required files")
     local urls = rawUrls(path)
@@ -2658,7 +2663,7 @@ end
 -- Stage 2: Notify
 pcall(function()
     game:GetService("StarterGui")
-        :SetCore("SendNotification", { Title = "BadWars", Text = "by usingINales | Dev Mode Active", Duration = 6 })
+        :SetCore("SendNotification", { Title = "BadWars", Text = "Ready", Duration = 6 })
     end)
 
 -- Stage 3: GUI Profile

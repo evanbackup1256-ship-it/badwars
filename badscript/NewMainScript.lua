@@ -447,7 +447,7 @@ local cacheVersionPath = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
 	return type(contents) == 'string'
 		and contents:find('BADWARS_UI_V13_PREMIUM_OVERHAUL', 1, true) ~= nil
-		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V13%-PREMIUM%-OVERHAUL"') ~= nil
+		and contents:find('PremiumBuild%s*=%s*"2026%.07%.06%-V13"') ~= nil
 end
 local function invalidateStaleGuiCache()
 	local guiPath = 'badscript/guis/new/gui.lua'
@@ -493,7 +493,7 @@ end
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
 	Title = "BadWars",
-	Text = "Entirely by usingINales - Dev Build",
+	Text = "Ready",
 	Duration = 4
 })
 

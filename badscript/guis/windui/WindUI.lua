@@ -6026,52 +6026,77 @@ do
 			})
 			ak.Container = an
 
+			ak.Generation = 0
+			ak.Destroyed = false
+
 			function ak.Open(ao)
+				if ak.Destroyed or not an or not an.Parent then
+					return ak
+				end
+
+				ak.Generation += 1
 				an.Visible = true
 
 				ad(
 					an.Background,
-					0.2,
+					0.12,
 					{ ImageTransparency = 0 },
 					Enum.EasingStyle.Quint,
 					Enum.EasingDirection.Out
 				):Play()
 				ad(
 					an.Arrow.ImageLabel,
-					0.2,
+					0.1,
 					{ ImageTransparency = 0 },
 					Enum.EasingStyle.Quint,
 					Enum.EasingDirection.Out
 				):Play()
-				ad(al, 0.2, { TextTransparency = 0 }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
-				ad(am, 0.22, { Scale = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+				ad(al, 0.12, { TextTransparency = 0 }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+				ad(am, 0.14, { Scale = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+				return ak
 			end
 
 			function ak.Close(ao, ap)
-				ad(
-					an.Background,
-					0.3,
-					{ ImageTransparency = 1 },
-					Enum.EasingStyle.Quint,
-					Enum.EasingDirection.Out
-				):Play()
-				ad(
-					an.Arrow.ImageLabel,
-					0.2,
-					{ ImageTransparency = 1 },
-					Enum.EasingStyle.Quint,
-					Enum.EasingDirection.Out
-				):Play()
-				ad(al, 0.3, { TextTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
-				ad(am, 0.35, { Scale = 0.9 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In):Play()
+				if ak.Destroyed or not an then
+					return ak
+				end
 
-				ap = ap ~= false
-				if ap then
-					task.wait(0.35)
+				ak.Generation += 1
+				local aq = ak.Generation
+				local ar = ap ~= false
+
+				if an.Parent then
+					ad(
+						an.Background,
+						0.08,
+						{ ImageTransparency = 1 },
+						Enum.EasingStyle.Quint,
+						Enum.EasingDirection.Out
+					):Play()
+					ad(
+						an.Arrow.ImageLabel,
+						0.08,
+						{ ImageTransparency = 1 },
+						Enum.EasingStyle.Quint,
+						Enum.EasingDirection.Out
+					):Play()
+					ad(al, 0.08, { TextTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+					ad(am, 0.09, { Scale = 0.94 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In):Play()
+				end
+
+				task.delay(0.09, function()
+					if aq ~= ak.Generation or ak.Destroyed or not an then
+						return
+					end
 
 					an.Visible = false
-					an:Destroy()
-				end
+					if ar and an.Parent then
+						ak.Destroyed = true
+						an:Destroy()
+					end
+				end)
+
+				return ak
 			end
 
 			return ak
@@ -8522,6 +8547,8 @@ do
 				aj.ClearTextOnFocus
 			)
 
+			aj.UIElements.Input = al
+
 			if aj.Type ~= "Textarea" then
 				al.Size = UDim2.new(0, aj.Width, 0, 36)
 				al.Position = UDim2.new(1, 0, ai.Window.NewElements and 0 or 0.5, 0)
@@ -10825,8 +10852,8 @@ do
 				Icon = am.Icon,
 				IconThemed = am.IconThemed,
 				TextXAlignment = am.TextXAlignment or "Left",
-				TextSize = am.TextSize or 19,
-				DescTextSize = am.DescTextSize or 16,
+				TextSize = am.TextSize or 18,
+				DescTextSize = am.DescTextSize or 15,
 				Box = am.Box or false,
 				BoxBorder = am.BoxBorder or false,
 				FontWeight = am.FontWeight or Enum.FontWeight.SemiBold,
@@ -10836,9 +10863,11 @@ do
 				Opened = am.Opened or false,
 				UIElements = {},
 
-				HeaderSize = 48,
+				HeaderSize = math.max(tonumber(am.HeaderSize) or 48, 40),
 				IconSize = 20,
 				Padding = 10,
+				ContentGap = math.max(tonumber(am.ContentGap) or 10, 0),
+				OuterGap = (am.Box or false) and 0 or math.max(tonumber(am.OuterGap) or 10, 0),
 
 				Elements = {},
 
@@ -11002,12 +11031,12 @@ do
 						AutomaticSize = "Y",
 						Name = "Content",
 						Visible = false,
-						Position = UDim2.new(0, 0, 0, an.HeaderSize + 10),
+						Position = UDim2.new(0, 0, 0, 0),
 					}, {
 						an.Box and af("UIPadding", {
 							PaddingLeft = UDim.new(0, am.Window.ElementConfig.UIPadding / 1.5),
 							PaddingRight = UDim.new(0, am.Window.ElementConfig.UIPadding / 1.5),
-							PaddingBottom = UDim.new(0, am.Window.ElementConfig.UIPadding / 1.5),
+							PaddingBottom = UDim.new(0, (am.Window.ElementConfig.UIPadding / 1.5) + 2),
 						}) or nil,
 						af("UIListLayout", {
 							FillDirection = "Vertical",
@@ -11020,16 +11049,93 @@ do
 
 			an.ElementFrame = at
 
-			at.Outline.Top:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-				at.Outline.Content.Position =
-					UDim2.new(0, 0, 0, (at.Outline.Top.AbsoluteSize.Y / am.UIScale) + 10)
+			local function getScale()
+				return math.max(tonumber(am.UIScale) or 1, 0.01)
+			end
+
+			local function getVerticalPadding(aq)
+				local ar = aq and aq:FindFirstChildOfClass("UIPadding")
+				if not ar then
+					return 0
+				end
+				return ar.PaddingTop.Offset + ar.PaddingBottom.Offset
+			end
+
+			local function getHeaderHeight()
+				local aq = at.Outline.Top.AbsoluteSize.Y / getScale()
+				if aq <= 0 then
+					aq = an.HeaderSize
+				end
+				return math.max(aq, an.HeaderSize)
+			end
+
+			local function getContentHeight()
+				local aq = at.Outline.Content
+				local ar = aq:FindFirstChildOfClass("UIListLayout")
+				local as = ar and (ar.AbsoluteContentSize.Y / getScale()) or 0
+				local au = aq.AbsoluteSize.Y / getScale()
+				return math.max(as + getVerticalPadding(aq), au, 0)
+			end
+
+			local function updateGeometry()
+				local aq = getHeaderHeight()
+				at.Outline.Size = UDim2.new(1, 0, 1, -an.OuterGap)
+				at.Outline.Content.Position = UDim2.new(0, 0, 0, aq + an.ContentGap)
+				return aq, getContentHeight()
+			end
+
+			function an.Reflow(aq, ar)
+				local as, au = updateGeometry()
+				local av = as + an.OuterGap
+				if an.Expandable and an.Opened then
+					av += an.ContentGap + au
+				end
+				av = math.max(av, 1)
 
 				if an.Opened then
-					an:Open(true)
+					at.Outline.Content.Visible = an.Expandable
+				elseif ar then
+					at.Outline.Content.Visible = false
 				else
-					an.Close(true)
+					task.delay(0.18, function()
+						if at.Parent and not an.Opened then
+							at.Outline.Content.Visible = false
+						end
+					end)
 				end
-			end)
+
+				if ar then
+					at.Size = UDim2.new(at.Size.X.Scale, at.Size.X.Offset, 0, av)
+					ap.ImageLabel.Rotation = an.Opened and 180 or 0
+				else
+					ai(
+						at,
+						an.Opened and 0.22 or 0.18,
+						{ Size = UDim2.new(at.Size.X.Scale, at.Size.X.Offset, 0, av) },
+						Enum.EasingStyle.Quint,
+						Enum.EasingDirection.Out
+					):Play()
+					ai(
+						ap.ImageLabel,
+						0.16,
+						{ Rotation = an.Opened and 180 or 0 },
+						Enum.EasingStyle.Quint,
+						Enum.EasingDirection.Out
+					):Play()
+				end
+
+				task.defer(function()
+					local aw = at.Parent
+					while aw and not aw:IsA("ScrollingFrame") do
+						aw = aw.Parent
+					end
+					if aw and aw.Parent then
+						aw.AutomaticCanvasSize = Enum.AutomaticSize.Y
+					end
+				end)
+
+				return av
+			end
 
 			local au = am.ElementsModule
 
@@ -11037,97 +11143,76 @@ do
 				if not an.Expandable then
 					an.Expandable = true
 					ap.Visible = true
+					at.AutomaticSize = Enum.AutomaticSize.None
+					at.Outline.Content.Visible = an.Opened
 					UpdateTitleSize()
+					task.defer(function()
+						an:Reflow(true)
+					end)
 				end
 			end, au, am.UIScale, am.Tab)
 
 			UpdateTitleSize()
 
 			function an.SetTitle(av, aw)
-				an.Title = aw
-				ar.Text = aw
+				an.Title = aw or ""
+				ar.Text = an.Title
+				ar.Visible = an.Title ~= ""
+				UpdateTitleSize()
+				task.defer(function()
+					an:Reflow(true)
+				end)
 			end
 
 			function an.SetDesc(av, aw)
 				an.Desc = aw
-				if not as then
-					as = createTitle(aw, "Desc")
+				if aw ~= nil and aw ~= "" then
+					if not as then
+						as = createTitle(aw, "Desc")
+					else
+						as.Text = aw
+						as.Visible = true
+					end
+				elseif as then
+					as.Text = ""
+					as.Visible = false
 				end
-				as.Text = aw
+
+				at.Outline.Top.AutomaticSize = (not an.Expandable or (as and as.Visible)) and Enum.AutomaticSize.Y
+					or Enum.AutomaticSize.None
+				if an.Expandable and not (as and as.Visible) then
+					at.Outline.Top.Size = UDim2.new(1, 0, 0, an.HeaderSize)
+				end
+				UpdateTitleSize()
+				task.defer(function()
+					an:Reflow(true)
+				end)
 			end
 
 			function an.Destroy(av)
 				for aw, ax in next, an.Elements do
-					ax:Destroy()
+					if type(ax) == "table" and type(ax.Destroy) == "function" then
+						pcall(ax.Destroy, ax)
+					end
 				end
-
 				at:Destroy()
 			end
 
 			function an.Open(av, aw)
 				if an.Expandable then
 					an.Opened = true
-					if aw then
-						at.Size = UDim2.new(
-							at.Size.X.Scale,
-							at.Size.X.Offset,
-							0,
-							at.Outline.Top.AbsoluteSize.Y / am.UIScale
-								+ (at.Outline.Content.AbsoluteSize.Y / am.UIScale)
-								+ 10
-						)
-						ap.ImageLabel.Rotation = 180
-					else
-						ai(at, 0.33, {
-							Size = UDim2.new(
-								at.Size.X.Scale,
-								at.Size.X.Offset,
-								0,
-								at.Outline.Top.AbsoluteSize.Y / am.UIScale
-									+ (at.Outline.Content.AbsoluteSize.Y / am.UIScale)
-									+ 10
-							),
-						}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
-
-						ai(
-							ap.ImageLabel,
-							0.2,
-							{ Rotation = 180 },
-							Enum.EasingStyle.Quint,
-							Enum.EasingDirection.Out
-						):Play()
-					end
+					at.Outline.Content.Visible = true
+					an:Reflow(aw == true)
 				end
+				return an
 			end
+
 			function an.Close(av, aw)
 				if an.Expandable then
 					an.Opened = false
-					if aw then
-						at.Size = UDim2.new(
-							at.Size.X.Scale,
-							at.Size.X.Offset,
-							0,
-							(at.Outline.Top.AbsoluteSize.Y / am.UIScale)
-						)
-						ap.ImageLabel.Rotation = 0
-					else
-						ai(at, 0.26, {
-							Size = UDim2.new(
-								at.Size.X.Scale,
-								at.Size.X.Offset,
-								0,
-								(at.Outline.Top.AbsoluteSize.Y / am.UIScale)
-							),
-						}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
-						ai(
-							ap.ImageLabel,
-							0.2,
-							{ Rotation = 0 },
-							Enum.EasingStyle.Quint,
-							Enum.EasingDirection.Out
-						):Play()
-					end
+					an:Reflow(aw == true)
 				end
+				return an
 			end
 
 			aa.AddSignal(at.Outline.Top.MouseButton1Click, function()
@@ -11140,35 +11225,37 @@ do
 				end
 			end)
 
+			aa.AddSignal(at.Outline.Top:GetPropertyChangedSignal("AbsoluteSize"), function()
+				task.defer(function()
+					if at.Parent then
+						an:Reflow(true)
+					end
+				end)
+			end)
+
 			aa.AddSignal(
 				at.Outline.Content.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"),
 				function()
-					if an.Opened then
-						an:Open(true)
-					else
-						an:Close(true)
-					end
+					task.defer(function()
+						if at.Parent then
+							an:Reflow(true)
+						end
+					end)
 				end
 			)
 
 			task.defer(function()
+				if not at.Parent then
+					return
+				end
+
 				if an.Expandable then
-					at.Size = UDim2.new(
-						at.Size.X.Scale,
-						at.Size.X.Offset,
-						0,
-						at.Outline.Top.AbsoluteSize.Y / am.UIScale
-					)
-					at.AutomaticSize = "None"
+					at.AutomaticSize = Enum.AutomaticSize.None
 					at.Outline.Top.Size = UDim2.new(1, 0, 0, (not as and an.HeaderSize or 0))
-					at.Outline.Top.AutomaticSize = (not an.Expandable or as) and "Y" or "None"
-					at.Outline.Content.Visible = true
+					at.Outline.Top.AutomaticSize = as and Enum.AutomaticSize.Y or Enum.AutomaticSize.None
+					at.Outline.Content.Visible = an.Opened
 				end
-				if an.Opened then
-					an:Open()
-				else
-					an:Close(true)
-				end
+				an:Reflow(true)
 			end)
 
 			return an.__type, an
@@ -11855,7 +11942,7 @@ do
 
 		local af = game:GetService("Players")
 
-		aa(game:GetService("UserInputService"))
+		local ag = aa(game:GetService("UserInputService"))
 		local ai = af.LocalPlayer:GetMouse()
 
 		local ak = a.load("d")
@@ -12181,43 +12268,119 @@ do
 			local ax
 			local ay
 			local az = false
+			local aA = 0
 
-			if ar.Desc then
-				ak.AddSignal(ar.UIElements.Main.InputBegan, function()
-					az = true
-					ax = task.spawn(function()
-						task.wait(0.35)
-						if az and not aw then
-							aw = am(ar.Desc, ao.ToolTipParent, true)
-							aw.Container.AnchorPoint = Vector2.new(0.5, 0.5)
+			local function pointerInside(aB, aC)
+				if not aB or not aB.Parent or not aB.Visible then
+					return false
+				end
 
-							local function updatePosition()
-								if not aw or not aw.Container then
-									return
-								end
+				local aD = aB.AbsolutePosition
+				local aE = aB.AbsoluteSize
+				return aC.X >= aD.X
+					and aC.Y >= aD.Y
+					and aC.X <= aD.X + aE.X
+					and aC.Y <= aD.Y + aE.Y
+			end
 
-								local viewport = ao.ToolTipParent.AbsoluteSize
-								if viewport.X <= 0 or viewport.Y <= 0 then
-									local camera = workspace.CurrentCamera
-									viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
-								end
+			local function clearTooltip()
+				aA += 1
+				az = false
 
-								local size = aw.Container.AbsoluteSize
-								local margin = 10
-								local x = math.clamp(ai.X, margin + (size.X / 2), math.max(margin + (size.X / 2), viewport.X - margin - (size.X / 2)))
-								local y = math.clamp(ai.Y + 18, margin, math.max(margin, viewport.Y - margin - size.Y))
-								aw.Container.Position = UDim2.fromOffset(x, y)
-							end
+				if ax then
+					pcall(task.cancel, ax)
+					ax = nil
+				end
+				if ay then
+					ay:Disconnect()
+					ay = nil
+				end
+				if aw then
+					local aB = aw
+					aw = nil
+					pcall(aB.Close, aB)
+					if WindUI.ActiveTooltip == aB then
+						WindUI.ActiveTooltip = nil
+						WindUI.ActiveTooltipSource = nil
+					end
+				end
+			end
 
+			local function beginTooltip()
+				if not ar.Desc or ar.Desc == "" or ar.Locked then
+					return
+				end
+
+				clearTooltip()
+				az = true
+				aA += 1
+				local aB = aA
+
+				ax = task.spawn(function()
+					task.wait(0.24)
+					ax = nil
+
+					local aC = ag:GetMouseLocation()
+					if aB ~= aA or not az or not pointerInside(ar.UIElements.Main, aC) then
+						return
+					end
+
+					if WindUI.ActiveTooltip and WindUI.ActiveTooltip ~= aw then
+						pcall(WindUI.ActiveTooltip.Close, WindUI.ActiveTooltip)
+					end
+
+					aw = am(ar.Desc, ao.ToolTipParent, true)
+					WindUI.ActiveTooltip = aw
+					WindUI.ActiveTooltipSource = ar.UIElements.Main
+					aw.Container.AnchorPoint = Vector2.new(0.5, 0)
+
+					local function updatePosition()
+						if not aw or not aw.Container or not aw.Container.Parent then
+							return
+						end
+
+						local aD = ag:GetMouseLocation()
+						if not pointerInside(ar.UIElements.Main, aD) then
+							clearTooltip()
+							return
+						end
+
+						local aE = ao.ToolTipParent.AbsoluteSize
+						if aE.X <= 0 or aE.Y <= 0 then
+							local aF = workspace.CurrentCamera
+							aE = aF and aF.ViewportSize or Vector2.new(1280, 720)
+						end
+
+						local aF = aw.Container.AbsoluteSize
+						local aG = 10
+						local aH = math.clamp(
+							aD.X,
+							aG + (aF.X / 2),
+							math.max(aG + (aF.X / 2), aE.X - aG - (aF.X / 2))
+						)
+						local aI = math.clamp(
+							aD.Y + 18,
+							aG,
+							math.max(aG, aE.Y - aG - aF.Y)
+						)
+						aw.Container.Position = UDim2.fromOffset(aH, aI)
+					end
+
+					updatePosition()
+					if aB ~= aA or not aw then
+						return
+					end
+					ay = ag.InputChanged:Connect(function(aD)
+						if aD.UserInputType == Enum.UserInputType.MouseMovement then
 							updatePosition()
-							ay = ai.Move:Connect(updatePosition)
-							aw:Open()
 						end
 					end)
+					aw:Open()
 				end)
 			end
 
 			ak.AddSignal(ar.UIElements.Main.MouseEnter, function()
+				beginTooltip()
 				if not ar.Locked then
 					ak.SetThemeTag(ar.UIElements.Main.Frame, {
 						ImageTransparency = "TabBackgroundHoverTransparency",
@@ -12225,29 +12388,18 @@ do
 					}, 0.1)
 				end
 			end)
-			ak.AddSignal(ar.UIElements.Main.InputEnded, function()
-				if ar.Desc then
-					az = false
-					if ax then
-						task.cancel(ax)
-						ax = nil
-					end
-					if ay then
-						ay:Disconnect()
-						ay = nil
-					end
-					if aw then
-						aw:Close()
-						aw = nil
-					end
-				end
 
+			ak.AddSignal(ar.UIElements.Main.MouseLeave, function()
+				clearTooltip()
 				if not ar.Locked then
 					ak.SetThemeTag(ar.UIElements.Main.Frame, {
 						ImageTransparency = "TabBorderTransparency",
 					}, 0.1)
 				end
 			end)
+
+			ak.AddSignal(ar.UIElements.Main.MouseButton1Click, clearTooltip)
+			ak.AddSignal(ar.UIElements.Main.Destroying, clearTooltip)
 
 			function ar.ScrollToTheElement(aA, aB)
 				ar.UIElements.ContainerFrame.ScrollingEnabled = false
@@ -15285,7 +15437,9 @@ aa.ScreenGui = at("ScreenGui", {
 	ZIndexBehavior = "Sibling",
 	DisplayOrder = 100000,
 }, {
-
+	-- Kept for compatibility with integrations that still reference
+	-- ScreenGui.Window directly. The active window is hosted in
+	-- ScaledGui.ClickGui so legacy visibility toggles affect the real UI.
 	at("Folder", {
 		Name = "Window",
 	}),
@@ -15300,6 +15454,47 @@ aa.ScreenGui = at("ScreenGui", {
 		Name = "ToolTips",
 	}),
 })
+
+-- Legacy BadWars modules expect this exact hierarchy:
+-- WindUI.ScaledGui.ClickGui
+--
+-- Use real GuiObjects rather than placeholder folders so setting either
+-- ScaledGui.Visible or ClickGui.Visible immediately hides/shows the actual UI.
+aa.ScaledGui = at("Frame", {
+	Name = "ScaledGui",
+	Parent = aa.ScreenGui,
+	Size = UDim2.fromScale(1, 1),
+	Position = UDim2.fromScale(0, 0),
+	AnchorPoint = Vector2.new(0, 0),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ClipsDescendants = false,
+	Visible = true,
+	Active = false,
+	Selectable = false,
+	ZIndex = 1,
+})
+
+aa.ClickGui = at("Frame", {
+	Name = "ClickGui",
+	Parent = aa.ScaledGui,
+	Size = UDim2.fromScale(1, 1),
+	Position = UDim2.fromScale(0, 0),
+	AnchorPoint = Vector2.new(0, 0),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ClipsDescendants = false,
+	Visible = true,
+	Active = false,
+	Selectable = false,
+	ZIndex = 1,
+})
+
+-- Common aliases used by old adapters and module bundles.
+aa.gui = aa.ScreenGui
+aa.Gui = aa.ScreenGui
+aa.RootGui = aa.ScreenGui
+aa.ClickGUI = aa.ClickGui
 
 aa.NotificationGui = at("ScreenGui", {
 	Name = "WindUI/Notifications",
@@ -15335,6 +15530,35 @@ av(aa.TooltipGui)
 
 as.Init(aa)
 
+local function validateLegacyGuiHierarchy()
+	if not aa.ScreenGui or not aa.ScreenGui.Parent then
+		return false
+	end
+
+	local scaled = aa.ScreenGui:FindFirstChild("ScaledGui")
+	local clickGui = scaled and scaled:FindFirstChild("ClickGui")
+
+	if not scaled or not scaled:IsA("GuiObject") then
+		return false
+	end
+	if not clickGui or not clickGui:IsA("GuiObject") then
+		return false
+	end
+
+	aa.ScaledGui = scaled
+	aa.ClickGui = clickGui
+	aa.gui = aa.ScreenGui
+	aa.Gui = aa.ScreenGui
+	aa.RootGui = aa.ScreenGui
+	aa.ClickGUI = clickGui
+	return true
+end
+
+assert(
+	validateLegacyGuiHierarchy(),
+	"WindUI failed to create the required ScaledGui.ClickGui compatibility hierarchy"
+)
+
 function aa.SetParent(ay, az)
 	if aa.ScreenGui then
 		aa.ScreenGui.Parent = az
@@ -15348,6 +15572,56 @@ function aa.SetParent(ay, az)
 	if aa.TooltipGui then
 		aa.TooltipGui.Parent = az
 	end
+	return aa
+end
+
+function aa.GetRootGui()
+	return aa.ScreenGui
+end
+
+function aa.GetScaledGui()
+	return aa.ScaledGui
+		or (aa.ScreenGui and aa.ScreenGui:FindFirstChild("ScaledGui"))
+end
+
+function aa.GetClickGui()
+	local scaled = aa:GetScaledGui()
+	return aa.ClickGui
+		or (scaled and scaled:FindFirstChild("ClickGui"))
+end
+
+function aa.SetVisible(_, visible)
+	visible = visible ~= false
+	local scaled = aa:GetScaledGui()
+	local clickGui = aa:GetClickGui()
+
+	if scaled then
+		scaled.Visible = visible
+	end
+	if clickGui then
+		clickGui.Visible = visible
+	end
+
+	if visible and aa.Window and type(aa.Window.Open) == "function" then
+		pcall(aa.Window.Open, aa.Window)
+	elseif not visible and aa.Window and type(aa.Window.Close) == "function" then
+		pcall(aa.Window.Close, aa.Window)
+	end
+
+	return aa
+end
+
+function aa.Show(self)
+	return aa.SetVisible(self, true)
+end
+
+function aa.Hide(self)
+	return aa.SetVisible(self, false)
+end
+
+function aa.Toggle(self)
+	local clickGui = aa:GetClickGui()
+	return aa.SetVisible(self, not (clickGui and clickGui.Visible == true))
 end
 aa.TransparencyValue = math.clamp(aa.TransparencyValue, 0, 1)
 
@@ -15515,7 +15789,14 @@ function aa.CreateWindow(az, aA)
 
 	aA.WindUI = aa
 	aA.Window = aa.Window
-	aA.Parent = aa.ScreenGui.Window
+	aA.Parent = aa.ClickGui
+		or (
+			aa.ScreenGui
+			and aa.ScreenGui:FindFirstChild("ScaledGui")
+			and aa.ScreenGui.ScaledGui:FindFirstChild("ClickGui")
+		)
+		or aa.ScreenGui:FindFirstChild("Window")
+		or aa.ScreenGui
 
 	if aa.Window then
 		warn("You cannot create more than one window")
@@ -16035,9 +16316,9 @@ do
 end
 
 
--- BADWARS_SMART_UI_RUNTIME_V3_BEGIN
+-- BADWARS_SMART_UI_RUNTIME_V5_BEGIN
 do
-	local SMART_UI_VERSION = "3.0.0"
+	local SMART_UI_VERSION = "5.0.0"
 	local userInputService = game:GetService("UserInputService")
 	local guiService = game:GetService("GuiService")
 	local workspaceService = game:GetService("Workspace")
@@ -16233,7 +16514,7 @@ do
 					local horizontal = layout:IsA("UIListLayout")
 						and layout.FillDirection == Enum.FillDirection.Horizontal
 					object.AutomaticCanvasSize = horizontal and Enum.AutomaticSize.X or Enum.AutomaticSize.Y
-					object.CanvasSize = UDim2.fromOffset(0, 0)
+					object.CanvasSize = horizontal and UDim2.fromOffset(12, 0) or UDim2.fromOffset(0, 18)
 				end
 
 				if window and window.ScrollBarEnabled and object.ScrollingDirection ~= Enum.ScrollingDirection.X then
@@ -16295,6 +16576,55 @@ do
 		return math.clamp(desired, 0.5, 1)
 	end
 
+
+	local function setControlWidth(object, width, height)
+		if not object or typeof(object) ~= "Instance" or not object:IsA("GuiObject") then
+			return
+		end
+		object.Size = UDim2.new(0, math.max(math.floor(width + 0.5), 1), object.Size.Y.Scale, height or object.Size.Y.Offset)
+	end
+
+	local function stabilizeElementLayout(window, logicalWidth)
+		local elements = type(window.AllElements) == "table" and window.AllElements or {}
+		local contentWidth = math.max(
+			logicalWidth - (window.SideBarWidth or 0) - (window.UIPadding or 0) * 4,
+			220
+		)
+		local controlWidth = math.clamp(contentWidth * 0.4, 112, 190)
+		local sliderWidth = math.clamp(contentWidth * 0.43, 125, 210)
+
+		for _, element in pairs(elements) do
+			if type(element) == "table" then
+				local frame = element.ElementFrame
+				if typeof(frame) == "Instance" and frame:IsA("GuiObject") then
+					frame.ClipsDescendants = false
+				end
+
+				if element.__type == "Section" and type(element.Reflow) == "function" then
+					pcall(element.Reflow, element, true)
+				elseif element.__type == "Dropdown" and element.UIElements and element.UIElements.Dropdown then
+					local width = math.min(tonumber(element.Width) or controlWidth, controlWidth)
+					element.Width = width
+					setControlWidth(element.UIElements.Dropdown, width, 36)
+				elseif element.__type == "Slider" and element.UIElements and element.UIElements.SliderContainer then
+					local width = math.min(tonumber(element.Width) or sliderWidth, sliderWidth)
+					element.Width = width
+					setControlWidth(element.UIElements.SliderContainer, width)
+				elseif element.__type == "Input" and element.UIElements and element.UIElements.Input then
+					if element.Type ~= "Textarea" then
+						local width = math.min(tonumber(element.Width) or controlWidth, controlWidth)
+						element.Width = width
+						setControlWidth(element.UIElements.Input, width, 36)
+					end
+				elseif element.__type == "ProgressBar" and element.UIElements and element.UIElements.Container then
+					local width = math.min(tonumber(element.Width) or sliderWidth, sliderWidth)
+					element.Width = width
+					setControlWidth(element.UIElements.Container, width, 36)
+				end
+			end
+		end
+	end
+
 	local function applyResponsiveLayout(window)
 		if not window or window.Destroyed then
 			return
@@ -16348,6 +16678,7 @@ do
 
 		styleTopbar(window, logicalWidth, window.CompactMode)
 		styleSidebarTabs(window)
+		stabilizeElementLayout(window, logicalWidth)
 		refreshScrolling(main, window)
 		updateNotificationLayout()
 		clampWindow(window)
@@ -16371,6 +16702,37 @@ do
 			rawset(window, "__SmartLayoutPending", nil)
 			pcall(applyResponsiveLayout, window)
 		end)
+	end
+
+
+	local function closeActiveTooltip()
+		local tooltip = aa.ActiveTooltip
+		aa.ActiveTooltip = nil
+		aa.ActiveTooltipSource = nil
+
+		if type(tooltip) == "table" and type(tooltip.Close) == "function" then
+			pcall(tooltip.Close, tooltip)
+		end
+
+		if aa.TooltipGui then
+			for _, object in ipairs(aa.TooltipGui:GetChildren()) do
+				if object:IsA("GuiObject") and object.Visible then
+					object.Visible = false
+				end
+			end
+		end
+	end
+
+	local function pointInsideGui(object, point)
+		if not object or not object.Parent or not object.Visible then
+			return false
+		end
+		local position = object.AbsolutePosition
+		local size = object.AbsoluteSize
+		return point.X >= position.X
+			and point.Y >= position.Y
+			and point.X <= position.X + size.X
+			and point.Y <= position.Y + size.Y
 	end
 
 	local function enhanceWindow(window)
@@ -16408,6 +16770,15 @@ do
 		local originalOpen = window.Open
 		if type(originalOpen) == "function" then
 			window.Open = function(self, ...)
+				local scaled = aa.GetScaledGui and aa:GetScaledGui() or aa.ScaledGui
+				local clickGui = aa.GetClickGui and aa:GetClickGui() or aa.ClickGui
+				if scaled then
+					scaled.Visible = true
+				end
+				if clickGui then
+					clickGui.Visible = true
+				end
+
 				local result = originalOpen(self, ...)
 				task.delay(0.05, function()
 					scheduleLayout(self)
@@ -16426,6 +16797,7 @@ do
 				if aa.ActiveDropdown and type(aa.ActiveDropdown.Close) == "function" then
 					pcall(aa.ActiveDropdown.Close, aa.ActiveDropdown)
 				end
+				closeActiveTooltip()
 				return originalClose(self, ...)
 			end
 			window.Hide = window.Close
@@ -16468,6 +16840,7 @@ do
 			if aa.ActiveDropdown and type(aa.ActiveDropdown.Close) == "function" then
 				pcall(aa.ActiveDropdown.Close, aa.ActiveDropdown)
 			end
+			closeActiveTooltip()
 			return self
 		end
 
@@ -16554,18 +16927,36 @@ do
 		if aa.ActiveDropdown and type(aa.ActiveDropdown.Close) == "function" then
 			pcall(aa.ActiveDropdown.Close, aa.ActiveDropdown)
 		end
+		closeActiveTooltip()
 	end
 
 	safeConnect(userInputService.InputBegan, function(input, processed)
 		if processed then
 			return
 		end
-		if input.KeyCode == Enum.KeyCode.Escape and aa.ActiveDropdown then
-			local dropdown = aa.ActiveDropdown
-			if type(dropdown.Close) == "function" then
-				pcall(dropdown.Close, dropdown)
+		if input.KeyCode == Enum.KeyCode.Escape then
+			if aa.ActiveDropdown then
+				local dropdown = aa.ActiveDropdown
+				if type(dropdown.Close) == "function" then
+					pcall(dropdown.Close, dropdown)
+				end
 			end
+			closeActiveTooltip()
 		end
+	end)
+
+	safeConnect(userInputService.InputChanged, function(input)
+		if input.UserInputType ~= Enum.UserInputType.MouseMovement then
+			return
+		end
+		local source = aa.ActiveTooltipSource
+		if source and not pointInsideGui(source, userInputService:GetMouseLocation()) then
+			closeActiveTooltip()
+		end
+	end)
+
+	pcall(function()
+		safeConnect(userInputService.WindowFocusReleased, closeActiveTooltip)
 	end)
 
 	safeConnect(userInputService.InputEnded, function(input)
@@ -16594,6 +16985,6 @@ do
 		end,
 	}
 end
--- BADWARS_SMART_UI_RUNTIME_V3_END
+-- BADWARS_SMART_UI_RUNTIME_V5_END
 
 return aa

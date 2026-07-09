@@ -1266,7 +1266,7 @@ local function callWithTimeout(callback, timeout)
     end)
 
     local started = os.clock()
-    while not done and os.clock() - started < (tonumber(timeout) or 2) do
+    while not done and os.clock() - started < (tonumber(timeout) or 3) do
         task.wait(0.02)
     end
 
@@ -1366,7 +1366,7 @@ local function httpGet(urls)
         for _, httpFunction in ipairs(__httpFunctions) do
             local ok, response, failure = callWithTimeout(function()
                 return httpFunction.fn(url)
-            end, 2)
+            end, 3)
 
             if ok then
                 local rejected = rejectionReason(response)
@@ -1488,6 +1488,7 @@ local function isTerminalStatus(message)
         or string.find(lower, "pipeline ok", 1, true) ~= nil
         or string.find(lower, "pipeline issues", 1, true) ~= nil
         or string.find(lower, "startup verified", 1, true) ~= nil
+        or string.find(lower, "validation passed", 1, true) ~= nil
 end
 
 local function resolveStatusProgress(message)
@@ -1511,8 +1512,8 @@ local function resolveStatusProgress(message)
         { "universal", 0.82 },
         { "game module", 0.88 },
         { "profile", 0.93 },
-        { "validation passed", 0.98 },
-        { "finalizing", 0.98 },
+        { "finalizing", 0.96 },
+        { "health", 0.98 },
     }
 
     for _, stage in ipairs(stages) do
@@ -1521,7 +1522,7 @@ local function resolveStatusProgress(message)
         end
     end
 
-    return math.min(statusProgress + 0.022, 0.98)
+    return math.min(statusProgress + 0.05, 0.99)
 end
 
 local function friendlyStage(message)

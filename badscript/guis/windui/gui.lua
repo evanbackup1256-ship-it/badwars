@@ -270,7 +270,7 @@ end)
 
 local Window = WindUI:CreateWindow({
 	Title = "BadWars",
-	Author = "Roblox",
+	Author = "Runtime Loader",
 	Icon = "swords",
 	Folder = "BadWars",
 	NewElements = true,
@@ -278,19 +278,19 @@ local Window = WindUI:CreateWindow({
 	ScrollBarEnabled = true,
 	AutoScale = false,
 	Resizable = true,
-	Size = UDim2.new(0, 680, 0, 500),
-	MinSize = Vector2.new(520, 340),
-	MaxSize = Vector2.new(920, 680),
+	Size = UDim2.new(0, 720, 0, 520),
+	MinSize = Vector2.new(540, 360),
+	MaxSize = Vector2.new(960, 720),
 	ToggleKey = Enum.KeyCode.RightShift,
 	OpenButton = {
 		Title = "BadWars",
 		Enabled = true,
 		Draggable = true,
 		Scale = 0.55,
-		Color = ColorSequence.new(Color3.fromHex("#FF3355"), Color3.fromHex("#FF8800")),
+		Color = ColorSequence.new(Color3.fromHex("#FF2D4A"), Color3.fromHex("#FF6B35")),
 	},
 	Topbar = {
-		Height = 46,
+		Height = 48,
 		ButtonsType = "Mac",
 	},
 })
@@ -302,7 +302,7 @@ end
 d.Window = Window
 
 pcall(function()
-	Window:SetUIScale(0.9)
+	Window:SetUIScale(0.92)
 end)
 
 d.gui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui
@@ -334,7 +334,7 @@ end)
 
 pcall(function()
 	Window:Tag({
-		Title = "v2 • WindUI",
+		Title = "v2.1",
 		Icon = "badge-check",
 		Color = Color3.fromHex("#22c55e"),
 		Border = true,
@@ -346,18 +346,18 @@ d.Tabs = Tabs
 
 local tabMetadata = {
 	General = { Icon = "home", Desc = "Core settings and quick actions" },
-	Modules = { Icon = "list", Desc = "Module browser and usage help" },
+	Modules = { Icon = "list", Desc = "Module browser and health overview" },
 	Blatant = { Icon = "flame", Desc = "High-visibility modules" },
-	Combat = { Icon = "sword", Desc = "Combat modules" },
+	Combat = { Icon = "sword", Desc = "Combat enhancements" },
 	Render = { Icon = "eye", Desc = "Visuals and overlays" },
 	Utility = { Icon = "wrench", Desc = "Helpers and automation" },
-	World = { Icon = "globe", Desc = "World and movement modules" },
+	World = { Icon = "globe", Desc = "World and movement" },
 	Minigames = { Icon = "gamepad-2", Desc = "Minigame-specific modules" },
 	Legit = { Icon = "user-check", Desc = "Lower-profile modules" },
 	Friends = { Icon = "users", Desc = "Friend configuration" },
 	Targets = { Icon = "crosshair", Desc = "Target configuration" },
 	Notifications = { Icon = "bell", Desc = "Notification history" },
-	Settings = { Icon = "settings", Desc = "Interface and profile management" },
+	Settings = { Icon = "settings", Desc = "Interface and profiles" },
 }
 
 local function ensureTab(name, metadata)
@@ -384,11 +384,11 @@ end
 
 Tabs.Modules:Paragraph({
 	Title = "Module Browser",
-	Desc = "Modules are grouped by category. Each module uses a collapsed section by default to reduce layout work and execution lag.",
+	Desc = "Modules are grouped by category. Each module is sandboxed — failures are isolated and recorded.",
 })
 Tabs.Modules:Paragraph({
 	Title = "Controls",
-	Desc = "RightShift toggles the window. Options are synchronized with their legacy module objects and can be persisted with profile flags.",
+	Desc = "RightShift toggles the window. Options sync with legacy module objects and persist via profile flags.",
 })
 
 local moduleHealthProgress
@@ -1773,7 +1773,7 @@ Tabs.General:Button({
 Tabs.General:Space()
 Tabs.General:Paragraph({
 	Title = "Quick Info",
-	Desc = "Use RightShift to toggle the interface. Module sections stay collapsed until opened, reducing startup layout cost.",
+	Desc = "RightShift toggles the interface. Modules are sandboxed — failures are isolated and recorded.",
 })
 
 -- Loader script display
@@ -1781,6 +1781,17 @@ Tabs.General:Code({
 	Title = "Loader Script",
 	Code = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/loader.lua", true))()',
 	CanCopied = true,
+})
+
+-- Quick stats
+local quickStatsHStack = Tabs.General:HStack()
+quickStatsHStack:Paragraph({
+	Title = "Version",
+	Desc = "v2.1 • WindUI",
+})
+quickStatsHStack:Paragraph({
+	Title = "Status",
+	Desc = "Operational",
 })
 
 local currentProfileName = "default"
@@ -1826,7 +1837,7 @@ end
 
 Tabs.Settings:Toggle({
 	Title = "UI Transparency",
-	Desc = "Use WindUI's transparent surface treatment",
+	Desc = "Transparent surface treatment",
 	Value = true,
 	Flag = "settings/transparency",
 	Callback = function(value)
@@ -1838,22 +1849,12 @@ Tabs.Settings:Toggle({
 		end)
 	end,
 })
-Tabs.Settings:Slider({
-	Title = "UI Scale",
-	Desc = "Adjust the interface without automatic resize overrides",
-	Value = { Min = 0.65, Max = 1.25, Default = 0.9 },
-	Step = 0.05,
-	Flag = "settings/ui_scale",
-	Callback = function(value)
-		pcall(function() Window:SetUIScale(value) end)
-	end,
-})
 
--- UI Scale progress indicator
+-- UI Scale with progress indicator
 local uiScaleProgress = Tabs.Settings:ProgressBar({
 	Title = "UI Scale",
 	Desc = "Current interface scale",
-	Value = { Min = 65, Max = 125, Default = 90 },
+	Value = { Min = 65, Max = 125, Default = 92 },
 	DisplayMode = "Value",
 	Format = function(value)
 		return string.format("%.0f%%", value)
@@ -1862,10 +1863,9 @@ local uiScaleProgress = Tabs.Settings:ProgressBar({
 	Animate = true,
 })
 
--- Sync slider to progress bar
-local uiScaleSlider = Tabs.Settings:Slider({
+Tabs.Settings:Slider({
 	Title = "Adjust Scale",
-	Value = { Min = 65, Max = 125, Default = 90 },
+	Value = { Min = 65, Max = 125, Default = 92 },
 	Step = 5,
 	Callback = function(value)
 		local scale = value / 100

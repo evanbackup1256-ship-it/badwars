@@ -158,24 +158,15 @@ local CFG = { repo = "evanbackup1256-ship-it", name = "badwars", branch = "main"
 local function rawUrls(path)
     local repo = CFG.repo .. "/" .. CFG.name
     local encodedPath = path:gsub(" ", "%%20")
-    local cacheBust = "bwui=" .. tostring(os.time()) .. "-" .. tostring(math.floor(os.clock() * 1000))
+    local cacheBust = "bwui=" .. tostring(os.time())
     local urls = {}
-    local seen = {}
 
     local function add(base)
-        if seen[base] then
-            return
-        end
-        seen[base] = true
         table.insert(urls, base .. (base:find("?", 1, true) and "&" or "?") .. cacheBust)
-        table.insert(urls, base)
     end
 
     add("https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. encodedPath)
-    add("https://raw.githubusercontent.com/" .. repo .. "/refs/heads/" .. CFG.branch .. "/" .. encodedPath)
     add("https://cdn.jsdelivr.net/gh/" .. repo .. "@" .. CFG.branch .. "/" .. encodedPath)
-    add("https://cdn.statically.io/gh/" .. repo .. "/" .. CFG.branch .. "/" .. encodedPath)
-    add("https://github.com/" .. repo .. "/raw/refs/heads/" .. CFG.branch .. "/" .. encodedPath)
     add("https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. encodedPath)
 
     return urls
@@ -1644,7 +1635,7 @@ local function httpGetMulti(urls)
         for _, httpFunction in ipairs(__httpFunctions) do
             local ok, response, failure = callWithTimeout(function()
                 return httpFunction.fn(url)
-            end, 15)
+            end, 5)
 
             if ok then
                 local rejected = rejectionReason(response)
@@ -1704,7 +1695,7 @@ local function isStaleMotionCache(path, body)
 end
 
 local function downloadFile(path, maxRetries)
-    maxRetries = maxRetries or 3
+    maxRetries = maxRetries or 2
     if not HttpGet then
         return nil, "HttpGet nil"
     end
@@ -1728,14 +1719,12 @@ local function downloadFile(path, maxRetries)
     setStatus("downloading required files")
     local urls = rawUrls(path)
     local res = httpGetMulti(urls)
-    -- Retry logic with backoff to avoid rate limiting
-    local retryDelay = 2
+    local retryDelay = 1
     local attempts = 0
     while (type(res) ~= "string" or #res == 0 or isRateLimited(res)) and attempts < maxRetries do
         attempts = attempts + 1
         setStatus("retrying download: " .. path .. " (attempt " .. (attempts + 1) .. ")")
         task.wait(retryDelay)
-        retryDelay = retryDelay * 2
         res = httpGetMulti(urls)
     end
     if type(res) ~= "string" or #res == 0 then

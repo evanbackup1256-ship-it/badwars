@@ -109,13 +109,15 @@ pcall(function()
     if not scripts then return end
     local knitModule = findModule(scripts, {"knit"})
     if not knitModule or not knitModule:IsA("ModuleScript") then return end
-    local knitSource = safeRequire(knitModule)
-    if type(knitSource) == "table" then
-        knit = knitSource.Controllers and knitSource or nil
-        if not knit and type(knitSource.setup) == "function" and debug and debug.getupvalue then
-            local ok, value = pcall(debug.getupvalue, knitSource.setup, 9)
-            if ok and type(value) == "table" then knit = value end
-        end
+    -- Wrap require in its own pcall to catch internal require errors
+    local ok, knitSource = pcall(function()
+        return require(knitModule)
+    end)
+    if not ok or type(knitSource) ~= "table" then return end
+    knit = knitSource.Controllers and knitSource or nil
+    if not knit and type(knitSource.setup) == "function" and debug and debug.getupvalue then
+        local upOk, value = pcall(debug.getupvalue, knitSource.setup, 9)
+        if upOk and type(value) == "table" then knit = value end
     end
 end)
 bedwars.Knit = knit

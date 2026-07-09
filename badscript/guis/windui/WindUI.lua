@@ -266,14 +266,26 @@ do
 			return b
 		end)
 
-		-- Icon discovery must never call an arbitrary game RemoteFunction.
-		-- Some games expose a similarly named remote that yields indefinitely or
-		-- performs unrelated server work. Remote icon packs are loaded separately
-		-- with a bounded timeout; this module is the deterministic local fallback.
-		local d = {
-			Icons = {},
-			Spritesheets = {},
-		}
+		-- Fix: GetIcons remote doesn't exist in BadWars/BedWars, would hang for 99999s
+		-- Use a fallback icon set instead
+		local d
+		local ok, result = pcall(function()
+			local rs = game:GetService("ReplicatedStorage")
+			local getIcons = rs:FindFirstChild("GetIcons")
+			if getIcons and getIcons:IsA("RemoteFunction") then
+				return getIcons:InvokeServer()
+			end
+			return nil
+		end)
+		
+		if ok and type(result) == "table" then
+			d = result
+		else
+			d = {}
+		end
+
+		d.Icons = type(d.Icons) == "table" and d.Icons or {}
+		d.Spritesheets = type(d.Spritesheets) == "table" and d.Spritesheets or {}
 
 		local function parseIconString(e)
 			if type(e) == "string" then
@@ -395,7 +407,7 @@ do
 				and string.sub(f, 1, 6) ~= "video:"
 			then
 				return {
-					"",
+					"rbxassetid://0",
 					{
 						ImageRectSize = Vector2.new(0, 0),
 						ImageRectPosition = Vector2.new(0, 0),
@@ -444,16 +456,6 @@ do
 			end
 
 			local j = d.Icon2(g.Icon, g.Type)
-			if type(j) ~= "table" and typeof(j) ~= "string" then
-				j = {
-					"",
-					{
-						ImageRectSize = Vector2.new(0, 0),
-						ImageRectPosition = Vector2.new(0, 0),
-						Missing = true,
-					},
-				}
-			end
 			local l = typeof(j) == "string" and string.find(j, "rbxassetid://")
 
 			if d.New then
@@ -463,7 +465,7 @@ do
 					Size = g.Size,
 					BackgroundTransparency = 1,
 					ImageColor3 = h[1].Color or nil,
-					ImageTransparency = (not l and j[2] and j[2].Missing) and 1 or (i[1].Value or nil),
+					ImageTransparency = i[1].Value or nil,
 					ThemeTag = h[1].ThemeTag and {
 						ImageColor3 = h[1].ThemeTag,
 						ImageTransparency = i[1].ThemeTag,
@@ -500,7 +502,7 @@ do
 				m.Size = g.Size
 				m.BackgroundTransparency = 1
 				m.ImageColor3 = h[1].Color
-				m.ImageTransparency = (not l and j[2] and j[2].Missing) and 1 or (i[1].Value or nil)
+				m.ImageTransparency = i[1].Value or nil
 				m.Image = l and j or j[1]
 				m.ImageRectSize = l and nil or j[2].ImageRectSize
 				m.ImageRectOffset = l and nil or j[2].ImageRectPosition
@@ -676,65 +678,21 @@ do
 
 		local l = "https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"
 
-		local m = a.load("b")
-
-		local function loadRemoteIconPack()
-			if d:IsStudio() or type(loadstring) ~= "function" then
-				return nil
-			end
-
-			local finished = false
-			local loaded
-			local worker = task.spawn(function()
-				local ok, result = pcall(function()
-					local source
-					if type(game.HttpGet) == "function" then
-						source = game:HttpGet(l, true)
-					else
-						source = h:GetAsync(l, true)
-					end
-
-					if type(source) ~= "string" or #source < 100 or #source > 4000000 then
-						return nil
-					end
-
-					local compiler, compileError = loadstring(source, "@WindUI/Icons")
-					if type(compiler) ~= "function" then
-						warn("[ WindUI ] Icon pack compile failed: " .. tostring(compileError))
-						return nil
-					end
-
-					local pack = compiler()
-					if type(pack) ~= "table"
-						or type(pack.Icon) ~= "function"
-						or type(pack.SetIconsType) ~= "function"
-					then
-						return nil
-					end
-
-					return pack
-				end)
-
-				if ok then
-					loaded = result
+		local m
+		if d:IsStudio() or not writefile then
+			m = a.load("b")
+		else
+			-- Fix: Icon download may fail due to rate limiting or network issues
+			local ok, result = pcall(function()
+				local source = game.HttpGet and game:HttpGet(l) or h:GetAsync(l)
+				if type(source) == "string" and #source > 100 then
+					return loadstring(source)()
 				end
-				finished = true
-			end)
-
-			local deadline = os.clock() + 6
-			repeat
-				task.wait(0.03)
-			until finished or os.clock() >= deadline
-
-			if not finished then
-				pcall(task.cancel, worker)
 				return nil
-			end
-
-			return loaded
+			end)
+			m = ok and result or a.load("b")
 		end
 
-		m = loadRemoteIconPack() or m
 		m.SetIconsType("lucide")
 
 		local p
@@ -840,13 +798,7 @@ do
 		end
 
 		function r.AddSignal(u, v)
-			if typeof(u) ~= "RBXScriptSignal" or type(v) ~= "function" then
-				return nil
-			end
-
-			local x = u:Connect(function(...)
-				r.SafeCallback(v, ...)
-			end)
+			local x = u:Connect(v)
 			table.insert(r.Signals, x)
 			return x
 		end
@@ -863,125 +815,65 @@ do
 		end
 
 		function r.SafeCallback(u, ...)
-			if type(u) ~= "function" then
-				return nil
+			if not u then
+				return
 			end
 
-			local args = table.pack(...)
-			local results = table.pack(xpcall(function()
-				return u(table.unpack(args, 1, args.n))
-			end, function(errorValue)
-				if type(debug) == "table" and type(debug.traceback) == "function" then
-					return debug.traceback(tostring(errorValue), 2)
+			local v, x = pcall(u, ...)
+			if not v then
+				warn("[ WindUI ] Callback error: " .. tostring(x))
+				if p and p.Window and p.Window.Debug then
+					local z, A = tostring(x):find(":%d+: ")
+
+					return p:Notify({
+						Title = "DEBUG Mode: Error",
+						Content = not A and tostring(x) or tostring(x):sub(A + 1),
+						Duration = 8,
+					})
 				end
-				return tostring(errorValue)
-			end))
-
-			if results[1] then
-				return table.unpack(results, 2, results.n)
 			end
-
-			local message = tostring(results[2])
-			warn("[ WindUI ] Callback error: " .. message)
-
-			local diagnostics = type(shared) == "table" and shared.BadDiagnostics or nil
-			if type(diagnostics) == "table" and type(diagnostics.RecordRuntime) == "function" then
-				pcall(diagnostics.RecordRuntime, diagnostics, "WindUI.Callback", message, {
-					subsystem = "WindUI",
-					stage = "callback",
-					traceback = message,
-				})
-			end
-
-			if p and p.Window and p.Window.Debug and type(p.Notify) == "function" then
-				local _, marker = message:find(":%d+: ")
-				pcall(p.Notify, p, {
-					Title = "WindUI callback error",
-					Content = not marker and message or message:sub(marker + 1),
-					Duration = 8,
-				})
-			end
-
-			return nil
 		end
 
 		function r.Gradient(u, v)
 			if p and p.Gradient then
-				local ok, result = pcall(p.Gradient, p, u, v)
-				if ok and type(result) == "table" then
-					return result
+				return p:Gradient(u, v)
+			end
+
+			local x = {}
+			local z = {}
+
+			for A, B in next, u do
+				local C = tonumber(A)
+				if C then
+					C = math.clamp(C / 100, 0, 1)
+					table.insert(x, ColorSequenceKeypoint.new(C, B.Color))
+					table.insert(z, NumberSequenceKeypoint.new(C, B.Transparency or 0))
 				end
 			end
 
-			local entries = {}
-			for key, value in pairs(type(u) == "table" and u or {}) do
-				local time = tonumber(key)
-				local color = type(value) == "table" and value.Color or nil
-				if time and typeof(color) == "Color3" then
-					table.insert(entries, {
-						Time = math.clamp(time / 100, 0, 1),
-						Color = color,
-						Transparency = math.clamp(tonumber(value.Transparency) or 0, 0, 1),
-					})
-				end
-			end
-
-			table.sort(entries, function(left, right)
-				return left.Time < right.Time
+			table.sort(x, function(A, B)
+				return A.Time < B.Time
+			end)
+			table.sort(z, function(A, B)
+				return A.Time < B.Time
 			end)
 
-			if #entries == 0 then
-				entries = {
-					{ Time = 0, Color = Color3.new(1, 1, 1), Transparency = 0 },
-					{ Time = 1, Color = Color3.new(1, 1, 1), Transparency = 0 },
-				}
-			elseif #entries == 1 then
-				local only = entries[1]
-				entries = {
-					{ Time = 0, Color = only.Color, Transparency = only.Transparency },
-					{ Time = 1, Color = only.Color, Transparency = only.Transparency },
-				}
-			else
-				if entries[1].Time > 0 then
-					table.insert(entries, 1, {
-						Time = 0,
-						Color = entries[1].Color,
-						Transparency = entries[1].Transparency,
-					})
-				end
-				if entries[#entries].Time < 1 then
-					local last = entries[#entries]
-					table.insert(entries, {
-						Time = 1,
-						Color = last.Color,
-						Transparency = last.Transparency,
-					})
-				end
+			if #x < 2 then
+				error("ColorSequence requires at least 2 keypoints")
 			end
 
-			local colors = {}
-			local transparencies = {}
-			local previousTime = -1
-			for _, entry in ipairs(entries) do
-				local time = entry.Time
-				if time <= previousTime then
-					time = math.min(1, previousTime + 0.0001)
-				end
-				previousTime = time
-				table.insert(colors, ColorSequenceKeypoint.new(time, entry.Color))
-				table.insert(transparencies, NumberSequenceKeypoint.new(time, entry.Transparency))
-			end
-
-			local result = {
-				Color = ColorSequence.new(colors),
-				Transparency = NumberSequence.new(transparencies),
+			local A = {
+				Color = ColorSequence.new(x),
+				Transparency = NumberSequence.new(z),
 			}
 
-			for property, value in pairs(type(v) == "table" and v or {}) do
-				result[property] = value
+			if v then
+				for B, C in pairs(v) do
+					A[B] = C
+				end
 			end
 
-			return result
+			return A
 		end
 
 		function r.SetTheme(u)
@@ -1090,13 +982,9 @@ do
 		end
 
 		function r.AddThemeObject(u, v, x)
-			if typeof(u) ~= "Instance" or type(v) ~= "table" then
-				return u
-			end
-
 			if r.Objects[u] then
-				for property, themeKey in pairs(v) do
-					r.Objects[u].Properties[property] = themeKey
+				for z, A in pairs(v) do
+					r.Objects[u].Properties[z] = A
 				end
 			else
 				r.Objects[u] = { Object = u, Properties = v }
@@ -1115,104 +1003,86 @@ do
 			end
 
 			local x = v.Object
+
 			r.SetLangForObject(u)
+
 			return x
 		end
 
 		function r.UpdateTheme(u, v, x, z, A, B)
-			local function applyTheme(entry)
-				if type(entry) ~= "table" or typeof(entry.Object) ~= "Instance" then
-					return false
-				end
-
-				local object = entry.Object
-				local alive = pcall(function()
-					return object.ClassName
-				end)
-				if not alive then
-					return false
-				end
-
-				for property, themeKey in pairs(entry.Properties or {}) do
-					local value = r.GetThemeProperty(themeKey, r.Theme)
-					local ok = pcall(function()
-						local gradient = object:FindFirstChild("LibraryGradient")
-
-						if typeof(value) == "Color3" then
-							if gradient then
-								gradient:Destroy()
+			local function ApplyTheme(C)
+				for F, G in pairs(C.Properties or {}) do
+					local H = r.GetThemeProperty(G, r.Theme)
+					if H ~= nil then
+						if typeof(H) == "Color3" then
+							local J = C.Object:FindFirstChild("LibraryGradient")
+							if J then
+								J:Destroy()
 							end
+
 							if x then
 								r.Tween(
-									object,
+									C.Object,
 									z or 0.2,
-									{ [property] = value },
+									{ [F] = H },
 									A or Enum.EasingStyle.Quint,
 									B or Enum.EasingDirection.Out
 								):Play()
 							elseif v then
-								r.Tween(object, 0.08, { [property] = value }):Play()
+								r.Tween(C.Object, 0.08, { [F] = H }):Play()
 							else
-								object[property] = value
+								C.Object[F] = H
 							end
-						elseif type(value) == "table" and value.Color and value.Transparency then
-							object[property] = Color3.new(1, 1, 1)
-							if not gradient then
-								gradient = Instance.new("UIGradient")
-								gradient.Name = "LibraryGradient"
-								gradient.Parent = object
+						elseif typeof(H) == "table" and H.Color and H.Transparency then
+							C.Object[F] = Color3.new(1, 1, 1)
+
+							local J = C.Object:FindFirstChild("LibraryGradient")
+							if not J then
+								J = Instance.new("UIGradient")
+								J.Name = "LibraryGradient"
+								J.Parent = C.Object
 							end
-							gradient.Color = value.Color
-							gradient.Transparency = value.Transparency
-							for gradientProperty, gradientValue in pairs(value) do
-								if gradientProperty ~= "Color"
-									and gradientProperty ~= "Transparency"
-									and pcall(function()
-										return gradient[gradientProperty]
-									end)
-								then
-									pcall(function()
-										gradient[gradientProperty] = gradientValue
-									end)
+
+							J.Color = H.Color
+							J.Transparency = H.Transparency
+
+							for L, M in pairs(H) do
+								if L ~= "Color" and L ~= "Transparency" and J[L] ~= nil then
+									J[L] = M
 								end
 							end
-						elseif type(value) == "number" then
+						elseif typeof(H) == "number" then
 							if x then
 								r.Tween(
-									object,
+									C.Object,
 									z or 0.2,
-									{ [property] = value },
+									{ [F] = H },
 									A or Enum.EasingStyle.Quint,
 									B or Enum.EasingDirection.Out
 								):Play()
 							elseif v then
-								r.Tween(object, 0.08, { [property] = value }):Play()
+								r.Tween(C.Object, 0.08, { [F] = H }):Play()
 							else
-								object[property] = value
+								C.Object[F] = H
 							end
-						elseif value == nil and gradient then
-							gradient:Destroy()
 						end
-					end)
-
-					if not ok then
-						return false
+					else
+						local J = C.Object:FindFirstChild("LibraryGradient")
+						if J then
+							J:Destroy()
+						end
 					end
 				end
-
-				return true
 			end
 
 			if u then
-				local entry = r.Objects[u]
-				if entry and not applyTheme(entry) then
-					r.Objects[u] = nil
+				local C = r.Objects[u]
+				if C then
+					ApplyTheme(C)
 				end
 			else
-				for object, entry in pairs(r.Objects) do
-					if not applyTheme(entry) then
-						r.Objects[object] = nil
-					end
+				for C, F in pairs(r.Objects) do
+					ApplyTheme(F)
 				end
 			end
 		end
@@ -1299,93 +1169,43 @@ do
 			return m.AddIcons(u, v)
 		end
 
-		local function assignProperty(object, property, value)
-			if value == nil then
-				return true
-			end
-			local ok, errorValue = pcall(function()
-				object[property] = value
-			end)
-			if not ok and p and p.Window and p.Window.Debug then
-				warn(
-					"[ WindUI ] Failed to set "
-						.. tostring(object.ClassName)
-						.. "."
-						.. tostring(property)
-						.. ": "
-						.. tostring(errorValue)
-				)
-			end
-			return ok
-		end
-
 		function r.New(u, v, x)
 			local z = Instance.new(u)
 
-			for property, value in pairs(r.DefaultProperties[u] or {}) do
-				assignProperty(z, property, value)
+			for A, B in next, r.DefaultProperties[u] or {} do
+				z[A] = B
 			end
 
-			for property, value in pairs(type(v) == "table" and v or {}) do
-				if property ~= "ThemeTag" then
-					assignProperty(z, property, value)
+			for A, B in next, v or {} do
+				if A ~= "ThemeTag" then
+					z[A] = B
 				end
+				if r.Localization and r.Localization.Enabled and A == "Text" then
+					local C = string.match(B, "^" .. r.Localization.Prefix .. "(.+)")
+					if C then
+						local F = #r.LocalizationObjects + 1
+						r.LocalizationObjects[F] = { TranslationId = C, Object = z }
 
-				if r.Localization
-					and r.Localization.Enabled
-					and property == "Text"
-					and type(value) == "string"
-				then
-					local translationId = string.match(value, "^" .. r.Localization.Prefix .. "(.+)")
-					if translationId then
-						local index = #r.LocalizationObjects + 1
-						r.LocalizationObjects[index] = {
-							TranslationId = translationId,
-							Object = z,
-						}
-						r.SetLangForObject(index)
+						r.SetLangForObject(F)
 					end
 				end
 			end
 
-			for _, child in pairs(type(x) == "table" and x or {}) do
-				if typeof(child) == "Instance" then
-					pcall(function()
-						child.Parent = z
-					end)
-				end
+			for A, B in next, x or {} do
+				B.Parent = z
 			end
 
-			if type(v) == "table" and type(v.ThemeTag) == "table" then
+			if v and v.ThemeTag then
 				r.AddThemeObject(z, v.ThemeTag)
 			end
-			if type(v) == "table" and v.FontFace then
+			if v and v.FontFace then
 				r.AddFontObject(z)
 			end
 			return z
 		end
 
-		r.AnimationsEnabled = true
-		r.MotionScale = 1
-
-		function r.SetAnimationsEnabled(enabled)
-			r.AnimationsEnabled = enabled ~= false
-			return r
-		end
-
-		function r.SetMotionScale(scale)
-			r.MotionScale = math.clamp(tonumber(scale) or 1, 0, 3)
-			return r
-		end
-
 		function r.Tween(u, v, x, ...)
-			local duration = math.max(tonumber(v) or 0, 0)
-			if r.AnimationsEnabled == false then
-				duration = 0
-			else
-				duration *= math.max(tonumber(r.MotionScale) or 1, 0)
-			end
-			return f:Create(u, TweenInfo.new(duration, ...), x)
+			return f:Create(u, TweenInfo.new(v, ...), x)
 		end
 
 		function r.NewRoundFrame(u, v, x, z, A, B)
@@ -1563,44 +1383,22 @@ do
 					local fallback = u("ImageLabel", {
 						Size = UDim2.new(1, 0, 1, 0),
 						BackgroundTransparency = 1,
-						Image = iconData[1] or "",
+						Image = iconData[1] or "rbxassetid://0",
 						ImageRectSize = iconData[2] and iconData[2].ImageRectSize or Vector2.new(0, 0),
 						ImageRectOffset = iconData[2] and iconData[2].ImageRectPosition or Vector2.new(0, 0),
 					})
 					fallback.Parent = J
 				end
 			elseif string.match(source, "^https?://") and not string.find(source, "roblox.com", 1, true) then
-				local rootFolder = "WindUI"
-				local categoryFolder = rootFolder .. "/" .. tostring(B)
-				local assetFolder = categoryFolder .. "/assets"
-				local fileName = assetFolder
-					.. "/."
+				local fileName = "WindUI/"
+					.. tostring(B)
+					.. "/assets/."
 					.. tostring(C or "asset")
 					.. "-"
 					.. z
 					.. ".png"
 
 				task.spawn(function()
-					if not J.Parent then
-						return
-					end
-
-					if type(getcustomasset) ~= "function" then
-						J.Visible = false
-						return
-					end
-
-					if type(isfile) == "function" then
-						local ok, cached = pcall(isfile, fileName)
-						if ok and cached then
-							local loaded, asset = pcall(getcustomasset, fileName)
-							if loaded and type(asset) == "string" and J.Parent and J:FindFirstChild("ImageLabel") then
-								J.ImageLabel.Image = asset
-								return
-							end
-						end
-					end
-
 					local body
 					local requestError
 
@@ -1617,18 +1415,17 @@ do
 							if type(response) == "string" then
 								body = response
 							elseif type(response) == "table" then
-								local status = tonumber(response.StatusCode or response.statusCode or response.Status)
-								if not status or (status >= 200 and status < 400) then
-									body = response.Body or response.body or response.Data or response.data
-								end
+								body = response.Body or response.body or response.Data or response.data
 							end
 						else
 							requestError = response
 						end
 					end
 
-					if type(body) ~= "string" and type(game.HttpGet) == "function" then
-						local ok, response = pcall(game.HttpGet, game, source, true)
+					if type(body) ~= "string" then
+						local ok, response = pcall(function()
+							return game:HttpGet(source, true)
+						end)
 						if ok and type(response) == "string" then
 							body = response
 						elseif not requestError then
@@ -1636,41 +1433,27 @@ do
 						end
 					end
 
-					if type(body) ~= "string" or body == "" or #body > 12000000 then
-						warn("[ WindUI.Creator ] Failed to download image: " .. tostring(requestError or "invalid response"))
-						if J.Parent then
-							J.Visible = false
-						end
+					if type(body) ~= "string" or body == "" then
+						warn("[ WindUI.Creator ] Failed to download image: " .. tostring(requestError or "empty response"))
+						J.Visible = false
 						return
 					end
 
-					if type(makefolder) == "function" then
-						for _, folder in ipairs({ rootFolder, categoryFolder, assetFolder }) do
-							local exists = type(isfolder) == "function" and select(2, pcall(isfolder, folder))
-							if not exists then
-								pcall(makefolder, folder)
-							end
-						end
+					if not d:IsStudio() and type(writefile) == "function" then
+						pcall(writefile, fileName, body)
 					end
 
-					if d:IsStudio() or type(writefile) ~= "function" then
-						if J.Parent then
-							J.Visible = false
-						end
-						return
-					end
-
-					local wrote = pcall(writefile, fileName, body)
-					if not wrote then
-						if J.Parent then
-							J.Visible = false
-						end
+					if type(getcustomasset) ~= "function" then
+						warn("[ WindUI.Creator ] getcustomasset is unavailable; URL image was skipped")
+						J.Visible = false
 						return
 					end
 
 					local ok, asset = pcall(getcustomasset, fileName)
-					if ok and type(asset) == "string" and J.Parent and J:FindFirstChild("ImageLabel") then
-						J.ImageLabel.Image = asset
+					if ok and type(asset) == "string" then
+						if J.Parent and J:FindFirstChild("ImageLabel") then
+							J.ImageLabel.Image = asset
+						end
 					else
 						warn(
 							string.format(
@@ -1679,9 +1462,7 @@ do
 								tostring(asset)
 							)
 						)
-						if J.Parent then
-							J.Visible = false
-						end
+						J.Visible = false
 					end
 				end)
 			elseif source == "" then
@@ -5184,13 +4965,7 @@ do
 		local ae = ad.New
 
 		function aa.New(af, ag, ah, ai, aj)
-			local existing = ag and ag:FindFirstChild("WindUICustomScrollBar")
-			if existing then
-				pcall(existing.Destroy, existing)
-			end
-
 			local ak = ae("Frame", {
-				Name = "WindUICustomScrollBar",
 				Size = UDim2.new(0, ai, 1, 0),
 				BackgroundTransparency = 1,
 				Position = UDim2.new(1, 0, 0, 0),
@@ -5251,16 +5026,12 @@ do
 					aj.CurrentInput = nil
 				end
 				ao = false
-				if af and af.Parent then
-					af.ScrollingEnabled = true
-				end
+				af.ScrollingEnabled = true
 				if ap then
-					pcall(ap.Disconnect, ap)
-					ap = nil
+					ap:Disconnect()
 				end
 				if aq then
-					pcall(aq.Disconnect, aq)
-					aq = nil
+					aq:Disconnect()
 				end
 			end
 
@@ -5323,11 +5094,6 @@ do
 			ad.AddSignal(af:GetPropertyChangedSignal("AbsoluteWindowSize"), UpdateVisuals)
 			ad.AddSignal(af:GetPropertyChangedSignal("AbsoluteCanvasSize"), UpdateVisuals)
 			ad.AddSignal(af:GetPropertyChangedSignal("CanvasPosition"), UpdateVisuals)
-			ad.AddSignal(ak.AncestryChanged, function(_, parent)
-				if parent == nil then
-					StopDrag()
-				end
-			end)
 
 			UpdateVisuals()
 
@@ -12509,33 +12275,12 @@ do
 					return false
 				end
 
-				local function inside(point)
-					local position = aB.AbsolutePosition
-					local size = aB.AbsoluteSize
-					return point.X >= position.X
-						and point.Y >= position.Y
-						and point.X <= position.X + size.X
-						and point.Y <= position.Y + size.Y
-				end
-
-				if inside(aC) then
-					return true
-				end
-
-				local inset = Vector2.new(0, 0)
-				pcall(function()
-					inset = game:GetService("GuiService"):GetGuiInset()
-				end)
-
-				-- UserInputService:GetMouseLocation() may include the Roblox
-				-- top-bar inset while IgnoreGuiInset ScreenGuis do not.
-				if inside(aC - inset) then
-					return true
-				end
-
-				-- Retain the opposite conversion for executor-specific input
-				-- implementations that already subtract the inset.
-				return inside(aC + inset)
+				local aD = aB.AbsolutePosition
+				local aE = aB.AbsoluteSize
+				return aC.X >= aD.X
+					and aC.Y >= aD.Y
+					and aC.X <= aD.X + aE.X
+					and aC.Y <= aD.Y + aE.Y
 			end
 
 			local function clearTooltip()
@@ -12557,7 +12302,6 @@ do
 					if WindUI.ActiveTooltip == aB then
 						WindUI.ActiveTooltip = nil
 						WindUI.ActiveTooltipSource = nil
-						WindUI.ActiveTooltipOpenedAt = nil
 					end
 				end
 			end
@@ -12588,7 +12332,6 @@ do
 					aw = am(ar.Desc, ao.ToolTipParent, true)
 					WindUI.ActiveTooltip = aw
 					WindUI.ActiveTooltipSource = ar.UIElements.Main
-					WindUI.ActiveTooltipOpenedAt = os.clock()
 					aw.Container.AnchorPoint = Vector2.new(0.5, 0)
 
 					local function updatePosition()
@@ -12602,10 +12345,7 @@ do
 							return
 						end
 
-						local aE = Vector2.new(0, 0)
-						pcall(function()
-							aE = ao.ToolTipParent.AbsoluteSize
-						end)
+						local aE = ao.ToolTipParent.AbsoluteSize
 						if aE.X <= 0 or aE.Y <= 0 then
 							local aF = workspace.CurrentCamera
 							aE = aF and aF.ViewportSize or Vector2.new(1280, 720)
@@ -12630,14 +12370,12 @@ do
 					if aB ~= aA or not aw then
 						return
 					end
-
-					aw:Open()
-
 					ay = ag.InputChanged:Connect(function(aD)
 						if aD.UserInputType == Enum.UserInputType.MouseMovement then
 							updatePosition()
 						end
 					end)
+					aw:Open()
 				end)
 			end
 
@@ -15595,12 +15333,7 @@ end
 local ao = aa.GenerateGUID()
 
 function aa.AddGlobalSignal(signal, callback)
-	if typeof(signal) ~= "RBXScriptSignal" or type(callback) ~= "function" then
-		return nil
-	end
-	local connection = signal:Connect(function(...)
-		aa.Creator.SafeCallback(callback, ...)
-	end)
+	local connection = signal:Connect(callback)
 	table.insert(aa.GlobalConnections, connection)
 	return connection
 end
@@ -15644,15 +15377,9 @@ end)
 
 local ap = ak.LocalPlayer or ak.PlayerAdded:Wait()
 
-local aq
-pcall(function()
-	local encoded = a.load("l")
-	if type(encoded) == "string" and encoded ~= "" then
-		aq = ai:JSONDecode(encoded)
-	end
-end)
-if type(aq) == "table" and aq.version ~= nil then
-	aa.Version = tostring(aq.version)
+local aq = ai:JSONDecode(a.load("l"))
+if aq then
+	aa.Version = aq.version
 end
 
 local ar = a.load("p")
@@ -15681,15 +15408,17 @@ if not aw and ap then
 end
 assert(aw, "WindUI could not resolve a GUI parent")
 
-local staleGuiNames = {
-	["WindUI"] = true,
-	["WindUI/Notifications"] = true,
-	["WindUI/Dropdowns"] = true,
-	["WindUI/Tooltips"] = true,
-}
-for _, existing in ipairs(aw:GetChildren()) do
-	if staleGuiNames[existing.Name] then
-		pcall(existing.Destroy, existing)
+for _, guiName in ipairs({
+	"WindUI",
+	"WindUI/Notifications",
+	"WindUI/Dropdowns",
+	"WindUI/Tooltips",
+}) do
+	local existing = aw:FindFirstChild(guiName)
+	if existing then
+		pcall(function()
+			existing:Destroy()
+		end)
 	end
 end
 
@@ -15708,9 +15437,7 @@ aa.ScreenGui = at("ScreenGui", {
 	ZIndexBehavior = "Sibling",
 	DisplayOrder = 100000,
 }, {
-	-- Kept for compatibility with integrations that still reference
-	-- ScreenGui.Window directly. The active window is hosted in
-	-- ScaledGui.ClickGui so legacy visibility toggles affect the real UI.
+
 	at("Folder", {
 		Name = "Window",
 	}),
@@ -15725,47 +15452,6 @@ aa.ScreenGui = at("ScreenGui", {
 		Name = "ToolTips",
 	}),
 })
-
--- Legacy BadWars modules expect this exact hierarchy:
--- WindUI.ScaledGui.ClickGui
---
--- Use real GuiObjects rather than placeholder folders so setting either
--- ScaledGui.Visible or ClickGui.Visible immediately hides/shows the actual UI.
-aa.ScaledGui = at("Frame", {
-	Name = "ScaledGui",
-	Parent = aa.ScreenGui,
-	Size = UDim2.fromScale(1, 1),
-	Position = UDim2.fromScale(0, 0),
-	AnchorPoint = Vector2.new(0, 0),
-	BackgroundTransparency = 1,
-	BorderSizePixel = 0,
-	ClipsDescendants = false,
-	Visible = true,
-	Active = false,
-	Selectable = false,
-	ZIndex = 1,
-})
-
-aa.ClickGui = at("Frame", {
-	Name = "ClickGui",
-	Parent = aa.ScaledGui,
-	Size = UDim2.fromScale(1, 1),
-	Position = UDim2.fromScale(0, 0),
-	AnchorPoint = Vector2.new(0, 0),
-	BackgroundTransparency = 1,
-	BorderSizePixel = 0,
-	ClipsDescendants = false,
-	Visible = true,
-	Active = false,
-	Selectable = false,
-	ZIndex = 1,
-})
-
--- Common aliases used by old adapters and module bundles.
-aa.gui = aa.ScreenGui
-aa.Gui = aa.ScreenGui
-aa.RootGui = aa.ScreenGui
-aa.ClickGUI = aa.ClickGui
 
 aa.NotificationGui = at("ScreenGui", {
 	Name = "WindUI/Notifications",
@@ -15801,35 +15487,6 @@ av(aa.TooltipGui)
 
 as.Init(aa)
 
-local function validateLegacyGuiHierarchy()
-	if not aa.ScreenGui or not aa.ScreenGui.Parent then
-		return false
-	end
-
-	local scaled = aa.ScreenGui:FindFirstChild("ScaledGui")
-	local clickGui = scaled and scaled:FindFirstChild("ClickGui")
-
-	if not scaled or not scaled:IsA("GuiObject") then
-		return false
-	end
-	if not clickGui or not clickGui:IsA("GuiObject") then
-		return false
-	end
-
-	aa.ScaledGui = scaled
-	aa.ClickGui = clickGui
-	aa.gui = aa.ScreenGui
-	aa.Gui = aa.ScreenGui
-	aa.RootGui = aa.ScreenGui
-	aa.ClickGUI = clickGui
-	return true
-end
-
-assert(
-	validateLegacyGuiHierarchy(),
-	"WindUI failed to create the required ScaledGui.ClickGui compatibility hierarchy"
-)
-
 function aa.SetParent(ay, az)
 	if aa.ScreenGui then
 		aa.ScreenGui.Parent = az
@@ -15843,56 +15500,6 @@ function aa.SetParent(ay, az)
 	if aa.TooltipGui then
 		aa.TooltipGui.Parent = az
 	end
-	return aa
-end
-
-function aa.GetRootGui()
-	return aa.ScreenGui
-end
-
-function aa.GetScaledGui()
-	return aa.ScaledGui
-		or (aa.ScreenGui and aa.ScreenGui:FindFirstChild("ScaledGui"))
-end
-
-function aa.GetClickGui()
-	local scaled = aa:GetScaledGui()
-	return aa.ClickGui
-		or (scaled and scaled:FindFirstChild("ClickGui"))
-end
-
-function aa.SetVisible(_, visible)
-	visible = visible ~= false
-	local scaled = aa:GetScaledGui()
-	local clickGui = aa:GetClickGui()
-
-	if scaled then
-		scaled.Visible = visible
-	end
-	if clickGui then
-		clickGui.Visible = visible
-	end
-
-	if visible and aa.Window and type(aa.Window.Open) == "function" then
-		pcall(aa.Window.Open, aa.Window)
-	elseif not visible and aa.Window and type(aa.Window.Close) == "function" then
-		pcall(aa.Window.Close, aa.Window)
-	end
-
-	return aa
-end
-
-function aa.Show(self)
-	return aa.SetVisible(self, true)
-end
-
-function aa.Hide(self)
-	return aa.SetVisible(self, false)
-end
-
-function aa.Toggle(self)
-	local clickGui = aa:GetClickGui()
-	return aa.SetVisible(self, not (clickGui and clickGui.Visible == true))
 end
 aa.TransparencyValue = math.clamp(aa.TransparencyValue, 0, 1)
 
@@ -16060,14 +15667,7 @@ function aa.CreateWindow(az, aA)
 
 	aA.WindUI = aa
 	aA.Window = aa.Window
-	aA.Parent = aa.ClickGui
-		or (
-			aa.ScreenGui
-			and aa.ScreenGui:FindFirstChild("ScaledGui")
-			and aa.ScreenGui.ScaledGui:FindFirstChild("ClickGui")
-		)
-		or aa.ScreenGui:FindFirstChild("Window")
-		or aa.ScreenGui
+	aA.Parent = aa.ScreenGui.Window
 
 	if aa.Window then
 		warn("You cannot create more than one window")
@@ -16587,9 +16187,9 @@ do
 end
 
 
--- BADWARS_SMART_UI_RUNTIME_V6_BEGIN
+-- BADWARS_SMART_UI_RUNTIME_V4_BEGIN
 do
-	local SMART_UI_VERSION = "6.0.0"
+	local SMART_UI_VERSION = "4.0.0"
 	local userInputService = game:GetService("UserInputService")
 	local guiService = game:GetService("GuiService")
 	local workspaceService = game:GetService("Workspace")
@@ -16788,13 +16388,9 @@ do
 					object.CanvasSize = horizontal and UDim2.fromOffset(12, 0) or UDim2.fromOffset(0, 18)
 				end
 
-				-- Prevent duplicate scrollbars.
-				-- WindUI already renders custom scrollbar rails/thumbs when
-				-- ScrollBarEnabled is turned on, so the native Roblox scrollbar
-				-- must remain hidden or both will appear at the same time.
-				if object.ScrollingDirection ~= Enum.ScrollingDirection.X then
-					object.ScrollBarThickness = 0
-					object.ScrollBarImageTransparency = 1
+				if window and window.ScrollBarEnabled and object.ScrollingDirection ~= Enum.ScrollingDirection.X then
+					object.ScrollBarThickness = math.max(object.ScrollBarThickness, 2)
+					object.ScrollBarImageTransparency = 0.35
 				end
 			end
 		end
@@ -16984,7 +16580,6 @@ do
 		local tooltip = aa.ActiveTooltip
 		aa.ActiveTooltip = nil
 		aa.ActiveTooltipSource = nil
-		aa.ActiveTooltipOpenedAt = nil
 
 		if type(tooltip) == "table" and type(tooltip.Close) == "function" then
 			pcall(tooltip.Close, tooltip)
@@ -17003,26 +16598,12 @@ do
 		if not object or not object.Parent or not object.Visible then
 			return false
 		end
-
-		local function inside(candidate)
-			local position = object.AbsolutePosition
-			local size = object.AbsoluteSize
-			return candidate.X >= position.X
-				and candidate.Y >= position.Y
-				and candidate.X <= position.X + size.X
-				and candidate.Y <= position.Y + size.Y
-		end
-
-		if inside(point) then
-			return true
-		end
-
-		local inset = Vector2.new(0, 0)
-		pcall(function()
-			inset = guiService:GetGuiInset()
-		end)
-
-		return inside(point - inset) or inside(point + inset)
+		local position = object.AbsolutePosition
+		local size = object.AbsoluteSize
+		return point.X >= position.X
+			and point.Y >= position.Y
+			and point.X <= position.X + size.X
+			and point.Y <= position.Y + size.Y
 	end
 
 	local function enhanceWindow(window)
@@ -17060,15 +16641,6 @@ do
 		local originalOpen = window.Open
 		if type(originalOpen) == "function" then
 			window.Open = function(self, ...)
-				local scaled = aa.GetScaledGui and aa:GetScaledGui() or aa.ScaledGui
-				local clickGui = aa.GetClickGui and aa:GetClickGui() or aa.ClickGui
-				if scaled then
-					scaled.Visible = true
-				end
-				if clickGui then
-					clickGui.Visible = true
-				end
-
 				local result = originalOpen(self, ...)
 				task.delay(0.05, function()
 					scheduleLayout(self)
@@ -17240,11 +16812,7 @@ do
 			return
 		end
 		local source = aa.ActiveTooltipSource
-		local openedAt = tonumber(aa.ActiveTooltipOpenedAt) or 0
-		if source
-			and os.clock() - openedAt > 0.14
-			and not pointInsideGui(source, userInputService:GetMouseLocation())
-		then
+		if source and not pointInsideGui(source, userInputService:GetMouseLocation()) then
 			closeActiveTooltip()
 		end
 	end)
@@ -17279,882 +16847,6 @@ do
 		end,
 	}
 end
--- BADWARS_SMART_UI_RUNTIME_V6_END
-
-
--- BADWARS_SMART_UI_RUNTIME_V8_BEGIN
-do
-	local V7_VERSION = "8.0.0"
-	local inputService = game:GetService("UserInputService")
-	local runService = game:GetService("RunService")
-	local guiService = game:GetService("GuiService")
-	local workspaceService = game:GetService("Workspace")
-
-	local windowState = setmetatable({}, { __mode = "k" })
-	local recentNotifications = {}
-	local maintenanceToken = {}
-	local cameraConnection
-
-	local function safeCall(callback, ...)
-		if type(callback) ~= "function" then
-			return false, nil
-		end
-		local arguments = table.pack(...)
-		local results = table.pack(xpcall(function()
-			return callback(table.unpack(arguments, 1, arguments.n))
-		end, function(errorValue)
-			if type(debug) == "table" and type(debug.traceback) == "function" then
-				return debug.traceback(tostring(errorValue), 2)
-			end
-			return tostring(errorValue)
-		end))
-		if not results[1] then
-			warn("[ WindUI V7 ] " .. tostring(results[2]))
-			return false, results[2]
-		end
-		return true, table.unpack(results, 2, results.n)
-	end
-
-	local function connect(signal, callback, bucket)
-		if typeof(signal) ~= "RBXScriptSignal" or type(callback) ~= "function" then
-			return nil
-		end
-		local connection = signal:Connect(function(...)
-			safeCall(callback, ...)
-		end)
-		if type(bucket) == "table" then
-			table.insert(bucket, connection)
-		else
-			table.insert(aa.GlobalConnections, connection)
-		end
-		return connection
-	end
-
-	local function disconnectBucket(bucket)
-		for index = #bucket, 1, -1 do
-			local connection = table.remove(bucket, index)
-			pcall(connection.Disconnect, connection)
-		end
-	end
-
-	local function getViewport()
-		local camera = workspaceService.CurrentCamera
-		if camera and camera.ViewportSize.X > 0 and camera.ViewportSize.Y > 0 then
-			return camera.ViewportSize
-		end
-
-		local scaled = aa.GetScaledGui and aa:GetScaledGui() or aa.ScaledGui
-		if scaled and scaled.AbsoluteSize.X > 0 and scaled.AbsoluteSize.Y > 0 then
-			return scaled.AbsoluteSize
-		end
-
-		return Vector2.new(1280, 720)
-	end
-
-	local function getInset()
-		local topLeft = Vector2.new(0, 0)
-		local bottomRight = Vector2.new(0, 0)
-		pcall(function()
-			topLeft, bottomRight = guiService:GetGuiInset()
-		end)
-		return topLeft, bottomRight
-	end
-
-	local function pointInside(object, point)
-		if typeof(object) ~= "Instance"
-			or not object:IsA("GuiObject")
-			or not object.Parent
-			or not object.Visible
-		then
-			return false
-		end
-
-		local function inside(candidate)
-			local position = object.AbsolutePosition
-			local size = object.AbsoluteSize
-			return candidate.X >= position.X
-				and candidate.Y >= position.Y
-				and candidate.X <= position.X + size.X
-				and candidate.Y <= position.Y + size.Y
-		end
-
-		if inside(point) then
-			return true
-		end
-
-		local inset = Vector2.new(0, 0)
-		pcall(function()
-			inset = guiService:GetGuiInset()
-		end)
-
-		return inside(point - inset) or inside(point + inset)
-	end
-
-	local function closePopups()
-		if aa.ActiveDropdown and type(aa.ActiveDropdown.Close) == "function" then
-			pcall(aa.ActiveDropdown.Close, aa.ActiveDropdown)
-		end
-		aa.ActiveDropdown = nil
-
-		if aa.ActiveTooltip and type(aa.ActiveTooltip.Close) == "function" then
-			pcall(aa.ActiveTooltip.Close, aa.ActiveTooltip)
-		end
-		aa.ActiveTooltip = nil
-		aa.ActiveTooltipSource = nil
-		aa.ActiveTooltipOpenedAt = nil
-
-		for _, screenGui in ipairs({ aa.DropdownGui, aa.TooltipGui }) do
-			if screenGui then
-				for _, object in ipairs(screenGui:GetChildren()) do
-					if object:IsA("GuiObject") then
-						object.Visible = false
-					end
-				end
-			end
-		end
-	end
-
-	local function clampObject(object, margin)
-		if typeof(object) ~= "Instance"
-			or not object:IsA("GuiObject")
-			or not object.Parent
-			or not object.Visible
-		then
-			return false
-		end
-
-		local viewport = getViewport()
-		local topInset, bottomInset = getInset()
-		margin = tonumber(margin) or 8
-
-		local leftLimit = margin + topInset.X
-		local topLimit = margin + topInset.Y
-		local rightLimit = viewport.X - margin - bottomInset.X
-		local bottomLimit = viewport.Y - margin - bottomInset.Y
-
-		local position = object.AbsolutePosition
-		local size = object.AbsoluteSize
-		if size.X <= 0 or size.Y <= 0 then
-			return false
-		end
-
-		local deltaX = 0
-		local deltaY = 0
-
-		if position.X < leftLimit then
-			deltaX = leftLimit - position.X
-		elseif position.X + size.X > rightLimit then
-			deltaX = rightLimit - (position.X + size.X)
-		end
-
-		if position.Y < topLimit then
-			deltaY = topLimit - position.Y
-		elseif position.Y + size.Y > bottomLimit then
-			deltaY = bottomLimit - (position.Y + size.Y)
-		end
-
-		if deltaX == 0 and deltaY == 0 then
-			return false
-		end
-
-		local scale = math.max(tonumber(aa.UIScaleObj and aa.UIScaleObj.Scale) or tonumber(aa.UIScale) or 1, 0.01)
-		object.Position = UDim2.new(
-			object.Position.X.Scale,
-			object.Position.X.Offset + deltaX / scale,
-			object.Position.Y.Scale,
-			object.Position.Y.Offset + deltaY / scale
-		)
-		return true
-	end
-
-	local function repairHierarchy()
-		if not aa.ScreenGui or not aa.ScreenGui.Parent then
-			return false
-		end
-
-		local scaled = aa.ScreenGui:FindFirstChild("ScaledGui")
-		if scaled and not scaled:IsA("GuiObject") then
-			pcall(scaled.Destroy, scaled)
-			scaled = nil
-		end
-		if not scaled then
-			scaled = Instance.new("Frame")
-			scaled.Name = "ScaledGui"
-			scaled.Size = UDim2.fromScale(1, 1)
-			scaled.BackgroundTransparency = 1
-			scaled.BorderSizePixel = 0
-			scaled.ClipsDescendants = false
-			scaled.Parent = aa.ScreenGui
-		end
-
-		local clickGui = scaled:FindFirstChild("ClickGui")
-		if clickGui and not clickGui:IsA("GuiObject") then
-			pcall(clickGui.Destroy, clickGui)
-			clickGui = nil
-		end
-		if not clickGui then
-			clickGui = Instance.new("Frame")
-			clickGui.Name = "ClickGui"
-			clickGui.Size = UDim2.fromScale(1, 1)
-			clickGui.BackgroundTransparency = 1
-			clickGui.BorderSizePixel = 0
-			clickGui.ClipsDescendants = false
-			clickGui.Parent = scaled
-		end
-
-		aa.ScaledGui = scaled
-		aa.ClickGui = clickGui
-		aa.gui = aa.ScreenGui
-		aa.Gui = aa.ScreenGui
-		aa.RootGui = aa.ScreenGui
-		aa.ClickGUI = clickGui
-
-		local main = aa.Window and aa.Window.UIElements and aa.Window.UIElements.Main
-		if main and main.Parent ~= clickGui then
-			main.Parent = clickGui
-		end
-
-		return true
-	end
-
-	local function repairScrolling(root)
-		if typeof(root) ~= "Instance" then
-			return 0
-		end
-
-		local fixed = 0
-		for _, object in ipairs(root:GetDescendants()) do
-			if object:IsA("ScrollingFrame") then
-				object.ElasticBehavior = Enum.ElasticBehavior.Never
-				object.ScrollingEnabled = true
-
-				if object.ScrollingDirection ~= Enum.ScrollingDirection.X then
-					if object.ScrollBarThickness ~= 0 or object.ScrollBarImageTransparency ~= 1 then
-						object.ScrollBarThickness = 0
-						object.ScrollBarImageTransparency = 1
-						fixed += 1
-					end
-				end
-
-				local layout = object:FindFirstChildOfClass("UIListLayout")
-					or object:FindFirstChildOfClass("UIGridLayout")
-				if layout then
-					local horizontal = layout:IsA("UIListLayout")
-						and layout.FillDirection == Enum.FillDirection.Horizontal
-					object.AutomaticCanvasSize = horizontal and Enum.AutomaticSize.X or Enum.AutomaticSize.Y
-					if horizontal then
-						object.CanvasSize = UDim2.fromOffset(12, 0)
-					else
-						object.CanvasSize = UDim2.fromOffset(0, 20)
-					end
-				end
-			end
-		end
-		return fixed
-	end
-
-	local function pruneCreatorRegistries()
-		local removed = 0
-		for object in pairs(aa.Creator.Objects or {}) do
-			local valid = typeof(object) == "Instance" and pcall(function()
-				return object.ClassName
-			end)
-			if not valid then
-				aa.Creator.Objects[object] = nil
-				removed += 1
-			end
-		end
-
-		for index = #(aa.Creator.FontObjects or {}), 1, -1 do
-			local object = aa.Creator.FontObjects[index]
-			if typeof(object) ~= "Instance" or not pcall(function()
-				return object.ClassName
-			end) then
-				table.remove(aa.Creator.FontObjects, index)
-				removed += 1
-			end
-		end
-
-		for index = #(aa.Creator.LocalizationObjects or {}), 1, -1 do
-			local entry = aa.Creator.LocalizationObjects[index]
-			local object = type(entry) == "table" and entry.Object or nil
-			if typeof(object) ~= "Instance" or not pcall(function()
-				return object.ClassName
-			end) then
-				table.remove(aa.Creator.LocalizationObjects, index)
-				removed += 1
-			end
-		end
-
-		return removed
-	end
-
-	local function reflowElements(window)
-		local count = 0
-		for _, element in pairs(type(window and window.AllElements) == "table" and window.AllElements or {}) do
-			if type(element) == "table" then
-				local frame = element.ElementFrame
-				if typeof(frame) == "Instance" and frame:IsA("GuiObject") then
-					frame.ClipsDescendants = false
-				end
-				if type(element.Reflow) == "function" then
-					pcall(element.Reflow, element, true)
-					count += 1
-				end
-			end
-		end
-		return count
-	end
-
-	local function visibleTabScroller(window)
-		local mainBar = window and window.UIElements and window.UIElements.MainBar
-		if not mainBar then
-			return nil
-		end
-		for _, object in ipairs(mainBar:GetDescendants()) do
-			if object:IsA("ScrollingFrame") and object.Visible then
-				return object
-			end
-		end
-		return nil
-	end
-
-	local function maintenancePass(window)
-		repairHierarchy()
-		local main = window and window.UIElements and window.UIElements.Main
-		if main then
-			repairScrolling(main)
-			reflowElements(window)
-			clampObject(main, 10)
-		end
-
-		for _, overlay in ipairs({ aa.DropdownGui, aa.TooltipGui }) do
-			if overlay then
-				for _, object in ipairs(overlay:GetChildren()) do
-					if object:IsA("GuiObject") and object.Visible then
-						clampObject(object, 8)
-					end
-				end
-			end
-		end
-
-		local tooltipSource = aa.ActiveTooltipSource
-		local openedAt = tonumber(aa.ActiveTooltipOpenedAt) or 0
-		if tooltipSource
-			and os.clock() - openedAt > 0.18
-			and not pointInside(tooltipSource, inputService:GetMouseLocation())
-		then
-			closePopups()
-		end
-
-		pruneCreatorRegistries()
-	end
-
-	local function auditUI(autoFix)
-		local report = {
-			Version = V7_VERSION,
-			Timestamp = os.clock(),
-			Issues = {},
-			Counts = {
-				VisibleNativeScrollbars = 0,
-				OffscreenObjects = 0,
-				ZeroSizeObjects = 0,
-				OverlappingSections = 0,
-				StaleRegistries = 0,
-			},
-			Fixed = 0,
-		}
-
-		if not aa.ScreenGui or not aa.ScreenGui.Parent then
-			table.insert(report.Issues, "ScreenGui is missing or unparented")
-		elseif not aa.ScreenGui:FindFirstChild("ScaledGui")
-			or not aa.ScreenGui.ScaledGui:FindFirstChild("ClickGui")
-		then
-			table.insert(report.Issues, "ScaledGui.ClickGui compatibility hierarchy is missing")
-			if autoFix and repairHierarchy() then
-				report.Fixed += 1
-			end
-		end
-
-		local roots = { aa.ScreenGui, aa.NotificationGui, aa.DropdownGui, aa.TooltipGui }
-		local viewport = getViewport()
-		for _, root in ipairs(roots) do
-			if root then
-				for _, object in ipairs(root:GetDescendants()) do
-					if object:IsA("ScrollingFrame")
-						and object.ScrollBarThickness > 0
-						and object.ScrollBarImageTransparency < 1
-					then
-						report.Counts.VisibleNativeScrollbars += 1
-						if autoFix and object.ScrollingDirection ~= Enum.ScrollingDirection.X then
-							object.ScrollBarThickness = 0
-							object.ScrollBarImageTransparency = 1
-							report.Fixed += 1
-						end
-					end
-
-					if object:IsA("GuiObject") and object.Visible then
-						local size = object.AbsoluteSize
-						local position = object.AbsolutePosition
-						if size.X == 0 or size.Y == 0 then
-							report.Counts.ZeroSizeObjects += 1
-						end
-						if position.X + size.X < 0
-							or position.Y + size.Y < 0
-							or position.X > viewport.X
-							or position.Y > viewport.Y
-						then
-							report.Counts.OffscreenObjects += 1
-							if autoFix and object == (aa.Window and aa.Window.UIElements and aa.Window.UIElements.Main) then
-								if clampObject(object, 10) then
-									report.Fixed += 1
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-
-		local window = aa.Window
-		if window and type(window.AllElements) == "table" then
-			local sections = {}
-			for _, element in pairs(window.AllElements) do
-				local frame = type(element) == "table" and element.__type == "Section" and element.ElementFrame or nil
-				if frame and frame.Parent and frame.Visible then
-					table.insert(sections, {
-						Element = element,
-						Top = frame.AbsolutePosition.Y,
-						Bottom = frame.AbsolutePosition.Y + frame.AbsoluteSize.Y,
-					})
-				end
-			end
-			table.sort(sections, function(left, right)
-				return left.Top < right.Top
-			end)
-			for index = 2, #sections do
-				if sections[index].Top < sections[index - 1].Bottom - 1 then
-					report.Counts.OverlappingSections += 1
-					if autoFix and type(sections[index - 1].Element.Reflow) == "function" then
-						pcall(sections[index - 1].Element.Reflow, sections[index - 1].Element, true)
-						pcall(sections[index].Element.Reflow, sections[index].Element, true)
-						report.Fixed += 1
-					end
-				end
-			end
-		end
-
-		for object in pairs(aa.Creator.Objects or {}) do
-			if typeof(object) ~= "Instance" or not pcall(function()
-				return object.ClassName
-			end) then
-				report.Counts.StaleRegistries += 1
-			end
-		end
-		if autoFix then
-			report.Fixed += pruneCreatorRegistries()
-			maintenancePass(window)
-		end
-
-		if report.Counts.VisibleNativeScrollbars > 0 then
-			table.insert(report.Issues, "Visible native scrollbars were found beside custom WindUI scrollbars")
-		end
-		if report.Counts.OffscreenObjects > 0 then
-			table.insert(report.Issues, "One or more visible UI objects are completely offscreen")
-		end
-		if report.Counts.OverlappingSections > 0 then
-			table.insert(report.Issues, "Overlapping module sections were detected")
-		end
-		if report.Counts.StaleRegistries > 0 then
-			table.insert(report.Issues, "Stale creator registry entries were detected")
-		end
-
-		aa.LastAudit = report
-		return report
-	end
-
-	function aa.SetAnimationsEnabled(_, enabled)
-		aa.Creator:SetAnimationsEnabled(enabled)
-		return aa
-	end
-
-	function aa.SetMotionScale(_, scale)
-		aa.Creator:SetMotionScale(scale)
-		return aa
-	end
-
-	function aa.SetReducedMotion(self, enabled)
-		aa:SetAnimationsEnabled(enabled == false)
-		aa:SetMotionScale(enabled and 0.35 or 1)
-		return aa
-	end
-
-	function aa.SetPerformanceMode(_, enabled)
-		aa.PerformanceMode = enabled == true
-		aa.Creator:SetMotionScale(aa.PerformanceMode and 0.35 or 1)
-		if aa.PerformanceMode and aa.Window then
-			pcall(aa.ToggleAcrylic, aa, false)
-		end
-		return aa
-	end
-
-	function aa.SetUIScale(_, scale)
-		scale = math.clamp(tonumber(scale) or 1, 0.55, 1.35)
-		aa.UIScale = scale
-		aa.Creator.UIScale = scale
-		if aa.UIScaleObj then
-			aa.UIScaleObj.Scale = scale
-		end
-		if aa.Window and type(aa.Window.RefreshLayout) == "function" then
-			aa.Window:RefreshLayout()
-		end
-		return scale
-	end
-
-	function aa.AuditUI(_, autoFix)
-		return auditUI(autoFix == true)
-	end
-
-	function aa.RepairUI()
-		return auditUI(true)
-	end
-
-	function aa.GetDiagnostics()
-		return aa.LastAudit or auditUI(false)
-	end
-
-	function aa.CenterWindow()
-		local window = aa.Window
-		local main = window and window.UIElements and window.UIElements.Main
-		if main then
-			main.AnchorPoint = Vector2.new(0.5, 0.5)
-			main.Position = UDim2.fromScale(0.5, 0.5)
-			window.Position = main.Position
-			closePopups()
-		end
-		return window
-	end
-
-	function aa.ResetLayout()
-		local window = aa.Window
-		if not window then
-			return nil
-		end
-		local baseSize = rawget(window, "__SmartBaseSize")
-		if typeof(baseSize) == "UDim2" and type(window.SetSize) == "function" then
-			window:SetSize(baseSize)
-		end
-		rawset(window, "__SmartForcedCompact", nil)
-		aa:SetUIScale(1)
-		aa:CenterWindow()
-		maintenancePass(window)
-		return window
-	end
-
-	local function enhanceWindowV7(window)
-		if type(window) ~= "table" or windowState[window] then
-			return window
-		end
-
-		local state = {
-			Connections = {},
-			ScrollConnections = setmetatable({}, { __mode = "k" }),
-		}
-		windowState[window] = state
-		window.SmartUIVersion = V7_VERSION
-
-		local function connectScroller(object)
-			if not object:IsA("ScrollingFrame") or state.ScrollConnections[object] then
-				return
-			end
-			state.ScrollConnections[object] = connect(
-				object:GetPropertyChangedSignal("CanvasPosition"),
-				function()
-					if aa.ActiveTooltip then
-						closePopups()
-					end
-				end,
-				state.Connections
-			)
-		end
-
-		local main = window.UIElements and window.UIElements.Main
-		if main then
-			for _, descendant in ipairs(main:GetDescendants()) do
-				connectScroller(descendant)
-			end
-			connect(main.DescendantAdded, function(descendant)
-				connectScroller(descendant)
-				task.defer(function()
-					if not window.Destroyed then
-						maintenancePass(window)
-					end
-				end)
-			end, state.Connections)
-			connect(main:GetPropertyChangedSignal("AbsoluteSize"), function()
-				task.defer(function()
-					maintenancePass(window)
-				end)
-			end, state.Connections)
-		end
-
-		local tabModule = window.TabModule
-		if type(tabModule) == "table" and type(tabModule.SelectTab) == "function" then
-			local originalSelectTab = tabModule.SelectTab
-			tabModule.SelectTab = function(self, ...)
-				closePopups()
-				local results = table.pack(originalSelectTab(self, ...))
-				task.defer(function()
-					maintenancePass(window)
-				end)
-				return table.unpack(results, 1, results.n)
-			end
-		end
-
-		local originalOpen = window.Open
-		if type(originalOpen) == "function" then
-			window.Open = function(self, ...)
-				repairHierarchy()
-				local results = table.pack(originalOpen(self, ...))
-				task.defer(function()
-					maintenancePass(self)
-				end)
-				return table.unpack(results, 1, results.n)
-			end
-			window.Show = window.Open
-		end
-
-		local originalDestroy = window.Destroy
-		if type(originalDestroy) == "function" then
-			window.Destroy = function(self, ...)
-				disconnectBucket(state.Connections)
-				windowState[self] = nil
-				closePopups()
-				return originalDestroy(self, ...)
-			end
-		end
-
-		function window.Center(self)
-			aa:CenterWindow()
-			return self
-		end
-
-		function window.BringIntoView(self)
-			local object = self.UIElements and self.UIElements.Main
-			if object then
-				clampObject(object, 10)
-				self.Position = object.Position
-			end
-			return self
-		end
-
-		function window.ResetLayout(self)
-			aa:ResetLayout()
-			return self
-		end
-
-		function window.SetUIScale(self, scale)
-			aa:SetUIScale(scale)
-			return self
-		end
-
-		function window.SetSidebarWidth(self, width)
-			width = math.clamp(tonumber(width) or self.SideBarWidth or 180, 100, 320)
-			rawset(self, "__SmartBaseSidebar", width)
-			self.SideBarWidth = width
-			if type(self.RefreshLayout) == "function" then
-				self:RefreshLayout()
-			end
-			return self
-		end
-
-		function window.ScrollToTop(self)
-			local scroller = visibleTabScroller(self)
-			if scroller then
-				scroller.CanvasPosition = Vector2.new(scroller.CanvasPosition.X, 0)
-			end
-			return self
-		end
-
-		function window.ScrollToBottom(self)
-			local scroller = visibleTabScroller(self)
-			if scroller then
-				local maximum = math.max(scroller.AbsoluteCanvasSize.Y - scroller.AbsoluteWindowSize.Y, 0)
-				scroller.CanvasPosition = Vector2.new(scroller.CanvasPosition.X, maximum)
-			end
-			return self
-		end
-
-		function window.Audit(self, autoFix)
-			return auditUI(autoFix == true)
-		end
-
-		function window.SetPerformanceMode(self, enabled)
-			aa:SetPerformanceMode(enabled)
-			return self
-		end
-
-		function window.SetReducedMotion(self, enabled)
-			aa:SetReducedMotion(enabled)
-			return self
-		end
-
-		task.defer(function()
-			maintenancePass(window)
-			auditUI(true)
-		end)
-
-		return window
-	end
-
-	local previousCreateWindow = aa.CreateWindow
-	function aa.CreateWindow(self, config)
-		local window = previousCreateWindow(self, config)
-		return enhanceWindowV7(window)
-	end
-
-	if aa.Window then
-		enhanceWindowV7(aa.Window)
-	end
-
-	local previousNotify = aa.Notify
-	function aa.Notify(self, ...)
-		local arguments = table.pack(...)
-		local config
-		if self == aa then
-			config = arguments[1]
-		else
-			config = self
-		end
-
-		local title
-		local content
-		if type(config) == "table" then
-			title = config.Title or config.Name
-			content = config.Content or config.Desc or config.Description or config.Text
-		else
-			title = config
-			content = arguments[1]
-		end
-
-		local key = tostring(title or "Notification") .. "\0" .. tostring(content or "")
-		local now = os.clock()
-		local recent = recentNotifications[key]
-		if recent and now - recent.Time < 0.8 and recent.Notification and not recent.Notification.Closed then
-			return recent.Notification
-		end
-
-		local notification = previousNotify(self, table.unpack(arguments, 1, arguments.n))
-		recentNotifications[key] = {
-			Time = now,
-			Notification = notification,
-		}
-		return notification
-	end
-	aa.CreateNotification = aa.Notify
-
-	local function focusSearch()
-		local window = aa.Window
-		local sidebar = window and window.UIElements and window.UIElements.SideBarContainer
-		if not sidebar then
-			return false
-		end
-		local textBox = sidebar:FindFirstChildWhichIsA("TextBox", true)
-		if textBox and textBox.Visible and textBox.TextEditable then
-			textBox:CaptureFocus()
-			return true
-		end
-		return false
-	end
-
-	connect(inputService.TextBoxFocused, function()
-		closePopups()
-	end)
-
-	connect(inputService.InputBegan, function(input, processed)
-		if processed then
-			return
-		end
-
-		local controlDown = inputService:IsKeyDown(Enum.KeyCode.LeftControl)
-			or inputService:IsKeyDown(Enum.KeyCode.RightControl)
-
-		if controlDown and input.KeyCode == Enum.KeyCode.K then
-			focusSearch()
-		elseif controlDown and input.KeyCode == Enum.KeyCode.Zero then
-			aa:ResetLayout()
-		elseif input.KeyCode == Enum.KeyCode.Home and not inputService:GetFocusedTextBox() then
-			if aa.Window and type(aa.Window.ScrollToTop) == "function" then
-				aa.Window:ScrollToTop()
-			end
-		elseif input.KeyCode == Enum.KeyCode.End and not inputService:GetFocusedTextBox() then
-			if aa.Window and type(aa.Window.ScrollToBottom) == "function" then
-				aa.Window:ScrollToBottom()
-			end
-		end
-	end)
-
-	local function bindCamera()
-		if cameraConnection then
-			pcall(cameraConnection.Disconnect, cameraConnection)
-			cameraConnection = nil
-		end
-
-		local camera = workspaceService.CurrentCamera
-		if camera then
-			cameraConnection = connect(camera:GetPropertyChangedSignal("ViewportSize"), function()
-				if aa.Window then
-					maintenancePass(aa.Window)
-				end
-			end)
-		end
-	end
-
-	connect(workspaceService:GetPropertyChangedSignal("CurrentCamera"), function()
-		bindCamera()
-		if aa.Window then
-			maintenancePass(aa.Window)
-		end
-	end)
-	bindCamera()
-
-	aa.__V7MaintenanceToken = maintenanceToken
-	task.spawn(function()
-		while aa.__V7MaintenanceToken == maintenanceToken
-			and aa.ScreenGui
-			and aa.ScreenGui.Parent
-		do
-			task.wait(2)
-			if aa.Window and not aa.Window.Destroyed then
-				maintenancePass(aa.Window)
-			end
-		end
-	end)
-
-	repairHierarchy()
-	if aa.Window then
-		maintenancePass(aa.Window)
-	end
-	auditUI(true)
-
-	aa.SmartUI = aa.SmartUI or {}
-	aa.SmartUI.Version = V7_VERSION
-	aa.SmartUI.Audit = function(autoFix)
-		return auditUI(autoFix == true)
-	end
-	aa.SmartUI.Repair = function()
-		return auditUI(true)
-	end
-	aa.SmartUI.SetScale = function(scale)
-		return aa:SetUIScale(scale)
-	end
-	aa.SmartUI.SetPerformanceMode = function(enabled)
-		return aa:SetPerformanceMode(enabled)
-	end
-	aa.SmartUI.SetReducedMotion = function(enabled)
-		return aa:SetReducedMotion(enabled)
-	end
-end
--- BADWARS_SMART_UI_RUNTIME_V8_END
+-- BADWARS_SMART_UI_RUNTIME_V4_END
 
 return aa

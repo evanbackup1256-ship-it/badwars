@@ -179,47 +179,227 @@ if not loadstring then
     loadstring = load or function(code) error("loadstring unavailable") end
 end
 
--- Executor detection using local patterns
+-- Smart executor detection using unique globals, functions, and patterns
 -- WEAO API (https://weao.xyz/api/status/exploits) only provides executor STATUS info
 -- (detected, updated, version, etc.) — it cannot detect which executor you're running on.
 -- Detection must be done locally by checking which global functions exist.
 local __detectedExecutor = "unknown"
-local __executorCapabilities = {}
+local __executorInfo = {name="unknown", confidence="low", platform="unknown", free=false}
+
+local function safeCheck(fn)
+    local ok, result = pcall(fn)
+    return ok and result or nil
+end
 
 local function detectExecutor()
-    -- Detect using local patterns (WEAO API skipped - causes hangs on some executors)
-    local executorPatterns = {
-        {name="Synapse X", check=function() return type(syn)=='table' and type(syn.request)=='function' end},
-        {name="Fluxus", check=function() return type(fluxus)=='table' and type(fluxus.request)=='function' end},
-        {name="Krnl", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
-        {name="Xeno", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
-        {name="Solora", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
-        {name="Wave", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
-        {name="Arceus X", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
-        {name="Delta", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
-        {name="Hydrogen", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
-        {name="Electron", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
-    }
+    -- TIER 1: Unique executor globals (highest confidence)
+    -- These are globals that ONLY exist on specific executors
     
-    for _, executor in ipairs(executorPatterns) do
-        if executor.check() then
-            __detectedExecutor = executor.name
+    -- Synapse X: has syn table with unique functions
+    if type(syn)=='table' then
+        local hasSecureCall = type(syn.secure_call)=='function'
+        local hasProtectGui = type(syn.protect_gui)=='function'
+        local hasRequest = type(syn.request)=='function'
+        local hasHttpGet = type(syn.http_get)=='function'
+        local hasQueueTeleport = type(syn.queue_on_teleport)=='function'
+        
+        if hasRequest or hasHttpGet then
+            __detectedExecutor = "Synapse X"
+            __executorInfo = {
+                name="Synapse X",
+                confidence=hasSecureCall and "very high" or "high",
+                platform="Windows",
+                free=false,
+                httpMethod=hasRequest and "syn.request" or "syn.http_get",
+                capabilities={
+                    secureCall=hasSecureCall,
+                    protectGui=hasProtectGui,
+                    queueTeleport=hasQueueTeleport,
+                    httpRequest=hasRequest,
+                    httpGet=hasHttpGet,
+                }
+            }
             return
         end
     end
     
+    -- Fluxus: has fluxus table with unique functions
+    if type(fluxus)=='table' then
+        local hasRequest = type(fluxus.request)=='function'
+        local hasHttpGet = type(fluxus.http_get)=='function'
+        local hasSetClipboard = type(fluxus.setclipboard)=='function'
+        local hasSetFpsCap = type(fluxus.set_fps_cap)=='function'
+        local hasGetFpsCap = type(fluxus.get_fps_cap)=='function'
+        
+        if hasRequest or hasHttpGet then
+            __detectedExecutor = "Fluxus"
+            __executorInfo = {
+                name="Fluxus",
+                confidence="very high",
+                platform="Windows",
+                free=false,
+                httpMethod=hasRequest and "fluxus.request" or "fluxus.http_get",
+                capabilities={
+                    httpRequest=hasRequest,
+                    httpGet=hasHttpGet,
+                    setClipboard=hasSetClipboard,
+                    setFpsCap=hasSetFpsCap,
+                    getFpsCap=hasGetFpsCap,
+                }
+            }
+            return
+        end
+    end
+    
+    -- Script-Ware: has syn table but different from Synapse X
+    if type(sw)=='table' or type(scriptware)=='table' then
+        __detectedExecutor = "Script-Ware"
+        __executorInfo = {
+            name="Script-Ware",
+            confidence="very high",
+            platform="Windows",
+            free=false,
+            httpMethod="request",
+            capabilities={}
+        }
+        return
+    end
+    
+    -- TIER 2: Executor-specific global tables (high confidence)
+    local executorTables = {
+        {name="Krnl", global="krnl", platform="Windows", free=true},
+        {name="Xeno", global="xeno", platform="Windows", free=true},
+        {name="Solora", global="solora", platform="Windows", free=true},
+        {name="Wave", global="wave", platform="Windows", free=false},
+        {name="Arceus X", global="arceus", platform="Android", free=true},
+        {name="Delta", global="delta", platform="Android", free=true},
+        {name="Hydrogen", global="hydrogen", platform="Android", free=true},
+        {name="Electron", global="electron", platform="Windows", free=false},
+        {name="Vega X", global="vega", platform="Windows", free=true},
+        {name="Celery", global="celery", platform="Windows", free=true},
+        {name="Swift", global="swift", platform="Windows", free=false},
+        {name="Nezur", global="nezur", platform="Windows", free=false},
+        {name="Ronix", global="ronix", platform="Windows", free=true},
+        {name="Potassium", global="potassium", platform="Windows", free=false},
+        {name="Matcha", global="matcha", platform="Windows", free=false},
+        {name="Bunni.lol", global="bunni", platform="Windows", free=true},
+        {name="Photon", global="photon", platform="Windows", free=false},
+    }
+    
+    for _, exec in ipairs(executorTables) do
+        local g = _G[exec.global] or (type(getgenv)=='function' and safeCheck(function() return getgenv()[exec.global] end))
+        if type(g)=='table' or type(g)=='userdata' then
+            __detectedExecutor = exec.name
+            __executorInfo = {
+                name=exec.name,
+                confidence="high",
+                platform=exec.platform,
+                free=exec.free,
+                httpMethod="request",
+                capabilities={}
+            }
+            return
+        end
+    end
+    
+    -- TIER 3: Function pattern detection (medium confidence)
+    -- Check for request/http_request with executor-specific signatures
+    local hasRequest = type(request)=='function'
+    local hasHttpRequest = type(http_request)=='function'
+    
+    if hasRequest or hasHttpRequest then
+        -- Try to identify by checking what the request function returns
+        local detectedByPattern = nil
+        
+        -- Check for Krnl-specific patterns
+        if type(krnl)=='table' or type(KRNL)=='table' or type(iskrnlclosure)=='function' then
+            detectedByPattern = "Krnl"
+        -- Check for Xeno-specific patterns
+        elseif type(xeno)=='table' or type(XENO)=='table' then
+            detectedByPattern = "Xeno"
+        -- Check for Solora-specific patterns
+        elseif type(solora)=='table' or type(SOLORA)=='table' then
+            detectedByPattern = "Solora"
+        -- Check for Wave-specific patterns
+        elseif type(wave)=='table' or type(WAVE)=='table' then
+            detectedByPattern = "Wave"
+        -- Check for Arceus X-specific patterns
+        elseif type(arceus)=='table' or type(ARCEUS)=='table' then
+            detectedByPattern = "Arceus X"
+        -- Check for Delta-specific patterns
+        elseif type(delta)=='table' or type(DELTA)=='table' then
+            detectedByPattern = "Delta"
+        -- Check for Hydrogen-specific patterns
+        elseif type(hydrogen)=='table' or type(HYDROGEN)=='table' then
+            detectedByPattern = "Hydrogen"
+        -- Check for Electron-specific patterns
+        elseif type(electron)=='table' or type(ELECTRON)=='table' then
+            detectedByPattern = "Electron"
+        end
+        
+        if detectedByPattern then
+            __detectedExecutor = detectedByPattern
+            __executorInfo = {
+                name=detectedByPattern,
+                confidence="medium",
+                platform="unknown",
+                free=false,
+                httpMethod="request",
+                capabilities={}
+            }
+            return
+        end
+        
+        -- Generic executor with request/http_request
+        __detectedExecutor = "Unknown Executor"
+        __executorInfo = {
+            name="Unknown Executor",
+            confidence="low",
+            platform="unknown",
+            free=false,
+            httpMethod=hasRequest and "request" or "http_request",
+            capabilities={}
+        }
+        return
+    end
+    
+    -- TIER 4: Roblox native (lowest confidence)
     if game and type(game.HttpGet)=='function' then
         __detectedExecutor = "Roblox Native"
-    elseif type(getgenv)=='function' then
-        local env = getgenv()
+        __executorInfo = {
+            name="Roblox Native",
+            confidence="high",
+            platform="unknown",
+            free=true,
+            httpMethod="game.HttpGet",
+            capabilities={}
+        }
+        return
+    end
+    
+    -- TIER 5: getgenv fallback
+    if type(getgenv)=='function' then
+        local env = safeCheck(getgenv)
         if type(env)=='table' and type(env.HttpGet)=='function' then
             __detectedExecutor = "Executor (getgenv)"
+            __executorInfo = {
+                name="Executor (getgenv)",
+                confidence="low",
+                platform="unknown",
+                free=false,
+                httpMethod="getgenv.HttpGet",
+                capabilities={}
+            }
+            return
         end
     end
 end
 
 -- Run executor detection
 detectExecutor()
+
+-- Log detected executor
+warn('BadWars: Detected executor: ' .. __executorInfo.name .. ' (confidence: ' .. __executorInfo.confidence .. ', http: ' .. (__executorInfo.httpMethod or 'unknown') .. ')')
 
 -- Configure HTTP methods based on detected executor
 local __httpFunctions = {}

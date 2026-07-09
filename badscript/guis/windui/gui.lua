@@ -1,5 +1,6 @@
 -- BADWARS_WINDUI_INTEGRATION
--- WindUI adapter with centralized legacy compatibility layer.
+-- BADWARS_WINDUI_ADAPTER_V3
+-- WindUI V8 adapter with centralized legacy compatibility and lifecycle management.
 
 local cloneref = cloneref or clonereference or function(value)
 	return value
@@ -16,11 +17,19 @@ local d = {
 	Connections = {},
 	Resources = {},
 	GUIColor = { Hue = 0.02, Sat = 0.95, Value = 0.98 },
-	Version = "WindUI-Adapter-2.1",
+	Version = "WindUI-Adapter-3.0.0",
+	AdapterVersion = "3.0.0",
+	WindUIVersion = "unknown",
+	SmartUIVersion = "unknown",
+	WindUISource = "unknown",
+	CompatibilityMode = false,
 	PremiumBuild = false,
 	Name = "BadWars-WindUI",
 	Visible = false,
+	Ready = false,
+	BootState = "loading",
 	Destroyed = false,
+	LastAudit = nil,
 }
 
 local function pack(...)
@@ -31,6 +40,13 @@ local function unpackPacked(values)
 	return table.unpack(values, 1, values.n)
 end
 
+local function safeTraceback(message, level)
+	if type(debug) == "table" and type(debug.traceback) == "function" then
+		return debug.traceback(tostring(message), level or 2)
+	end
+	return tostring(message)
+end
+
 local function safeCall(callback, ...)
 	if type(callback) ~= "function" then
 		return true
@@ -39,7 +55,7 @@ local function safeCall(callback, ...)
 	return xpcall(function()
 		return callback(unpackPacked(args))
 	end, function(message)
-		return debug.traceback(tostring(message), 2)
+		return safeTraceback(message, 2)
 	end)
 end
 
@@ -191,64 +207,127 @@ local function forEachOpenButton(window, callback)
 	end
 end
 
+local function validateSource(source)
+	if type(source) ~= "string" or #source < 10000 then
+		return false, "source is empty or too small"
+	end
+	if #source > 8000000 then
+		return false, "source is unexpectedly large"
+	end
+	local trimmed = source:match("^%s*(.-)%s*$")
+	local lower = string.lower(trimmed:sub(1, 500))
+	if lower:find("<!doctype", 1, true) or lower:find("<html", 1, true) then
+		return false, "received HTML instead of Luau"
+	end
+	if trimmed == "404: Not Found" or trimmed:find('"message"%s*:%s*"Not Found"') then
+		return false, "source was not found"
+	end
+	return true
+end
+
 local function compileSource(source, chunkName)
 	if type(loadstring) ~= "function" then
 		return nil, "loadstring is unavailable"
+	end
+	local valid, validationError = validateSource(source)
+	if not valid then
+		return nil, validationError
 	end
 	local compiled, compileError = loadstring(source, chunkName)
 	if not compiled then
 		return nil, compileError
 	end
-	local ok, result = pcall(compiled)
+	local ok, result = xpcall(compiled, function(message)
+		return safeTraceback(message, 2)
+	end)
 	if not ok then
 		return nil, result
 	end
+	if type(result) ~= "table" or type(result.CreateWindow) ~= "function" then
+		return nil, "source did not return a valid WindUI library"
+	end
 	return result
+end
+
+local function readLocalSource(path)
+	if type(readfile) ~= "function" or type(isfile) ~= "function" then
+		return nil, "filesystem APIs are unavailable"
+	end
+	local existsOk, exists = pcall(isfile, path)
+	if not existsOk or not exists then
+		return nil, "file does not exist"
+	end
+	local readOk, contents = pcall(readfile, path)
+	if not readOk then
+		return nil, contents
+	end
+	return contents
+end
+
+local function downloadSource(url)
+	local attempts = {
+		function()
+			if game and type(game.HttpGet) == "function" then
+				return game:HttpGet(url, true)
+			end
+		end,
+		function()
+			return HttpService:GetAsync(url, true)
+		end,
+	}
+	local lastError = "no HTTP method succeeded"
+	for _, attempt in ipairs(attempts) do
+		local ok, result = pcall(attempt)
+		if ok and type(result) == "string" then
+			return result
+		end
+		if not ok then
+			lastError = tostring(result)
+		end
+	end
+	return nil, lastError
 end
 
 local function loadWindUI()
 	local failures = {}
 	local localPaths = {
+		"badscript/guis/windui/WindUI-BadWars-Tooltip-Restoration-V8.lua",
+		"badscript/guis/windui/WindUI_v8.lua",
 		"badscript/guis/windui/WindUI.lua",
 		"badscript/guis/windui/WindUI_compat.lua",
 	}
 
-	if type(readfile) == "function" and type(isfile) == "function" then
-		for _, path in ipairs(localPaths) do
-			if isfile(path) then
-				local ok, source = pcall(readfile, path)
-				if ok and type(source) == "string" and #source > 10000 then
-					local library, loadError = compileSource(source, "@" .. path)
-					if type(library) == "table" then
-						return library
-					end
-					table.insert(failures, path .. ": " .. tostring(loadError))
-				else
-					table.insert(failures, path .. ": invalid or unreadable source")
-				end
+	for _, path in ipairs(localPaths) do
+		local body, readError = readLocalSource(path)
+		if type(body) == "string" then
+			local library, loadError = compileSource(body, "@" .. path)
+			if type(library) == "table" then
+				d.WindUISource = path
+				return library
 			end
+			table.insert(failures, path .. ": " .. tostring(loadError))
+		elseif readError ~= "file does not exist" and readError ~= "filesystem APIs are unavailable" then
+			table.insert(failures, path .. ": " .. tostring(readError))
 		end
 	end
 
 	local urls = {
+		"https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/guis/windui/WindUI.lua",
+		"https://raw.githubusercontent.com/evanbackup1256-ship-it/badwars/main/badscript/guis/windui/WindUI-BadWars-Tooltip-Restoration-V8.lua",
 		"https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua",
-		"https://github.com/Footagesus/WindUI/raw/main/dist/main.lua",
 	}
+
 	for _, url in ipairs(urls) do
-		local ok, body = pcall(function()
-			if game and type(game.HttpGet) == "function" then
-				return game:HttpGet(url, true)
-			end
-			return HttpService:GetAsync(url, true)
-		end)
-		if ok and type(body) == "string" and #body > 10000 then
-			local library, loadError = compileSource(body, "@WindUI")
+		local body, downloadError = downloadSource(url)
+		if type(body) == "string" then
+			local library, loadError = compileSource(body, "@WindUI:" .. url)
 			if type(library) == "table" then
+				d.WindUISource = url
 				return library
 			end
 			table.insert(failures, url .. ": " .. tostring(loadError))
 		else
-			table.insert(failures, url .. ": download failed")
+			table.insert(failures, url .. ": " .. tostring(downloadError))
 		end
 	end
 
@@ -261,10 +340,21 @@ if type(WindUI.CreateWindow) ~= "function" then
 end
 
 d.WindUI = WindUI
+d.WindUIVersion = tostring(WindUI.Version or "unknown")
+d.SmartUIVersion = type(WindUI.SmartUI) == "table" and tostring(WindUI.SmartUI.Version or "unknown") or "unavailable"
+d.CompatibilityMode = d.SmartUIVersion == "unavailable"
 
 pcall(function()
 	WindUI.TransparencyValue = 0.08
-	WindUI:SetTheme("BadWars")
+	if type(WindUI.SetTheme) == "function" then
+		WindUI:SetTheme("BadWars")
+	end
+	if type(WindUI.SetMotionScale) == "function" then
+		WindUI:SetMotionScale(0.9)
+	end
+	if type(WindUI.RepairUI) == "function" then
+		WindUI:RepairUI()
+	end
 end)
 
 local Window = WindUI:CreateWindow({
@@ -277,9 +367,9 @@ local Window = WindUI:CreateWindow({
 	ScrollBarEnabled = true,
 	AutoScale = false,
 	Resizable = true,
-	Size = UDim2.new(0, 760, 0, 540),
-	MinSize = Vector2.new(560, 380),
-	MaxSize = Vector2.new(1000, 760),
+	Size = UDim2.new(0, 740, 0, 520),
+	MinSize = Vector2.new(520, 360),
+	MaxSize = Vector2.new(1040, 780),
 	ToggleKey = Enum.KeyCode.RightShift,
 	OpenButton = {
 		Title = "BadWars",
@@ -300,39 +390,109 @@ end
 
 d.Window = Window
 
-pcall(function()
-	Window:SetUIScale(0.94)
-end)
+local function syncGuiReferences()
+	d.RootGui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui or nil
+	d.ScaledGui = typeof(WindUI.ScaledGui) == "Instance" and WindUI.ScaledGui
+		or (d.RootGui and d.RootGui:FindFirstChild("ScaledGui"))
+	d.ClickGui = typeof(WindUI.ClickGui) == "Instance" and WindUI.ClickGui
+		or (d.ScaledGui and d.ScaledGui:FindFirstChild("ClickGui"))
+	d.gui = d.RootGui
+		or (typeof(findWindowMain(Window)) == "Instance" and findWindowMain(Window))
+		or Window
+	return d.gui
+end
 
-d.gui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui
-	or (typeof(findWindowMain(Window)) == "Instance" and findWindowMain(Window))
-	or Window
+local function setCompatibilityRootVisible(visible)
+	syncGuiReferences()
+	for _, object in ipairs({ d.ScaledGui, d.ClickGui }) do
+		if typeof(object) == "Instance" and object:IsA("GuiObject") then
+			pcall(function()
+				object.Visible = visible ~= false
+			end)
+		end
+	end
+end
 
-local function setWindowHidden(hidden)
+local bootstrapHidden = true
+local function setBootstrapHidden(hidden)
+	bootstrapHidden = hidden == true
 	local main = findWindowMain(Window)
 	if typeof(main) == "Instance" then
 		pcall(function()
-			main.Visible = not hidden
+			main.Visible = not bootstrapHidden
 			if main:IsA("CanvasGroup") then
-				main.GroupTransparency = hidden and 1 or 0
+				main.GroupTransparency = bootstrapHidden and 1 or 0
 			end
 		end)
 	end
 	forEachOpenButton(Window, function(object)
-		setObjectVisible(object, not hidden)
+		setObjectVisible(object, not bootstrapHidden)
 	end)
 end
 
-setWindowHidden(true)
+syncGuiReferences()
+
+pcall(function()
+	if type(Window.SetUIScale) == "function" then
+		Window:SetUIScale(0.94)
+	elseif type(WindUI.SetUIScale) == "function" then
+		WindUI:SetUIScale(0.94)
+	end
+end)
+
+setBootstrapHidden(true)
 
 pcall(function()
 	Window:Tag({
-		Title = "v2.1",
+		Title = "Adapter v3 · UI v8",
 		Icon = "badge-check",
 		Color = Color3.fromHex("#FF2D4A"),
 		Border = true,
 	})
 end)
+
+local function closeAllPopups()
+	if type(WindUI.CloseAllPopups) == "function" then
+		pcall(WindUI.CloseAllPopups, WindUI)
+		return
+	end
+	for _, active in ipairs({ WindUI.ActiveDropdown, WindUI.ActiveTooltip }) do
+		if type(active) == "table" and type(active.Close) == "function" then
+			pcall(active.Close, active)
+		end
+	end
+	WindUI.ActiveDropdown = nil
+	WindUI.ActiveTooltip = nil
+	WindUI.ActiveTooltipSource = nil
+end
+
+if type(Window.OnOpen) == "function" then
+	Window:OnOpen(function()
+		d.Visible = true
+		setCompatibilityRootVisible(true)
+		task.defer(function()
+			if not d.Destroyed and type(Window.RefreshLayout) == "function" then
+				pcall(Window.RefreshLayout, Window)
+			end
+		end)
+	end)
+end
+
+if type(Window.OnClose) == "function" then
+	Window:OnClose(function()
+		d.Visible = false
+		closeAllPopups()
+	end)
+end
+
+if type(Window.OnDestroy) == "function" then
+	Window:OnDestroy(function()
+		d.Visible = false
+		d.Destroyed = true
+		d.Ready = false
+		d.BootState = "destroyed"
+	end)
+end
 
 local Tabs = {}
 d.Tabs = Tabs
@@ -417,36 +577,48 @@ moduleHealthLabel = Tabs.Modules:Paragraph({
 
 -- Real-time module tracking
 task.spawn(function()
-	local lastCount = 0
+	local lastCount = -1
+	local stablePasses = 0
 	while not d.Destroyed do
-		task.wait(0.5)
-		
-		-- Count registered modules
+		task.wait(d.Ready and 1 or 0.4)
+
 		local currentCount = 0
-		for _ in pairs(d.Modules) do
-			currentCount += 1
-		end
-		
-		-- Update if changed
-		if currentCount ~= lastCount then
-			lastCount = currentCount
-			-- Estimate total (universal + game modules, typically 70-100)
-			local estimatedTotal = math.max(currentCount, 70)
-			updateModuleHealth(currentCount, estimatedTotal)
-		end
-		
-		-- Stop if we've loaded a reasonable amount
-		if currentCount >= 50 then
-			task.wait(2)
-			-- Final update with actual health data
-			local B = shared.Bad
-			if B and type(B.GetBedWarsModuleHealth) == "function" then
-				local report = B:GetBedWarsModuleHealth()
-				if type(report) == "table" and report.Total and report.Total > 0 then
-					updateModuleHealth(report.Ready or 0, report.Total)
-					return
-				end
+		local seen = {}
+		for _, module in pairs(d.Modules) do
+			if type(module) == "table" and not seen[module] then
+				seen[module] = true
+				currentCount += 1
 			end
+		end
+
+		local report
+		local runtime = type(shared) == "table" and shared.Bad or nil
+		if type(runtime) == "table" and type(runtime.GetBedWarsModuleHealth) == "function" then
+			local ok, result = pcall(runtime.GetBedWarsModuleHealth, runtime)
+			if ok and type(result) == "table" then
+				report = result
+			end
+		end
+
+		if report and tonumber(report.Total) and tonumber(report.Total) > 0 then
+			updateModuleHealth(tonumber(report.Ready) or currentCount, tonumber(report.Total))
+		elseif currentCount ~= lastCount then
+			if moduleHealthLabel and type(moduleHealthLabel.SetDesc) == "function" then
+				pcall(moduleHealthLabel.SetDesc, moduleHealthLabel, string.format("%d modules registered", currentCount))
+			end
+			if moduleHealthProgress and type(moduleHealthProgress.Set) == "function" then
+				pcall(moduleHealthProgress.Set, moduleHealthProgress, d.Ready and 100 or math.min(95, currentCount))
+			end
+		end
+
+		if currentCount == lastCount then
+			stablePasses += 1
+		else
+			stablePasses = 0
+			lastCount = currentCount
+		end
+
+		if d.Ready and stablePasses >= 6 then
 			return
 		end
 	end
@@ -457,6 +629,8 @@ local notificationLog = {}
 local MAX_NOTIFICATION_LOG = 60
 local notificationsEnabled = true
 local notificationParagraph
+local notificationRefreshQueued = false
+local recentNotifications = {}
 
 local function formatNotificationLog()
 	local lines = {}
@@ -468,30 +642,39 @@ local function formatNotificationLog()
 end
 
 local function refreshNotificationTab()
-	local content = formatNotificationLog()
-	if notificationParagraph then
-		local ok = pcall(function()
-			if type(notificationParagraph.SetDesc) == "function" then
-				notificationParagraph:SetDesc(content)
-			elseif type(notificationParagraph.Set) == "function" then
-				notificationParagraph:Set(content)
-			end
-		end)
-		if ok then
+	if notificationRefreshQueued then
+		return
+	end
+	notificationRefreshQueued = true
+	task.defer(function()
+		notificationRefreshQueued = false
+		if d.Destroyed then
 			return
 		end
-		-- Old paragraph is broken, destroy it and recreate
-		pcall(function()
-			if type(notificationParagraph.Destroy) == "function" then
-				notificationParagraph:Destroy()
+		local content = formatNotificationLog()
+		if notificationParagraph then
+			local ok = pcall(function()
+				if type(notificationParagraph.SetDesc) == "function" then
+					notificationParagraph:SetDesc(content)
+				elseif type(notificationParagraph.Set) == "function" then
+					notificationParagraph:Set(content)
+				end
+			end)
+			if ok then
+				return
 			end
-		end)
-		notificationParagraph = nil
-	end
-	notificationParagraph = Tabs.Notifications:Paragraph({
-		Title = "Event Log",
-		Desc = content,
-	})
+			pcall(function()
+				if type(notificationParagraph.Destroy) == "function" then
+					notificationParagraph:Destroy()
+				end
+			end)
+			notificationParagraph = nil
+		end
+		notificationParagraph = Tabs.Notifications:Paragraph({
+			Title = "Event Log",
+			Desc = content,
+		})
+	end)
 end
 
 local function normalizeNotificationArguments(self, title, text, duration, notificationType)
@@ -506,12 +689,23 @@ end
 
 function d.CreateNotification(self, title, text, duration, notificationType)
 	title, text, duration, notificationType = normalizeNotificationArguments(self, title, text, duration, notificationType)
+	text = text:sub(1, 2000)
+
+	local key = title .. "\0" .. text .. "\0" .. notificationType
+	local now = os.clock()
+	local recent = recentNotifications[key]
+	if recent and now - recent.time < 0.75 then
+		return recent.entry
+	end
+
 	local entry = {
 		time = os.date("%X"),
 		title = title,
 		text = text,
 		type = notificationType,
 	}
+	recentNotifications[key] = { time = now, entry = entry }
+
 	table.insert(notificationLog, 1, entry)
 	if #notificationLog > MAX_NOTIFICATION_LOG then
 		table.remove(notificationLog)
@@ -530,7 +724,7 @@ function d.CreateNotification(self, title, text, duration, notificationType)
 				Title = title,
 				Content = text,
 				Icon = iconMap[notificationType] or "bell",
-				Duration = duration,
+				Duration = math.clamp(duration, 1, 30),
 			})
 		end)
 	end
@@ -566,7 +760,18 @@ refreshNotificationTab()
 
 -- ─── Core helpers ───
 local function reportCallbackError(context, err)
-	d:CreateNotification("Module Error", tostring(context) .. ": " .. tostring(err), 7, "error")
+	local message = tostring(context) .. ": " .. tostring(err)
+	if type(shared) == "table"
+		and type(shared.BadDiagnostics) == "table"
+		and type(shared.BadDiagnostics.RecordRuntime) == "function"
+	then
+		pcall(shared.BadDiagnostics.RecordRuntime, shared.BadDiagnostics, "WindUI.Adapter", message, {
+			subsystem = "WindUIAdapter",
+			stage = "callback",
+			traceback = tostring(err),
+		})
+	end
+	d:CreateNotification("Module Error", message, 7, "error")
 end
 
 local function runUserCallback(context, callback, ...)
@@ -786,7 +991,7 @@ local function createSliderOption(module, section, settings)
 	})
 	option.Min = minimum
 	option.Max = maximum
-	option.Step = tonumber(firstNonNil(settings.Step, settings.Increment, settings.Round, 1)) or 1
+	option.Step = math.max(tonumber(firstNonNil(settings.Step, settings.Increment, settings.Round, 1)) or 1, 0.000001)
 	option.Object = section:Slider({
 		Title = option.Name,
 		Desc = normalizeDescription(settings),
@@ -1062,7 +1267,13 @@ local function createTwoSliderOption(module, section, settings)
 		Flag = resolveFlag(module, settings, option.Name .. "_min"),
 		Callback = function(value)
 			if setting then return end
-			option.ValueMin = math.min(value, option.ValueMax)
+			local corrected = math.min(tonumber(value) or option.ValueMin, option.ValueMax)
+			option.ValueMin = corrected
+			if corrected ~= value then
+				setting = true
+				setControlValue(minControl, corrected)
+				setting = false
+			end
 			emit(false)
 		end,
 	})
@@ -1073,7 +1284,13 @@ local function createTwoSliderOption(module, section, settings)
 		Flag = resolveFlag(module, settings, option.Name .. "_max"),
 		Callback = function(value)
 			if setting then return end
-			option.ValueMax = math.max(value, option.ValueMin)
+			local corrected = math.max(tonumber(value) or option.ValueMax, option.ValueMin)
+			option.ValueMax = corrected
+			if corrected ~= value then
+				setting = true
+				setControlValue(maxControl, corrected)
+				setting = false
+			end
 			emit(false)
 		end,
 	})
@@ -1422,9 +1639,11 @@ local function createCategoryObject(name, iconName, suppliedTab)
 			category.Modules[moduleName] = nil
 			-- Remove from d.Modules using both keys
 			d.Modules[name .. "/" .. moduleName] = nil
-			-- Only remove short key if it still points to this module
 			if d.Modules[moduleName] == module then
 				d.Modules[moduleName] = nil
+			end
+			if d.Overlays[moduleName] == module then
+				d.Overlays[moduleName] = nil
 			end
 		end
 
@@ -1548,7 +1767,8 @@ local function createCategoryObject(name, iconName, suppliedTab)
 				if type(option.Object) == "table" and type(option.Object.GetPercentage) == "function" then
 					return option.Object:GetPercentage()
 				end
-				return ((option.Value - minimum) / (maximum - minimum)) * 100
+				local span = maximum - minimum
+				return span == 0 and 100 or ((option.Value - minimum) / span) * 100
 			end
 			function option:SetRange(min, max)
 				option.Min = min
@@ -1962,9 +2182,81 @@ appearanceSection:Slider({
 	Step = 5,
 	Callback = function(value)
 		local scale = value / 100
-		pcall(function() Window:SetUIScale(scale) end)
+		if type(d.SetUIScale) == "function" then
+			d:SetUIScale(scale)
+		else
+			pcall(function() Window:SetUIScale(scale) end)
+		end
 		if uiScaleProgress and type(uiScaleProgress.Set) == "function" then
 			pcall(uiScaleProgress.Set, uiScaleProgress, value)
+		end
+	end,
+})
+
+appearanceSection:Toggle({
+	Title = "Compact Layout",
+	Desc = "Use denser spacing on smaller displays",
+	Value = false,
+	Flag = "settings/compact_layout",
+	Callback = function(value)
+		if type(Window.SetCompactMode) == "function" then
+			pcall(Window.SetCompactMode, Window, value == true)
+		end
+	end,
+})
+
+appearanceSection:Toggle({
+	Title = "Reduced Motion",
+	Desc = "Shorten animations without disabling feedback",
+	Value = false,
+	Flag = "settings/reduced_motion",
+	Callback = function(value)
+		d:SetReducedMotion(value == true)
+	end,
+})
+
+appearanceSection:Toggle({
+	Title = "Performance Mode",
+	Desc = "Reduce expensive visual effects and animation duration",
+	Value = false,
+	Flag = "settings/performance_mode",
+	Callback = function(value)
+		d:SetPerformanceMode(value == true)
+	end,
+})
+
+appearanceSection:Slider({
+	Title = "Sidebar Width",
+	Desc = "Adjust navigation width",
+	Value = { Min = 120, Max = 260, Default = 180 },
+	Step = 10,
+	Flag = "settings/sidebar_width",
+	Callback = function(value)
+		if type(Window.SetSidebarWidth) == "function" then
+			pcall(Window.SetSidebarWidth, Window, value)
+		end
+	end,
+})
+
+appearanceSection:Button({
+	Title = "Repair Interface",
+	Icon = "wrench",
+	Desc = "Reflow sections, repair scroll canvases, and clear stale popups",
+	Callback = function()
+		local report = d:RepairUI()
+		local fixed = type(report) == "table" and tonumber(report.Fixed) or 0
+		d:CreateNotification("Interface", "Repair completed · " .. tostring(fixed or 0) .. " fix(es)", 4, "success")
+	end,
+})
+
+appearanceSection:Button({
+	Title = "Reset Layout",
+	Icon = "rotate-ccw",
+	Desc = "Restore the default scale, size, and position",
+	Callback = function()
+		d:ResetLayout()
+		if uiScaleProgress and type(uiScaleProgress.Set) == "function" then
+			pcall(uiScaleProgress.Set, uiScaleProgress, 94)
 		end
 	end,
 })
@@ -2091,30 +2383,151 @@ function d.CreatePopup(self, settings)
 	return popup
 end
 
+function d.CloseAllPopups()
+	closeAllPopups()
+	return true
+end
+
 function d.RefreshScrollCanvases()
-	local roots = { WindUI.ScreenGui, WindUI.DropdownGui, WindUI.NotificationGui }
+	local roots = {
+		WindUI.ScreenGui,
+		WindUI.DropdownGui,
+		WindUI.NotificationGui,
+		WindUI.TooltipGui,
+	}
 	for _, root in ipairs(roots) do
 		if typeof(root) == "Instance" then
 			for _, descendant in ipairs(root:GetDescendants()) do
 				if descendant:IsA("ScrollingFrame") then
 					pcall(function()
-						if descendant.AutomaticCanvasSize == Enum.AutomaticSize.None then
-							descendant.AutomaticCanvasSize = Enum.AutomaticSize.Y
+						descendant.ElasticBehavior = Enum.ElasticBehavior.Never
+						if descendant.ScrollingDirection ~= Enum.ScrollingDirection.X then
+							descendant.ScrollBarThickness = 0
+							descendant.ScrollBarImageTransparency = 1
+						end
+						local layout = descendant:FindFirstChildOfClass("UIListLayout")
+							or descendant:FindFirstChildOfClass("UIGridLayout")
+						if layout then
+							local horizontal = layout:IsA("UIListLayout")
+								and layout.FillDirection == Enum.FillDirection.Horizontal
+							descendant.AutomaticCanvasSize = horizontal and Enum.AutomaticSize.X or Enum.AutomaticSize.Y
 						end
 					end)
 				end
 			end
 		end
 	end
+	if type(WindUI.RepairUI) == "function" then
+		pcall(WindUI.RepairUI, WindUI)
+	end
 	return true
 end
 
-function d.WaitForModuleReadiness()
-	return not d.Destroyed
+function d.RefreshLayout()
+	if d.Destroyed then
+		return false
+	end
+	d:CloseAllPopups()
+	d:RefreshScrollCanvases()
+	if type(Window.RefreshLayout) == "function" then
+		pcall(Window.RefreshLayout, Window)
+	end
+	if type(Window.BringIntoView) == "function" then
+		pcall(Window.BringIntoView, Window)
+	end
+	return true
+end
+
+function d.AuditUI(self, autoFix)
+	if self ~= d then
+		autoFix = self
+	end
+	local report
+	if type(WindUI.AuditUI) == "function" then
+		local ok, result = pcall(WindUI.AuditUI, WindUI, autoFix == true)
+		if ok then report = result end
+	elseif type(Window.Audit) == "function" then
+		local ok, result = pcall(Window.Audit, Window, autoFix == true)
+		if ok then report = result end
+	end
+	d.LastAudit = report
+	return report
+end
+
+function d.RepairUI()
+	d:CloseAllPopups()
+	local report
+	if type(WindUI.RepairUI) == "function" then
+		local ok, result = pcall(WindUI.RepairUI, WindUI)
+		if ok then report = result end
+	else
+		report = d:AuditUI(true)
+	end
+	d:RefreshLayout()
+	d.LastAudit = report
+	return report
+end
+
+function d.SetUIScale(self, scale)
+	if self ~= d then scale = self end
+	scale = math.clamp(tonumber(scale) or 0.94, 0.65, 1.25)
+	if type(Window.SetUIScale) == "function" then
+		pcall(Window.SetUIScale, Window, scale)
+	elseif type(WindUI.SetUIScale) == "function" then
+		pcall(WindUI.SetUIScale, WindUI, scale)
+	end
+	return scale
+end
+
+function d.SetReducedMotion(self, enabled)
+	if self ~= d then enabled = self end
+	if type(WindUI.SetReducedMotion) == "function" then
+		pcall(WindUI.SetReducedMotion, WindUI, enabled == true)
+	elseif type(WindUI.SetMotionScale) == "function" then
+		pcall(WindUI.SetMotionScale, WindUI, enabled and 0.35 or 0.9)
+	end
+	return d
+end
+
+function d.SetPerformanceMode(self, enabled)
+	if self ~= d then enabled = self end
+	if type(WindUI.SetPerformanceMode) == "function" then
+		pcall(WindUI.SetPerformanceMode, WindUI, enabled == true)
+	end
+	return d
+end
+
+function d.ResetLayout()
+	d:CloseAllPopups()
+	if type(Window.ResetLayout) == "function" then
+		pcall(Window.ResetLayout, Window)
+	elseif type(WindUI.ResetLayout) == "function" then
+		pcall(WindUI.ResetLayout, WindUI)
+	end
+	d:SetUIScale(0.94)
+	return d:RefreshLayout()
+end
+
+function d.WaitForModuleReadiness(self, timeout)
+	if self ~= d then timeout = self end
+	if d.Destroyed then return false end
+	if d.Ready or timeout == nil then
+		return not d.Destroyed
+	end
+	local deadline = os.clock() + math.max(tonumber(timeout) or 0, 0)
+	repeat
+		task.wait(0.05)
+	until d.Ready or d.Destroyed or os.clock() >= deadline
+	return d.Ready and not d.Destroyed
 end
 
 function d.FinalizeInitialLayout()
-	d:RefreshScrollCanvases()
+	if d.Destroyed then return false end
+	d.BootState = "finalizing"
+	d:RefreshLayout()
+	d:AuditUI(true)
+	d.Ready = true
+	d.BootState = "ready"
 	return true
 end
 
@@ -2124,40 +2537,29 @@ local firstLoadDone = false
 function d.Show(self)
 	if self ~= d then return d:Show() end
 	if d.Destroyed then return false end
+
+	bootstrapHidden = false
+	setCompatibilityRootVisible(true)
+	setBootstrapHidden(false)
 	d.Visible = true
 
-	pcall(function()
-		if type(Window.Open) == "function" then Window:Open() end
-	end)
-	pcall(function()
-		if type(Window.Show) == "function" then Window:Show() end
-	end)
-
-	setWindowHidden(false)
+	if type(WindUI.SetVisible) == "function" then
+		pcall(WindUI.SetVisible, WindUI, true)
+	elseif type(Window.Open) == "function" then
+		pcall(Window.Open, Window)
+	elseif type(Window.Show) == "function" then
+		pcall(Window.Show, Window)
+	end
 
 	task.defer(function()
 		if d.Visible and not d.Destroyed then
-			setWindowHidden(false)
-			local main = findWindowMain(Window)
-			if typeof(main) == "Instance" then
-				pcall(function() main.Visible = true end)
-			end
+			d:RefreshLayout()
 		end
 	end)
 
 	if not firstLoadDone then
 		firstLoadDone = true
-		d:CreateNotification("BadWars", "Interface ready. RightShift to toggle.", 4, "success")
-		task.defer(function()
-			if d.Destroyed then return end
-			local popup = WindUI:Popup({
-				Title = "Welcome to BadWars",
-				Content = "Your loader is ready. Use RightShift to toggle the interface. Check the Modules tab for a health overview of all loaded features.",
-				Buttons = {
-					{ Title = "Got it", Variant = "Primary", Callback = function() end },
-				},
-			})
-		end)
+		d:CreateNotification("BadWars", "Interface ready · RightShift toggles the window", 4, "success")
 	end
 	return true
 end
@@ -2165,14 +2567,16 @@ end
 function d.Hide(self)
 	if self ~= d then return d:Hide() end
 	if d.Destroyed then return false end
+
 	d.Visible = false
-	pcall(function()
-		if type(Window.Close) == "function" then Window:Close() end
-	end)
-	pcall(function()
-		if type(Window.Hide) == "function" then Window:Hide() end
-	end)
-	setWindowHidden(true)
+	d:CloseAllPopups()
+	if type(WindUI.SetVisible) == "function" then
+		pcall(WindUI.SetVisible, WindUI, false)
+	elseif type(Window.Close) == "function" then
+		pcall(Window.Close, Window)
+	elseif type(Window.Hide) == "function" then
+		pcall(Window.Hide, Window)
+	end
 	return true
 end
 
@@ -2226,10 +2630,40 @@ function d.Uninject(self)
 		end
 	end
 
-	-- Destroy the window
+	d:CloseAllPopups()
+	WindUI.__V8MaintenanceToken = nil
+	WindUI.__V7MaintenanceToken = nil
+
 	pcall(function()
-		if type(Window.Destroy) == "function" then Window:Destroy() end
+		if type(Window.Destroy) == "function" then
+			Window:Destroy()
+		elseif type(WindUI.Destroy) == "function" then
+			WindUI:Destroy()
+		end
 	end)
+
+	pcall(function()
+		if type(WindUI.DisconnectGlobalSignals) == "function" then
+			WindUI:DisconnectGlobalSignals()
+		end
+	end)
+
+	for _, root in ipairs({
+		WindUI.ScreenGui,
+		WindUI.NotificationGui,
+		WindUI.DropdownGui,
+		WindUI.TooltipGui,
+	}) do
+		if typeof(root) == "Instance" and root.Parent then
+			pcall(root.Destroy, root)
+		end
+	end
+
+	table.clear(d.Modules)
+	table.clear(d.Overlays)
+	table.clear(d.Categories)
+	d.Ready = false
+	d.BootState = "destroyed"
 
 	-- Clean up shared references
 	if shared then
@@ -2242,6 +2676,8 @@ end
 -- ─── Shared registration ───
 if shared then
 	shared.BadGUI = d
+	shared.BadWindUI = WindUI
+	shared.BadWindUIAdapter = d
 	if shared.Bad == nil then
 		shared.Bad = d
 	elseif type(shared.Bad) == "table" then
@@ -2249,7 +2685,14 @@ if shared then
 			return d:CreateNotification(...)
 		end
 		shared.Bad.GUI = d
+		shared.Bad.WindUI = WindUI
 	end
 end
+
+task.defer(function()
+	if not d.Destroyed then
+		d:FinalizeInitialLayout()
+	end
+end)
 
 return d

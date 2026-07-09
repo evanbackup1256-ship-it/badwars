@@ -1117,50 +1117,13 @@ end
 local function tryRequest(reqFn, url)
     local attempts = {
         function()
-            return reqFn({
-                Url = url,
-                Method = "GET",
-                Headers = {
-                    ["Cache-Control"] = "no-cache",
-                    ["Pragma"] = "no-cache",
-                    ["User-Agent"] = "BadWars-Loader",
-                },
-            })
+            return reqFn({Url = url, Method = "GET"})
         end,
         function()
-            return reqFn({
-                URL = url,
-                Method = "GET",
-                Headers = {
-                    ["Cache-Control"] = "no-cache",
-                    ["User-Agent"] = "BadWars-Loader",
-                },
-            })
-        end,
-        function()
-            return reqFn({
-                url = url,
-                method = "GET",
-                headers = {
-                    ["Cache-Control"] = "no-cache",
-                    ["User-Agent"] = "BadWars-Loader",
-                },
-            })
-        end,
-        function()
-            return reqFn({ URI = url, Method = "GET" })
-        end,
-        function()
-            return reqFn({ Url = url, Type = "GET" })
+            return reqFn({url = url, method = "GET"})
         end,
         function()
             return reqFn(url)
-        end,
-        function()
-            return reqFn(url, "GET")
-        end,
-        function()
-            return reqFn("GET", url)
         end,
     }
 
@@ -1191,78 +1154,12 @@ end
 
 local env = getExecutorEnvironment()
 
+-- Only register HTTP methods that exist (fast startup)
 registerRequestTransport("request", request)
 registerRequestTransport("http_request", http_request)
-registerRequestTransport("getgenv.request", type(env) == "table" and env.request or nil)
-registerRequestTransport("getgenv.http_request", type(env) == "table" and env.http_request or nil)
-
-if type(syn) == "table" then
-    registerRequestTransport("syn.request", syn.request)
-    registerRequestTransport("syn.http_request", syn.http_request)
-end
-if type(fluxus) == "table" then
-    registerRequestTransport("fluxus.request", fluxus.request)
-end
-if type(krnl) == "table" then
-    registerRequestTransport("krnl.request", krnl.request)
-end
-if type(http) == "table" then
-    registerRequestTransport("http.request", http.request)
-end
-
-local function registerDirectGet(name, getFunction, owner)
-    if type(getFunction) ~= "function" then
-        return
-    end
-
-    addHttpFunction(name, function(url)
-        local attempts = {}
-
-        if owner ~= nil then
-            table.insert(attempts, function()
-                return getFunction(owner, url, true)
-            end)
-            table.insert(attempts, function()
-                return getFunction(owner, url)
-            end)
-        end
-
-        table.insert(attempts, function()
-            return getFunction(url, true)
-        end)
-        table.insert(attempts, function()
-            return getFunction(url)
-        end)
-
-        local lastError = "direct GET returned no usable body"
-        for _, attempt in ipairs(attempts) do
-            local ok, result = pcall(attempt)
-            if ok then
-                local body, bodyError = extractBody(result)
-                if type(body) == "string" and body ~= "" then
-                    return body
-                end
-                lastError = bodyError or lastError
-            else
-                lastError = tostring(result)
-            end
-        end
-
-        error(lastError, 0)
-    end)
-end
 
 registerDirectGet("game.HttpGet", game and game.HttpGet, game)
 registerDirectGet("getgenv.HttpGet", type(env) == "table" and env.HttpGet or nil, game)
-registerDirectGet("httpget", httpget, nil)
-registerDirectGet("http_get", http_get, nil)
-
-if type(syn) == "table" then
-    registerDirectGet("syn.http_get", syn.http_get, syn)
-end
-if type(fluxus) == "table" then
-    registerDirectGet("fluxus.http_get", fluxus.http_get, fluxus)
-end
 
 pcall(function()
     local service = cloneref(game:GetService("HttpService"))
@@ -1289,27 +1186,13 @@ local CFG={repo='evanbackup1256-ship-it',name='badwars',branch='main',folder='ba
 local function rawUrls(path)
     local repo = CFG.repo .. "/" .. CFG.name
     local encodedPath = path:gsub(" ", "%%20")
-    local cacheBust = "bwui=" .. tostring(os.time()) .. "-" .. tostring(math.floor(os.clock() * 1000))
-    local urls = {}
-    local seen = {}
-
-    local function add(base)
-        if seen[base] then
-            return
-        end
-        seen[base] = true
-        table.insert(urls, base .. (base:find("?", 1, true) and "&" or "?") .. cacheBust)
-        table.insert(urls, base)
-    end
-
-    add("https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. encodedPath)
-    add("https://raw.githubusercontent.com/" .. repo .. "/refs/heads/" .. CFG.branch .. "/" .. encodedPath)
-    add("https://cdn.jsdelivr.net/gh/" .. repo .. "@" .. CFG.branch .. "/" .. encodedPath)
-    add("https://cdn.statically.io/gh/" .. repo .. "/" .. CFG.branch .. "/" .. encodedPath)
-    add("https://github.com/" .. repo .. "/raw/refs/heads/" .. CFG.branch .. "/" .. encodedPath)
-    add("https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. encodedPath)
-
-    return urls
+    -- Try the most reliable URL first, fewer variants for speed
+    return {
+        "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. encodedPath,
+        "https://cdn.jsdelivr.net/gh/" .. repo .. "@" .. CFG.branch .. "/" .. encodedPath,
+        "https://cdn.statically.io/gh/" .. repo .. "/" .. CFG.branch .. "/" .. encodedPath,
+        "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. encodedPath,
+    }
 end
 
 local ORCH_PATH=CFG.folder..'/'..CFG.file
@@ -1323,8 +1206,8 @@ local function callWithTimeout(callback, timeout)
     end)
 
     local started = os.clock()
-    while not done and os.clock() - started < (tonumber(timeout) or 15) do
-        task.wait(0.03)
+    while not done and os.clock() - started < (tonumber(timeout) or 2) do
+        task.wait(0.02)
     end
 
     if not done then

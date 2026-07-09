@@ -413,6 +413,128 @@ if not loadstring then
     loadstring = load or function(code) error("loadstring unavailable") end
 end
 
+-- HTTP polyfill: discover all available request functions
+local __httpFunctions = {}
+pcall(function()
+    if game and type(game.HttpGet) == 'function' then
+        table.insert(__httpFunctions, {name='game.HttpGet', fn=function(url)
+            return game:HttpGet(url, true)
+        end})
+    end
+end)
+pcall(function()
+    local env = type(getgenv)=='function' and getgenv() or nil
+    if type(env)=='table' and type(env.HttpGet)=='function' then
+        local genvFn = env.HttpGet
+        table.insert(__httpFunctions, {name='getgenv.HttpGet', fn=function(url)
+            return genvFn(game, url, true)
+        end})
+    end
+end)
+pcall(function()
+    local svc = cloneref(game:GetService('HttpService'))
+    if svc and type(svc.GetAsync)=='function' then
+        table.insert(__httpFunctions, {name='HttpService.GetAsync', fn=function(url)
+            return svc:GetAsync(url, true)
+        end})
+    end
+end)
+pcall(function()
+    if type(request)=='function' then
+        table.insert(__httpFunctions, {name='request', fn=function(url)
+            local result = request({Url=url, Method='GET'})
+            if type(result)=='table' then return result.Body or result.body or result end
+            return result
+        end})
+        table.insert(__httpFunctions, {name='request(lowercase)', fn=function(url)
+            local result = request({url=url, method='GET'})
+            if type(result)=='table' then return result.Body or result.body or result end
+            return result
+        end})
+        table.insert(__httpFunctions, {name='request(simple)', fn=function(url)
+            local result = request(url)
+            if type(result)=='table' then return result.Body or result.body or result end
+            return result
+        end})
+    end
+end)
+pcall(function()
+    if type(http_request)=='function' then
+        table.insert(__httpFunctions, {name='http_request', fn=function(url)
+            local result = http_request({Url=url, Method='GET'})
+            if type(result)=='table' then return result.Body or result.body or result end
+            return result
+        end})
+    end
+end)
+pcall(function()
+    if type(syn)=='table' and type(syn.request)=='function' then
+        local synReq = syn.request
+        table.insert(__httpFunctions, {name='syn.request', fn=function(url)
+            local result = synReq({Url=url, Method='GET'})
+            if type(result)=='table' then return result.Body or result.body or result end
+            return result
+        end})
+    end
+end)
+pcall(function()
+    if type(syn)=='table' and type(syn.http_request)=='function' then
+        local synHttpReq = syn.http_request
+        table.insert(__httpFunctions, {name='syn.http_request', fn=function(url)
+            local result = synHttpReq({Url=url, Method='GET'})
+            if type(result)=='table' then return result.Body or result.body or result end
+            return result
+        end})
+    end
+end)
+pcall(function()
+    if type(syn)=='table' and type(syn.http_get)=='function' then
+        local synHttpGet = syn.http_get
+        table.insert(__httpFunctions, {name='syn.http_get', fn=function(url)
+            return synHttpGet(url)
+        end})
+    end
+end)
+pcall(function()
+    if type(fluxus)=='table' and type(fluxus.request)=='function' then
+        local fluxusReq = fluxus.request
+        table.insert(__httpFunctions, {name='fluxus.request', fn=function(url)
+            local result = fluxusReq({Url=url, Method='GET'})
+            if type(result)=='table' then return result.Body or result.body or result end
+            return result
+        end})
+    end
+end)
+pcall(function()
+    if type(fluxus)=='table' and type(fluxus.http_get)=='function' then
+        local fluxusHttpGet = fluxus.http_get
+        table.insert(__httpFunctions, {name='fluxus.http_get', fn=function(url)
+            return fluxusHttpGet(url)
+        end})
+    end
+end)
+pcall(function()
+    local env = type(getgenv)=='function' and getgenv() or nil
+    if type(env)=='table' then
+        if type(env.request)=='function' then
+            local genvReq = env.request
+            table.insert(__httpFunctions, {name='getgenv.request', fn=function(url)
+                local result = genvReq({Url=url, Method='GET'})
+                if type(result)=='table' then return result.Body or result.body or result end
+                return result
+            end})
+        end
+        if type(env.http_request)=='function' then
+            local genvHttpReq = env.http_request
+            table.insert(__httpFunctions, {name='getgenv.http_request', fn=function(url)
+                local result = genvHttpReq({Url=url, Method='GET'})
+                if type(result)=='table' then return result.Body or result.body or result end
+                return result
+            end})
+        end
+    end
+end)
+
 local BadwarsLoader
 local function createCustomSignal(key, delay)
     key = tostring(key or "Unknown")
@@ -633,65 +755,12 @@ end
 
 local function httpGetMulti(urls)
     for _, url in ipairs(urls) do
-        -- Try game.HttpGet first
-        local fn
-        pcall(function()
-            fn = (game and game.HttpGet)
-        end)
-        if type(fn) ~= "function" then
-            local env = getgenv and type(getgenv) == "function" and getgenv()
-            if type(env) == "table" then
-                fn = env.HttpGet
-            end
-        end
-        if type(fn) == "function" then
+        for _, httpFn in ipairs(__httpFunctions) do
             local ok, res = callWithTimeout(function()
-                return fn(game, url, true)
+                return httpFn.fn(url)
             end, 15)
             if ok and type(res) == "string" and #res >= 50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then
                 return res
-            end
-        end
-        -- Try HttpService:GetAsync as fallback
-        local ok, res = callWithTimeout(function()
-            local svc = cloneref(game:GetService("HttpService"))
-            if svc and type(svc.GetAsync) == "function" then
-                return svc:GetAsync(url, true)
-            end
-            return nil
-        end, 15)
-        if ok and type(res) == "string" and #res >= 50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then
-            return res
-        end
-        -- Try request/http_request as last resort
-        local reqFn
-        pcall(function()
-            if type(request) == "function" then
-                reqFn = request
-            elseif type(http_request) == "function" then
-                reqFn = http_request
-            elseif type(syn) == "table" and type(syn.request) == "function" then
-                reqFn = syn.request
-            elseif type(fluxus) == "table" and type(fluxus.request) == "function" then
-                reqFn = fluxus.request
-            end
-        end)
-        if type(reqFn) == "function" then
-            local reqOk, reqRes = callWithTimeout(function()
-                local result = reqFn({Url = url, Method = "GET"})
-                if type(result) == "table" then
-                    if type(result.Body) == "string" then
-                        return result
-                    elseif type(result.body) == "string" then
-                        return {Body = result.body}
-                    end
-                elseif type(result) == "string" then
-                    return {Body = result}
-                end
-                return nil
-            end, 15)
-            if reqOk and type(reqRes) == "table" and type(reqRes.Body) == "string" and #reqRes.Body >= 50 and not isNotFoundBody(reqRes.Body) and not isRateLimited(reqRes.Body) and not isCorruptedBody(reqRes.Body) then
-                return reqRes.Body
             end
         end
     end

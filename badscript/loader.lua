@@ -133,7 +133,7 @@ end
 
 local loaderStart=os.clock()
 
--- Polyfills for all executors (including Solora, Arceus X, Delta, etc.)
+-- Polyfills for all executors (including Solora, Arceus X, Delta, Wave, Xeno, etc.)
 readfile=readfile or function()return''end
 writefile=writefile or function()end
 isfile=isfile or function(f)local s,r=pcall(readfile,f)return s and r~=nil and r~=''end
@@ -179,6 +179,159 @@ if not loadstring then
     loadstring = load or function(code) error("loadstring unavailable") end
 end
 
+-- HTTP polyfill: discover all available request functions
+local __httpFunctions = {}
+pcall(function()
+    -- game.HttpGet (Roblox native, some executors)
+    if game and type(game.HttpGet) == 'function' then
+        table.insert(__httpFunctions, {name='game.HttpGet', type='roblox', fn=function(url)
+            return game:HttpGet(url, true)
+        end})
+    end
+end)
+pcall(function()
+    -- getgenv().HttpGet
+    local env = type(getgenv)=='function' and getgenv() or nil
+    if type(env)=='table' and type(env.HttpGet)=='function' then
+        local genvFn = env.HttpGet
+        table.insert(__httpFunctions, {name='getgenv.HttpGet', type='roblox', fn=function(url)
+            return genvFn(game, url, true)
+        end})
+    end
+end)
+pcall(function()
+    -- HttpService:GetAsync
+    local svc = cloneref(game:GetService('HttpService'))
+    if svc and type(svc.GetAsync)=='function' then
+        table.insert(__httpFunctions, {name='HttpService.GetAsync', type='roblox', fn=function(url)
+            return svc:GetAsync(url, true)
+        end})
+    end
+end)
+-- request() - Xeno, Solora, Wave, Arceus X, Delta, Hydrogen, Electron, Krnl, etc.
+pcall(function()
+    if type(request)=='function' then
+        table.insert(__httpFunctions, {name='request', type='generic', fn=function(url)
+            local result = request({Url=url, Method='GET'})
+            if type(result)=='table' then
+                return result.Body or result.body or result
+            end
+            return result
+        end})
+        -- Also try lowercase format
+        table.insert(__httpFunctions, {name='request(lowercase)', type='generic', fn=function(url)
+            local result = request({url=url, method='GET'})
+            if type(result)=='table' then
+                return result.Body or result.body or result
+            end
+            return result
+        end})
+        -- Also try simple URL format
+        table.insert(__httpFunctions, {name='request(simple)', type='generic', fn=function(url)
+            local result = request(url)
+            if type(result)=='table' then
+                return result.Body or result.body or result
+            end
+            return result
+        end})
+    end
+end)
+-- http_request() - some executors
+pcall(function()
+    if type(http_request)=='function' then
+        table.insert(__httpFunctions, {name='http_request', type='generic', fn=function(url)
+            local result = http_request({Url=url, Method='GET'})
+            if type(result)=='table' then
+                return result.Body or result.body or result
+            end
+            return result
+        end})
+    end
+end)
+-- syn.request() - Synapse X
+pcall(function()
+    if type(syn)=='table' and type(syn.request)=='function' then
+        local synReq = syn.request
+        table.insert(__httpFunctions, {name='syn.request', type='generic', fn=function(url)
+            local result = synReq({Url=url, Method='GET'})
+            if type(result)=='table' then
+                return result.Body or result.body or result
+            end
+            return result
+        end})
+    end
+end)
+-- syn.http_request() - Synapse X (older)
+pcall(function()
+    if type(syn)=='table' and type(syn.http_request)=='function' then
+        local synHttpReq = syn.http_request
+        table.insert(__httpFunctions, {name='syn.http_request', type='generic', fn=function(url)
+            local result = synHttpReq({Url=url, Method='GET'})
+            if type(result)=='table' then
+                return result.Body or result.body or result
+            end
+            return result
+        end})
+    end
+end)
+-- syn.http_get() - Synapse X (oldest)
+pcall(function()
+    if type(syn)=='table' and type(syn.http_get)=='function' then
+        local synHttpGet = syn.http_get
+        table.insert(__httpFunctions, {name='syn.http_get', type='generic', fn=function(url)
+            return synHttpGet(url)
+        end})
+    end
+end)
+-- fluxus.request() - Fluxus
+pcall(function()
+    if type(fluxus)=='table' and type(fluxus.request)=='function' then
+        local fluxusReq = fluxus.request
+        table.insert(__httpFunctions, {name='fluxus.request', type='generic', fn=function(url)
+            local result = fluxusReq({Url=url, Method='GET'})
+            if type(result)=='table' then
+                return result.Body or result.body or result
+            end
+            return result
+        end})
+    end
+end)
+-- fluxus.http_get() - Fluxus (older)
+pcall(function()
+    if type(fluxus)=='table' and type(fluxus.http_get)=='function' then
+        local fluxusHttpGet = fluxus.http_get
+        table.insert(__httpFunctions, {name='fluxus.http_get', type='generic', fn=function(url)
+            return fluxusHttpGet(url)
+        end})
+    end
+end)
+-- getgenv().request / getgenv().http_request
+pcall(function()
+    local env = type(getgenv)=='function' and getgenv() or nil
+    if type(env)=='table' then
+        if type(env.request)=='function' then
+            local genvReq = env.request
+            table.insert(__httpFunctions, {name='getgenv.request', type='generic', fn=function(url)
+                local result = genvReq({Url=url, Method='GET'})
+                if type(result)=='table' then
+                    return result.Body or result.body or result
+                end
+                return result
+            end})
+        end
+        if type(env.http_request)=='function' then
+            local genvHttpReq = env.http_request
+            table.insert(__httpFunctions, {name='getgenv.http_request', type='generic', fn=function(url)
+                local result = genvHttpReq({Url=url, Method='GET'})
+                if type(result)=='table' then
+                    return result.Body or result.body or result
+                end
+                return result
+            end})
+        end
+    end
+end)
+
 -- Config
 local CFG={repo='evanbackup1256-ship-it',name='badwars',branch='main',folder='badscript',file='main.lua'}
 local function rawUrls(path)
@@ -218,50 +371,14 @@ local isCorruptedBody
 
 local function httpGet(urls)
 	for _,url in ipairs(urls) do
-		-- Method 1: game.HttpGet
-		local fn
-		pcall(function()if game and type(game.HttpGet)=='function' then fn=game.HttpGet end end)
-		if type(fn)~='function' then
-			local env
-			pcall(function()env = getgenv and type(getgenv)=='function' and getgenv() or nil end)
-			if type(env)=='table' and type(env.HttpGet)=='function' then fn=env.HttpGet end
-		end
-		if type(fn)=='function' then
+		for _,httpFn in ipairs(__httpFunctions) do
 			local ok,res=callWithTimeout(function()
-				if game and fn then return fn(game,url,true) end
-				return nil
+				return httpFn.fn(url)
 			end,15)
-			if ok and type(res)=='string' and #res>=50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then return res,url end
-		end
-		-- Method 2: HttpService:GetAsync
-		local ok,res=callWithTimeout(function()
-			local svc
-			pcall(function()svc=cloneref(game:GetService('HttpService')) end)
-			if svc and type(svc.GetAsync)=='function' then
-				return svc:GetAsync(url,true)
+			if ok and type(res)=='string' and #res>=50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then
+				return res,url
 			end
-			return nil
-		end,15)
-		if ok and type(res)=='string' and #res>=50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then return res,url end
-		-- Method 3: request/http_request fallback
-		local reqOk2,reqRes2=callWithTimeout(function()
-			local reqFn
-			pcall(function()
-				if type(request)=='function' then reqFn=request
-				elseif type(http_request)=='function' then reqFn=http_request
-				elseif type(syn)=='table' and type(syn.request)=='function' then reqFn=syn.request
-				elseif type(fluxus)=='table' and type(fluxus.request)=='function' then reqFn=fluxus.request
-				end
-			end)
-			if type(reqFn)~='function' then return nil end
-			local result=reqFn({Url=url,Method='GET'})
-			if type(result)=='table' then
-				if type(result.Body)=='string' then return result.Body
-				elseif type(result.body)=='string' then return result.body end
-			elseif type(result)=='string' then return result end
-			return nil
-		end,15)
-		if reqOk2 and type(reqRes2)=='string' and #reqRes2>=50 and not isNotFoundBody(reqRes2) and not isRateLimited(reqRes2) and not isCorruptedBody(reqRes2) then return reqRes2,url end
+		end
 	end
 	return nil,nil
 end

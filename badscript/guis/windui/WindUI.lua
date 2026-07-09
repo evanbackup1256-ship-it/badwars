@@ -12509,12 +12509,33 @@ do
 					return false
 				end
 
-				local aD = aB.AbsolutePosition
-				local aE = aB.AbsoluteSize
-				return aC.X >= aD.X
-					and aC.Y >= aD.Y
-					and aC.X <= aD.X + aE.X
-					and aC.Y <= aD.Y + aE.Y
+				local function inside(point)
+					local position = aB.AbsolutePosition
+					local size = aB.AbsoluteSize
+					return point.X >= position.X
+						and point.Y >= position.Y
+						and point.X <= position.X + size.X
+						and point.Y <= position.Y + size.Y
+				end
+
+				if inside(aC) then
+					return true
+				end
+
+				local inset = Vector2.new(0, 0)
+				pcall(function()
+					inset = game:GetService("GuiService"):GetGuiInset()
+				end)
+
+				-- UserInputService:GetMouseLocation() may include the Roblox
+				-- top-bar inset while IgnoreGuiInset ScreenGuis do not.
+				if inside(aC - inset) then
+					return true
+				end
+
+				-- Retain the opposite conversion for executor-specific input
+				-- implementations that already subtract the inset.
+				return inside(aC + inset)
 			end
 
 			local function clearTooltip()
@@ -12536,6 +12557,7 @@ do
 					if WindUI.ActiveTooltip == aB then
 						WindUI.ActiveTooltip = nil
 						WindUI.ActiveTooltipSource = nil
+						WindUI.ActiveTooltipOpenedAt = nil
 					end
 				end
 			end
@@ -12566,6 +12588,7 @@ do
 					aw = am(ar.Desc, ao.ToolTipParent, true)
 					WindUI.ActiveTooltip = aw
 					WindUI.ActiveTooltipSource = ar.UIElements.Main
+					WindUI.ActiveTooltipOpenedAt = os.clock()
 					aw.Container.AnchorPoint = Vector2.new(0.5, 0)
 
 					local function updatePosition()
@@ -12579,7 +12602,10 @@ do
 							return
 						end
 
-						local aE = ao.ToolTipParent.AbsoluteSize
+						local aE = Vector2.new(0, 0)
+						pcall(function()
+							aE = ao.ToolTipParent.AbsoluteSize
+						end)
 						if aE.X <= 0 or aE.Y <= 0 then
 							local aF = workspace.CurrentCamera
 							aE = aF and aF.ViewportSize or Vector2.new(1280, 720)
@@ -12604,12 +12630,14 @@ do
 					if aB ~= aA or not aw then
 						return
 					end
+
+					aw:Open()
+
 					ay = ag.InputChanged:Connect(function(aD)
 						if aD.UserInputType == Enum.UserInputType.MouseMovement then
 							updatePosition()
 						end
 					end)
-					aw:Open()
 				end)
 			end
 
@@ -16956,6 +16984,7 @@ do
 		local tooltip = aa.ActiveTooltip
 		aa.ActiveTooltip = nil
 		aa.ActiveTooltipSource = nil
+		aa.ActiveTooltipOpenedAt = nil
 
 		if type(tooltip) == "table" and type(tooltip.Close) == "function" then
 			pcall(tooltip.Close, tooltip)
@@ -16974,12 +17003,26 @@ do
 		if not object or not object.Parent or not object.Visible then
 			return false
 		end
-		local position = object.AbsolutePosition
-		local size = object.AbsoluteSize
-		return point.X >= position.X
-			and point.Y >= position.Y
-			and point.X <= position.X + size.X
-			and point.Y <= position.Y + size.Y
+
+		local function inside(candidate)
+			local position = object.AbsolutePosition
+			local size = object.AbsoluteSize
+			return candidate.X >= position.X
+				and candidate.Y >= position.Y
+				and candidate.X <= position.X + size.X
+				and candidate.Y <= position.Y + size.Y
+		end
+
+		if inside(point) then
+			return true
+		end
+
+		local inset = Vector2.new(0, 0)
+		pcall(function()
+			inset = guiService:GetGuiInset()
+		end)
+
+		return inside(point - inset) or inside(point + inset)
 	end
 
 	local function enhanceWindow(window)
@@ -17197,7 +17240,11 @@ do
 			return
 		end
 		local source = aa.ActiveTooltipSource
-		if source and not pointInsideGui(source, userInputService:GetMouseLocation()) then
+		local openedAt = tonumber(aa.ActiveTooltipOpenedAt) or 0
+		if source
+			and os.clock() - openedAt > 0.14
+			and not pointInsideGui(source, userInputService:GetMouseLocation())
+		then
 			closeActiveTooltip()
 		end
 	end)
@@ -17235,9 +17282,9 @@ end
 -- BADWARS_SMART_UI_RUNTIME_V6_END
 
 
--- BADWARS_SMART_UI_RUNTIME_V7_BEGIN
+-- BADWARS_SMART_UI_RUNTIME_V8_BEGIN
 do
-	local V7_VERSION = "7.0.0"
+	local V7_VERSION = "8.0.0"
 	local inputService = game:GetService("UserInputService")
 	local runService = game:GetService("RunService")
 	local guiService = game:GetService("GuiService")
@@ -17322,12 +17369,25 @@ do
 			return false
 		end
 
-		local position = object.AbsolutePosition
-		local size = object.AbsoluteSize
-		return point.X >= position.X
-			and point.Y >= position.Y
-			and point.X <= position.X + size.X
-			and point.Y <= position.Y + size.Y
+		local function inside(candidate)
+			local position = object.AbsolutePosition
+			local size = object.AbsoluteSize
+			return candidate.X >= position.X
+				and candidate.Y >= position.Y
+				and candidate.X <= position.X + size.X
+				and candidate.Y <= position.Y + size.Y
+		end
+
+		if inside(point) then
+			return true
+		end
+
+		local inset = Vector2.new(0, 0)
+		pcall(function()
+			inset = guiService:GetGuiInset()
+		end)
+
+		return inside(point - inset) or inside(point + inset)
 	end
 
 	local function closePopups()
@@ -17341,6 +17401,7 @@ do
 		end
 		aa.ActiveTooltip = nil
 		aa.ActiveTooltipSource = nil
+		aa.ActiveTooltipOpenedAt = nil
 
 		for _, screenGui in ipairs({ aa.DropdownGui, aa.TooltipGui }) do
 			if screenGui then
@@ -17578,7 +17639,11 @@ do
 		end
 
 		local tooltipSource = aa.ActiveTooltipSource
-		if tooltipSource and not pointInside(tooltipSource, inputService:GetMouseLocation()) then
+		local openedAt = tonumber(aa.ActiveTooltipOpenedAt) or 0
+		if tooltipSource
+			and os.clock() - openedAt > 0.18
+			and not pointInside(tooltipSource, inputService:GetMouseLocation())
+		then
 			closePopups()
 		end
 
@@ -18053,13 +18118,6 @@ do
 	end)
 	bindCamera()
 
-	connect(runService.Heartbeat, function()
-		local source = aa.ActiveTooltipSource
-		if source and not pointInside(source, inputService:GetMouseLocation()) then
-			closePopups()
-		end
-	end)
-
 	aa.__V7MaintenanceToken = maintenanceToken
 	task.spawn(function()
 		while aa.__V7MaintenanceToken == maintenanceToken
@@ -18097,6 +18155,6 @@ do
 		return aa:SetReducedMotion(enabled)
 	end
 end
--- BADWARS_SMART_UI_RUNTIME_V7_END
+-- BADWARS_SMART_UI_RUNTIME_V8_END
 
 return aa

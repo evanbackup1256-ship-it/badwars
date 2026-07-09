@@ -1635,7 +1635,7 @@ local function httpGetMulti(urls)
         for _, httpFunction in ipairs(__httpFunctions) do
             local ok, response, failure = callWithTimeout(function()
                 return httpFunction.fn(url)
-            end, 5)
+            end, 2)
 
             if ok then
                 local rejected = rejectionReason(response)
@@ -1695,7 +1695,7 @@ local function isStaleMotionCache(path, body)
 end
 
 local function downloadFile(path, maxRetries)
-    maxRetries = maxRetries or 2
+    maxRetries = maxRetries or 1
     if not HttpGet then
         return nil, "HttpGet nil"
     end
@@ -1719,12 +1719,11 @@ local function downloadFile(path, maxRetries)
     setStatus("downloading required files")
     local urls = rawUrls(path)
     local res = httpGetMulti(urls)
-    local retryDelay = 1
     local attempts = 0
     while (type(res) ~= "string" or #res == 0 or isRateLimited(res)) and attempts < maxRetries do
         attempts = attempts + 1
         setStatus("retrying download: " .. path .. " (attempt " .. (attempts + 1) .. ")")
-        task.wait(retryDelay)
+        task.wait(0.5)
         res = httpGetMulti(urls)
     end
     if type(res) ~= "string" or #res == 0 then

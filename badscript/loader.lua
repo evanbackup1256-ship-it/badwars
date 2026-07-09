@@ -1266,7 +1266,7 @@ local function callWithTimeout(callback, timeout)
     end)
 
     local started = os.clock()
-    while not done and os.clock() - started < (tonumber(timeout) or 3) do
+    while not done and os.clock() - started < (tonumber(timeout) or 2) do
         task.wait(0.02)
     end
 
@@ -1366,7 +1366,7 @@ local function httpGet(urls)
         for _, httpFunction in ipairs(__httpFunctions) do
             local ok, response, failure = callWithTimeout(function()
                 return httpFunction.fn(url)
-            end, 3)
+            end, 2)
 
             if ok then
                 local rejected = rejectionReason(response)
@@ -2189,32 +2189,29 @@ shared.BadStatus = function(msg, isErr)
         end
 
         local visibleFor = os.clock() - loaderCreatedAt
-        local hold = math.max(MINIMUM_VISIBLE_SECONDS - visibleFor, 0) + 0.5
+        local hold = math.max(MINIMUM_VISIBLE_SECONDS - visibleFor, 0) + 0.3
 
         task.delay(hold, function()
-            if generation ~= loaderStatusGeneration
-                or statusError
-                or not statusGui
-                or not statusGui.Parent
-            then
+            -- Only check if GUI still exists, ignore generation and errors
+            if not statusGui or not statusGui.Parent then
                 loaderDismissScheduled = false
                 return
             end
 
             -- Smooth fade out animation
-            loaderTween(statusBackdrop, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            loaderTween(statusBackdrop, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
                 BackgroundTransparency = 1,
             })
-            loaderTween(statusCard, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            loaderTween(statusCard, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
                 Position = UDim2.fromScale(0.5, 0.52),
                 BackgroundTransparency = 0.12,
             })
-            loaderTween(statusCardScale, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            loaderTween(statusCardScale, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
                 Scale = 0.94,
             })
 
-            task.delay(0.38, function()
-                if generation == loaderStatusGeneration and statusGui and statusGui.Parent then
+            task.delay(0.35, function()
+                if statusGui and statusGui.Parent then
                     statusGui:Destroy()
                     shared.BadStatusGui = nil
                 end

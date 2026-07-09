@@ -218,6 +218,7 @@ local isCorruptedBody
 
 local function httpGet(urls)
 	for _,url in ipairs(urls) do
+		-- Method 1: game.HttpGet
 		local fn
 		pcall(function()if game and type(game.HttpGet)=='function' then fn=game.HttpGet end end)
 		if type(fn)~='function' then
@@ -232,6 +233,7 @@ local function httpGet(urls)
 			end,15)
 			if ok and type(res)=='string' and #res>=50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then return res,url end
 		end
+		-- Method 2: HttpService:GetAsync
 		local ok,res=callWithTimeout(function()
 			local svc
 			pcall(function()svc=cloneref(game:GetService('HttpService')) end)
@@ -241,6 +243,25 @@ local function httpGet(urls)
 			return nil
 		end,15)
 		if ok and type(res)=='string' and #res>=50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then return res,url end
+		-- Method 3: request/http_request fallback
+		local reqOk2,reqRes2=callWithTimeout(function()
+			local reqFn
+			pcall(function()
+				if type(request)=='function' then reqFn=request
+				elseif type(http_request)=='function' then reqFn=http_request
+				elseif type(syn)=='table' and type(syn.request)=='function' then reqFn=syn.request
+				elseif type(fluxus)=='table' and type(fluxus.request)=='function' then reqFn=fluxus.request
+				end
+			end)
+			if type(reqFn)~='function' then return nil end
+			local result=reqFn({Url=url,Method='GET'})
+			if type(result)=='table' then
+				if type(result.Body)=='string' then return result.Body
+				elseif type(result.body)=='string' then return result.body end
+			elseif type(result)=='string' then return result end
+			return nil
+		end,15)
+		if reqOk2 and type(reqRes2)=='string' and #reqRes2>=50 and not isNotFoundBody(reqRes2) and not isRateLimited(reqRes2) and not isCorruptedBody(reqRes2) then return reqRes2,url end
 	end
 	return nil,nil
 end

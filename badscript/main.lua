@@ -157,14 +157,28 @@ end
 local CFG = { repo = "evanbackup1256-ship-it", name = "badwars", branch = "main" }
 local function rawUrls(path)
     local repo = CFG.repo .. "/" .. CFG.name
-    local p = path:gsub(" ", "%%20")
-    local query = "?bwui=v19-ui-repair-" .. tostring(os.time())  -- dynamic cache-bust for robustness
-    return {
-        "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p .. query,
-        "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p .. query,
-        "https://cdn.jsdelivr.net/gh/" .. repo .. "@" .. CFG.branch .. "/" .. p .. query,
-        "https://cdn.statically.io/gh/" .. repo .. "/" .. CFG.branch .. "/" .. p .. query,
-    }
+    local encodedPath = path:gsub(" ", "%%20")
+    local cacheBust = "bwui=" .. tostring(os.time()) .. "-" .. tostring(math.floor(os.clock() * 1000))
+    local urls = {}
+    local seen = {}
+
+    local function add(base)
+        if seen[base] then
+            return
+        end
+        seen[base] = true
+        table.insert(urls, base .. (base:find("?", 1, true) and "&" or "?") .. cacheBust)
+        table.insert(urls, base)
+    end
+
+    add("https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. encodedPath)
+    add("https://raw.githubusercontent.com/" .. repo .. "/refs/heads/" .. CFG.branch .. "/" .. encodedPath)
+    add("https://cdn.jsdelivr.net/gh/" .. repo .. "@" .. CFG.branch .. "/" .. encodedPath)
+    add("https://cdn.statically.io/gh/" .. repo .. "/" .. CFG.branch .. "/" .. encodedPath)
+    add("https://github.com/" .. repo .. "/raw/refs/heads/" .. CFG.branch .. "/" .. encodedPath)
+    add("https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. encodedPath)
+
+    return urls
 end
 -- Safe helpers
 local function typeName(v)
@@ -339,6 +353,24 @@ local function logMod(stage, name, elapsed, success, detail)
     -- Logging intentionally muted for the premium UX build.
 end
 
+local __executorPrimitiveSnapshot = {
+    request = type(request) == "function",
+    http_request = type(http_request) == "function",
+    readfile = type(readfile) == "function",
+    writefile = type(writefile) == "function",
+    isfile = type(isfile) == "function",
+    delfile = type(delfile) == "function",
+    isfolder = type(isfolder) == "function",
+    makefolder = type(makefolder) == "function",
+    listfiles = type(listfiles) == "function",
+    loadstring = type(loadstring) == "function",
+    getgenv = type(getgenv) == "function",
+    getrenv = type(getrenv) == "function",
+    gethui = type(gethui) == "function",
+    queue_on_teleport = type(queue_on_teleport) == "function"
+        or type(queueonteleport) == "function",
+}
+
 -- Download
 local _loadstring
 pcall(function()
@@ -415,574 +447,1120 @@ if not loadstring then
     loadstring = load or function(code) error("loadstring unavailable") end
 end
 
--- Smart executor detection using unique globals, functions, and patterns
--- WEAO API (https://weao.xyz/api/status/exploits) only provides executor STATUS info
--- (detected, updated, version, etc.) — it cannot detect which executor you're running on.
--- Detection must be done locally by checking which global functions exist.
-local __detectedExecutor = "unknown"
-local __executorInfo = {name="unknown", confidence="low", platform="unknown", free=false}
+-- Multi-signal executor fingerprinting.
+-- Direct identity APIs are treated as strongest evidence, but the result is
+-- cross-checked against unique namespaces, marker globals, and capabilities.
+local __detectedExecutor = "Unidentified Executor"
+local __executorInfo = {
+    name = "Unidentified Executor",
+    confidence = "unknown",
+    confidenceScore = 0,
+    platform = "Unknown",
+    free = false,
+    httpMethod = "none",
+    capabilities = {},
+    evidence = {},
+    alternatives = {},
+    rawIdentifiers = {},
+    spoofSuspected = false,
+}
 
-local function safeCheck(fn)
-    local ok, result = pcall(fn)
-    return ok and result or nil
+local function safeRead(container, key)
+    if type(container) ~= "table" then
+        return nil
+    end
+
+    local ok, value = pcall(rawget, container, key)
+    if ok and value ~= nil then
+        return value
+    end
+
+    ok, value = pcall(function()
+        return container[key]
+    end)
+    if ok then
+        return value
+    end
+
+    return nil
 end
 
-local function detectExecutor()
-    -- TIER 1: Unique executor globals (highest confidence)
-    if type(syn)=='table' then
-        local hasSecureCall = type(syn.secure_call)=='function'
-        local hasProtectGui = type(syn.protect_gui)=='function'
-        local hasRequest = type(syn.request)=='function'
-        local hasHttpGet = type(syn.http_get)=='function'
-        local hasQueueTeleport = type(syn.queue_on_teleport)=='function'
-        
-        if hasRequest or hasHttpGet then
-            __detectedExecutor = "Synapse X"
-            __executorInfo = {
-                name="Synapse X",
-                confidence=hasSecureCall and "very high" or "high",
-                platform="Windows",
-                free=false,
-                httpMethod=hasRequest and "syn.request" or "syn.http_get",
-                capabilities={
-                    secureCall=hasSecureCall,
-                    protectGui=hasProtectGui,
-                    queueTeleport=hasQueueTeleport,
-                    httpRequest=hasRequest,
-                    httpGet=hasHttpGet,
-                }
-            }
+local function collectEnvironments()
+    local environments = {}
+    local seen = {}
+
+    local function add(name, environment)
+        if type(environment) ~= "table" or seen[environment] then
             return
         end
+        seen[environment] = true
+        table.insert(environments, {
+            name = name,
+            value = environment,
+        })
     end
-    
-    if type(fluxus)=='table' then
-        local hasRequest = type(fluxus.request)=='function'
-        local hasHttpGet = type(fluxus.http_get)=='function'
-        local hasSetClipboard = type(fluxus.setclipboard)=='function'
-        local hasSetFpsCap = type(fluxus.set_fps_cap)=='function'
-        local hasGetFpsCap = type(fluxus.get_fps_cap)=='function'
-        
-        if hasRequest or hasHttpGet then
-            __detectedExecutor = "Fluxus"
-            __executorInfo = {
-                name="Fluxus",
-                confidence="very high",
-                platform="Windows",
-                free=false,
-                httpMethod=hasRequest and "fluxus.request" or "fluxus.http_get",
-                capabilities={
-                    httpRequest=hasRequest,
-                    httpGet=hasHttpGet,
-                    setClipboard=hasSetClipboard,
-                    setFpsCap=hasSetFpsCap,
-                    getFpsCap=hasGetFpsCap,
-                }
-            }
-            return
+
+    add("_G", _G)
+
+    if type(getgenv) == "function" then
+        local ok, environment = pcall(getgenv)
+        if ok then
+            add("getgenv", environment)
         end
     end
-    
-    if type(sw)=='table' or type(scriptware)=='table' then
-        __detectedExecutor = "Script-Ware"
-        __executorInfo = {
-            name="Script-Ware",
-            confidence="very high",
-            platform="Windows",
-            free=false,
-            httpMethod="request",
-            capabilities={}
-        }
+
+    if type(getrenv) == "function" then
+        local ok, environment = pcall(getrenv)
+        if ok then
+            add("getrenv", environment)
+        end
+    end
+
+    if type(getfenv) == "function" then
+        local ok, environment = pcall(getfenv, 0)
+        if ok then
+            add("getfenv", environment)
+        end
+    end
+
+    return environments
+end
+
+local __executorEnvironments = collectEnvironments()
+
+local function getGlobal(name)
+    for _, environment in ipairs(__executorEnvironments) do
+        local value = safeRead(environment.value, name)
+        if value ~= nil then
+            return value, environment.name
+        end
+    end
+    return nil, nil
+end
+
+local function hasGlobal(name, expectedType)
+    local value, environmentName = getGlobal(name)
+    if value == nil then
+        return false, nil, environmentName
+    end
+    if expectedType and type(value) ~= expectedType then
+        return false, value, environmentName
+    end
+    return true, value, environmentName
+end
+
+local function hasNamespaceFunction(namespaceName, functionName)
+    local namespace, environmentName = getGlobal(namespaceName)
+    if type(namespace) ~= "table" then
+        return false, nil, environmentName
+    end
+
+    local value = safeRead(namespace, functionName)
+    return type(value) == "function", value, environmentName
+end
+
+local function safeText(value)
+    local valueType = type(value)
+    if valueType == "string" then
+        local trimmed = value:match("^%s*(.-)%s*$")
+        if trimmed == "" then
+            return nil
+        end
+        return trimmed
+    end
+    if valueType == "number" or valueType == "boolean" then
+        return tostring(value)
+    end
+    return nil
+end
+
+local EXECUTOR_ALIASES = {
+    { "synapse z", "Synapse Z" },
+    { "synapse x", "Synapse X" },
+    { "script ware", "Script-Ware" },
+    { "scriptware", "Script-Ware" },
+    { "proto smasher", "ProtoSmasher" },
+    { "protosmasher", "ProtoSmasher" },
+    { "sir hurt", "SirHurt" },
+    { "sirhurt", "SirHurt" },
+    { "arceus x", "Arceus X" },
+    { "vega x", "Vega X" },
+    { "bunni lol", "Bunni.lol" },
+    { "mac sploit", "MacSploit" },
+    { "macsploit", "MacSploit" },
+    { "solora", "Solara" },
+    { "solara", "Solara" },
+    { "fluxus", "Fluxus" },
+    { "krnl", "Krnl" },
+    { "xeno", "Xeno" },
+    { "wave", "Wave" },
+    { "arceus", "Arceus X" },
+    { "delta", "Delta" },
+    { "hydrogen", "Hydrogen" },
+    { "electron", "Electron" },
+    { "vega", "Vega X" },
+    { "celery", "Celery" },
+    { "swift", "Swift" },
+    { "nezur", "Nezur" },
+    { "ronix", "Ronix" },
+    { "potassium", "Potassium" },
+    { "matcha", "Matcha" },
+    { "bunni", "Bunni.lol" },
+    { "photon", "Photon" },
+    { "codex", "Codex" },
+    { "cryptic", "Cryptic" },
+    { "nihon", "Nihon" },
+    { "velocity", "Velocity" },
+    { "seliware", "Seliware" },
+    { "zorara", "Zorara" },
+    { "valex", "Valex" },
+    { "trigon", "Trigon" },
+    { "volcano", "Volcano" },
+    { "cubix", "Cubix" },
+    { "sentinel", "Sentinel" },
+    { "electron", "Electron" },
+    { "awp", "AWP" },
+    { "volt", "Volt" },
+    { "luna", "Luna" },
+    { "evon", "Evon" },
+}
+
+local function canonicalExecutorName(rawName)
+    local text = safeText(rawName)
+    if not text then
+        return nil
+    end
+
+    local normalized = string.lower(text)
+        :gsub("[_%-%.]+", " ")
+        :gsub("[^%w%s]+", "")
+        :gsub("%s+", " ")
+        :match("^%s*(.-)%s*$")
+
+    if normalized == ""
+        or normalized == "unknown"
+        or normalized == "unknown executor"
+        or normalized == "executor"
+        or normalized == "none"
+        or normalized == "nil"
+    then
+        return nil
+    end
+
+    for _, alias in ipairs(EXECUTOR_ALIASES) do
+        if normalized:find(alias[1], 1, true) then
+            return alias[2]
+        end
+    end
+
+    local generic = normalized
+        :gsub("%s+executor%s*$", "")
+        :gsub("^executor%s+", "")
+        :match("^%s*(.-)%s*$")
+
+    if generic == "" or generic == "roblox" or generic == "studio" then
+        return nil
+    end
+
+    if #text > 64 then
+        text = text:sub(1, 64)
+    end
+    return text
+end
+
+local CANDIDATE_METADATA = {
+    ["Synapse X"] = { platform = "Windows" },
+    ["Synapse Z"] = { platform = "Windows" },
+    ["Script-Ware"] = { platform = "Windows/macOS" },
+    ["Fluxus"] = { platform = "Windows/Android" },
+    ["Krnl"] = { platform = "Windows" },
+    ["Xeno"] = { platform = "Windows" },
+    ["Solara"] = { platform = "Windows" },
+    ["Wave"] = { platform = "Windows" },
+    ["Arceus X"] = { platform = "Android/iOS" },
+    ["Delta"] = { platform = "Android/iOS/Windows" },
+    ["Hydrogen"] = { platform = "Android/macOS" },
+    ["Electron"] = { platform = "Windows" },
+    ["Vega X"] = { platform = "Windows/Android" },
+    ["MacSploit"] = { platform = "macOS" },
+}
+
+local candidates = {}
+local rawIdentifiers = {}
+local directCandidateNames = {}
+local detectedVersions = {}
+
+local function addCandidate(name, score, source, detail, evidenceClass)
+    name = canonicalExecutorName(name)
+    if not name then
         return
     end
-    
-    -- TIER 2: Executor-specific global tables (high confidence)
-    local executorTables = {
-        {name="Krnl", global="krnl", platform="Windows", free=true},
-        {name="Xeno", global="xeno", platform="Windows", free=true},
-        {name="Solora", global="solora", platform="Windows", free=true},
-        {name="Wave", global="wave", platform="Windows", free=false},
-        {name="Arceus X", global="arceus", platform="Android", free=true},
-        {name="Delta", global="delta", platform="Android", free=true},
-        {name="Hydrogen", global="hydrogen", platform="Android", free=true},
-        {name="Electron", global="electron", platform="Windows", free=false},
-        {name="Vega X", global="vega", platform="Windows", free=true},
-        {name="Celery", global="celery", platform="Windows", free=true},
-        {name="Swift", global="swift", platform="Windows", free=false},
-        {name="Nezur", global="nezur", platform="Windows", free=false},
-        {name="Ronix", global="ronix", platform="Windows", free=true},
-        {name="Potassium", global="potassium", platform="Windows", free=false},
-        {name="Matcha", global="matcha", platform="Windows", free=false},
-        {name="Bunni.lol", global="bunni", platform="Windows", free=true},
-        {name="Photon", global="photon", platform="Windows", free=false},
+
+    local candidate = candidates[name]
+    if not candidate then
+        candidate = {
+            name = name,
+            score = 0,
+            direct = 0,
+            unique = 0,
+            supporting = 0,
+            evidence = {},
+            seen = {},
+        }
+        candidates[name] = candidate
+    end
+
+    local evidenceKey = tostring(source) .. "|" .. tostring(detail)
+    if candidate.seen[evidenceKey] then
+        return
+    end
+    candidate.seen[evidenceKey] = true
+
+    candidate.score += tonumber(score) or 0
+    if evidenceClass == "direct" then
+        candidate.direct += 1
+        directCandidateNames[name] = true
+    elseif evidenceClass == "unique" then
+        candidate.unique += 1
+    else
+        candidate.supporting += 1
+    end
+
+    table.insert(candidate.evidence, {
+        source = tostring(source),
+        detail = tostring(detail),
+        score = tonumber(score) or 0,
+        class = evidenceClass or "supporting",
+    })
+end
+
+local function recordIdentifier(source, rawName, rawVersion)
+    local name = canonicalExecutorName(rawName)
+    if not name then
+        return
+    end
+
+    local version = safeText(rawVersion)
+    table.insert(rawIdentifiers, {
+        source = source,
+        name = safeText(rawName) or name,
+        canonical = name,
+        version = version,
+    })
+
+    if version then
+        detectedVersions[name] = detectedVersions[name] or version
+    end
+
+    addCandidate(
+        name,
+        170,
+        source,
+        "identity API returned " .. tostring(safeText(rawName) or name),
+        "direct"
+    )
+end
+
+local function inspectIdentifierResult(source, first, second, third)
+    if type(first) == "table" then
+        local name = safeRead(first, "Name")
+            or safeRead(first, "name")
+            or safeRead(first, "Executor")
+            or safeRead(first, "executor")
+            or safeRead(first, "ExecutorName")
+            or safeRead(first, "executorName")
+        local version = safeRead(first, "Version")
+            or safeRead(first, "version")
+            or safeRead(first, "ExecutorVersion")
+            or safeRead(first, "executorVersion")
+        recordIdentifier(source, name, version)
+        return
+    end
+
+    local firstText = safeText(first)
+    local secondText = safeText(second)
+    local thirdText = safeText(third)
+
+    if firstText then
+        recordIdentifier(source, firstText, secondText or thirdText)
+    elseif secondText then
+        recordIdentifier(source, secondText, thirdText)
+    end
+end
+
+local IDENTIFIER_APIS = {
+    "identifyexecutor",
+    "identify_executor",
+    "getexecutorname",
+    "get_executor_name",
+    "getexecutor",
+    "get_executor",
+}
+
+for _, apiName in ipairs(IDENTIFIER_APIS) do
+    local api, environmentName = getGlobal(apiName)
+    if type(api) == "function" then
+        local ok, first, second, third = pcall(api)
+        if ok then
+            inspectIdentifierResult(
+                tostring(environmentName or "global") .. "." .. apiName,
+                first,
+                second,
+                third
+            )
+        end
+    end
+end
+
+local STRING_IDENTITY_GLOBALS = {
+    "EXECUTOR_NAME",
+    "ExecutorName",
+    "executor_name",
+    "_EXECUTOR_NAME",
+    "EXECUTOR",
+}
+
+for _, globalName in ipairs(STRING_IDENTITY_GLOBALS) do
+    local value, environmentName = getGlobal(globalName)
+    if type(value) == "string" then
+        addCandidate(
+            value,
+            48,
+            tostring(environmentName or "global") .. "." .. globalName,
+            "string identity marker",
+            "supporting"
+        )
+    end
+end
+
+local function addGlobalMarker(candidateName, globalName, expectedType, score)
+    local present, value, environmentName = hasGlobal(globalName, expectedType)
+    if not present then
+        return
+    end
+
+    local detail = globalName .. " (" .. type(value) .. ")"
+    addCandidate(
+        candidateName,
+        score,
+        tostring(environmentName or "global") .. "." .. globalName,
+        detail,
+        score >= 40 and "unique" or "supporting"
+    )
+end
+
+local function addNamespaceMarker(candidateName, namespaceName, functionName, score)
+    local present, _, environmentName = hasNamespaceFunction(namespaceName, functionName)
+    if not present then
+        return
+    end
+
+    addCandidate(
+        candidateName,
+        score,
+        tostring(environmentName or "global")
+            .. "."
+            .. namespaceName
+            .. "."
+            .. functionName,
+        "namespace function present",
+        score >= 30 and "unique" or "supporting"
+    )
+end
+
+local GLOBAL_MARKERS = {
+    { "Synapse X", "syn", "table", 52 },
+    { "Script-Ware", "sw", "table", 70 },
+    { "Script-Ware", "scriptware", "table", 70 },
+    { "Fluxus", "fluxus", "table", 65 },
+    { "Krnl", "krnl", "table", 62 },
+    { "Krnl", "KRNL_LOADED", nil, 58 },
+    { "Krnl", "iskrnlclosure", "function", 52 },
+    { "Xeno", "xeno", "table", 62 },
+    { "Xeno", "XENO_LOADED", nil, 55 },
+    { "Solara", "solara", "table", 62 },
+    { "Solara", "solora", "table", 62 },
+    { "Solara", "SOLARA_LOADED", nil, 55 },
+    { "Wave", "wave", "table", 62 },
+    { "Wave", "WAVE_LOADED", nil, 55 },
+    { "Arceus X", "arceus", "table", 62 },
+    { "Arceus X", "ARCEUS_LOADED", nil, 55 },
+    { "Delta", "delta", "table", 62 },
+    { "Delta", "DELTA_LOADED", nil, 55 },
+    { "Hydrogen", "hydrogen", "table", 62 },
+    { "Hydrogen", "HYDROGEN_LOADED", nil, 55 },
+    { "Electron", "electron", "table", 62 },
+    { "Electron", "ELECTRON_LOADED", nil, 55 },
+    { "Vega X", "vega", "table", 58 },
+    { "Vega X", "vegax", "table", 62 },
+    { "Celery", "celery", "table", 62 },
+    { "Swift", "swift", "table", 62 },
+    { "Nezur", "nezur", "table", 62 },
+    { "Ronix", "ronix", "table", 62 },
+    { "Potassium", "potassium", "table", 62 },
+    { "Matcha", "matcha", "table", 62 },
+    { "Bunni.lol", "bunni", "table", 62 },
+    { "Photon", "photon", "table", 62 },
+    { "Codex", "codex", "table", 62 },
+    { "Cryptic", "cryptic", "table", 62 },
+    { "MacSploit", "macsploit", "table", 62 },
+    { "Nihon", "nihon", "table", 62 },
+    { "Velocity", "velocity", "table", 62 },
+    { "Seliware", "seliware", "table", 62 },
+    { "Zorara", "zorara", "table", 62 },
+    { "Valex", "valex", "table", 62 },
+    { "Trigon", "trigon", "table", 62 },
+    { "Volcano", "volcano", "table", 62 },
+    { "Cubix", "cubix", "table", 62 },
+    { "AWP", "awp", "table", 62 },
+    { "Volt", "volt", "table", 62 },
+    { "Luna", "luna", "table", 62 },
+    { "Evon", "evon", "table", 62 },
+    { "ProtoSmasher", "pebc_execute", "function", 70 },
+    { "ProtoSmasher", "is_protosmasher_closure", "function", 70 },
+    { "SirHurt", "is_sirhurt_closure", "function", 70 },
+    { "Sentinel", "secure_load", "function", 52 },
+}
+
+for _, marker in ipairs(GLOBAL_MARKERS) do
+    addGlobalMarker(marker[1], marker[2], marker[3], marker[4])
+end
+
+local NAMESPACE_MARKERS = {
+    { "Synapse X", "syn", "secure_call", 42 },
+    { "Synapse X", "syn", "protect_gui", 38 },
+    { "Synapse X", "syn", "request", 24 },
+    { "Synapse X", "syn", "queue_on_teleport", 22 },
+    { "Fluxus", "fluxus", "request", 34 },
+    { "Fluxus", "fluxus", "http_get", 30 },
+    { "Fluxus", "fluxus", "set_fps_cap", 24 },
+    { "Krnl", "krnl", "request", 28 },
+    { "Wave", "wave", "request", 28 },
+    { "Delta", "delta", "request", 28 },
+    { "Hydrogen", "hydrogen", "request", 28 },
+    { "Electron", "electron", "request", 28 },
+}
+
+for _, marker in ipairs(NAMESPACE_MARKERS) do
+    addNamespaceMarker(marker[1], marker[2], marker[3], marker[4])
+end
+
+local FUNCTION_MARKERS = {
+    { "Synapse X", "is_synapse_function", 45 },
+    { "Synapse X", "is_synapse_closure", 45 },
+    { "Script-Ware", "is_sw_closure", 45 },
+    { "Krnl", "iskrnlclosure", 45 },
+    { "ProtoSmasher", "is_protosmasher_closure", 55 },
+    { "SirHurt", "is_sirhurt_closure", 55 },
+}
+
+for _, marker in ipairs(FUNCTION_MARKERS) do
+    local present, _, environmentName = hasGlobal(marker[2], "function")
+    if present then
+        addCandidate(
+            marker[1],
+            marker[3],
+            tostring(environmentName or "global") .. "." .. marker[2],
+            "unique closure marker",
+            "unique"
+        )
+    end
+end
+
+local function currentPlatform()
+    local platform = "Unknown"
+
+    pcall(function()
+        local inputService = cloneref(game:GetService("UserInputService"))
+        if type(inputService.GetPlatform) == "function" then
+            local value = inputService:GetPlatform()
+            local text = tostring(value)
+            platform = text:gsub("^Enum%.Platform%.", "")
+        end
+
+        if platform == "Unknown" then
+            if inputService.TouchEnabled and not inputService.KeyboardEnabled then
+                platform = "Mobile"
+            elseif inputService.KeyboardEnabled then
+                platform = "Desktop"
+            end
+        end
+    end)
+
+    return platform
+end
+
+local function functionExists(name)
+    local value = getGlobal(name)
+    return type(value) == "function"
+end
+
+local function tableExists(name)
+    local value = getGlobal(name)
+    return type(value) == "table"
+end
+
+local synTable = getGlobal("syn")
+local fluxusTable = getGlobal("fluxus")
+local websocketTable = getGlobal("WebSocket") or getGlobal("websocket")
+local cryptTable = getGlobal("crypt")
+    or (type(synTable) == "table" and safeRead(synTable, "crypt"))
+local drawingTable = getGlobal("Drawing")
+local gameHttpGetAvailable = false
+
+pcall(function()
+    gameHttpGetAvailable = type(game.HttpGet) == "function"
+end)
+
+local capabilities = {
+    identityApi = #rawIdentifiers > 0,
+    request = __executorPrimitiveSnapshot.request
+        or __executorPrimitiveSnapshot.http_request
+        or (type(synTable) == "table" and type(safeRead(synTable, "request")) == "function")
+        or (type(fluxusTable) == "table" and type(safeRead(fluxusTable, "request")) == "function"),
+    httpGet = functionExists("httpget")
+        or functionExists("http_get")
+        or (type(synTable) == "table" and type(safeRead(synTable, "http_get")) == "function")
+        or (type(fluxusTable) == "table" and type(safeRead(fluxusTable, "http_get")) == "function")
+        or gameHttpGetAvailable,
+    fileSystem = __executorPrimitiveSnapshot.readfile
+        and __executorPrimitiveSnapshot.writefile
+        and __executorPrimitiveSnapshot.isfile,
+    deleteFile = __executorPrimitiveSnapshot.delfile,
+    folders = __executorPrimitiveSnapshot.isfolder
+        and __executorPrimitiveSnapshot.makefolder
+        and __executorPrimitiveSnapshot.listfiles,
+    loadstring = __executorPrimitiveSnapshot.loadstring,
+    getgenv = __executorPrimitiveSnapshot.getgenv,
+    getrenv = __executorPrimitiveSnapshot.getrenv,
+    gethui = __executorPrimitiveSnapshot.gethui,
+    clipboard = functionExists("setclipboard") or functionExists("toclipboard"),
+    queueOnTeleport = __executorPrimitiveSnapshot.queue_on_teleport
+        or (type(synTable) == "table"
+            and type(safeRead(synTable, "queue_on_teleport")) == "function"),
+    hookFunction = functionExists("hookfunction"),
+    hookMetamethod = functionExists("hookmetamethod"),
+    newCClosure = functionExists("newcclosure"),
+    rawMetatable = functionExists("getrawmetatable"),
+    readonlyControl = functionExists("setreadonly")
+        or functionExists("make_writeable")
+        or functionExists("make_readonly"),
+    executorClosure = functionExists("isexecutorclosure")
+        or functionExists("isourclosure")
+        or functionExists("checkclosure"),
+    threadIdentity = functionExists("setthreadidentity")
+        or functionExists("set_thread_identity")
+        or functionExists("getthreadidentity")
+        or functionExists("get_thread_identity"),
+    hiddenProperties = functionExists("gethiddenproperty")
+        or functionExists("sethiddenproperty"),
+    scriptEnvironment = functionExists("getsenv")
+        or functionExists("getrenv")
+        or functionExists("getgc"),
+    drawing = type(drawingTable) == "table"
+        and type(safeRead(drawingTable, "new")) == "function",
+    websocket = type(websocketTable) == "table"
+        and type(safeRead(websocketTable, "connect")) == "function",
+    crypt = type(cryptTable) == "table",
+    fpsCap = functionExists("setfpscap")
+        or functionExists("set_fps_cap")
+        or (type(fluxusTable) == "table"
+            and type(safeRead(fluxusTable, "set_fps_cap")) == "function"),
+    debugIntrospection = type(debug) == "table"
+        and (
+            type(safeRead(debug, "getinfo")) == "function"
+            or type(safeRead(debug, "info")) == "function"
+            or type(safeRead(debug, "getconstants")) == "function"
+        ),
+}
+
+local httpMethod = "none"
+if __executorPrimitiveSnapshot.request then
+    httpMethod = "request"
+elseif __executorPrimitiveSnapshot.http_request then
+    httpMethod = "http_request"
+elseif type(synTable) == "table" and type(safeRead(synTable, "request")) == "function" then
+    httpMethod = "syn.request"
+elseif type(fluxusTable) == "table" and type(safeRead(fluxusTable, "request")) == "function" then
+    httpMethod = "fluxus.request"
+elseif functionExists("httpget") then
+    httpMethod = "httpget"
+elseif functionExists("http_get") then
+    httpMethod = "http_get"
+elseif capabilities.httpGet then
+    httpMethod = "game.HttpGet"
+end
+
+local rankedCandidates = {}
+for _, candidate in pairs(candidates) do
+    table.sort(candidate.evidence, function(left, right)
+        if left.score == right.score then
+            return left.source < right.source
+        end
+        return left.score > right.score
+    end)
+    table.insert(rankedCandidates, candidate)
+end
+
+table.sort(rankedCandidates, function(left, right)
+    if left.score == right.score then
+        if left.direct == right.direct then
+            if left.unique == right.unique then
+                return left.name < right.name
+            end
+            return left.unique > right.unique
+        end
+        return left.direct > right.direct
+    end
+    return left.score > right.score
+end)
+
+local directNameCount = 0
+for _ in pairs(directCandidateNames) do
+    directNameCount += 1
+end
+
+local top = rankedCandidates[1]
+local second = rankedCandidates[2]
+local spoofSuspected = directNameCount > 1
+
+if top and second then
+    local margin = top.score - second.score
+    if margin < 18 and second.score >= 55 then
+        spoofSuspected = true
+    end
+
+    if top.direct > 0 and second.direct == 0 and second.score >= 90 and second.name ~= top.name then
+        spoofSuspected = true
+    end
+end
+
+local confidence = "unknown"
+local confidenceScore = 0
+local selectedName = "Unidentified Executor"
+
+if top then
+    selectedName = top.name
+    local margin = second and (top.score - second.score) or top.score
+
+    if top.direct > 0 and directNameCount == 1 and not spoofSuspected then
+        confidence = "very high"
+        confidenceScore = math.clamp(97 + math.min(top.unique, 2), 0, 99)
+    elseif top.score >= 140 and margin >= 35 then
+        confidence = "very high"
+        confidenceScore = 94
+    elseif top.score >= 95 and margin >= 24 then
+        confidence = "high"
+        confidenceScore = 86
+    elseif top.score >= 65 and margin >= 12 then
+        confidence = "medium"
+        confidenceScore = 72
+    else
+        confidence = "low"
+        confidenceScore = 48
+    end
+
+    if spoofSuspected then
+        confidenceScore = math.max(35, confidenceScore - 22)
+        if confidenceScore >= 75 then
+            confidence = "high"
+        elseif confidenceScore >= 58 then
+            confidence = "medium"
+        else
+            confidence = "low"
+        end
+    end
+else
+    local exploitPrimitiveCount = 0
+    for _, enabled in pairs({
+        __executorPrimitiveSnapshot.request,
+        __executorPrimitiveSnapshot.http_request,
+        __executorPrimitiveSnapshot.readfile,
+        __executorPrimitiveSnapshot.writefile,
+        __executorPrimitiveSnapshot.loadstring,
+        __executorPrimitiveSnapshot.getgenv,
+        __executorPrimitiveSnapshot.gethui,
+        capabilities.hookFunction,
+        capabilities.hookMetamethod,
+        capabilities.drawing,
+    }) do
+        if enabled then
+            exploitPrimitiveCount += 1
+        end
+    end
+
+    if exploitPrimitiveCount == 0 then
+        selectedName = "Roblox/Studio Environment"
+        confidence = "medium"
+        confidenceScore = 70
+    else
+        selectedName = "Unidentified Executor"
+        confidence = "low"
+        confidenceScore = math.min(55, 25 + exploitPrimitiveCount * 4)
+    end
+end
+
+local selectedEvidence = {}
+if top then
+    for index = 1, math.min(#top.evidence, 12) do
+        local evidence = top.evidence[index]
+        table.insert(
+            selectedEvidence,
+            evidence.source
+                .. ": "
+                .. evidence.detail
+                .. " (+"
+                .. tostring(evidence.score)
+                .. ")"
+        )
+    end
+end
+
+local alternatives = {}
+for index = 2, math.min(#rankedCandidates, 5) do
+    local candidate = rankedCandidates[index]
+    table.insert(alternatives, {
+        name = candidate.name,
+        score = candidate.score,
+        direct = candidate.direct,
+        unique = candidate.unique,
+    })
+end
+
+local version = top and detectedVersions[top.name] or nil
+if not version then
+    local VERSION_APIS = {
+        "getexecutorversion",
+        "get_executor_version",
+        "executorversion",
     }
-    
-    for _, exec in ipairs(executorTables) do
-        local g = _G[exec.global] or (type(getgenv)=='function' and safeCheck(function() return getgenv()[exec.global] end))
-        if type(g)=='table' or type(g)=='userdata' then
-            __detectedExecutor = exec.name
-            __executorInfo = {
-                name=exec.name,
-                confidence="high",
-                platform=exec.platform,
-                free=exec.free,
-                httpMethod="request",
-                capabilities={}
-            }
-            return
-        end
-    end
-    
-    -- TIER 3: Function pattern detection (medium confidence)
-    local hasRequest = type(request)=='function'
-    local hasHttpRequest = type(http_request)=='function'
-    
-    if hasRequest or hasHttpRequest then
-        local detectedByPattern = nil
-        
-        if type(krnl)=='table' or type(KRNL)=='table' or type(iskrnlclosure)=='function' then
-            detectedByPattern = "Krnl"
-        elseif type(xeno)=='table' or type(XENO)=='table' then
-            detectedByPattern = "Xeno"
-        elseif type(solora)=='table' or type(SOLORA)=='table' then
-            detectedByPattern = "Solora"
-        elseif type(wave)=='table' or type(WAVE)=='table' then
-            detectedByPattern = "Wave"
-        elseif type(arceus)=='table' or type(ARCEUS)=='table' then
-            detectedByPattern = "Arceus X"
-        elseif type(delta)=='table' or type(DELTA)=='table' then
-            detectedByPattern = "Delta"
-        elseif type(hydrogen)=='table' or type(HYDROGEN)=='table' then
-            detectedByPattern = "Hydrogen"
-        elseif type(electron)=='table' or type(ELECTRON)=='table' then
-            detectedByPattern = "Electron"
-        end
-        
-        if detectedByPattern then
-            __detectedExecutor = detectedByPattern
-            __executorInfo = {
-                name=detectedByPattern,
-                confidence="medium",
-                platform="unknown",
-                free=false,
-                httpMethod="request",
-                capabilities={}
-            }
-            return
-        end
-        
-        __detectedExecutor = "Unknown Executor"
-        __executorInfo = {
-            name="Unknown Executor",
-            confidence="low",
-            platform="unknown",
-            free=false,
-            httpMethod=hasRequest and "request" or "http_request",
-            capabilities={}
-        }
-        return
-    end
-    
-    -- TIER 4: Roblox native (lowest confidence)
-    if game and type(game.HttpGet)=='function' then
-        __detectedExecutor = "Roblox Native"
-        __executorInfo = {
-            name="Roblox Native",
-            confidence="high",
-            platform="unknown",
-            free=true,
-            httpMethod="game.HttpGet",
-            capabilities={}
-        }
-        return
-    end
-    
-    -- TIER 5: getgenv fallback
-    if type(getgenv)=='function' then
-        local env = safeCheck(getgenv)
-        if type(env)=='table' and type(env.HttpGet)=='function' then
-            __detectedExecutor = "Executor (getgenv)"
-            __executorInfo = {
-                name="Executor (getgenv)",
-                confidence="low",
-                platform="unknown",
-                free=false,
-                httpMethod="getgenv.HttpGet",
-                capabilities={}
-            }
-            return
+
+    for _, apiName in ipairs(VERSION_APIS) do
+        local api = getGlobal(apiName)
+        if type(api) == "function" then
+            local ok, result = pcall(api)
+            if ok then
+                version = safeText(result)
+                if version then
+                    break
+                end
+            end
         end
     end
 end
 
-detectExecutor()
-warn('BadWars: Detected executor: ' .. __executorInfo.name .. ' (confidence: ' .. __executorInfo.confidence .. ', http: ' .. (__executorInfo.httpMethod or 'unknown') .. ')')
+local platform = currentPlatform()
+local expectedPlatform = top
+    and CANDIDATE_METADATA[top.name]
+    and CANDIDATE_METADATA[top.name].platform
+    or nil
 
--- Configure HTTP methods based on detected executor
+__detectedExecutor = selectedName
+__executorInfo = {
+    name = selectedName,
+    rawName = top and top.name or selectedName,
+    version = version,
+    confidence = confidence,
+    confidenceScore = confidenceScore,
+    score = top and top.score or 0,
+    runnerUpMargin = top and second and (top.score - second.score) or nil,
+    platform = platform,
+    expectedPlatform = expectedPlatform,
+    free = false,
+    httpMethod = httpMethod,
+    capabilities = capabilities,
+    evidence = selectedEvidence,
+    alternatives = alternatives,
+    rawIdentifiers = rawIdentifiers,
+    spoofSuspected = spoofSuspected,
+}
+
+shared.BadWarsExecutorInfo = __executorInfo
+shared.BadWarsExecutorDetection = {
+    selected = __executorInfo,
+    candidates = rankedCandidates,
+    identifiers = rawIdentifiers,
+    spoofSuspected = spoofSuspected,
+    primitiveSnapshot = __executorPrimitiveSnapshot,
+}
+
+warn(
+    "BadWars: Detected executor: "
+        .. __executorInfo.name
+        .. (__executorInfo.version and (" " .. tostring(__executorInfo.version)) or "")
+        .. " (confidence: "
+        .. __executorInfo.confidence
+        .. " "
+        .. tostring(__executorInfo.confidenceScore)
+        .. "%, score: "
+        .. tostring(__executorInfo.score)
+        .. ", platform: "
+        .. tostring(__executorInfo.platform)
+        .. ", http: "
+        .. tostring(__executorInfo.httpMethod)
+        .. (spoofSuspected and ", conflicting/spoofed fingerprints detected" or "")
+        .. ")"
+)
+
+-- Configure every HTTP transport that is actually available.
+-- Do not gate transports behind executor-name detection: many executors spoof or
+-- omit their identifying globals while still exposing a working request function.
 local __httpFunctions = {}
+local __httpFunctionNames = {}
+local __lastHttpDiagnostics = {}
+
+local function getExecutorEnvironment()
+    if type(getgenv) == "function" then
+        local ok, env = pcall(getgenv)
+        if ok and type(env) == "table" then
+            return env
+        end
+    end
+    return _G
+end
 
 local function extractBody(result)
-    if type(result)=='string' then return result end
-    if type(result)~='table' then return nil end
-    return result.Body or result.body or result.StatusCode and result.Body
-        or result.status and result.Body or result.Status and result.Body
-        or result.Response or result.response or result.Data or result.data
-        or result.Content or result.content
+    if type(result) == "string" then
+        return result
+    end
+    if type(result) ~= "table" then
+        return nil, "response was " .. type(result)
+    end
+
+    local statusCode = tonumber(
+        result.StatusCode
+            or result.statusCode
+            or result.Status
+            or result.status
+            or result.Code
+            or result.code
+    )
+    local body = result.Body
+        or result.body
+        or result.Response
+        or result.response
+        or result.Data
+        or result.data
+        or result.Content
+        or result.content
+
+    if statusCode and (statusCode < 200 or statusCode >= 400) then
+        return nil, "HTTP " .. tostring(statusCode)
+    end
+    if type(body) ~= "string" then
+        return nil, "response body missing"
+    end
+    return body
+end
+
+local function addHttpFunction(name, callback)
+    if type(callback) ~= "function" or __httpFunctionNames[name] then
+        return
+    end
+    __httpFunctionNames[name] = true
+    table.insert(__httpFunctions, {
+        name = name,
+        fn = callback,
+    })
 end
 
 local function tryRequest(reqFn, url)
-    local ok, result = pcall(function() return reqFn({Url=url, Method='GET'}) end)
-    if ok then local body = extractBody(result) if body then return body end end
-    ok, result = pcall(function() return reqFn({url=url, method='GET'}) end)
-    if ok then local body = extractBody(result) if body then return body end end
-    ok, result = pcall(function() return reqFn({URI=url, Method='GET'}) end)
-    if ok then local body = extractBody(result) if body then return body end end
-    ok, result = pcall(function() return reqFn({Url=url, Type='GET'}) end)
-    if ok then local body = extractBody(result) if body then return body end end
-    ok, result = pcall(function() return reqFn(url) end)
-    if ok then local body = extractBody(result) if body then return body end end
-    ok, result = pcall(function() return reqFn(url, 'GET') end)
-    if ok then local body = extractBody(result) if body then return body end end
-    ok, result = pcall(function() return reqFn('GET', url) end)
-    if ok then local body = extractBody(result) if body then return body end end
-    return nil
-end
-
-if __detectedExecutor == "Synapse X" then
-    pcall(function()
-        if type(syn)=='table' and type(syn.request)=='function' then
-            local synReq = syn.request
-            table.insert(__httpFunctions, {name='syn.request', fn=function(url) return tryRequest(synReq, url) end})
-        end
-    end)
-    pcall(function()
-        if type(syn)=='table' and type(syn.http_request)=='function' then
-            local synHttpReq = syn.http_request
-            table.insert(__httpFunctions, {name='syn.http_request', fn=function(url) return tryRequest(synHttpReq, url) end})
-        end
-    end)
-    pcall(function()
-        if type(syn)=='table' and type(syn.http_get)=='function' then
-            local synHttpGet = syn.http_get
-            table.insert(__httpFunctions, {name='syn.http_get', fn=function(url)
-                local ok, result = pcall(function() return synHttpGet(url) end)
-                if ok and type(result)=='string' then return result end
-                return nil
-            end})
-        end
-    end)
-elseif __detectedExecutor == "Fluxus" then
-    pcall(function()
-        if type(fluxus)=='table' and type(fluxus.request)=='function' then
-            local fluxusReq = fluxus.request
-            table.insert(__httpFunctions, {name='fluxus.request', fn=function(url) return tryRequest(fluxusReq, url) end})
-        end
-    end)
-    pcall(function()
-        if type(fluxus)=='table' and type(fluxus.http_get)=='function' then
-            local fluxusHttpGet = fluxus.http_get
-            table.insert(__httpFunctions, {name='fluxus.http_get', fn=function(url)
-                local ok, result = pcall(function() return fluxusHttpGet(url) end)
-                if ok and type(result)=='string' then return result end
-                return nil
-            end})
-        end
-    end)
-else
-    pcall(function()
-        if type(request)=='function' then
-            table.insert(__httpFunctions, {name='request', fn=function(url) return tryRequest(request, url) end})
-        end
-    end)
-    pcall(function()
-        if type(http_request)=='function' then
-            table.insert(__httpFunctions, {name='http_request', fn=function(url) return tryRequest(http_request, url) end})
-        end
-    end)
-    pcall(function()
-        local env = type(getgenv)=='function' and getgenv() or nil
-        if type(env)=='table' then
-            if type(env.request)=='function' then
-                local genvReq = env.request
-                table.insert(__httpFunctions, {name='getgenv.request', fn=function(url) return tryRequest(genvReq, url) end})
-            end
-            if type(env.http_request)=='function' then
-                local genvHttpReq = env.http_request
-                table.insert(__httpFunctions, {name='getgenv.http_request', fn=function(url) return tryRequest(genvHttpReq, url) end})
-            end
-        end
-    end)
-end
-
-pcall(function()
-    if game and type(game.HttpGet)=='function' then
-        table.insert(__httpFunctions, {name='game.HttpGet', fn=function(url)
-            return game:HttpGet(url, true)
-        end})
-    end
-end)
-pcall(function()
-    local env = type(getgenv)=='function' and getgenv() or nil
-    if type(env)=='table' and type(env.HttpGet)=='function' then
-        local genvFn = env.HttpGet
-        table.insert(__httpFunctions, {name='getgenv.HttpGet', fn=function(url)
-            return genvFn(game, url, true)
-        end})
-    end
-end)
-pcall(function()
-    local svc = cloneref(game:GetService('HttpService'))
-    if svc and type(svc.GetAsync)=='function' then
-        table.insert(__httpFunctions, {name='HttpService.GetAsync', fn=function(url)
-            return svc:GetAsync(url, true)
-        end})
-    end
-end)
-
-if #__httpFunctions == 0 then
-    pcall(function() table.insert(__httpFunctions, {name='fallback.game.HttpGet', fn=function(url) return game:HttpGet(url, true) end}) end)
-    pcall(function()
-        local svc = cloneref(game:GetService('HttpService'))
-        if svc then table.insert(__httpFunctions, {name='fallback.HttpService', fn=function(url) return svc:GetAsync(url, true) end}) end
-    end)
-end
-
-local BadwarsLoader
-local function createCustomSignal(key, delay)
-    key = tostring(key or "Unknown")
-    delay = delay or 0
-    return setmetatable({ __conns = {}, __args = true, __delay = delay, __lastFire = nil }, {
-        __index = function(self, k)
-            if k == "Event" then
-                return self
-            end
-            if k == "Destroy" then
-                return function()
-                    for i in pairs(self.__conns or {}) do
-                        self.__conns[i] = nil
-                    end
-                    self.__conns = nil
-                end
-            end
-            return rawget(self, k)
+    local attempts = {
+        function()
+            return reqFn({
+                Url = url,
+                Method = "GET",
+                Headers = {
+                    ["Cache-Control"] = "no-cache",
+                    ["Pragma"] = "no-cache",
+                    ["User-Agent"] = "BadWars-Loader",
+                },
+            })
         end,
-        __tostring = function()
-            return "BADWARS_INTERNAL_EVENT_" .. key
+        function()
+            return reqFn({
+                URL = url,
+                Method = "GET",
+                Headers = {
+                    ["Cache-Control"] = "no-cache",
+                    ["User-Agent"] = "BadWars-Loader",
+                },
+            })
         end,
-    })
-end
-local signalApi = {
-    Connect = function(self, func)
-        if BadwarsLoader and BadwarsLoader.Unloaded then
-            return
-        end
-        assert(type(func) == "function", "req not met")
-        local conn = { func = func, once = false }
-        table.insert(self.__conns, conn)
-        return {
-            Disconnect = function()
-                local id = table.find(self.__conns, conn)
-                if id then
-                    table.remove(self.__conns, id)
-                    return true
-                end
-                return false
-            end,
-        }
-    end,
-    Once = function(self, func)
-        if BadwarsLoader and BadwarsLoader.Unloaded then
-            return
-        end
-        assert(type(func) == "function", "req not met")
-        local conn = { func = func, once = true }
-        table.insert(self.__conns, conn)
-        return {
-            Disconnect = function()
-                local id = table.find(self.__conns, conn)
-                if id then
-                    table.remove(self.__conns, id)
-                    return true
-                end
-                return false
-            end,
-        }
-    end,
-    Fire = function(self, ...)
-        if BadwarsLoader and BadwarsLoader.Unloaded then
-            return
-        end
-        if type(self.__conns) ~= "table" then
-            return
-        end
-        local args = { ... }
-        local bypass = not self.__args and args[1]
-        if not bypass and self.__lastFire and tick() - self.__lastFire < self.__delay then
-            return
-        end
-        self.__lastFire = tick()
-        local remove = {}
-        for i, conn in ipairs(self.__conns) do
-            local cbOk, cbErr
-            -- Safely execute callback with maximum protection
-            local function safeExecute()
-                return conn.func(unpack(args))
+        function()
+            return reqFn({
+                url = url,
+                method = "GET",
+                headers = {
+                    ["Cache-Control"] = "no-cache",
+                    ["User-Agent"] = "BadWars-Loader",
+                },
+            })
+        end,
+        function()
+            return reqFn({ URI = url, Method = "GET" })
+        end,
+        function()
+            return reqFn({ Url = url, Type = "GET" })
+        end,
+        function()
+            return reqFn(url)
+        end,
+        function()
+            return reqFn(url, "GET")
+        end,
+        function()
+            return reqFn("GET", url)
+        end,
+    }
+
+    local lastError = "request returned no usable body"
+    for _, attempt in ipairs(attempts) do
+        local ok, result = pcall(attempt)
+        if ok then
+            local body, bodyError = extractBody(result)
+            if type(body) == "string" and body ~= "" then
+                return body
             end
-            if shared.BadDiagnostics and type(shared.BadDiagnostics.Capture) == "function" then
-                cbOk, cbErr = pcall(function()
-                    return shared.BadDiagnostics:Capture(safeExecute, {subsystem='Signal',module=key,stage='signal-callback'})
-                end)
+            lastError = bodyError or lastError
+        else
+            lastError = tostring(result)
+        end
+    end
+
+    error(lastError, 0)
+end
+
+local function registerRequestTransport(name, requestFunction)
+    if type(requestFunction) == "function" then
+        addHttpFunction(name, function(url)
+            return tryRequest(requestFunction, url)
+        end)
+    end
+end
+
+local env = getExecutorEnvironment()
+
+registerRequestTransport("request", request)
+registerRequestTransport("http_request", http_request)
+registerRequestTransport("getgenv.request", type(env) == "table" and env.request or nil)
+registerRequestTransport("getgenv.http_request", type(env) == "table" and env.http_request or nil)
+
+if type(syn) == "table" then
+    registerRequestTransport("syn.request", syn.request)
+    registerRequestTransport("syn.http_request", syn.http_request)
+end
+if type(fluxus) == "table" then
+    registerRequestTransport("fluxus.request", fluxus.request)
+end
+if type(krnl) == "table" then
+    registerRequestTransport("krnl.request", krnl.request)
+end
+if type(http) == "table" then
+    registerRequestTransport("http.request", http.request)
+end
+
+local function registerDirectGet(name, getFunction, owner)
+    if type(getFunction) ~= "function" then
+        return
+    end
+
+    addHttpFunction(name, function(url)
+        local attempts = {}
+
+        if owner ~= nil then
+            table.insert(attempts, function()
+                return getFunction(owner, url, true)
+            end)
+            table.insert(attempts, function()
+                return getFunction(owner, url)
+            end)
+        end
+
+        table.insert(attempts, function()
+            return getFunction(url, true)
+        end)
+        table.insert(attempts, function()
+            return getFunction(url)
+        end)
+
+        local lastError = "direct GET returned no usable body"
+        for _, attempt in ipairs(attempts) do
+            local ok, result = pcall(attempt)
+            if ok then
+                local body, bodyError = extractBody(result)
+                if type(body) == "string" and body ~= "" then
+                    return body
+                end
+                lastError = bodyError or lastError
             else
-                cbOk, cbErr = pcall(safeExecute)
-            end
-            if not cbOk and type(shared.BadDiagnostics) == "table" and type(shared.BadDiagnostics.RecordRuntime) == "function" then
-                pcall(shared.BadDiagnostics.RecordRuntime, shared.BadDiagnostics, key, cbErr, {subsystem='Signal',stage='signal-callback'})
-            end
-            if conn.once then
-                table.insert(remove, i)
+                lastError = tostring(result)
             end
         end
-        for i = #remove, 1, -1 do
-            table.remove(self.__conns, remove[i])
-        end
-        return self
-    end,
-    SetCooldown = function(self, val)
-        self.__delay = val or 0
-        return self
-    end,
-    ArgCheck = function(self, val)
-        if val == nil then
-            val = not self.__args
-        end
-        self.__args = val
-        return self
-    end,
-}
-local function installBadWarsLoaderShim()
-    BadwarsLoader = setmetatable({
-        Unloaded = false,
-        Services = setmetatable({}, {
-            __index = function(self, key)
-                key = tostring(key)
-                if key == "InputService" then
-                    key = "UserInputService"
-                end
-                local ok, svc = pcall(function()
-                    return game:GetService(key)
-                end)
-                if not ok then
-                    return nil
-                end
-                local okClone, cloned = pcall(cloneref, svc)
-                if okClone then
-                    svc = cloned
-                end
-                rawset(self, key, svc)
-                return svc
-            end,
-        }),
-        createCustomSignal = function(_, key, delay)
-            local sig = createCustomSignal(key, delay)
-            for k, v in pairs(signalApi) do
-                sig[k] = v
-            end
-            return sig
-        end,
-        setupDecoratedCustomSignal = function(self, id)
-            id = tostring(id)
-            return function(sigName)
-                return self:createCustomSignal(id .. "_" .. tostring(sigName))
-            end
-        end,
-        BadwarsEvents = setmetatable({}, {
-            __index = function(self, key)
-                local sig = BadwarsLoader:createCustomSignal(key)
-                rawset(self, key, sig)
-                return sig
-            end,
-        }),
-        wrap = function(self, func, decorator)
-            if not func then
-                return
-            end
-            if type(func) ~= "function" then
-                return func
-            end
-            return function(...)
-                local ok, res = xpcall(func, function(err) local d=shared.BadDiagnostics; local hasTraceback=type(debug)=="table" and type(debug.traceback)=="function" return d and d:Traceback(err,3) or (hasTraceback and debug.traceback(tostring(err),3) or tostring(err)) end, ...)
-                if not ok then
-                    local report = { err = res }
-                    if type(decorator) == "table" then
-                        for k, v in pairs(decorator) do
-                            report[k] = v
-                        end
-                    end
-                    self:report(report)
-                end
-                return ok and res
-            end
-        end,
-        report = function(_, report)
-            mwarn(
-                "BadWars: [UI] "
-                    .. safeStr(report and (report.name or report.type) or "Error")
-                    .. " "
-                    .. safeStr(report and report.err or "")
-            )
-        end,
-        throw = function(self, err)
-            self:report({ name = "Badwars Error", err = err })
-        end,
-    }, {
-        __index = function(_, key)
-            error("BadwarsLoader: Invalid key " .. tostring(key) .. "!", 0)
-        end,
-    })
-    shared.BadWarsLoader = BadwarsLoader
-    shared.BadwarsLoader = BadwarsLoader
+
+        error(lastError, 0)
+    end)
 end
 
-local function callWithTimeout(callback, timeoutSeconds)
-    local finished = false
-    local success = false
-    local result
+registerDirectGet("game.HttpGet", game and game.HttpGet, game)
+registerDirectGet("getgenv.HttpGet", type(env) == "table" and env.HttpGet or nil, game)
+registerDirectGet("httpget", httpget, nil)
+registerDirectGet("http_get", http_get, nil)
+
+if type(syn) == "table" then
+    registerDirectGet("syn.http_get", syn.http_get, syn)
+end
+if type(fluxus) == "table" then
+    registerDirectGet("fluxus.http_get", fluxus.http_get, fluxus)
+end
+
+pcall(function()
+    local service = cloneref(game:GetService("HttpService"))
+    if service and type(service.GetAsync) == "function" then
+        addHttpFunction("HttpService.GetAsync", function(url)
+            local ok, result = pcall(function()
+                return service:GetAsync(url, true)
+            end)
+            if not ok then
+                ok, result = pcall(function()
+                    return service:GetAsync(url)
+                end)
+            end
+            if not ok then
+                error(result, 0)
+            end
+            return result
+        end)
+    end
+end)
+
+-- CFG and rawUrls are defined near the top of main.lua.
+
+local function callWithTimeout(callback, timeout)
+    local done = false
+    local packed
     local worker = task.spawn(function()
-        success,result=pcall(callback)
-        finished = true
+        packed = { pcall(callback) }
+        done = true
     end)
 
-    local deadline = os.clock() + (tonumber(timeoutSeconds) or 15)
-    repeat
-        task.wait(0.05)
-    until finished or os.clock() >= deadline
-
-    if not finished then
-        pcall(function() task.cancel(worker) end)
-        return false, "request timed out"
+    local started = os.clock()
+    while not done and os.clock() - started < (tonumber(timeout) or 15) do
+        task.wait(0.03)
     end
 
-    return success, result
-end
-
-local function httpGetMulti(urls)
-    for _, url in ipairs(urls) do
-        for _, httpFn in ipairs(__httpFunctions) do
-            local ok, res = callWithTimeout(function()
-                return httpFn.fn(url)
-            end, 15)
-            if ok and type(res) == "string" and #res >= 10 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then
-                return res
-            end
-        end
+    if not done then
+        pcall(function()
+            task.cancel(worker)
+        end)
+        return false, nil, "timeout"
     end
-    return nil
-end
 
-local function httpGet(url)
-    return httpGetMulti({ url })
+    if packed[1] then
+        return true, packed[2], packed[3]
+    end
+    return false, nil, tostring(packed[2])
 end
-local HttpGet = httpGet
 
 local function isNotFoundBody(body)
     if type(body) ~= "string" then
@@ -991,7 +1569,7 @@ local function isNotFoundBody(body)
     local trimmed = body:match("^%s*(.-)%s*$")
     return trimmed == "404: Not Found"
         or trimmed == '{"message":"Not Found"}'
-        or (#trimmed < 200 and trimmed:find('"message"%s*:%s*"Not Found"') ~= nil)
+        or (#trimmed < 300 and trimmed:find('"message"%s*:%s*"Not Found"') ~= nil)
 end
 
 local function isRateLimited(body)
@@ -999,44 +1577,96 @@ local function isRateLimited(body)
         return false
     end
     local trimmed = body:match("^%s*(.-)%s*$")
-    -- Check for GitHub rate limit responses
-    if trimmed:find("429", 1, true) and #trimmed < 300 then
-        return true
-    end
-    if trimmed:find("rate limit", 1, true) and #trimmed < 500 then
-        return true
-    end
-    if trimmed:find("abuse detection", 1, true) then
-        return true
-    end
-    -- Check for generic error pages that aren't valid Lua
-    if trimmed:find("<!DOCTYPE", 1, true) or trimmed:find("<html", 1, true) then
-        return true
-    end
-    -- Check for JSON error responses
-    if #trimmed < 200 and trimmed:find('"message"%s*:') and not trimmed:find('"message"%s*:%s*"Not Found"') then
-        return true
-    end
-    return false
+    local lower = string.lower(trimmed)
+    return (#trimmed < 600 and lower:find("rate limit", 1, true) ~= nil)
+        or (#trimmed < 300 and lower:find("429", 1, true) ~= nil)
+        or lower:find("abuse detection", 1, true) ~= nil
 end
 
 local function isCorruptedBody(body)
-    if type(body) ~= "string" or #body < 10 then return true end
-    local trimmed = body:match("^%s*(.-)%s*$")
-    if trimmed:find("<!DOCTYPE", 1, true) or trimmed:find("<html", 1, true) then return true end
-    if not trimmed:find('function', 1, true) and not trimmed:find('local ', 1, true) and not trimmed:find('--', 1, true) then
-        if trimmed:find('<', 1, true) and trimmed:find('>', 1, true) then return true end
+    if type(body) ~= "string" or #body < 10 then
+        return true
     end
+
+    local trimmed = body:match("^%s*(.-)%s*$")
+    local lower = string.lower(trimmed)
+
+    if lower:find("<!doctype", 1, true) or lower:find("<html", 1, true) then
+        return true
+    end
+
     local nonPrintable = 0
-    for i = 1, math.min(#body, 200) do
-        local c = body:byte(i)
-        if c and (c < 32 and c ~= 10 and c ~= 13 and c ~= 9) then
-            nonPrintable = nonPrintable + 1
+    for index = 1, math.min(#body, 300) do
+        local byte = body:byte(index)
+        if byte and byte < 32 and byte ~= 9 and byte ~= 10 and byte ~= 13 then
+            nonPrintable += 1
         end
     end
-    if nonPrintable > 20 then return true end
-    return false
+
+    return nonPrintable > 20
 end
+
+local function rejectionReason(body)
+    if type(body) ~= "string" then
+        return "non-string response"
+    end
+    if #body < 10 then
+        return "response too short"
+    end
+    if isNotFoundBody(body) then
+        return "404/not found"
+    end
+    if isRateLimited(body) then
+        return "rate limited"
+    end
+    if isCorruptedBody(body) then
+        return "HTML or corrupted response"
+    end
+    return nil
+end
+
+local function httpGetMulti(urls)
+    __lastHttpDiagnostics = {}
+
+    if #__httpFunctions == 0 then
+        table.insert(__lastHttpDiagnostics, "No supported HTTP functions were discovered")
+        return nil
+    end
+
+    for _, url in ipairs(urls) do
+        for _, httpFunction in ipairs(__httpFunctions) do
+            local ok, response, failure = callWithTimeout(function()
+                return httpFunction.fn(url)
+            end, 15)
+
+            if ok then
+                local rejected = rejectionReason(response)
+                if not rejected then
+                    return response
+                end
+                table.insert(
+                    __lastHttpDiagnostics,
+                    httpFunction.name .. " | " .. url .. " | rejected: " .. rejected
+                )
+            else
+                table.insert(
+                    __lastHttpDiagnostics,
+                    httpFunction.name .. " | " .. url .. " | failed: " .. tostring(failure)
+                )
+            end
+        end
+    end
+
+    return nil
+end
+
+
+local function httpGet(url)
+    return httpGetMulti({ url })
+end
+
+local HttpGet = httpGet
+
 
 local function isStaleGuiCache(path, body)
     -- WindUI adapter is intentionally lean and not part of the legacy cache-bust logic
@@ -1230,7 +1860,7 @@ local function repairKnownSourceDefects(path, source)
 
     -- Additional common Roblox deprecation repair
     repaired, changed = repaired:gsub(
-        "game:GetService%([\"']RunService[\"']%)%.Heartbeat:Wait%(%)\s*game:GetService%([\"']RunService[\"']%)%.Heartbeat:Wait%(%)\;",
+        "game:GetService%([\"']RunService[\"']%)%.Heartbeat:Wait%(%)%s*game:GetService%([\"']RunService[\"']%)%.Heartbeat:Wait%(%)%s*;?",
         "local rs = game:GetService('RunService'); rs.Heartbeat:Wait(); rs.Heartbeat:Wait();"
     )
     fixes += changed

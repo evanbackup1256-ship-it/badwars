@@ -15437,9 +15437,7 @@ aa.ScreenGui = at("ScreenGui", {
 	ZIndexBehavior = "Sibling",
 	DisplayOrder = 100000,
 }, {
-	-- Kept for compatibility with integrations that still reference
-	-- ScreenGui.Window directly. The active window is hosted in
-	-- ScaledGui.ClickGui so legacy visibility toggles affect the real UI.
+
 	at("Folder", {
 		Name = "Window",
 	}),
@@ -15454,47 +15452,6 @@ aa.ScreenGui = at("ScreenGui", {
 		Name = "ToolTips",
 	}),
 })
-
--- Legacy BadWars modules expect this exact hierarchy:
--- WindUI.ScaledGui.ClickGui
---
--- Use real GuiObjects rather than placeholder folders so setting either
--- ScaledGui.Visible or ClickGui.Visible immediately hides/shows the actual UI.
-aa.ScaledGui = at("Frame", {
-	Name = "ScaledGui",
-	Parent = aa.ScreenGui,
-	Size = UDim2.fromScale(1, 1),
-	Position = UDim2.fromScale(0, 0),
-	AnchorPoint = Vector2.new(0, 0),
-	BackgroundTransparency = 1,
-	BorderSizePixel = 0,
-	ClipsDescendants = false,
-	Visible = true,
-	Active = false,
-	Selectable = false,
-	ZIndex = 1,
-})
-
-aa.ClickGui = at("Frame", {
-	Name = "ClickGui",
-	Parent = aa.ScaledGui,
-	Size = UDim2.fromScale(1, 1),
-	Position = UDim2.fromScale(0, 0),
-	AnchorPoint = Vector2.new(0, 0),
-	BackgroundTransparency = 1,
-	BorderSizePixel = 0,
-	ClipsDescendants = false,
-	Visible = true,
-	Active = false,
-	Selectable = false,
-	ZIndex = 1,
-})
-
--- Common aliases used by old adapters and module bundles.
-aa.gui = aa.ScreenGui
-aa.Gui = aa.ScreenGui
-aa.RootGui = aa.ScreenGui
-aa.ClickGUI = aa.ClickGui
 
 aa.NotificationGui = at("ScreenGui", {
 	Name = "WindUI/Notifications",
@@ -15530,35 +15487,6 @@ av(aa.TooltipGui)
 
 as.Init(aa)
 
-local function validateLegacyGuiHierarchy()
-	if not aa.ScreenGui or not aa.ScreenGui.Parent then
-		return false
-	end
-
-	local scaled = aa.ScreenGui:FindFirstChild("ScaledGui")
-	local clickGui = scaled and scaled:FindFirstChild("ClickGui")
-
-	if not scaled or not scaled:IsA("GuiObject") then
-		return false
-	end
-	if not clickGui or not clickGui:IsA("GuiObject") then
-		return false
-	end
-
-	aa.ScaledGui = scaled
-	aa.ClickGui = clickGui
-	aa.gui = aa.ScreenGui
-	aa.Gui = aa.ScreenGui
-	aa.RootGui = aa.ScreenGui
-	aa.ClickGUI = clickGui
-	return true
-end
-
-assert(
-	validateLegacyGuiHierarchy(),
-	"WindUI failed to create the required ScaledGui.ClickGui compatibility hierarchy"
-)
-
 function aa.SetParent(ay, az)
 	if aa.ScreenGui then
 		aa.ScreenGui.Parent = az
@@ -15572,56 +15500,6 @@ function aa.SetParent(ay, az)
 	if aa.TooltipGui then
 		aa.TooltipGui.Parent = az
 	end
-	return aa
-end
-
-function aa.GetRootGui()
-	return aa.ScreenGui
-end
-
-function aa.GetScaledGui()
-	return aa.ScaledGui
-		or (aa.ScreenGui and aa.ScreenGui:FindFirstChild("ScaledGui"))
-end
-
-function aa.GetClickGui()
-	local scaled = aa:GetScaledGui()
-	return aa.ClickGui
-		or (scaled and scaled:FindFirstChild("ClickGui"))
-end
-
-function aa.SetVisible(_, visible)
-	visible = visible ~= false
-	local scaled = aa:GetScaledGui()
-	local clickGui = aa:GetClickGui()
-
-	if scaled then
-		scaled.Visible = visible
-	end
-	if clickGui then
-		clickGui.Visible = visible
-	end
-
-	if visible and aa.Window and type(aa.Window.Open) == "function" then
-		pcall(aa.Window.Open, aa.Window)
-	elseif not visible and aa.Window and type(aa.Window.Close) == "function" then
-		pcall(aa.Window.Close, aa.Window)
-	end
-
-	return aa
-end
-
-function aa.Show(self)
-	return aa.SetVisible(self, true)
-end
-
-function aa.Hide(self)
-	return aa.SetVisible(self, false)
-end
-
-function aa.Toggle(self)
-	local clickGui = aa:GetClickGui()
-	return aa.SetVisible(self, not (clickGui and clickGui.Visible == true))
 end
 aa.TransparencyValue = math.clamp(aa.TransparencyValue, 0, 1)
 
@@ -15789,14 +15667,7 @@ function aa.CreateWindow(az, aA)
 
 	aA.WindUI = aa
 	aA.Window = aa.Window
-	aA.Parent = aa.ClickGui
-		or (
-			aa.ScreenGui
-			and aa.ScreenGui:FindFirstChild("ScaledGui")
-			and aa.ScreenGui.ScaledGui:FindFirstChild("ClickGui")
-		)
-		or aa.ScreenGui:FindFirstChild("Window")
-		or aa.ScreenGui
+	aA.Parent = aa.ScreenGui.Window
 
 	if aa.Window then
 		warn("You cannot create more than one window")
@@ -16316,9 +16187,9 @@ do
 end
 
 
--- BADWARS_SMART_UI_RUNTIME_V5_BEGIN
+-- BADWARS_SMART_UI_RUNTIME_V4_BEGIN
 do
-	local SMART_UI_VERSION = "5.0.0"
+	local SMART_UI_VERSION = "4.0.0"
 	local userInputService = game:GetService("UserInputService")
 	local guiService = game:GetService("GuiService")
 	local workspaceService = game:GetService("Workspace")
@@ -16770,15 +16641,6 @@ do
 		local originalOpen = window.Open
 		if type(originalOpen) == "function" then
 			window.Open = function(self, ...)
-				local scaled = aa.GetScaledGui and aa:GetScaledGui() or aa.ScaledGui
-				local clickGui = aa.GetClickGui and aa:GetClickGui() or aa.ClickGui
-				if scaled then
-					scaled.Visible = true
-				end
-				if clickGui then
-					clickGui.Visible = true
-				end
-
 				local result = originalOpen(self, ...)
 				task.delay(0.05, function()
 					scheduleLayout(self)
@@ -16985,6 +16847,6 @@ do
 		end,
 	}
 end
--- BADWARS_SMART_UI_RUNTIME_V5_END
+-- BADWARS_SMART_UI_RUNTIME_V4_END
 
 return aa

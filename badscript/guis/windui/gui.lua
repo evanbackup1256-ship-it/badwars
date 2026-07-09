@@ -387,19 +387,24 @@ Tabs.Modules:Paragraph({
 
 local moduleHealthProgress
 local moduleHealthLabel
+local modulesLoaded = 0
+local modulesTotal = 0
+
 local function updateModuleHealth(ready, total)
+	modulesLoaded = ready
+	modulesTotal = total
 	if moduleHealthProgress and type(moduleHealthProgress.Set) == "function" then
 		local pct = total > 0 and math.floor((ready / total) * 100 + 0.5) or 0
 		pcall(moduleHealthProgress.Set, moduleHealthProgress, pct)
 	end
 	if moduleHealthLabel and type(moduleHealthLabel.SetDesc) == "function" then
-		pcall(moduleHealthLabel.SetDesc, moduleHealthLabel, string.format("%d / %d modules healthy", ready, total))
+		pcall(moduleHealthLabel.SetDesc, moduleHealthLabel, string.format("%d / %d modules loaded", ready, total))
 	end
 end
 
 moduleHealthProgress = Tabs.Modules:ProgressBar({
 	Title = "Module Health",
-	Desc = "Percentage of modules loaded successfully",
+	Desc = "Real-time loading progress",
 	Value = { Min = 0, Max = 100, Default = 0 },
 	DisplayMode = "Percent",
 	Animate = true,
@@ -410,18 +415,39 @@ moduleHealthLabel = Tabs.Modules:Paragraph({
 	Desc = "Waiting for modules to load...",
 })
 
--- Update health after modules load (retry a few times to catch late registrations)
+-- Real-time module tracking
 task.spawn(function()
-	for attempt = 1, 5 do
-		task.wait(1.5 * attempt)
-		if d.Destroyed then return end
-		local B = shared.Bad
-		if B and type(B.GetBedWarsModuleHealth) == "function" then
-			local report = B:GetBedWarsModuleHealth()
-			if type(report) == "table" and report.Total and report.Total > 0 then
-				updateModuleHealth(report.Ready or 0, report.Total)
-				return
+	local lastCount = 0
+	while not d.Destroyed do
+		task.wait(0.5)
+		
+		-- Count registered modules
+		local currentCount = 0
+		for _ in pairs(d.Modules) do
+			currentCount += 1
+		end
+		
+		-- Update if changed
+		if currentCount ~= lastCount then
+			lastCount = currentCount
+			-- Estimate total (universal + game modules, typically 70-100)
+			local estimatedTotal = math.max(currentCount, 70)
+			updateModuleHealth(currentCount, estimatedTotal)
+		end
+		
+		-- Stop if we've loaded a reasonable amount
+		if currentCount >= 50 then
+			task.wait(2)
+			-- Final update with actual health data
+			local B = shared.Bad
+			if B and type(B.GetBedWarsModuleHealth) == "function" then
+				local report = B:GetBedWarsModuleHealth()
+				if type(report) == "table" and report.Total and report.Total > 0 then
+					updateModuleHealth(report.Ready or 0, report.Total)
+					return
+				end
 			end
+			return
 		end
 	end
 end)

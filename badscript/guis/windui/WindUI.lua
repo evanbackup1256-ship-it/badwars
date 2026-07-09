@@ -266,7 +266,27 @@ do
 			return b
 		end)
 
-		local d = b(game:GetService("ReplicatedStorage"):WaitForChild("GetIcons", 99999):InvokeServer())
+		-- Fix: GetIcons remote doesn't exist in BadWars/BedWars, would hang for 99999s
+		-- Use a fallback icon set instead
+		local d
+		local ok, result = pcall(function()
+			local rs = game:GetService("ReplicatedStorage")
+			local getIcons = rs:FindFirstChild("GetIcons")
+			if getIcons and getIcons:IsA("RemoteFunction") then
+				return getIcons:InvokeServer()
+			end
+			return nil
+		end)
+		
+		if ok and type(result) == "table" then
+			d = result
+		else
+			-- Fallback: create a basic icon table for BadWars
+			d = {
+				Icons = {},
+				Spritesheets = {},
+			}
+		end
 
 		local function parseIconString(e)
 			if type(e) == "string" then
@@ -634,7 +654,15 @@ do
 		if d:IsStudio() or not writefile then
 			m = a.load("b")
 		else
-			m = loadstring(game.HttpGet and game:HttpGet(l) or h:GetAsync(l))()
+			-- Fix: Icon download may fail due to rate limiting or network issues
+			local ok, result = pcall(function()
+				local source = game.HttpGet and game:HttpGet(l) or h:GetAsync(l)
+				if type(source) == "string" and #source > 100 then
+					return loadstring(source)()
+				end
+				return nil
+			end)
+			m = ok and result or a.load("b")
 		end
 
 		m.SetIconsType("lucide")
@@ -4253,23 +4281,24 @@ do
 				Dark = {
 					Name = "Dark",
 
-					Accent = Color3.fromHex("#18181b"),
-					Dialog = Color3.fromHex("#1a1a1a"),
+					-- BadWars branding colors (crimson/red theme)
+					Accent = Color3.fromHex("#1a1a1e"),
+					Dialog = Color3.fromHex("#1c1c20"),
 					Outline = Color3.fromHex("#FFFFFF"),
 					Text = Color3.fromHex("#FFFFFF"),
 					Placeholder = Color3.fromHex("#a1a1a1"),
-					Background = Color3.fromHex("#101010"),
+					Background = Color3.fromHex("#0d0d0f"),
 					Button = Color3.fromHex("#52525b"),
 					Icon = Color3.fromHex("#a1a1aa"),
-					Toggle = Color3.fromHex("#33C759"),
-					Slider = Color3.fromHex("#0091FF"),
-					Checkbox = Color3.fromHex("#0091FF"),
+					Toggle = Color3.fromHex("#FF2D4A"),
+					Slider = Color3.fromHex("#FF2D4A"),
+					Checkbox = Color3.fromHex("#FF2D4A"),
 
 					PanelBackground = Color3.fromHex("#FFFFFF"),
 					PanelBackgroundTransparency = 0.95,
 
 					SliderIcon = Color3.fromHex("#908F95"),
-					Primary = Color3.fromHex("#0091FF"),
+					Primary = Color3.fromHex("#FF2D4A"),
 
 					LabelBackground = Color3.fromHex("#000000"),
 					LabelBackgroundTransparency = 0.83,

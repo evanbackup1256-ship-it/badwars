@@ -201,7 +201,7 @@ end
 -- This ensures the latest code is always downloaded, even if old loader is cached
 pcall(function()
     local oldCacheVersion = isfile('badscript/profiles/cache-version.txt') and readfile('badscript/profiles/cache-version.txt') or ''
-    if oldCacheVersion ~= 'badwars-v23-windui-2026-07-08-10' then
+    if oldCacheVersion ~= 'badwars-v24-windui-2026-07-08-11' then
         -- Clear old main.lua and diagnostics to force fresh download
         local filesToClear = {
             'badscript/main.lua',
@@ -227,7 +227,7 @@ pcall(function()
             end
         end
         -- Write new cache version
-        pcall(writefile, 'badscript/profiles/cache-version.txt', 'badwars-v23-windui-2026-07-08-10')
+        pcall(writefile, 'badscript/profiles/cache-version.txt', 'badwars-v24-windui-2026-07-08-11')
     end
 end)
 
@@ -2275,7 +2275,7 @@ if isfile(ORCH_PATH) then
     end
 end
 
-local cacheVersion = 'badwars-v23-windui-2026-07-08-10'
+local cacheVersion = 'badwars-v24-windui-2026-07-08-11'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"

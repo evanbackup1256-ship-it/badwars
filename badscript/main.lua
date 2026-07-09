@@ -415,47 +415,23 @@ if not loadstring then
     loadstring = load or function(code) error("loadstring unavailable") end
 end
 
--- Executor detection using WEAO API and local patterns
+-- Executor detection using local patterns
 local __detectedExecutor = "unknown"
 local __executorCapabilities = {}
 
 local function detectExecutor()
-    -- First try WEAO API for accurate detection
-    local weaoSuccess, weaoData = pcall(function()
-        local weaoUrl = "https://api.weao.dev/executor"
-        local reqFn = nil
-        if type(request)=='function' then reqFn=request
-        elseif type(http_request)=='function' then reqFn=http_request
-        elseif type(syn)=='table' and type(syn.request)=='function' then reqFn=syn.request
-        elseif type(fluxus)=='table' and type(fluxus.request)=='function' then reqFn=fluxus.request
-        end
-        if not reqFn then return nil end
-        local result = reqFn({Url=weaoUrl, Method='GET'})
-        if type(result)=='table' and type(result.Body)=='string' then
-            local json = cloneref(game:GetService('HttpService')):JSONDecode(result.Body)
-            return json
-        end
-        return nil
-    end)
-    
-    if weaoSuccess and type(weaoData)=='table' then
-        __detectedExecutor = weaoData.name or weaoData.executor or "unknown"
-        __executorCapabilities = weaoData.capabilities or weaoData.features or {}
-        return
-    end
-    
-    -- Fallback: detect using local patterns
+    -- Detect using local patterns (WEAO API skipped - causes hangs on some executors)
     local executorPatterns = {
         {name="Synapse X", check=function() return type(syn)=='table' and type(syn.request)=='function' end},
         {name="Fluxus", check=function() return type(fluxus)=='table' and type(fluxus.request)=='function' end},
-        {name="Krnl", check=function() return type(request)=='function' and type(syn)~='table' end},
-        {name="Xeno", check=function() return type(request)=='function' and type(syn)~='table' end},
-        {name="Solora", check=function() return type(request)=='function' and type(syn)~='table' end},
-        {name="Wave", check=function() return type(request)=='function' and type(syn)~='table' end},
-        {name="Arceus X", check=function() return type(request)=='function' and type(syn)~='table' end},
-        {name="Delta", check=function() return type(request)=='function' and type(syn)~='table' end},
-        {name="Hydrogen", check=function() return type(request)=='function' and type(syn)~='table' end},
-        {name="Electron", check=function() return type(request)=='function' and type(syn)~='table' end},
+        {name="Krnl", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
+        {name="Xeno", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
+        {name="Solora", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
+        {name="Wave", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
+        {name="Arceus X", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
+        {name="Delta", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
+        {name="Hydrogen", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
+        {name="Electron", check=function() return type(request)=='function' and type(syn)~='table' and type(fluxus)~='table' end},
     }
     
     for _, executor in ipairs(executorPatterns) do

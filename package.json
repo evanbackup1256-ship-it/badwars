@@ -2,7 +2,7 @@
   "name": "badwars-site",
   "version": "2.0.1",
   "private": true,
-  "description": "BadWars premium website, dashboard, download center, and Roblox update status API.",
+  "description": "BadWars website, dashboard, download center, and Roblox update status API.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

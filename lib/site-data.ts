@@ -24,9 +24,6 @@ export const navItems = [
   { label: "Home", href: "/" },
   { label: "Features", href: "/features" },
   { label: "Downloads", href: "/downloads" },
-  { label: "Documentation", href: "/#documentation" },
-  { label: "Support", href: "/#support" },
-  { label: "Community", href: "/#community" },
   { label: "Changelog", href: "/changelog" }
 ];
 
@@ -36,7 +33,7 @@ export const features = [
   { icon: Gamepad2, title: "Route-aware modules", description: "Known place IDs resolve into nested game routes instead of falling through as unknown.", tone: "accent" },
   { icon: ShieldCheck, title: "Isolated module health", description: "Module callbacks are guarded, failures are recorded, and broken modules are disabled instead of crashing the bundle.", tone: "success" },
   { icon: Search, title: "Support-grade search", description: "Search spans games, releases, support answers, module routes, and status language.", tone: "primary" },
-  { icon: Palette, title: "Polished control surface", description: "Sharper controls, readable density, reduced-motion support, and persistent theme handling.", tone: "secondary" }
+  { icon: Palette, title: "Refined control surface", description: "Sharper controls, readable density, reduced-motion support, and persistent theme handling.", tone: "secondary" }
 ];
 
 export const games = [
@@ -62,7 +59,7 @@ export const releases = [
 export const changelog = [
   { version: "2.2.0", category: "V14", title: "Clean animated UI pass", description: "Game GUI moved to V14 with cleaner chrome, guarded settings panes, fresh motion, and synced loader fallback.", date: "Jul 2026" },
   { version: "2.1.0", category: "Overhaul", title: "Runtime and website refresh", description: "Sharper public UI, larger game inventory, synced loader refs, and repaired local validation checks.", date: "Jul 2026" },
-  { version: "2.0.0", category: "Website", title: "Premium Next.js launch", description: "Landing, dashboard, downloads, changelog, settings, admin shell, themes, and animations rebuilt.", date: "Jul 2026" },
+  { version: "2.0.0", category: "Website", title: "Next.js rebuild", description: "Landing, dashboard, downloads, changelog, settings, admin shell, themes, and animations rebuilt.", date: "Jul 2026" },
   { version: "1.8.4", category: "Runtime", title: "Roblox warning layer", description: "Loader can read the website status API and warn when Roblox client versions move.", date: "Jul 2026" },
   { version: "1.8.3", category: "Routing", title: "Game detection repair", description: "Nested module paths are resolved for supported games that previously looked unknown.", date: "Jul 2026" },
   { version: "1.7.9", category: "Cache", title: "Raw GitHub paths fixed", description: "Spaces in game module paths are escaped before remote downloads.", date: "Jul 2026" }

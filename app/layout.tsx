@@ -25,16 +25,16 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://badwars-production.up.railway.app"),
   title: {
-    default: "BadWars — Premium Roblox Loader Console",
-    template: "%s • BadWars"
+    default: "BadWars — Roblox Loader Console",
+    template: "%s — BadWars"
   },
-  description: "The premium loader console. Live Roblox status, one-click latest loader, full game routing, and professional diagnostics. In-game UI now powered by WindUI (tabs, notifications, seamless module controls).",
+  description: "Loader console for Roblox. Route-aware module bundles, executor fingerprinting, and a WindUI interface. Live status, one-click deploy, full game routing.",
   icons: {
     icon: "/logo.svg"
   },
   openGraph: {
     title: "BadWars",
-    description: "Copy the newest loader. Know when Roblox updates. Every supported route, instantly.",
+    description: "Loader console for Roblox. Route-aware module bundles, executor fingerprinting, and a WindUI interface.",
     images: [{ url: "/logo.svg" }],
   },
 };

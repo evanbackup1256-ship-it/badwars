@@ -190,8 +190,8 @@ export function Footer() {
                 <span className="text-foreground">WARS</span>
               </span>
             </Link>
-            <p className="text-sm text-muted-foreground max-w-md font-mono">
-              The premium Roblox loader console. Live status, one-click deployment, and professional diagnostics.
+              <p className="text-sm text-muted-foreground max-w-md font-mono">
+              The Roblox loader console. Live status, one-click deployment, and full diagnostics.
             </p>
           </div>
 
@@ -269,9 +269,9 @@ export function LandingPage() {
               </h1>
 
               <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto font-mono">
-                The premium loader console for Roblox.
+                The loader console for Roblox.
                 <br />
-                <span className="text-primary">Live status. One-click deploy. Professional diagnostics.</span>
+                <span className="text-primary">Live status. One-click deploy. Full diagnostics.</span>
               </p>
             </motion.div>
 
@@ -359,13 +359,13 @@ export function LandingPage() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-primary/30 bg-primary/5 mb-6 font-mono text-xs uppercase tracking-wider">
               <Terminal className="h-3 w-3 text-primary" />
-              <span className="text-primary">System Features</span>
+              <span className="text-primary">Architecture</span>
             </div>
             <h2 className="font-display text-4xl md:text-5xl font-black mb-4">
-              Core Modules
+              How it works
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-mono">
-              Everything you need for reliable loader deployment.
+              Six subsystems handle execution, isolation, routing, diagnostics, detection, and interface.
             </p>
           </motion.div>
 
@@ -373,7 +373,7 @@ export function LandingPage() {
             {[
               { icon: Zap, label: "One-Click Deploy", description: "Copy and paste the loader directly into your executor", color: "text-primary" },
               { icon: Activity, label: "Live Status", description: "Real-time Roblox update monitoring and alerts", color: "text-success" },
-              { icon: Shield, label: "Premium UI", description: "WindUI-powered interface with seamless module controls", color: "text-primary" },
+              { icon: Shield, label: "WindUI Interface", description: "Tabbed interface with seamless module controls and notification pipeline", color: "text-primary" },
             ].map((feature, i) => {
               const Icon = feature.icon;
               return (
@@ -412,10 +412,10 @@ export function LandingPage() {
               <span className="text-primary">Route Inventory</span>
             </div>
             <h2 className="font-display text-4xl md:text-5xl font-black mb-4">
-              {games.length} Games Ready
+              {games.length} Games Mapped
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-mono">
-              Full compatibility with popular Roblox experiences.
+              Place ID resolution routes to nested module bundles.
             </p>
           </motion.div>
 
@@ -474,12 +474,12 @@ export function LandingPage() {
           >
             <div className="relative z-10">
               <h2 className="font-display text-4xl md:text-5xl font-black mb-4">
-                Ready to Deploy?
+                One Line. That's It.
               </h2>
               <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto font-mono">
-                Copy the loader now and get started in seconds.
+                Paste the loader into your executor. Cache, diagnostics, module bundles, and UI — handled.
                 <br />
-                <span className="text-primary">No accounts. No downloads. No hassle.</span>
+                <span className="text-primary">No accounts. No downloads. No setup.</span>
               </p>
 
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -489,7 +489,7 @@ export function LandingPage() {
                   onClick={copyLatestLoader}
                 >
                   <Copy className="h-4 w-4" />
-                  Copy Loader Now
+                  Copy Loader
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </motion.div>

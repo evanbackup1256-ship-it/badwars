@@ -415,10 +415,71 @@ if not loadstring then
     loadstring = load or function(code) error("loadstring unavailable") end
 end
 
--- HTTP polyfill: discover all available request functions
+-- Executor detection using WEAO API and local patterns
+local __detectedExecutor = "unknown"
+local __executorCapabilities = {}
+
+local function detectExecutor()
+    -- First try WEAO API for accurate detection
+    local weaoSuccess, weaoData = pcall(function()
+        local weaoUrl = "https://api.weao.dev/executor"
+        local reqFn = nil
+        if type(request)=='function' then reqFn=request
+        elseif type(http_request)=='function' then reqFn=http_request
+        elseif type(syn)=='table' and type(syn.request)=='function' then reqFn=syn.request
+        elseif type(fluxus)=='table' and type(fluxus.request)=='function' then reqFn=fluxus.request
+        end
+        if not reqFn then return nil end
+        local result = reqFn({Url=weaoUrl, Method='GET'})
+        if type(result)=='table' and type(result.Body)=='string' then
+            local json = cloneref(game:GetService('HttpService')):JSONDecode(result.Body)
+            return json
+        end
+        return nil
+    end)
+    
+    if weaoSuccess and type(weaoData)=='table' then
+        __detectedExecutor = weaoData.name or weaoData.executor or "unknown"
+        __executorCapabilities = weaoData.capabilities or weaoData.features or {}
+        return
+    end
+    
+    -- Fallback: detect using local patterns
+    local executorPatterns = {
+        {name="Synapse X", check=function() return type(syn)=='table' and type(syn.request)=='function' end},
+        {name="Fluxus", check=function() return type(fluxus)=='table' and type(fluxus.request)=='function' end},
+        {name="Krnl", check=function() return type(request)=='function' and type(syn)~='table' end},
+        {name="Xeno", check=function() return type(request)=='function' and type(syn)~='table' end},
+        {name="Solora", check=function() return type(request)=='function' and type(syn)~='table' end},
+        {name="Wave", check=function() return type(request)=='function' and type(syn)~='table' end},
+        {name="Arceus X", check=function() return type(request)=='function' and type(syn)~='table' end},
+        {name="Delta", check=function() return type(request)=='function' and type(syn)~='table' end},
+        {name="Hydrogen", check=function() return type(request)=='function' and type(syn)~='table' end},
+        {name="Electron", check=function() return type(request)=='function' and type(syn)~='table' end},
+    }
+    
+    for _, executor in ipairs(executorPatterns) do
+        if executor.check() then
+            __detectedExecutor = executor.name
+            return
+        end
+    end
+    
+    if game and type(game.HttpGet)=='function' then
+        __detectedExecutor = "Roblox Native"
+    elseif type(getgenv)=='function' then
+        local env = getgenv()
+        if type(env)=='table' and type(env.HttpGet)=='function' then
+            __detectedExecutor = "Executor (getgenv)"
+        end
+    end
+end
+
+detectExecutor()
+
+-- Configure HTTP methods based on detected executor
 local __httpFunctions = {}
 
--- Helper to extract body from response (handles all formats)
 local function extractBody(result)
     if type(result)=='string' then return result end
     if type(result)~='table' then return nil end
@@ -428,7 +489,6 @@ local function extractBody(result)
         or result.Content or result.content
 end
 
--- Helper to try request with multiple formats
 local function tryRequest(reqFn, url)
     local ok, result = pcall(function() return reqFn({Url=url, Method='GET'}) end)
     if ok then local body = extractBody(result) if body then return body end end
@@ -447,7 +507,72 @@ local function tryRequest(reqFn, url)
     return nil
 end
 
--- Discover HTTP functions
+if __detectedExecutor == "Synapse X" then
+    pcall(function()
+        if type(syn)=='table' and type(syn.request)=='function' then
+            local synReq = syn.request
+            table.insert(__httpFunctions, {name='syn.request', fn=function(url) return tryRequest(synReq, url) end})
+        end
+    end)
+    pcall(function()
+        if type(syn)=='table' and type(syn.http_request)=='function' then
+            local synHttpReq = syn.http_request
+            table.insert(__httpFunctions, {name='syn.http_request', fn=function(url) return tryRequest(synHttpReq, url) end})
+        end
+    end)
+    pcall(function()
+        if type(syn)=='table' and type(syn.http_get)=='function' then
+            local synHttpGet = syn.http_get
+            table.insert(__httpFunctions, {name='syn.http_get', fn=function(url)
+                local ok, result = pcall(function() return synHttpGet(url) end)
+                if ok and type(result)=='string' then return result end
+                return nil
+            end})
+        end
+    end)
+elseif __detectedExecutor == "Fluxus" then
+    pcall(function()
+        if type(fluxus)=='table' and type(fluxus.request)=='function' then
+            local fluxusReq = fluxus.request
+            table.insert(__httpFunctions, {name='fluxus.request', fn=function(url) return tryRequest(fluxusReq, url) end})
+        end
+    end)
+    pcall(function()
+        if type(fluxus)=='table' and type(fluxus.http_get)=='function' then
+            local fluxusHttpGet = fluxus.http_get
+            table.insert(__httpFunctions, {name='fluxus.http_get', fn=function(url)
+                local ok, result = pcall(function() return fluxusHttpGet(url) end)
+                if ok and type(result)=='string' then return result end
+                return nil
+            end})
+        end
+    end)
+else
+    pcall(function()
+        if type(request)=='function' then
+            table.insert(__httpFunctions, {name='request', fn=function(url) return tryRequest(request, url) end})
+        end
+    end)
+    pcall(function()
+        if type(http_request)=='function' then
+            table.insert(__httpFunctions, {name='http_request', fn=function(url) return tryRequest(http_request, url) end})
+        end
+    end)
+    pcall(function()
+        local env = type(getgenv)=='function' and getgenv() or nil
+        if type(env)=='table' then
+            if type(env.request)=='function' then
+                local genvReq = env.request
+                table.insert(__httpFunctions, {name='getgenv.request', fn=function(url) return tryRequest(genvReq, url) end})
+            end
+            if type(env.http_request)=='function' then
+                local genvHttpReq = env.http_request
+                table.insert(__httpFunctions, {name='getgenv.http_request', fn=function(url) return tryRequest(genvHttpReq, url) end})
+            end
+        end
+    end)
+end
+
 pcall(function()
     if game and type(game.HttpGet)=='function' then
         table.insert(__httpFunctions, {name='game.HttpGet', fn=function(url)
@@ -472,69 +597,7 @@ pcall(function()
         end})
     end
 end)
-pcall(function()
-    if type(request)=='function' then
-        table.insert(__httpFunctions, {name='request', fn=function(url) return tryRequest(request, url) end})
-    end
-end)
-pcall(function()
-    if type(http_request)=='function' then
-        table.insert(__httpFunctions, {name='http_request', fn=function(url) return tryRequest(http_request, url) end})
-    end
-end)
-pcall(function()
-    if type(syn)=='table' and type(syn.request)=='function' then
-        local synReq = syn.request
-        table.insert(__httpFunctions, {name='syn.request', fn=function(url) return tryRequest(synReq, url) end})
-    end
-end)
-pcall(function()
-    if type(syn)=='table' and type(syn.http_request)=='function' then
-        local synHttpReq = syn.http_request
-        table.insert(__httpFunctions, {name='syn.http_request', fn=function(url) return tryRequest(synHttpReq, url) end})
-    end
-end)
-pcall(function()
-    if type(syn)=='table' and type(syn.http_get)=='function' then
-        local synHttpGet = syn.http_get
-        table.insert(__httpFunctions, {name='syn.http_get', fn=function(url)
-            local ok, result = pcall(function() return synHttpGet(url) end)
-            if ok and type(result)=='string' then return result end
-            return nil
-        end})
-    end
-end)
-pcall(function()
-    if type(fluxus)=='table' and type(fluxus.request)=='function' then
-        local fluxusReq = fluxus.request
-        table.insert(__httpFunctions, {name='fluxus.request', fn=function(url) return tryRequest(fluxusReq, url) end})
-    end
-end)
-pcall(function()
-    if type(fluxus)=='table' and type(fluxus.http_get)=='function' then
-        local fluxusHttpGet = fluxus.http_get
-        table.insert(__httpFunctions, {name='fluxus.http_get', fn=function(url)
-            local ok, result = pcall(function() return fluxusHttpGet(url) end)
-            if ok and type(result)=='string' then return result end
-            return nil
-        end})
-    end
-end)
-pcall(function()
-    local env = type(getgenv)=='function' and getgenv() or nil
-    if type(env)=='table' then
-        if type(env.request)=='function' then
-            local genvReq = env.request
-            table.insert(__httpFunctions, {name='getgenv.request', fn=function(url) return tryRequest(genvReq, url) end})
-        end
-        if type(env.http_request)=='function' then
-            local genvHttpReq = env.http_request
-            table.insert(__httpFunctions, {name='getgenv.http_request', fn=function(url) return tryRequest(genvHttpReq, url) end})
-        end
-    end
-end)
 
--- Fallback: if no HTTP functions discovered, add direct calls as last resort
 if #__httpFunctions == 0 then
     pcall(function() table.insert(__httpFunctions, {name='fallback.game.HttpGet', fn=function(url) return game:HttpGet(url, true) end}) end)
     pcall(function()

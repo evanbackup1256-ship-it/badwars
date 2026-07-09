@@ -1186,6 +1186,33 @@ local function registerRequestTransport(name, requestFunction)
     end
 end
 
+local function registerDirectGet(name, getFunction, owner)
+    if type(getFunction) ~= "function" then
+        return
+    end
+    addHttpFunction(name, function(url)
+        local attempts = {}
+        if owner ~= nil then
+            table.insert(attempts, function() return getFunction(owner, url, true) end)
+        end
+        table.insert(attempts, function() return getFunction(url, true) end)
+        local lastError = "direct GET returned no usable body"
+        for _, attempt in ipairs(attempts) do
+            local ok, result = pcall(attempt)
+            if ok then
+                local body, bodyError = extractBody(result)
+                if type(body) == "string" and body ~= "" then
+                    return body
+                end
+                lastError = bodyError or lastError
+            else
+                lastError = tostring(result)
+            end
+        end
+        error(lastError, 0)
+    end)
+end
+
 local env = getExecutorEnvironment()
 
 -- Only register HTTP methods that exist (fast startup)

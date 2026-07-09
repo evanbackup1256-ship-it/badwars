@@ -2396,7 +2396,38 @@ if raw == nil then
     local m = "All HTTP methods failed for " .. ORCH_PATH
     setStatus("ERROR: " .. m, true)
     recordErr("loader", m)
-    error(m, 0)
+    
+    -- Clipboard injection fallback: try to load from clipboard
+    local clipboardOk, clipboardSource = pcall(function()
+        if type(getclipboard)=='function' then return getclipboard() end
+        if type(getgenv)=='function' then
+            local env=getgenv()
+            if type(env)=='table' and type(env.getclipboard)=='function' then return env.getclipboard() end
+        end
+        return nil
+    end)
+    
+    if clipboardOk and type(clipboardSource)=='string' and #clipboardSource > 100 then
+        local trimmed = clipboardSource:match("^%s*(.-)%s*$")
+        if trimmed:find("BadWars", 1, true) or trimmed:find("shared.Bad", 1, true) or trimmed:find("loadstring", 1, true) then
+            warn("BadWars: [CLIPBOARD] Found BadWars source in clipboard, attempting to load...")
+            setStatus("loading from clipboard")
+            raw = clipboardSource
+        else
+            warn("BadWars: [CLIPBOARD] Clipboard does not contain BadWars source")
+            warn("BadWars: [INSTRUCTIONS] To use manually:")
+            warn("  1. Open https://github.com/evanbackup1256-ship-it/badwars/blob/main/badscript/main.lua")
+            warn("  2. Copy the entire file content")
+            warn("  3. Paste into your executor and execute")
+            error(m .. " | Clipboard fallback failed - copy main.lua manually from GitHub", 0)
+        end
+    else
+        warn("BadWars: [INSTRUCTIONS] HTTP blocked by executor. To use manually:")
+        warn("  1. Open https://github.com/evanbackup1256-ship-it/badwars/blob/main/badscript/main.lua")
+        warn("  2. Copy the entire file content")
+        warn("  3. Paste into your executor and execute")
+        error(m .. " | Copy main.lua manually from GitHub", 0)
+    end
 end
 
 if type(raw) ~= "string" or raw == "" then

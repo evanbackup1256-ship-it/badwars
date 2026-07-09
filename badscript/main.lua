@@ -1595,14 +1595,14 @@ local function isCorruptedBody(body)
     if type(body) ~= "string" or #body < 10 then
         return true
     end
-
+    if #body > 2000 then
+        return false
+    end
     local trimmed = body:match("^%s*(.-)%s*$")
     local lower = string.lower(trimmed)
-
     if lower:find("<!doctype", 1, true) or lower:find("<html", 1, true) then
         return true
     end
-
     local nonPrintable = 0
     for index = 1, math.min(#body, 300) do
         local byte = body:byte(index)
@@ -1610,7 +1610,6 @@ local function isCorruptedBody(body)
             nonPrintable += 1
         end
     end
-
     return nonPrintable > 20
 end
 

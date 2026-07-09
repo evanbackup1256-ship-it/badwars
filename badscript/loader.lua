@@ -211,45 +211,28 @@ local isNotFoundBody
 local function httpGet(urls)
 	for _,url in ipairs(urls) do
 		local fn
-		pcall(function()fn=game and game.HttpGet end)
+		pcall(function()if game and type(game.HttpGet)=='function' then fn=game.HttpGet end end)
 		if type(fn)~='function' then
-			local env=getgenv and type(getgenv)=='function' and getgenv()
-			if type(env)=='table' then fn=env.HttpGet end
+			local env
+			pcall(function()env = getgenv and type(getgenv)=='function' and getgenv() or nil end)
+			if type(env)=='table' and type(env.HttpGet)=='function' then fn=env.HttpGet end
 		end
 		if type(fn)=='function' then
-			local ok,res=callWithTimeout(function()return fn(game,url,true)end,15)
+			local ok,res=callWithTimeout(function()
+				if game then return fn(game,url,true) end
+				return nil
+			end,15)
 			if ok and type(res)=='string' and #res>0 and not isNotFoundBody(res) and not isRateLimited(res) then return res,url end
 		end
 		local ok,res=callWithTimeout(function()
-			local svc=cloneref(game:GetService('HttpService'))
+			local svc
+			pcall(function()svc=cloneref(game:GetService('HttpService')) end)
 			if svc and type(svc.GetAsync)=='function' then
 				return svc:GetAsync(url,true)
 			end
 			return nil
 		end,15)
 		if ok and type(res)=='string' and #res>0 and not isNotFoundBody(res) and not isRateLimited(res) then return res,url end
-		-- Try request/http_request as last resort
-		local reqFn
-		pcall(function()
-			if type(request)=='function' then reqFn=request
-			elseif type(http_request)=='function' then reqFn=http_request
-			elseif type(syn)=='table' and type(syn.request)=='function' then reqFn=syn.request
-			elseif type(fluxus)=='table' and type(fluxus.request)=='function' then reqFn=fluxus.request
-			end
-		end)
-		if type(reqFn)=='function' then
-			local reqOk,reqRes=callWithTimeout(function()
-				local result=reqFn({Url=url,Method='GET'})
-				if type(result)=='table' then
-					if type(result.Body)=='string' then return result
-					elseif type(result.body)=='string' then return {Body=result.body} end
-				elseif type(result)=='string' then return {Body=result} end
-				return nil
-			end,15)
-			if reqOk and type(reqRes)=='table' and type(reqRes.Body)=='string' and #reqRes.Body>0 and not isNotFoundBody(reqRes.Body) and not isRateLimited(reqRes.Body) then
-				return reqRes.Body,url
-			end
-		end
 	end
 	return nil,nil
 end

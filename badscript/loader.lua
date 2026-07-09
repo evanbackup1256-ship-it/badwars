@@ -213,6 +213,8 @@ local function callWithTimeout(callback, timeout)
 end
 
 local isNotFoundBody
+local isRateLimited
+local isCorruptedBody
 
 local function httpGet(urls)
 	for _,url in ipairs(urls) do
@@ -243,17 +245,13 @@ local function httpGet(urls)
 	return nil,nil
 end
 
-local function isCorruptedBody(body)
+isCorruptedBody = function(body)
 	if type(body) ~= 'string' or #body < 50 then return true end
 	local trimmed = body:match('^%s*(.-)%s*$')
-	-- Reject HTML pages
 	if trimmed:find('<!DOCTYPE', 1, true) or trimmed:find('<html', 1, true) then return true end
-	-- Reject pages that are clearly not Lua (no valid Lua content)
 	if not trimmed:find('function', 1, true) and not trimmed:find('local ', 1, true) and not trimmed:find('--', 1, true) then
-		-- Check for common non-Lua error indicators
 		if trimmed:find('<', 1, true) and trimmed:find('>', 1, true) then return true end
 	end
-	-- Reject if contains too many non-printable characters (likely binary/corrupted)
 	local nonPrintable = 0
 	for i = 1, math.min(#body, 200) do
 		local c = body:byte(i)
@@ -271,7 +269,7 @@ isNotFoundBody = function(body)
 	return trimmed=='404: Not Found' or trimmed=='{"message":"Not Found"}' or (#trimmed<200 and trimmed:find('"message"%s*:%s*"Not Found"')~=nil)
 end
 
-local isRateLimited = function(body)
+isRateLimited = function(body)
 	if type(body) ~= 'string' then return false end
 	local trimmed = body:match('^%s*(.-)%s*$')
 	if trimmed:find('429', 1, true) and #trimmed < 300 then return true end

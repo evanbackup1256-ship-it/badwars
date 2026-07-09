@@ -201,7 +201,7 @@ end
 -- This ensures the latest code is always downloaded, even if old loader is cached
 pcall(function()
     local oldCacheVersion = isfile('badscript/profiles/cache-version.txt') and readfile('badscript/profiles/cache-version.txt') or ''
-    if oldCacheVersion ~= 'badwars-v24-windui-2026-07-08-11' then
+    if oldCacheVersion ~= 'badwars-v25-windui-2026-07-08-12' then
         -- Clear old main.lua and diagnostics to force fresh download
         local filesToClear = {
             'badscript/main.lua',
@@ -227,7 +227,7 @@ pcall(function()
             end
         end
         -- Write new cache version
-        pcall(writefile, 'badscript/profiles/cache-version.txt', 'badwars-v24-windui-2026-07-08-11')
+        pcall(writefile, 'badscript/profiles/cache-version.txt', 'badwars-v25-windui-2026-07-08-12')
     end
 end)
 
@@ -1367,16 +1367,18 @@ local function httpGet(urls)
         for _, httpFunction in ipairs(__httpFunctions) do
             local ok, response, failure = callWithTimeout(function()
                 return httpFunction.fn(url)
-            end, 15)
+            end, 2)
 
             if ok then
                 local rejected = rejectionReason(response)
                 if not rejected then
                     return response, url, httpFunction.name
                 end
+                -- Log first 150 chars of rejected response for debugging
+                local preview = type(response) == "string" and response:sub(1, 150) or tostring(response)
                 table.insert(
                     __lastHttpDiagnostics,
-                    httpFunction.name .. " | " .. url .. " | rejected: " .. rejected
+                    httpFunction.name .. " | " .. url .. " | rejected: " .. rejected .. " | body: " .. preview
                 )
             else
                 table.insert(
@@ -2275,7 +2277,7 @@ if isfile(ORCH_PATH) then
     end
 end
 
-local cacheVersion = 'badwars-v24-windui-2026-07-08-11'
+local cacheVersion = 'badwars-v25-windui-2026-07-08-12'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"

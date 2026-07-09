@@ -162,6 +162,8 @@ local function rawUrls(path)
     return {
         "https://github.com/" .. repo .. "/raw/" .. CFG.branch .. "/" .. p .. query,
         "https://raw.githubusercontent.com/" .. repo .. "/" .. CFG.branch .. "/" .. p .. query,
+        "https://cdn.jsdelivr.net/gh/" .. repo .. "@" .. CFG.branch .. "/" .. p .. query,
+        "https://cdn.statically.io/gh/" .. repo .. "/" .. CFG.branch .. "/" .. p .. query,
     }
 end
 -- Safe helpers
@@ -415,8 +417,39 @@ end
 
 -- HTTP polyfill: discover all available request functions
 local __httpFunctions = {}
+
+-- Helper to extract body from response (handles all formats)
+local function extractBody(result)
+    if type(result)=='string' then return result end
+    if type(result)~='table' then return nil end
+    return result.Body or result.body or result.StatusCode and result.Body
+        or result.status and result.Body or result.Status and result.Body
+        or result.Response or result.response or result.Data or result.data
+        or result.Content or result.content
+end
+
+-- Helper to try request with multiple formats
+local function tryRequest(reqFn, url)
+    local ok, result = pcall(function() return reqFn({Url=url, Method='GET'}) end)
+    if ok then local body = extractBody(result) if body then return body end end
+    ok, result = pcall(function() return reqFn({url=url, method='GET'}) end)
+    if ok then local body = extractBody(result) if body then return body end end
+    ok, result = pcall(function() return reqFn({URI=url, Method='GET'}) end)
+    if ok then local body = extractBody(result) if body then return body end end
+    ok, result = pcall(function() return reqFn({Url=url, Type='GET'}) end)
+    if ok then local body = extractBody(result) if body then return body end end
+    ok, result = pcall(function() return reqFn(url) end)
+    if ok then local body = extractBody(result) if body then return body end end
+    ok, result = pcall(function() return reqFn(url, 'GET') end)
+    if ok then local body = extractBody(result) if body then return body end end
+    ok, result = pcall(function() return reqFn('GET', url) end)
+    if ok then local body = extractBody(result) if body then return body end end
+    return nil
+end
+
+-- Discover HTTP functions
 pcall(function()
-    if game and type(game.HttpGet) == 'function' then
+    if game and type(game.HttpGet)=='function' then
         table.insert(__httpFunctions, {name='game.HttpGet', fn=function(url)
             return game:HttpGet(url, true)
         end})
@@ -441,75 +474,49 @@ pcall(function()
 end)
 pcall(function()
     if type(request)=='function' then
-        table.insert(__httpFunctions, {name='request', fn=function(url)
-            local result = request({Url=url, Method='GET'})
-            if type(result)=='table' then return result.Body or result.body or result end
-            return result
-        end})
-        table.insert(__httpFunctions, {name='request(lowercase)', fn=function(url)
-            local result = request({url=url, method='GET'})
-            if type(result)=='table' then return result.Body or result.body or result end
-            return result
-        end})
-        table.insert(__httpFunctions, {name='request(simple)', fn=function(url)
-            local result = request(url)
-            if type(result)=='table' then return result.Body or result.body or result end
-            return result
-        end})
+        table.insert(__httpFunctions, {name='request', fn=function(url) return tryRequest(request, url) end})
     end
 end)
 pcall(function()
     if type(http_request)=='function' then
-        table.insert(__httpFunctions, {name='http_request', fn=function(url)
-            local result = http_request({Url=url, Method='GET'})
-            if type(result)=='table' then return result.Body or result.body or result end
-            return result
-        end})
+        table.insert(__httpFunctions, {name='http_request', fn=function(url) return tryRequest(http_request, url) end})
     end
 end)
 pcall(function()
     if type(syn)=='table' and type(syn.request)=='function' then
         local synReq = syn.request
-        table.insert(__httpFunctions, {name='syn.request', fn=function(url)
-            local result = synReq({Url=url, Method='GET'})
-            if type(result)=='table' then return result.Body or result.body or result end
-            return result
-        end})
+        table.insert(__httpFunctions, {name='syn.request', fn=function(url) return tryRequest(synReq, url) end})
     end
 end)
 pcall(function()
     if type(syn)=='table' and type(syn.http_request)=='function' then
         local synHttpReq = syn.http_request
-        table.insert(__httpFunctions, {name='syn.http_request', fn=function(url)
-            local result = synHttpReq({Url=url, Method='GET'})
-            if type(result)=='table' then return result.Body or result.body or result end
-            return result
-        end})
+        table.insert(__httpFunctions, {name='syn.http_request', fn=function(url) return tryRequest(synHttpReq, url) end})
     end
 end)
 pcall(function()
     if type(syn)=='table' and type(syn.http_get)=='function' then
         local synHttpGet = syn.http_get
         table.insert(__httpFunctions, {name='syn.http_get', fn=function(url)
-            return synHttpGet(url)
+            local ok, result = pcall(function() return synHttpGet(url) end)
+            if ok and type(result)=='string' then return result end
+            return nil
         end})
     end
 end)
 pcall(function()
     if type(fluxus)=='table' and type(fluxus.request)=='function' then
         local fluxusReq = fluxus.request
-        table.insert(__httpFunctions, {name='fluxus.request', fn=function(url)
-            local result = fluxusReq({Url=url, Method='GET'})
-            if type(result)=='table' then return result.Body or result.body or result end
-            return result
-        end})
+        table.insert(__httpFunctions, {name='fluxus.request', fn=function(url) return tryRequest(fluxusReq, url) end})
     end
 end)
 pcall(function()
     if type(fluxus)=='table' and type(fluxus.http_get)=='function' then
         local fluxusHttpGet = fluxus.http_get
         table.insert(__httpFunctions, {name='fluxus.http_get', fn=function(url)
-            return fluxusHttpGet(url)
+            local ok, result = pcall(function() return fluxusHttpGet(url) end)
+            if ok and type(result)=='string' then return result end
+            return nil
         end})
     end
 end)
@@ -518,22 +525,23 @@ pcall(function()
     if type(env)=='table' then
         if type(env.request)=='function' then
             local genvReq = env.request
-            table.insert(__httpFunctions, {name='getgenv.request', fn=function(url)
-                local result = genvReq({Url=url, Method='GET'})
-                if type(result)=='table' then return result.Body or result.body or result end
-                return result
-            end})
+            table.insert(__httpFunctions, {name='getgenv.request', fn=function(url) return tryRequest(genvReq, url) end})
         end
         if type(env.http_request)=='function' then
             local genvHttpReq = env.http_request
-            table.insert(__httpFunctions, {name='getgenv.http_request', fn=function(url)
-                local result = genvHttpReq({Url=url, Method='GET'})
-                if type(result)=='table' then return result.Body or result.body or result end
-                return result
-            end})
+            table.insert(__httpFunctions, {name='getgenv.http_request', fn=function(url) return tryRequest(genvHttpReq, url) end})
         end
     end
 end)
+
+-- Fallback: if no HTTP functions discovered, add direct calls as last resort
+if #__httpFunctions == 0 then
+    pcall(function() table.insert(__httpFunctions, {name='fallback.game.HttpGet', fn=function(url) return game:HttpGet(url, true) end}) end)
+    pcall(function()
+        local svc = cloneref(game:GetService('HttpService'))
+        if svc then table.insert(__httpFunctions, {name='fallback.HttpService', fn=function(url) return svc:GetAsync(url, true) end}) end
+    end)
+end
 
 local BadwarsLoader
 local function createCustomSignal(key, delay)
@@ -759,7 +767,7 @@ local function httpGetMulti(urls)
             local ok, res = callWithTimeout(function()
                 return httpFn.fn(url)
             end, 15)
-            if ok and type(res) == "string" and #res >= 50 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then
+            if ok and type(res) == "string" and #res >= 10 and not isNotFoundBody(res) and not isRateLimited(res) and not isCorruptedBody(res) then
                 return res
             end
         end
@@ -809,11 +817,12 @@ local function isRateLimited(body)
 end
 
 local function isCorruptedBody(body)
-    if type(body) ~= "string" or #body < 50 then return true end
+    if type(body) ~= "string" or #body < 10 then return true end
     local trimmed = body:match("^%s*(.-)%s*$")
-    -- Reject HTML pages
     if trimmed:find("<!DOCTYPE", 1, true) or trimmed:find("<html", 1, true) then return true end
-    -- Reject if contains too many non-printable characters (likely binary/corrupted)
+    if not trimmed:find('function', 1, true) and not trimmed:find('local ', 1, true) and not trimmed:find('--', 1, true) then
+        if trimmed:find('<', 1, true) and trimmed:find('>', 1, true) then return true end
+    end
     local nonPrintable = 0
     for i = 1, math.min(#body, 200) do
         local c = body:byte(i)
@@ -821,7 +830,7 @@ local function isCorruptedBody(body)
             nonPrintable = nonPrintable + 1
         end
     end
-    if nonPrintable > 10 then return true end
+    if nonPrintable > 20 then return true end
     return false
 end
 
@@ -891,6 +900,9 @@ local function downloadFile(path, maxRetries)
     end
     if isRateLimited(res) then
         return nil, "RATE LIMITED: GitHub is throttling requests"
+    end
+    if isCorruptedBody(res) then
+        return nil, "CORRUPTED: Response is not valid content"
     end
     if path:sub(-4) == ".lua" then
         res = "-- BadWars by usingINales\n" .. res

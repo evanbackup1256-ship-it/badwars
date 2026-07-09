@@ -180,6 +180,9 @@ if not loadstring then
 end
 
 -- Executor detection using local patterns
+-- WEAO API (https://weao.xyz/api/status/exploits) only provides executor STATUS info
+-- (detected, updated, version, etc.) — it cannot detect which executor you're running on.
+-- Detection must be done locally by checking which global functions exist.
 local __detectedExecutor = "unknown"
 local __executorCapabilities = {}
 

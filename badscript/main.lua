@@ -3108,33 +3108,16 @@ if not shared.BadIndependent then
     local shown = showInterface(finalizedApi or api)
     setStatus("ready - " .. string.format("%.2f", el) .. "s")
 
--- For WindUI (or any modern GUI): ensure main UI is visible after full bootstrap
-pcall(function()
-    local B = shared.Bad
-    if B and type(B.Show) == "function" then
-        B:Show()
-    end
-end)
-
--- Dismiss the loader status overlay now that we're ready (prevents it lingering on top of WindUI)
-pcall(function()
-    if shared and shared.BadStatusGui and typeof(shared.BadStatusGui) == "Instance" then
-        shared.BadStatusGui:Destroy()
-        shared.BadStatusGui = nil
-    end
-    -- also try direct name in case (use safe parent lookup)
-    local parent = nil
+    -- For WindUI (or any modern GUI): ensure main UI is visible after full bootstrap
     pcall(function()
-        if type(gethui) == "function" then parent = gethui() end
+        local B = shared.Bad
+        if B and type(B.Show) == "function" then
+            B:Show()
+        end
     end)
-    if not parent then
-        pcall(function() parent = game:GetService("CoreGui") end)
-    end
-    if parent then
-        local old = parent:FindFirstChild("BadWarsLoaderStatus")
-        if old then old:Destroy() end
-    end
-end)
+
+    -- The loader overlay will animate away on its own via the terminal status handler.
+    -- Do NOT destroy BadStatusGui here — that would cut off the fade animation.
 
     if totalErr > 0 and api and type(api.CreateNotification) == "function" then
         api:CreateNotification(

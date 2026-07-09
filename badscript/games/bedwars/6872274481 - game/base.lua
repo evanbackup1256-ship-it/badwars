@@ -106,7 +106,9 @@ bedwars.RawClient = realClient
 local knit
 pcall(function()
     local scripts = lplr:WaitForChild("PlayerScripts", 8)
-    local knitModule = scripts and findModule(scripts, {"knit"})
+    if not scripts then return end
+    local knitModule = findModule(scripts, {"knit"})
+    if not knitModule or not knitModule:IsA("ModuleScript") then return end
     local knitSource = safeRequire(knitModule)
     if type(knitSource) == "table" then
         knit = knitSource.Controllers and knitSource or nil

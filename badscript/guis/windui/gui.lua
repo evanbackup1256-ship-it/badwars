@@ -1258,7 +1258,7 @@ local function createCategoryObject(name, iconName, suppliedTab)
 		local section = tab:Section({
 			Title = moduleName,
 			Desc = baseDescription,
-			Opened = settings.Opened == true or settings.Expanded == true,
+			Opened = settings.Opened ~= false and settings.Expanded ~= false,
 			Box = settings.Box,
 		})
 		module.Section = section
@@ -1747,16 +1747,32 @@ function d.Show(self)
 	if self ~= d then return d:Show() end
 	if d.Destroyed then return false end
 	d.Visible = true
+
+	-- Try multiple methods to open the WindUI window
 	pcall(function()
 		if type(Window.Open) == "function" then Window:Open() end
 	end)
-	setWindowHidden(false)
-	task.defer(function()
-		if d.Visible and not d.Destroyed then setWindowHidden(false) end
+	pcall(function()
+		if type(Window.Show) == "function" then Window:Show() end
 	end)
+
+	setWindowHidden(false)
+
+	-- Ensure visibility after a frame
+	task.defer(function()
+		if d.Visible and not d.Destroyed then
+			setWindowHidden(false)
+			-- Also try direct instance visibility
+			local main = findWindowMain(Window)
+			if typeof(main) == "Instance" then
+				pcall(function() main.Visible = true end)
+			end
+		end
+	end)
+
 	if not welcomeShown then
 		welcomeShown = true
-		d:CreateNotification("BadWars", "WindUI compatibility layer initialized successfully.", 5, "success")
+		d:CreateNotification("BadWars", "Interface ready. RightShift to toggle.", 4, "success")
 	end
 	return true
 end

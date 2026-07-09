@@ -1485,6 +1485,9 @@ local function isTerminalStatus(message)
         or string.sub(lower, 1, 7) == "ready -"
         or string.find(lower, "launch complete", 1, true) ~= nil
         or string.find(lower, "loader complete", 1, true) ~= nil
+        or string.find(lower, "pipeline ok", 1, true) ~= nil
+        or string.find(lower, "pipeline issues", 1, true) ~= nil
+        or string.find(lower, "startup verified", 1, true) ~= nil
 end
 
 local function resolveStatusProgress(message)
@@ -2180,8 +2183,12 @@ shared.BadStatus = function(msg, isErr)
             statusMessage.Text = "BadWars is loaded and ready to use."
         end
 
+        if statusChipText then
+            statusChipText.Text = "READY"
+        end
+
         local visibleFor = os.clock() - loaderCreatedAt
-        local hold = math.max(MINIMUM_VISIBLE_SECONDS - visibleFor, 0) + 0.34
+        local hold = math.max(MINIMUM_VISIBLE_SECONDS - visibleFor, 0) + 0.5
 
         task.delay(hold, function()
             if generation ~= loaderStatusGeneration
@@ -2193,18 +2200,19 @@ shared.BadStatus = function(msg, isErr)
                 return
             end
 
-            loaderTween(statusCard, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-                Position = UDim2.fromScale(0.5, 0.49),
-                BackgroundTransparency = 0.08,
-            })
-            loaderTween(statusCardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-                Scale = 0.97,
-            })
-            loaderTween(statusBackdrop, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            -- Smooth fade out animation
+            loaderTween(statusBackdrop, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
                 BackgroundTransparency = 1,
             })
+            loaderTween(statusCard, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+                Position = UDim2.fromScale(0.5, 0.52),
+                BackgroundTransparency = 0.12,
+            })
+            loaderTween(statusCardScale, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+                Scale = 0.94,
+            })
 
-            task.delay(0.22, function()
+            task.delay(0.38, function()
                 if generation == loaderStatusGeneration and statusGui and statusGui.Parent then
                     statusGui:Destroy()
                     shared.BadStatusGui = nil

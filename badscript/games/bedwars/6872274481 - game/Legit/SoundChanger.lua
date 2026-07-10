@@ -1,8 +1,10 @@
 local Bad = shared.Bad or {}
-local bedwars = Bad.bedwars or {}
-local store = Bad.store or {}
-local entitylib = Bad.entitylib or {}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local store = (shared.Bad and shared.Bad.store) or {}
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local compat = Bad.BedWarsCompatibility or {}
+local isfile = type(isfile) == 'function' and isfile or function() return false end
+local assetfunction = type(assetfunction) == 'function' and assetfunction or type(getcustomasset) == 'function' and getcustomasset or function() return '' end
 
 local SoundChanger
 local List

@@ -1,15 +1,24 @@
 local Bad = shared.Bad or {}
-local bedwars = Bad.bedwars or {}
-local store = Bad.store or {}
-local entitylib = Bad.entitylib or {}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local store = (shared.Bad and shared.Bad.store) or {}
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local compat = Bad.BedWarsCompatibility or {}
+local lplr = game:GetService('Players').LocalPlayer
+local starterGui = game:GetService('StarterGui')
+local getRoactRender = (Bad.BedWarsCompatibility and Bad.BedWarsCompatibility.getRoactRender) or function() return function() end end
+local oldinvrender
 
 local UICleanup
 local OpenInv
 local KillFeed
 local OldTabList
-local HotbarApp = getRoactRender(require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-app']).HotbarApp.render)
-local HotbarOpenInventory = require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-open-inventory']).HotbarOpenInventory
+local HotbarApp, HotbarOpenInventory
+
+pcall(function()
+	HotbarApp = getRoactRender(require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-app']).HotbarApp.render)
+	HotbarOpenInventory = require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-open-inventory']).HotbarOpenInventory
+end)
+
 local old, new = {}, {}
 local oldkillfeed
 

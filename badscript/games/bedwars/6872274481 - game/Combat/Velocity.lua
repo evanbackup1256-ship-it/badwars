@@ -1,3 +1,4 @@
+local Bad = shared.Bad or {}
 local Velocity
 local Horizontal
 local Vertical

@@ -4,6 +4,7 @@ local start
 local JumpTick, JumpSpeed, Direction = tick(), 0
 local projectileRemote = {InvokeServer = function() end}
 local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local remotes = (shared.Bad and shared.Bad.remotes) or {}
 local lplr = game:GetService('Players').LocalPlayer
 local runService = game:GetService('RunService')
 local entitylib = (shared.Bad and shared.Bad.entitylib) or {}

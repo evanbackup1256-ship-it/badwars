@@ -1,3 +1,4 @@
+local Bad = shared.Bad or {}
 local Speed
 local Value
 local WallCheck
@@ -12,6 +13,7 @@ local lplr = game:GetService('Players').LocalPlayer
 local runService = game:GetService('RunService')
 local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local getSpeed = (shared.Bad and shared.Bad.getSpeed) or function() return 0 end
+local isnetworkowner = type(isnetworkowner) == 'function' and isnetworkowner or function() return true end
 local Fly, InfiniteFly, LongJump, Attacking
 local AntiFallDirection
 

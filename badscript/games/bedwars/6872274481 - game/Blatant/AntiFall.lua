@@ -1,3 +1,4 @@
+local Bad = shared.Bad or {}
 local AntiFallDirection
 run(function()
 	local AntiFall

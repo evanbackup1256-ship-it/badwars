@@ -12,12 +12,14 @@ run(function()
 	local frictionTable = {}
 	local updateVelocity = function() end
 	local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+	local store = (shared.Bad and shared.Bad.store) or {}
 	local lplr = game:GetService('Players').LocalPlayer
 	local inputService = game:GetService('UserInputService')
 	local runService = game:GetService('RunService')
 	local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 	local getItem = (shared.Bad and shared.Bad.getItem) or function() return nil end
 	local getSpeed = (shared.Bad and shared.Bad.getSpeed) or function() return 0 end
+	local isnetworkowner = type(isnetworkowner) == 'function' and isnetworkowner or function() return true end
 	local InfiniteFly
 	local AntiFallPart
 

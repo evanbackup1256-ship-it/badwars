@@ -6,6 +6,10 @@ local cloneref = cloneref or clonereference or function(value)
 end
 
 local HttpService = cloneref(game:GetService("HttpService"))
+local TweenService = cloneref(game:GetService("TweenService"))
+local UserInputService = cloneref(game:GetService("UserInputService"))
+local RunService = cloneref(game:GetService("RunService"))
+local TextService = cloneref(game:GetService("TextService"))
 
 local d = {
 	Categories = {},
@@ -23,6 +27,185 @@ local d = {
 	Destroyed = false,
 }
 
+-- BADWARS_RUNTIME_COMPAT_V28
+local BUILTIN_ASSET_FALLBACK = "rbxassetid://130359823580534"
+local BUILTIN_ASSETS = {
+	["add.png"] = "rbxassetid://14368300605",
+	["alert.png"] = "rbxassetid://14368301329",
+	["allowedicon.png"] = "rbxassetid://14368302000",
+	["allowedtab.png"] = "rbxassetid://14368302875",
+	["arrowmodule.png"] = "rbxassetid://14473354880",
+	["back.png"] = "rbxassetid://14368303894",
+	["bind.png"] = "rbxassetid://14368304734",
+	["bindbkg.png"] = "rbxassetid://14368305655",
+	["blatanticon.png"] = "rbxassetid://14368306745",
+	["blockedicon.png"] = "rbxassetid://14385669108",
+	["blockedtab.png"] = "rbxassetid://14385672881",
+	["blur.png"] = "rbxassetid://14898786664",
+	["blurnotif.png"] = "rbxassetid://16738720137",
+	["close.png"] = "rbxassetid://14368309446",
+	["closemini.png"] = "rbxassetid://14368310467",
+	["colorpreview.png"] = "rbxassetid://14368311578",
+	["combaticon.png"] = "rbxassetid://14368312652",
+	["customsettings.png"] = "rbxassetid://14403726449",
+	["dots.png"] = "rbxassetid://14368314459",
+	["edit.png"] = "rbxassetid://14368315443",
+	["expandicon.png"] = "rbxassetid://14368353032",
+	["expandright.png"] = "rbxassetid://14368316544",
+	["expandup.png"] = "rbxassetid://14368317595",
+	["friendstab.png"] = "rbxassetid://14397462778",
+	["guisettings.png"] = "rbxassetid://14368318994",
+	["guislider.png"] = "rbxassetid://14368320020",
+	["guisliderrain.png"] = "rbxassetid://14368321228",
+	["guiv4.png"] = "rbxassetid://14368322199",
+	["guivape.png"] = "rbxassetid://14657521312",
+	["info.png"] = "rbxassetid://14368324807",
+	["inventoryicon.png"] = "rbxassetid://14928011633",
+	["legit.png"] = "rbxassetid://14425650534",
+	["legittab.png"] = "rbxassetid://14426740825",
+	["miniicon.png"] = "rbxassetid://14368326029",
+	["notification.png"] = "rbxassetid://16738721069",
+	["overlaysicon.png"] = "rbxassetid://14368339581",
+	["overlaystab.png"] = "rbxassetid://14397380433",
+	["pin.png"] = "rbxassetid://14368342301",
+	["profilesicon.png"] = "rbxassetid://14397465323",
+	["radaricon.png"] = "rbxassetid://14368343291",
+	["rainbow_1.png"] = "rbxassetid://14368344374",
+	["rainbow_2.png"] = "rbxassetid://14368345149",
+	["rainbow_3.png"] = "rbxassetid://14368345840",
+	["rainbow_4.png"] = "rbxassetid://14368346696",
+	["range.png"] = "rbxassetid://14368347435",
+	["rangearrow.png"] = "rbxassetid://14368348640",
+	["rendericon.png"] = "rbxassetid://14368350193",
+	["rendertab.png"] = "rbxassetid://14397373458",
+	["search.png"] = "rbxassetid://14425646684",
+	["targetinfoicon.png"] = "rbxassetid://14368354234",
+	["targetnpc1.png"] = "rbxassetid://14497400332",
+	["targetnpc2.png"] = "rbxassetid://14497402744",
+	["targetplayers1.png"] = "rbxassetid://14497396015",
+	["targetplayers2.png"] = "rbxassetid://14497397862",
+	["targetstab.png"] = "rbxassetid://14497393895",
+	["textguiicon.png"] = "rbxassetid://14368355456",
+	["textv4.png"] = "rbxassetid://14368357095",
+	["textvape.png"] = "rbxassetid://14368358200",
+	["utilityicon.png"] = "rbxassetid://14368359107",
+	["vape.png"] = "rbxassetid://14373395239",
+	["warning.png"] = "rbxassetid://14368361552",
+	["worldicon.png"] = "rbxassetid://14368362492",
+}
+
+local nativeGetCustomAsset = type(getcustomasset) == "function" and getcustomasset
+	or (type(getsynasset) == "function" and getsynasset)
+	or nil
+
+local function compatGetCustomAsset(path)
+	path = tostring(path or "")
+	if nativeGetCustomAsset then
+		local shouldTry = true
+		if type(isfile) == "function" then
+			local ok, exists = pcall(isfile, path)
+			shouldTry = ok and exists == true
+		end
+		if shouldTry then
+			local ok, result = pcall(nativeGetCustomAsset, path)
+			if ok and type(result) == "string" and result ~= "" then
+				return result
+			end
+		end
+	end
+
+	local filename = path:match("([^/\\]+)$")
+	return BUILTIN_ASSETS[path] or BUILTIN_ASSETS[filename] or BUILTIN_ASSET_FALLBACK
+end
+
+local executorEnvironment = type(getgenv) == "function" and getgenv() or _G
+if type(executorEnvironment) == "table" and type(executorEnvironment.getcustomasset) ~= "function" then
+	executorEnvironment.getcustomasset = compatGetCustomAsset
+end
+
+local textBoundsParams
+pcall(function()
+	textBoundsParams = Instance.new("GetTextBoundsParams")
+	textBoundsParams.Width = math.huge
+end)
+
+local function normalizeFontFace(font)
+	if typeof(font) == "Font" then
+		return font
+	end
+	if typeof(font) == "EnumItem" then
+		local ok, converted = pcall(Font.fromEnum, font)
+		if ok then return converted end
+	end
+	return Font.fromEnum(Enum.Font.Gotham)
+end
+
+local function compatGetFontSize(text, size, font)
+	text = tostring(text or "")
+	size = tonumber(size) or 14
+	font = normalizeFontFace(font)
+
+	if textBoundsParams then
+		local ok, bounds = pcall(function()
+			textBoundsParams.Text = text
+			textBoundsParams.Size = size
+			textBoundsParams.Font = font
+			return TextService:GetTextBoundsAsync(textBoundsParams)
+		end)
+		if ok and typeof(bounds) == "Vector2" then
+			return bounds
+		end
+	end
+
+	local ok, bounds = pcall(function()
+		return TextService:GetTextSize(text, size, Enum.Font.Gotham, Vector2.new(100000, 100000))
+	end)
+	return ok and bounds or Vector2.new(math.max(1, #text * size * 0.5), size + 4)
+end
+
+local compatTween = {
+	Active = setmetatable({}, { __mode = "k" }),
+}
+
+function compatTween:Tween(object, tweenInfo, properties)
+	if typeof(object) ~= "Instance" or type(properties) ~= "table" then
+		return nil
+	end
+	local previous = self.Active[object]
+	if previous then pcall(previous.Cancel, previous) end
+	local ok, created = pcall(TweenService.Create, TweenService, object, tweenInfo, properties)
+	if not ok or not created then
+		for property, value in pairs(properties) do
+			pcall(function() object[property] = value end)
+		end
+		return nil
+	end
+	self.Active[object] = created
+	created.Completed:Connect(function()
+		if self.Active[object] == created then
+			self.Active[object] = nil
+		end
+	end)
+	created:Play()
+	return created
+end
+
+function compatTween:Cancel(object)
+	local active = self.Active[object]
+	if active then
+		pcall(active.Cancel, active)
+		self.Active[object] = nil
+	end
+end
+
+d.Libraries.getcustomasset = compatGetCustomAsset
+d.Libraries.getfontsize = compatGetFontSize
+d.Libraries.tween = compatTween
+d.Libraries.targetinfo = type(d.Libraries.targetinfo) == "table" and d.Libraries.targetinfo or {}
+d.ThreadFix = type(setthreadidentity) == "function"
+d.Scale = type(d.Scale) == "table" and d.Scale or { Value = 1 }
+d.MotionEnabled = true
+d.MotionIntensity = 1
 local function pack(...)
 	return { n = select("#", ...), ... }
 end
@@ -304,10 +487,273 @@ pcall(function()
 	Window:SetUIScale(0.94)
 end)
 
-d.gui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui
-	or (typeof(findWindowMain(Window)) == "Instance" and findWindowMain(Window))
-	or Window
+-- BADWARS_EXTREME_MOTION_V1
+d.ScreenGui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui or nil
 
+local compatibilityRoot = Instance.new("Frame")
+compatibilityRoot.Name = "BadWarsCompatibilityRoot"
+compatibilityRoot.Size = UDim2.fromScale(1, 1)
+compatibilityRoot.BackgroundTransparency = 1
+compatibilityRoot.BorderSizePixel = 0
+compatibilityRoot.Active = false
+compatibilityRoot.ClipsDescendants = false
+
+local rootParent = d.ScreenGui
+if typeof(rootParent) ~= "Instance" then
+	rootParent = typeof(findWindowMain(Window)) == "Instance" and findWindowMain(Window) or nil
+end
+if rootParent then
+	compatibilityRoot.Parent = rootParent
+end
+
+local compatibilityScaledGui = Instance.new("Frame")
+compatibilityScaledGui.Name = "ScaledGui"
+compatibilityScaledGui.Size = UDim2.fromScale(1, 1)
+compatibilityScaledGui.BackgroundTransparency = 1
+compatibilityScaledGui.BorderSizePixel = 0
+compatibilityScaledGui.Active = false
+compatibilityScaledGui.Parent = compatibilityRoot
+
+local compatibilityClickGui = Instance.new("Frame")
+compatibilityClickGui.Name = "ClickGui"
+compatibilityClickGui.Size = UDim2.fromScale(1, 1)
+compatibilityClickGui.BackgroundTransparency = 1
+compatibilityClickGui.BorderSizePixel = 0
+compatibilityClickGui.Active = false
+compatibilityClickGui.Visible = false
+compatibilityClickGui.Parent = compatibilityScaledGui
+
+d.gui = compatibilityRoot
+d.CompatibilityRoot = compatibilityRoot
+d.ScaledGui = compatibilityScaledGui
+d.ClickGui = compatibilityClickGui
+
+local motionTweens = setmetatable({}, { __mode = "k" })
+local motionBound = setmetatable({}, { __mode = "k" })
+local motionRevealed = setmetatable({}, { __mode = "k" })
+local motionObjectCount = 0
+local MAX_MOTION_OBJECTS = 1400
+
+local function trackResource(resource)
+	if resource ~= nil then
+		table.insert(d.Resources, resource)
+	end
+	return resource
+end
+
+local function motionDuration(base)
+	return math.max(0.04, base / math.max(0.35, tonumber(d.MotionIntensity) or 1))
+end
+
+local function motionTween(object, duration, properties, style, direction)
+	if typeof(object) ~= "Instance" or not object.Parent then
+		return nil
+	end
+	local previous = motionTweens[object]
+	if previous then pcall(previous.Cancel, previous) end
+	if d.MotionEnabled == false then
+		for property, value in pairs(properties) do
+			pcall(function() object[property] = value end)
+		end
+		return nil
+	end
+	local info = TweenInfo.new(
+		motionDuration(duration),
+		style or Enum.EasingStyle.Quint,
+		direction or Enum.EasingDirection.Out
+	)
+	local ok, created = pcall(TweenService.Create, TweenService, object, info, properties)
+	if not ok or not created then return nil end
+	motionTweens[object] = created
+	created.Completed:Connect(function()
+		if motionTweens[object] == created then motionTweens[object] = nil end
+	end)
+	created:Play()
+	return created
+end
+
+local function ensureMotionScale(object)
+	if typeof(object) ~= "Instance" or not object:IsA("GuiObject") then return nil end
+	local existing = object:FindFirstChild("BadWarsMotionScale")
+	if existing and existing:IsA("UIScale") then return existing end
+	if object:FindFirstChildWhichIsA("UIScale") then return nil end
+	local scale = Instance.new("UIScale")
+	scale.Name = "BadWarsMotionScale"
+	scale.Scale = 1
+	scale.Parent = object
+	return scale
+end
+
+local function createRipple(button)
+	if d.MotionEnabled == false or not button.Parent then return end
+	local ripple = Instance.new("Frame")
+	ripple.Name = "BadWarsMotionRipple"
+	ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+	ripple.Position = UDim2.fromScale(0.5, 0.5)
+	ripple.Size = UDim2.fromScale(0, 0)
+	ripple.BackgroundColor3 = Color3.new(1, 1, 1)
+	ripple.BackgroundTransparency = 0.72
+	ripple.BorderSizePixel = 0
+	ripple.ZIndex = button.ZIndex + 20
+	ripple.Parent = button
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = ripple
+	motionTween(ripple, 0.38, {
+		Size = UDim2.fromScale(1.55, 1.55),
+		BackgroundTransparency = 1,
+	}, Enum.EasingStyle.Quart)
+	task.delay(motionDuration(0.42), function()
+		if ripple.Parent then ripple:Destroy() end
+	end)
+end
+
+local function bindMotionButton(button)
+	if motionBound[button] or motionObjectCount >= MAX_MOTION_OBJECTS then return end
+	motionBound[button] = true
+	motionObjectCount += 1
+
+	local scale = ensureMotionScale(button)
+	local baseRotation = button.Rotation
+	local hovered = false
+	local pressed = false
+
+	local stroke = button:FindFirstChild("BadWarsMotionStroke")
+	if not stroke then
+		stroke = Instance.new("UIStroke")
+		stroke.Name = "BadWarsMotionStroke"
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Thickness = 1
+		stroke.Color = Color3.new(1, 1, 1)
+		stroke.Transparency = 1
+		stroke.Parent = button
+	end
+
+	local function animate(targetScale, targetRotation, strokeTransparency, duration, style)
+		if scale then
+			motionTween(scale, duration, { Scale = targetScale }, style or Enum.EasingStyle.Back)
+		end
+		motionTween(button, duration, { Rotation = targetRotation }, Enum.EasingStyle.Quint)
+		if stroke and stroke.Parent then
+			motionTween(stroke, duration, { Transparency = strokeTransparency }, Enum.EasingStyle.Quint)
+		end
+	end
+
+	trackResource(button.MouseEnter:Connect(function()
+		hovered = true
+		if not pressed then
+			animate(1.035, baseRotation + 0.3, 0.72, 0.2)
+		end
+	end))
+	trackResource(button.MouseLeave:Connect(function()
+		hovered = false
+		if not pressed then
+			animate(1, baseRotation, 1, 0.24)
+		end
+	end))
+	trackResource(button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			pressed = true
+			animate(0.955, baseRotation - 0.45, 0.42, 0.09, Enum.EasingStyle.Quart)
+			createRipple(button)
+		end
+	end))
+	trackResource(button.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			pressed = false
+			animate(hovered and 1.035 or 1, hovered and (baseRotation + 0.3) or baseRotation, hovered and 0.72 or 1, 0.24)
+		end
+	end))
+end
+
+local function revealMotionObject(object)
+	if motionRevealed[object] or motionObjectCount >= MAX_MOTION_OBJECTS then return end
+	if not object:IsA("GuiObject") then return end
+	if object == compatibilityRoot or object == compatibilityScaledGui or object == compatibilityClickGui then return end
+
+	local name = string.lower(object.Name)
+	local parent = object.Parent
+	local revealable = parent and parent:IsA("ScrollingFrame")
+		or name:find("section", 1, true)
+		or name:find("notification", 1, true)
+		or name:find("dialog", 1, true)
+		or name:find("popup", 1, true)
+		or name:find("dropdown", 1, true)
+		or name:find("card", 1, true)
+		or name:find("element", 1, true)
+
+	if not revealable then return end
+	motionRevealed[object] = true
+	motionObjectCount += 1
+
+	task.defer(function()
+		if not object.Parent or d.MotionEnabled == false then return end
+		local scale = ensureMotionScale(object)
+		if scale then
+			scale.Scale = 0.96
+			motionTween(scale, 0.32, { Scale = 1 }, Enum.EasingStyle.Back)
+		end
+		if object:IsA("CanvasGroup") then
+			local target = object.GroupTransparency
+			object.GroupTransparency = math.min(1, target + 0.55)
+			motionTween(object, 0.28, { GroupTransparency = target }, Enum.EasingStyle.Quint)
+		end
+	end)
+
+	trackResource(object:GetPropertyChangedSignal("Visible"):Connect(function()
+		if object.Visible and object.Parent and d.MotionEnabled ~= false then
+			local scale = object:FindFirstChild("BadWarsMotionScale")
+			if scale and scale:IsA("UIScale") then
+				scale.Scale = 0.965
+				motionTween(scale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
+			end
+		end
+	end))
+end
+
+local function bindMotionObject(object)
+	if typeof(object) ~= "Instance" then return end
+	if object:IsA("GuiButton") then
+		bindMotionButton(object)
+	end
+	if object:IsA("GuiObject") then
+		revealMotionObject(object)
+	end
+end
+
+local function attachMotionRoot(root)
+	if typeof(root) ~= "Instance" then return end
+	for _, descendant in ipairs(root:GetDescendants()) do
+		bindMotionObject(descendant)
+	end
+	trackResource(root.DescendantAdded:Connect(bindMotionObject))
+end
+
+local function animateWindowMotion()
+	local main = findWindowMain(Window)
+	if typeof(main) ~= "Instance" or not main:IsA("GuiObject") then return end
+	local scale = ensureMotionScale(main)
+	if scale then
+		scale.Scale = 0.925
+		motionTween(scale, 0.38, { Scale = 1 }, Enum.EasingStyle.Back)
+	end
+	main.Rotation = -0.35
+	motionTween(main, 0.3, { Rotation = 0 }, Enum.EasingStyle.Quint)
+	if main:IsA("CanvasGroup") then
+		main.GroupTransparency = 1
+		motionTween(main, 0.24, { GroupTransparency = 0 }, Enum.EasingStyle.Quint)
+	end
+end
+
+task.defer(function()
+	attachMotionRoot(d.ScreenGui)
+	attachMotionRoot(WindUI.DropdownGui)
+	attachMotionRoot(WindUI.NotificationGui)
+end)
 local function setWindowHidden(hidden)
 	local main = findWindowMain(Window)
 	if typeof(main) == "Instance" then
@@ -737,7 +1183,71 @@ local function enableDotAndColon(object, methodName)
 	end
 end
 
-local function registerOption(module, name, option)
+-- BADWARS_OPTION_COMPAT_V2
+local visibilityApplying = setmetatable({}, { __mode = "k" })
+
+local function installLegacyVisibilityProxy(option)
+	local control = option.Object
+	if type(control) ~= "table" or rawget(control, "__BadWarsVisibilityProxy") then
+		return
+	end
+
+	local currentMetatable = getmetatable(control)
+	if currentMetatable ~= nil and type(currentMetatable) ~= "table" then
+		return
+	end
+
+	local previousIndex = currentMetatable and currentMetatable.__index
+	local previousNewIndex = currentMetatable and currentMetatable.__newindex
+	local proxy = {}
+	if currentMetatable then
+		for key, value in pairs(currentMetatable) do proxy[key] = value end
+	end
+
+	if rawget(control, "Visible") ~= nil then
+		option.Visible = rawget(control, "Visible") ~= false
+		rawset(control, "Visible", nil)
+	end
+
+	proxy.__index = function(target, key)
+		if key == "Visible" then
+			return option.Visible ~= false
+		end
+		if type(previousIndex) == "function" then
+			return previousIndex(target, key)
+		elseif type(previousIndex) == "table" then
+			return previousIndex[key]
+		end
+		return rawget(target, key)
+	end
+
+	proxy.__newindex = function(target, key, value)
+		if key == "Visible" then
+			option.Visible = value ~= false
+			if not visibilityApplying[target] then
+				visibilityApplying[target] = true
+				setControlVisible(target, option.Visible)
+				visibilityApplying[target] = nil
+			end
+			return
+		end
+		if type(previousNewIndex) == "function" then
+			return previousNewIndex(target, key, value)
+		elseif type(previousNewIndex) == "table" then
+			previousNewIndex[key] = value
+			return
+		end
+		rawset(target, key, value)
+	end
+
+	local ok = pcall(setmetatable, control, proxy)
+	if ok then
+		rawset(control, "__BadWarsVisibilityProxy", true)
+	end
+end
+
+local function registerOption(module, name, option, settings)
+	settings = settings or {}
 	local baseName = tostring(name or option.Name or option.Type)
 	local uniqueName = baseName
 	local suffix = 2
@@ -746,10 +1256,16 @@ local function registerOption(module, name, option)
 		suffix += 1
 	end
 	option.Name = uniqueName
+	option.Visible = settings.Visible ~= false
 	module.Options[uniqueName] = option
+	installLegacyVisibilityProxy(option)
+	if option.Visible == false then
+		task.defer(function()
+			if not option.Destroyed then setControlVisible(option.Object, false) end
+		end)
+	end
 	return option
 end
-
 local function makeFlag(categoryName, moduleName, optionName)
 	return sanitizeName(string.format("%s/%s/%s", categoryName, moduleName, optionName))
 end
@@ -780,7 +1296,7 @@ local function createToggleOption(module, section, settings)
 			option:_FromControl(value == true)
 		end,
 	})
-	return registerOption(module, option.Name, option)
+	return registerOption(module, option.Name, option, settings)
 end
 
 local function createSliderOption(module, section, settings)
@@ -827,7 +1343,7 @@ local function createSliderOption(module, section, settings)
 		end
 		return option
 	end
-	return registerOption(module, option.Name, option)
+	return registerOption(module, option.Name, option, settings)
 end
 
 local function createDropdownOption(module, section, settings)
@@ -877,7 +1393,7 @@ local function createDropdownOption(module, section, settings)
 		return option
 	end
 	option.Refresh = option.SetList
-	return registerOption(module, option.Name, option)
+	return registerOption(module, option.Name, option, settings)
 end
 
 local function createColorOption(module, section, settings, hsvCallback)
@@ -951,7 +1467,7 @@ local function createColorOption(module, section, settings, hsvCallback)
 		return applyColor(value, transparency, isSilent, true)
 	end
 	option.Set = option.SetValue
-	return registerOption(module, option.Name, option)
+	return registerOption(module, option.Name, option, settings)
 end
 
 local function createKeybindOption(module, section, settings)
@@ -1008,7 +1524,7 @@ local function createKeybindOption(module, section, settings)
 		return option
 	end
 	option.Set = option.SetValue
-	return registerOption(module, option.Name, option)
+	return registerOption(module, option.Name, option, settings)
 end
 
 local function createInputOption(module, section, settings)
@@ -1032,7 +1548,7 @@ local function createInputOption(module, section, settings)
 			option:_FromControl(value)
 		end,
 	})
-	return registerOption(module, option.Name, option)
+	return registerOption(module, option.Name, option, settings)
 end
 
 local function createTwoSliderOption(module, section, settings)
@@ -1131,7 +1647,7 @@ local function createTwoSliderOption(module, section, settings)
 			destroyControl(maxControl)
 		end
 	end
-	return registerOption(module, option.Name, option)
+	return registerOption(module, option.Name, option, settings)
 end
 
 local function createTextListOption(module, section, settings)
@@ -1149,6 +1665,7 @@ local function createTextListOption(module, section, settings)
 	})
 	option.List = option.Value
 	option.ObjectList = option.Value
+	option.ListEnabled = option.Value -- BADWARS_TEXTLIST_LISTENABLED_V1
 	option.Object = section:Input({
 		Title = option.Name,
 		Desc = normalizeDescription(settings),
@@ -1166,6 +1683,7 @@ local function createTextListOption(module, section, settings)
 	local function syncList(silent)
 		option.List = option.Value
 		option.ObjectList = option.Value
+	option.ListEnabled = option.Value -- BADWARS_TEXTLIST_LISTENABLED_V1
 		if silent ~= true then
 			runUserCallback(option.Name, settings.Function or settings.Callback, option.Value)
 		end
@@ -1198,27 +1716,102 @@ local function createTextListOption(module, section, settings)
 		return option
 	end
 	option.Set = option.SetValue
-	return registerOption(module, option.Name, option)
+	return registerOption(module, option.Name, option, settings)
 end
 
+-- BADWARS_FONT_COMPAT_V2
 local function createFontOption(module, section, settings)
 	settings = settings or {}
-	local fonts = firstNonNil(settings.List, settings.Values, {
+	local sourceFonts = firstNonNil(settings.List, settings.Values, {
 		"Gotham", "Arial", "SourceSans", "Roboto", "Ubuntu", "Fantasy", "Code", "Highway",
 	})
-	settings.List = fonts
-	settings.Default = firstNonNil(settings.Default, settings.Value, fonts[1])
-	return createDropdownOption(module, section, settings)
-end
+	local blacklist = settings.Blacklist
+	local fonts = {}
 
+	local function blocked(name)
+		if type(blacklist) == "string" then
+			return name == blacklist
+		end
+		return type(blacklist) == "table" and table.find(blacklist, name) ~= nil
+	end
+
+	for _, name in ipairs(sourceFonts) do
+		name = tostring(name)
+		if not blocked(name) and Enum.Font[name] then
+			table.insert(fonts, name)
+		end
+	end
+	if #fonts == 0 then fonts = { "Gotham", "Arial" } end
+
+	local function resolveFont(value)
+		if typeof(value) == "Font" then
+			return value, fonts[1]
+		end
+		if typeof(value) == "EnumItem" then
+			local ok, converted = pcall(Font.fromEnum, value)
+			return ok and converted or Font.fromEnum(Enum.Font.Gotham), value.Name
+		end
+		local name = tostring(value or fonts[1])
+		if not Enum.Font[name] then name = fonts[1] end
+		local ok, converted = pcall(Font.fromEnum, Enum.Font[name])
+		return ok and converted or Font.fromEnum(Enum.Font.Gotham), name
+	end
+
+	local initialFont, initialName = resolveFont(firstNonNil(settings.Default, settings.Value, fonts[1]))
+	local option = makeOptionApi({
+		Name = settings.Name or "Font",
+		Type = "Font",
+		Value = initialFont,
+		Callback = nil,
+		CallbackOnSet = false,
+	})
+	option.List = fonts
+	option.Font = initialFont
+	local userCallback = settings.Function or settings.Callback
+
+	option.Object = section:Dropdown({
+		Title = option.Name,
+		Desc = normalizeDescription(settings),
+		Values = fonts,
+		Value = initialName,
+		Flag = resolveFlag(module, settings, option.Name),
+		Callback = function(value)
+			local font, fontName = resolveFont(value)
+			option.Value = font
+			option.Font = font
+			option.Selected = fontName
+			runUserCallback(option.Name, userCallback, font)
+		end,
+	})
+
+	function option:SetValue(value, silent)
+		local font, fontName = resolveFont(value)
+		local changed = option.Value ~= font
+		option.Value = font
+		option.Font = font
+		option.Selected = fontName
+		setControlValue(option.Object, fontName)
+		if changed and silent ~= true then
+			runUserCallback(option.Name, userCallback, font)
+		end
+		return option
+	end
+	option.Set = option.SetValue
+
+	return registerOption(module, option.Name, option, settings)
+end
+-- BADWARS_TARGETS_COMPAT_V2
 local function createTargetsOption(module, section, settings)
 	settings = settings or {}
 	local labels = {}
 	local defaults = {}
+	local wrappers = {}
+
 	local function addTarget(label, enabled)
 		table.insert(labels, label)
 		defaults[label] = enabled ~= false
 	end
+
 	if settings.Players ~= false then addTarget("Players", settings.Players) end
 	if settings.NPCs or settings.NPC then addTarget("NPCs", true) end
 	if settings.Friends ~= false then addTarget("Friends", settings.Friends) end
@@ -1228,20 +1821,25 @@ local function createTargetsOption(module, section, settings)
 		addTarget("NPCs", true)
 		addTarget("Friends", true)
 	end
+
 	local selected = {}
 	for _, label in ipairs(labels) do
 		if defaults[label] then table.insert(selected, label) end
 	end
+
 	local option = {
 		Name = tostring(settings.Name or "Targets"),
 		Type = "Targets",
-		Value = defaults,
-		Visible = true,
+		Value = cloneValue(defaults),
+		Visible = settings.Visible ~= false,
 		Destroyed = false,
 	}
+
 	for label, enabled in pairs(defaults) do
-		option[label] = enabled
+		wrappers[label] = { Enabled = enabled, Value = enabled }
+		option[label] = wrappers[label]
 	end
+
 	local userCallback = settings.Function or settings.Callback
 
 	local function fromSelected(current, silent)
@@ -1251,9 +1849,16 @@ local function createTargetsOption(module, section, settings)
 			local label = type(value) == "table" and value.Title or value
 			if map[label] ~= nil then map[label] = true end
 		end
+
 		local changed = not valuesEqual(option.Value, map)
 		option.Value = map
-		for label, enabled in pairs(map) do option[label] = enabled end
+		for label, enabled in pairs(map) do
+			local wrapper = wrappers[label] or { Enabled = false, Value = false }
+			wrapper.Enabled = enabled
+			wrapper.Value = enabled
+			wrappers[label] = wrapper
+			option[label] = wrapper
+		end
 		if changed and silent ~= true then
 			runUserCallback(option.Name, userCallback, map)
 		end
@@ -1276,7 +1881,9 @@ local function createTargetsOption(module, section, settings)
 		local newSelected = {}
 		if type(value) == "table" then
 			for _, label in ipairs(labels) do
-				if value[label] == true or table.find(value, label) then
+				local candidate = value[label]
+				local enabled = type(candidate) == "table" and candidate.Enabled == true or candidate == true
+				if enabled or table.find(value, label) then
 					table.insert(newSelected, label)
 				end
 			end
@@ -1286,27 +1893,30 @@ local function createTargetsOption(module, section, settings)
 		return option
 	end
 	option.Set = option.SetValue
+
 	function option:SetVisible(visible)
 		option.Visible = visible ~= false
 		setControlVisible(option.Object, option.Visible)
 		return option
 	end
+
 	function option:Save()
 		return cloneValue(option.Value)
 	end
+
 	function option:Load(value, silent)
 		return option:SetValue(value, silent)
 	end
+
 	function option:Destroy()
 		if not option.Destroyed then
 			option.Destroyed = true
 			destroyControl(option.Object)
 		end
 	end
-	return registerOption(module, option.Name, option)
-end
 
--- ─── Category system ───
+	return registerOption(module, option.Name, option, settings)
+end
 local categoryIcons = {
 	Combat = "sword",
 	Blatant = "flame",
@@ -1572,7 +2182,7 @@ local function createCategoryObject(name, iconName, suppliedTab)
 				end
 				return option
 			end
-			return registerOption(module, option.Name, option)
+			return registerOption(module, option.Name, option, settings)
 		end
 		function module:CreateCode(optionSettings)
 			optionSettings = optionSettings or {}
@@ -1631,7 +2241,10 @@ local function createCategoryObject(name, iconName, suppliedTab)
 		category.Modules[moduleName] = module
 		-- Store under qualified key only (no duplicate short key to prevent double-processing)
 		d.Modules[name .. "/" .. moduleName] = module
-		return module
+				-- BADWARS_SHORT_MODULE_ALIASES_V1
+		if d.Modules[moduleName] == nil or d.Modules[moduleName].Destroyed then
+			d.Modules[moduleName] = module
+		endreturn module
 	end
 
 	function category:CreateModuleCategory(settings)
@@ -1741,6 +2354,126 @@ end
 
 d.Legit = d.Categories.Legit
 
+-- BADWARS_OVERLAY_RUNTIME_V2
+local overlayNextY = 86
+local overlayColumnOffset = 24
+local overlayColumnWidth = 246
+
+local function createOverlayCanvas()
+	local ok, canvas = pcall(Instance.new, "CanvasGroup")
+	if ok and canvas then return canvas end
+	return Instance.new("Frame")
+end
+
+local function resolveOverlaySize(name, settings)
+	if settings.OverlaySize and typeof(settings.OverlaySize) == "UDim2" then
+		return settings.OverlaySize
+	end
+	if tonumber(settings.CategorySize) and tonumber(settings.ContentHeight) then
+		return UDim2.fromOffset(
+			math.max(40, tonumber(settings.CategorySize)),
+			math.max(24, tonumber(settings.ContentHeight))
+		)
+	end
+	if name == "Radar" then
+		return UDim2.fromOffset(220, 220)
+	end
+	if name == "Session Info" then
+		return UDim2.fromOffset(230, 130)
+	end
+	return UDim2.fromOffset(160, 54)
+end
+
+local function placeOverlay(root)
+	local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+	local height = math.max(40, root.Size.Y.Offset)
+	local width = math.max(100, root.Size.X.Offset)
+	if overlayNextY + height > math.max(360, viewport.Y - 36) then
+		overlayNextY = 86
+		overlayColumnOffset += math.max(overlayColumnWidth, width + 18)
+	end
+	root.AnchorPoint = Vector2.new(1, 0)
+	root.Position = UDim2.new(1, -overlayColumnOffset, 0, overlayNextY)
+	overlayNextY += height + 14
+end
+
+local function bindOverlayDrag(module, root, scale)
+	local dragging = false
+	local dragInput
+	local dragStart
+	local startPosition
+	local hovered = false
+
+	local function settle()
+		dragging = false
+		motionTween(root, 0.28, { Rotation = 0 }, Enum.EasingStyle.Back)
+		if scale then
+			motionTween(scale, 0.28, { Scale = hovered and 1.025 or 1 }, Enum.EasingStyle.Back)
+		end
+	end
+
+	module:Clean(root.MouseEnter:Connect(function()
+		hovered = true
+		if not dragging and scale then
+			motionTween(scale, 0.22, { Scale = 1.025 }, Enum.EasingStyle.Back)
+		end
+	end))
+	module:Clean(root.MouseLeave:Connect(function()
+		hovered = false
+		if not dragging and scale then
+			motionTween(scale, 0.24, { Scale = 1 }, Enum.EasingStyle.Back)
+		end
+	end))
+
+	module:Clean(root.InputBegan:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1
+			and input.UserInputType ~= Enum.UserInputType.Touch
+		then
+			return
+		end
+
+		local absolute = root.AbsolutePosition
+		root.AnchorPoint = Vector2.zero
+		root.Position = UDim2.fromOffset(absolute.X, absolute.Y)
+		dragging = true
+		dragStart = input.Position
+		startPosition = root.Position
+		if scale then
+			motionTween(scale, 0.12, { Scale = 1.055 }, Enum.EasingStyle.Back)
+		end
+		motionTween(root, 0.12, { Rotation = -0.7 }, Enum.EasingStyle.Quint)
+
+		module:Clean(input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				settle()
+			end
+		end))
+	end))
+
+	module:Clean(root.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			dragInput = input
+		end
+	end))
+
+	module:Clean(UserInputService.InputChanged:Connect(function(input)
+		if not dragging or input ~= dragInput or not dragStart or not startPosition then return end
+		local delta = input.Position - dragStart
+		local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+		local maxX = math.max(0, viewport.X - root.AbsoluteSize.X)
+		local maxY = math.max(0, viewport.Y - root.AbsoluteSize.Y)
+		local targetX = math.clamp(startPosition.X.Offset + delta.X, 0, maxX)
+		local targetY = math.clamp(startPosition.Y.Offset + delta.Y, 0, maxY)
+		local tilt = math.clamp(delta.X / 90, -1.6, 1.6)
+		motionTween(root, 0.075, {
+			Position = UDim2.fromOffset(targetX, targetY),
+			Rotation = tilt,
+		}, Enum.EasingStyle.Quad)
+	end))
+end
+
 function d.CreateOverlay(self, settings)
 	if self ~= d then settings = self end
 	settings = settings or {}
@@ -1748,12 +2481,126 @@ function d.CreateOverlay(self, settings)
 	if d.Overlays[name] then
 		return d.Overlays[name]
 	end
+
 	local overlay = d.Categories.Render:CreateModule(settings)
+	local root = createOverlayCanvas()
+	root.Name = sanitizeName(name) .. "_Overlay"
+	root.Size = resolveOverlaySize(name, settings)
+	root.BackgroundTransparency = 1
+	root.BorderSizePixel = 0
+	root.Active = true
+	root.Selectable = false
+	root.ClipsDescendants = false
+	root.Visible = overlay.Enabled == true
+	root.ZIndex = 500
+	if root:IsA("CanvasGroup") then
+		root.GroupTransparency = overlay.Enabled and 0 or 1
+	end
+	root.Parent = compatibilityRoot
+	placeOverlay(root)
+
+	local scale = ensureMotionScale(root)
+	if scale then scale.Scale = overlay.Enabled and 1 or 0.88 end
+
+	overlay.Children = root
+	overlay.Root = root
+	overlay.Window = root
+	overlay.Button = overlay
+	overlay.CustomOverlay = settings.CustomOverlay == true
+	overlay.Pinned = settings.Pinned == true
+	overlay.OverlaySettings = settings
+
+	local visualEpoch = 0
+	local function setOverlayVisual(enabled, instant)
+		visualEpoch += 1
+		local epoch = visualEpoch
+		if enabled then
+			root.Visible = true
+			if scale then
+				scale.Scale = instant and 1 or 0.86
+				motionTween(scale, instant and 0.01 or 0.36, { Scale = 1 }, Enum.EasingStyle.Back)
+			end
+			if root:IsA("CanvasGroup") then
+				root.GroupTransparency = instant and 0 or 1
+				motionTween(root, instant and 0.01 or 0.24, {
+					GroupTransparency = 0,
+					Rotation = 0,
+				}, Enum.EasingStyle.Quint)
+			end
+		else
+			if scale then
+				motionTween(scale, instant and 0.01 or 0.22, { Scale = 0.9 }, Enum.EasingStyle.Quint)
+			end
+			if root:IsA("CanvasGroup") then
+				motionTween(root, instant and 0.01 or 0.2, {
+					GroupTransparency = 1,
+					Rotation = -0.45,
+				}, Enum.EasingStyle.Quint)
+			end
+			task.delay(instant and 0 or motionDuration(0.22), function()
+				if visualEpoch == epoch and not overlay.Enabled and root.Parent then
+					root.Visible = false
+					root.Rotation = 0
+				end
+			end)
+		end
+	end
+
+	local originalSetEnabled = overlay.SetEnabled
+	local originalDestroy = overlay.Destroy
+
+	function overlay:SetEnabled(state, silent)
+		state = state == true
+		if state then setOverlayVisual(true, false) end
+		local result = originalSetEnabled(overlay, state, silent)
+		if not state then setOverlayVisual(false, false) end
+		return result
+	end
+	overlay.SetState = overlay.SetEnabled
+
+	function overlay:Toggle(silent)
+		return overlay:SetEnabled(not overlay.Enabled, silent)
+	end
+
+	function overlay:SetPosition(position)
+		if typeof(position) == "UDim2" then
+			root.Position = position
+		end
+		return overlay
+	end
+
+	function overlay:GetPosition()
+		return root.Position
+	end
+
+	function overlay:SetVisible(visible)
+		setOverlayVisual(visible == true, false)
+		return overlay
+	end
+
+	function overlay:Destroy()
+		if root.Parent then root:Destroy() end
+		d.Overlays[name] = nil
+		return originalDestroy(overlay)
+	end
+
+	bindOverlayDrag(overlay, root, scale)
+	overlay:Clean(root.DescendantAdded:Connect(function(descendant)
+		if descendant:IsA("GuiObject") then
+			descendant.ZIndex = math.max(descendant.ZIndex, root.ZIndex + 1)
+		end
+	end))
+
+	for _, descendant in ipairs(root:GetDescendants()) do
+		if descendant:IsA("GuiObject") then
+			descendant.ZIndex = math.max(descendant.ZIndex, root.ZIndex + 1)
+		end
+	end
+
 	d.Overlays[name] = overlay
+	setOverlayVisual(overlay.Enabled, true)
 	return overlay
 end
-
--- ─── Main category (legacy compat) ───
 local mainCategory = {
 	Type = "ServiceCategory",
 	Name = "Main",
@@ -1942,6 +2789,27 @@ local appearanceSection = Tabs.Settings:Section({
 	Box = true,
 })
 
+-- BADWARS_MOTION_SETTINGS_V1
+appearanceSection:Toggle({
+	Title = "Extreme Motion",
+	Desc = "CSS-like hover, press, reveal, popup, and overlay animations",
+	Value = true,
+	Flag = "settings/extreme_motion",
+	Callback = function(value)
+		d.MotionEnabled = value == true
+	end,
+})
+
+appearanceSection:Slider({
+	Title = "Motion Intensity",
+	Desc = "Controls animation speed and emphasis",
+	Value = { Min = 50, Max = 150, Default = 100 },
+	Step = 5,
+	Flag = "settings/motion_intensity",
+	Callback = function(value)
+		d.MotionIntensity = math.clamp((tonumber(value) or 100) / 100, 0.5, 1.5)
+	end,
+})
 appearanceSection:Toggle({
 	Title = "UI Transparency",
 	Desc = "Glass effect",
@@ -2325,6 +3193,7 @@ function d.Show(self)
 	if self ~= d then return d:Show() end
 	if d.Destroyed then return false end
 	d.Visible = true
+	compatibilityClickGui.Visible = true -- BADWARS_SHOW_MOTION_V1
 
 	pcall(function()
 		if type(Window.Open) == "function" then Window:Open() end
@@ -2334,6 +3203,7 @@ function d.Show(self)
 	end)
 
 	setWindowHidden(false)
+	animateWindowMotion()
 
 	task.defer(function()
 		if d.Visible and not d.Destroyed then
@@ -2366,6 +3236,7 @@ function d.Hide(self)
 	if self ~= d then return d:Hide() end
 	if d.Destroyed then return false end
 	d.Visible = false
+	compatibilityClickGui.Visible = false
 	pcall(function()
 		if type(Window.Close) == "function" then Window:Close() end
 	end)

@@ -120,6 +120,32 @@ foreach ($iconName in $requiredIcons) {
         "Required WindUI icon is bundled: $iconName"
 }
 
+Assert-Match $adapter 'BADWARS_RUNTIME_COMPAT_V28' `
+    "Runtime compatibility libraries are installed"
+Assert-Match $adapter 'd\.Libraries\.getcustomasset\s*=\s*compatGetCustomAsset' `
+    "getcustomasset compatibility is exported"
+Assert-Match $adapter 'd\.Libraries\.getfontsize\s*=\s*compatGetFontSize' `
+    "getfontsize compatibility is exported"
+Assert-Match $adapter 'd\.Libraries\.tween\s*=\s*compatTween' `
+    "tween compatibility is exported"
+Assert-Match $adapter 'BADWARS_OVERLAY_RUNTIME_V2' `
+    "Legacy overlay runtime is installed"
+Assert-Match $adapter 'overlay\.Children\s*=\s*root' `
+    "Overlay Children container is present"
+Assert-Match $adapter 'overlay\.Button\s*=\s*overlay' `
+    "Overlay Button compatibility object is present"
+Assert-Match $adapter 'BADWARS_TARGETS_COMPAT_V2' `
+    "Targets wrappers expose Enabled state"
+Assert-Match $adapter 'BADWARS_FONT_COMPAT_V2' `
+    "Font controls return Font values"
+Assert-Match $adapter 'BADWARS_TEXTLIST_LISTENABLED_V1' `
+    "TextList ListEnabled compatibility is present"
+Assert-Match $adapter 'BADWARS_SHORT_MODULE_ALIASES_V1' `
+    "Short module aliases are restored"
+Assert-Match $adapter 'BADWARS_EXTREME_MOTION_V1' `
+    "Extreme motion engine is installed"
+Assert-Match $adapter 'BADWARS_MOTION_SETTINGS_V1' `
+    "Motion settings controls are present"
 if ($script:Failed) {
     Write-Host ""
     Write-Host "WindUI validation failed." -ForegroundColor Red

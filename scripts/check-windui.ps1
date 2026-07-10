@@ -78,14 +78,47 @@ Assert-Match $library 'FindFirstChild\("GetIcons"\)' `
     "GetIcons lookup is non-blocking"
 Assert-NoMatch $library 'WaitForChild\("GetIcons"' `
     "GetIcons cannot cause a long startup wait"
+Assert-Match $library 'BADWARS_WINDUI_VISIBLE_ICONS_V2' `
+    "Visible icon repair marker is present"
+Assert-Match $library 'local DEFAULT_ICON_TYPE = "lucide"' `
+    "Lucide is the default icon pack"
+Assert-Match $library 'local function normalizeImageAsset' `
+    "Icon values are normalized to Roblox asset strings"
 Assert-Match $library 'local builtInLucide\s*=' `
     "Built-in Lucide fallback assets are present"
 Assert-Match $library 'function r\.SafeIcon' `
     "SafeIcon public fallback is present"
 Assert-Match $library 'local iconPack = d\.Icons\[e\]' `
     "AddIcons normalizes existing icon-pack formats"
-Assert-Match $library 'image = p\.Spritesheets\[tostring\(iconData\.Image\)\] or image' `
-    "Icon lookup falls back when a spritesheet entry is missing"
+Assert-Match $library 'local image = mappedImage or directImage' `
+    "Structured icon aliases resolve only to valid assets"
+Assert-NoMatch $library 'p\.Spritesheets\[tostring\(iconData\.Image\)\]\s+or\s+image' `
+    "Unresolved aliases are never returned as image assets"
+
+$requiredIcons = @(
+    "swords",
+    "badge-check",
+    "home",
+    "list",
+    "flame",
+    "sword",
+    "eye",
+    "wrench",
+    "globe",
+    "gamepad-2",
+    "user-check",
+    "users",
+    "crosshair",
+    "bell",
+    "settings",
+    "folder"
+)
+
+foreach ($iconName in $requiredIcons) {
+    $escapedName = [regex]::Escape($iconName)
+    Assert-Match $library ('(?:\["' + $escapedName + '"\]|' + $escapedName + ')\s*=\s*"rbxassetid://\d+"') `
+        "Required WindUI icon is bundled: $iconName"
+}
 
 if ($script:Failed) {
     Write-Host ""

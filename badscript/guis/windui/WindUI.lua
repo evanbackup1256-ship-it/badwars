@@ -269,7 +269,22 @@ do
 		-- Prefer a game-provided icon module when available, but never depend on it.
 		-- BadWars does not expose GetIcons, so these essential Lucide assets keep
 		-- WindUI usable without remote HTTP or long WaitForChild timeouts.
+		-- BADWARS_WINDUI_VISIBLE_ICONS_V2
+		local DEFAULT_ICON_TYPE = "lucide"
+		local FALLBACK_ICON = "rbxassetid://130359823580534"
+
+		local function normalizeImageAsset(value)
+			if type(value) == "number" then
+				return "rbxassetid://" .. tostring(value)
+			end
+			if type(value) == "string" and value:match("^rbxassetid://%d+$") then
+				return value
+			end
+			return nil
+		end
+
 		local d = {
+			IconsType = DEFAULT_ICON_TYPE,
 			Icons = {},
 			Spritesheets = {},
 		}
@@ -286,21 +301,40 @@ do
 			d = result
 		end
 
+		d.IconsType = type(d.IconsType) == "string" and d.IconsType or DEFAULT_ICON_TYPE
 		d.Icons = type(d.Icons) == "table" and d.Icons or {}
 		d.Spritesheets = type(d.Spritesheets) == "table" and d.Spritesheets or {}
 
 		local builtInLucide = {
+			["badge-check"] = "rbxassetid://76078495178149",
+			bell = "rbxassetid://97392696311902",
 			check = "rbxassetid://93898873302694",
 			["chevron-down"] = "rbxassetid://134243273101015",
 			["chevrons-up-down"] = "rbxassetid://131833120209646",
+			circle = FALLBACK_ICON,
 			copy = "rbxassetid://78979572434545",
+			crosshair = "rbxassetid://134242818164054",
 			expand = "rbxassetid://137492887754537",
+			eye = "rbxassetid://100033680381365",
+			flame = "rbxassetid://98218034436456",
+			folder = "rbxassetid://80846616596607",
+			["gamepad-2"] = "rbxassetid://92483947987410",
+			globe = "rbxassetid://114238209622913",
+			home = "rbxassetid://98755624629571",
+			house = "rbxassetid://98755624629571",
+			list = "rbxassetid://113179976918783",
 			maximize = "rbxassetid://76045941763188",
 			["maximize-2"] = "rbxassetid://73085922906397",
 			minimize = "rbxassetid://121304296213645",
 			move = "rbxassetid://116138709011735",
 			["move-diagonal-2"] = "rbxassetid://117298577948096",
 			search = "rbxassetid://121018724060431",
+			settings = "rbxassetid://80758916183665",
+			sword = "rbxassetid://124448418211665",
+			swords = "rbxassetid://81872698913435",
+			["user-check"] = "rbxassetid://81775205032725",
+			users = "rbxassetid://115398113982385",
+			wrench = "rbxassetid://112148279212860",
 			x = "rbxassetid://110786993356448",
 		}
 
@@ -312,25 +346,31 @@ do
 
 		if type(lucide.Icons) == "table" then
 			lucide.Spritesheets = type(lucide.Spritesheets) == "table" and lucide.Spritesheets or {}
-			for iconName, image in pairs(builtInLucide) do
-				if lucide.Icons[iconName] == nil then
+			for iconName, fallbackImage in pairs(builtInLucide) do
+				local iconData = lucide.Icons[iconName]
+				local resolvedImage
+				if type(iconData) == "table" then
+					resolvedImage = normalizeImageAsset(lucide.Spritesheets[tostring(iconData.Image)])
+						or normalizeImageAsset(iconData.Image)
+				end
+
+				if not resolvedImage then
 					lucide.Icons[iconName] = {
-						Image = image,
+						Image = fallbackImage,
 						ImageRectSize = Vector2.new(0, 0),
 						ImageRectPosition = Vector2.new(0, 0),
 						Parts = nil,
 					}
+					lucide.Spritesheets[fallbackImage] = fallbackImage
 				end
-				lucide.Spritesheets[image] = lucide.Spritesheets[image] or image
 			end
 		else
-			for iconName, image in pairs(builtInLucide) do
-				if lucide[iconName] == nil then
-					lucide[iconName] = image
+			for iconName, fallbackImage in pairs(builtInLucide) do
+				if not normalizeImageAsset(lucide[iconName]) then
+					lucide[iconName] = fallbackImage
 				end
 			end
 		end
-
 		local function parseIconString(e)
 			if type(e) == "string" then
 				local f = e:find(":")
@@ -357,14 +397,8 @@ do
 			if type(iconPack.Icons) ~= "table" then
 				local normalizedIcons = {}
 				for iconName, iconValue in pairs(iconPack) do
-					if
-						type(iconName) == "string"
-						and (type(iconValue) == "number"
-							or (type(iconValue) == "string" and iconValue:match("^rbxassetid://")))
-					then
-						local image = type(iconValue) == "number"
-								and ("rbxassetid://" .. tostring(iconValue))
-							or iconValue
+					local image = normalizeImageAsset(iconValue)
+					if type(iconName) == "string" and image then
 						normalizedIcons[iconName] = {
 							Image = image,
 							ImageRectSize = Vector2.new(0, 0),
@@ -384,47 +418,41 @@ do
 			iconPack.Spritesheets = type(iconPack.Spritesheets) == "table" and iconPack.Spritesheets or {}
 			for _, iconData in pairs(iconPack.Icons) do
 				if type(iconData) == "table" and iconData.Image ~= nil then
-					local imageKey = tostring(iconData.Image)
-					iconPack.Spritesheets[imageKey] = iconPack.Spritesheets[imageKey] or iconData.Image
+					local rawImage = iconData.Image
+					local resolvedImage = normalizeImageAsset(iconPack.Spritesheets[tostring(rawImage)])
+						or normalizeImageAsset(rawImage)
+					if resolvedImage then
+						iconData.Image = resolvedImage
+						iconPack.Spritesheets[resolvedImage] = resolvedImage
+					end
 				end
 			end
 
-			for g, h in pairs(f) do
-				if type(h) == "number" or (type(h) == "string" and h:match("^rbxassetid://")) then
-					local i = h
-					if type(h) == "number" then
-						i = "rbxassetid://" .. tostring(h)
-					end
-
-					iconPack.Icons[g] = {
-						Image = i,
+			for iconName, iconValue in pairs(f) do
+				local directImage = normalizeImageAsset(iconValue)
+				if directImage then
+					iconPack.Icons[iconName] = {
+						Image = directImage,
 						ImageRectSize = Vector2.new(0, 0),
 						ImageRectPosition = Vector2.new(0, 0),
 						Parts = nil,
 					}
-					iconPack.Spritesheets[i] = i
-				elseif type(h) == "table" then
-					if h.Image and h.ImageRectSize and h.ImageRectPosition then
-						local i = h.Image
-						if type(i) == "number" then
-							i = "rbxassetid://" .. tostring(i)
-						end
-
-						iconPack.Icons[g] = {
-							Image = i,
-							ImageRectSize = h.ImageRectSize,
-							ImageRectPosition = h.ImageRectPosition,
-							Parts = h.Parts,
+					iconPack.Spritesheets[directImage] = directImage
+				elseif type(iconValue) == "table" then
+					local image = normalizeImageAsset(iconValue.Image)
+					if image and iconValue.ImageRectSize and iconValue.ImageRectPosition then
+						iconPack.Icons[iconName] = {
+							Image = image,
+							ImageRectSize = iconValue.ImageRectSize,
+							ImageRectPosition = iconValue.ImageRectPosition,
+							Parts = iconValue.Parts,
 						}
-
-						if not iconPack.Spritesheets[i] then
-							iconPack.Spritesheets[i] = i
-						end
+						iconPack.Spritesheets[image] = image
 					else
-						warn("AddIcons: Invalid spritesheet data format for icon '" .. g .. "'")
+						warn("AddIcons: Invalid spritesheet data format for icon '" .. tostring(iconName) .. "'")
 					end
 				else
-					warn("AddIcons: Unsupported data type for icon '" .. g .. "': " .. type(h))
+					warn("AddIcons: Unsupported data type for icon '" .. tostring(iconName) .. "': " .. type(iconValue))
 				end
 			end
 		end
@@ -445,28 +473,35 @@ do
 			h = h ~= false
 			local i, j = parseIconString(f)
 
-			local l = i or g or d.IconsType
+			local l = i or g or d.IconsType or DEFAULT_ICON_TYPE
 			local m = j
-
 			local p = d.Icons[l]
 
-			if p and p.Icons and p.Icons[m] then
+			if p and type(p.Icons) == "table" and type(p.Icons[m]) == "table" then
 				local iconData = p.Icons[m]
-				local image = iconData.Image
-				if type(p.Spritesheets) == "table" then
-					image = p.Spritesheets[tostring(iconData.Image)] or image
+				local directImage = normalizeImageAsset(iconData.Image)
+				local mappedImage = type(p.Spritesheets) == "table"
+						and normalizeImageAsset(p.Spritesheets[tostring(iconData.Image)])
+					or nil
+				local image = mappedImage or directImage
+				if not image then
+					return nil
 				end
+
 				return {
 					image,
 					iconData,
 				}
-			elseif p and p[m] and string.find(p[m], "rbxassetid://") then
-				return h
-						and {
-							p[m],
-							{ ImageRectSize = Vector2.new(0, 0), ImageRectPosition = Vector2.new(0, 0) },
-						}
-					or p[m]
+			elseif p then
+				local image = normalizeImageAsset(p[m])
+				if image then
+					return h
+							and {
+								image,
+								{ ImageRectSize = Vector2.new(0, 0), ImageRectPosition = Vector2.new(0, 0) },
+							}
+						or image
+				end
 			end
 			return nil
 		end
@@ -1211,18 +1246,26 @@ do
 			ImageRectPosition = Vector2.new(0, 0),
 			Parts = nil,
 		}
+		local SAFE_FALLBACK_ICON = "rbxassetid://130359823580534"
+
+		local function isValidIconImage(value)
+			return type(value) == "string" and value:match("^rbxassetid://%d+$") ~= nil
+		end
 
 		function r.SafeIcon(u, v)
 			local icon = m.Icon2(u, nil, v ~= false)
-			if type(icon) == "table" and type(icon[2]) == "table" then
+			if
+				type(icon) == "table"
+				and isValidIconImage(icon[1])
+				and type(icon[2]) == "table"
+			then
 				return icon
 			end
-			if type(icon) == "string" then
+			if isValidIconImage(icon) then
 				return { icon, EMPTY_ICON_DATA }
 			end
-			return { "rbxassetid://130359823580534", EMPTY_ICON_DATA }
+			return { SAFE_FALLBACK_ICON, EMPTY_ICON_DATA }
 		end
-
 		function r.AddIcons(u, v)
 			return m.AddIcons(u, v)
 		end

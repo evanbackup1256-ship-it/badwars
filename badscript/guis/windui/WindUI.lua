@@ -648,6 +648,7 @@ do
 		local i = a.load("a")
 		local j = d.Heartbeat
 
+		-- BADWARS_WINDUI_BUNDLED_ICONS_V1
 		-- WindUI already ships the complete Lucide icon provider. Using the bundled
 		-- copy avoids executing an unnamed, mutable remote chunk during startup.
 		local m = a.load("b")

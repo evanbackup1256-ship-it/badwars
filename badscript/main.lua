@@ -1667,7 +1667,12 @@ local HttpGet = httpGet
 
 
 local function isStaleGuiCache(path, body)
-    -- WindUI adapter is intentionally lean and not part of the legacy cache-bust logic
+    if path == "badscript/guis/windui/WindUI.lua" then
+        return type(body) ~= "string"
+            or body:find("BADWARS_WINDUI_BUNDLED_ICONS_V1", 1, true) == nil
+    end
+
+    -- The WindUI adapter is intentionally lean and has no versioned runtime payload.
     if path:find("windui", 1, true) or path ~= "badscript/guis/new/gui.lua" then
         return false
     end
@@ -2672,14 +2677,9 @@ if gui == "windui" then
 	local windFolder = "badscript/guis/windui"
 	if not isfolder(windFolder) then makefolder(windFolder) end
 	local windBundle = windFolder .. "/WindUI.lua"
-	if (not isfile(windBundle)) or (#(readfile(windBundle) or "") < 1000) then
-		setStatus("downloading WindUI library")
-		local bundleCode = downloadFile("badscript/guis/windui/WindUI.lua")
-		if type(bundleCode) == "string" and #bundleCode > 50000 then
-			if type(writefile) == "function" then
-				pcall(writefile, windBundle, bundleCode)
-			end
-		end
+	local bundleCode = downloadFile(windBundle)
+	if type(bundleCode) ~= "string" or #bundleCode < 50000 then
+		mwarn("BadWars: WindUI library is unavailable or incomplete")
 	end
 end
 

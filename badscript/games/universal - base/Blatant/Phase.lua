@@ -7,6 +7,7 @@ overlapCheck.MaxParts = 9e9
 local modified, fflag = {}
 local teleported
 local phaseCharacter
+local SpiderShift = false
 
 local function grabClosestNormal(ray)
 	local partCF, mag, closest = ray.Instance.CFrame, 0, Enum.NormalId.Top
@@ -110,6 +111,7 @@ Phase = Bad.Categories.Blatant:CreateModule({
 		if callback then
 			Phase:Clean(runService.Stepped:Connect(function()
 				if entitylib.isAlive then
+					SpiderShift = inputService and inputService:IsKeyDown(Enum.KeyCode.LeftShift)
 					local handler = Functions[Mode and Mode.Value]
 					if type(handler) == 'function' then
 						handler()

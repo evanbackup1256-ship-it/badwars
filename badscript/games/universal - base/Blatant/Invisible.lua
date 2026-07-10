@@ -1,7 +1,7 @@
 local Invisible
 local oldcf
 local animtrack
-local proper = true
+local oldroot
 
 local function animationTrickery()
 	if entitylib.isAlive and entitylib.character and entitylib.character.Humanoid then

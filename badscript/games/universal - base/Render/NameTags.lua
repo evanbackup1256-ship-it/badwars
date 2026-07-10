@@ -159,12 +159,12 @@ local Updated = {
 				Strings[ent] = Strings[ent]..' '..math.round(ent.Health)
 			end
 
-			if Distance.Enabled then
-				Strings[ent] = '[%s] '..Strings[ent]
-				nametag.Text.Text = entitylib.isAlive and string.format(Strings[ent], math.floor((entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude)) or Strings[ent]
-			else
-				nametag.Text.Text = Strings[ent]
-			end
+		if Distance.Enabled then
+			Strings[ent] = '[%s] '..Strings[ent]
+			nametag.Text.Text = entitylib.isAlive and entitylib.character and entitylib.character.RootPart and ent and ent.RootPart and string.format(Strings[ent], math.floor((entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude)) or Strings[ent]
+		else
+			nametag.Text.Text = Strings[ent]
+		end
 
 			nametag.BG.Size = Vector2.new(nametag.Text.TextBounds.X + 8, nametag.Text.TextBounds.Y + 7)
 			nametag.Text.Color = entitylib.getEntityColor(ent) or Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)

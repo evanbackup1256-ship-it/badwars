@@ -6,6 +6,8 @@ local YFactor
 local rayCheck = RaycastParams.new()
 rayCheck.RespectCanCollide = true
 local module, old
+local ang = 0
+local oldent = nil
 
 TargetStrafe = Bad.Categories.Blatant:CreateModule({
 	Name = 'TargetStrafe',

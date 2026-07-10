@@ -1,20 +1,20 @@
 local rayCheck = RaycastParams.new()
 rayCheck.RespectCanCollide = true
-local module, old
+local playerModule, oldMoveFunction
 
 Bad.Categories.World:CreateModule({
 	Name = 'SafeWalk',
 	Function = function(callback)
 		if callback then
-			if not module then
+			if not playerModule then
 				local suc = pcall(function() 
-					module = require(lplr and lplr.PlayerScripts and lplr.PlayerScripts:FindFirstChild('PlayerModule') and lplr.PlayerScripts.PlayerModule).controls 
+					playerModule = require(lplr and lplr.PlayerScripts and lplr.PlayerScripts:FindFirstChild('PlayerModule') and lplr.PlayerScripts.PlayerModule).controls 
 				end)
-				if not suc then module = {} end
+				if not suc then playerModule = {} end
 			end
 			
-			old = module.moveFunction
-			module.moveFunction = function(self, vec, face)
+			oldMoveFunction = playerModule.moveFunction
+			playerModule.moveFunction = function(self, vec, face)
 				if entitylib.isAlive and entitylib.character and entitylib.character.RootPart then
 					rayCheck.FilterDescendantsInstances = {lplr and lplr.Character, gameCamera}
 					local root = entitylib.character.RootPart
@@ -28,11 +28,11 @@ Bad.Categories.World:CreateModule({
 					end
 				end
 
-				return old and old(self, vec, face)
+				return oldMoveFunction and oldMoveFunction(self, vec, face)
 			end
 		else
-			if module and old then
-				module.moveFunction = old
+			if playerModule and oldMoveFunction then
+				playerModule.moveFunction = oldMoveFunction
 			end
 		end
 	end,

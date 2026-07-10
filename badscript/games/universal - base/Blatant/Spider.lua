@@ -4,6 +4,7 @@ local State
 local rayCheck = RaycastParams.new()
 rayCheck.RespectCanCollide = true
 local Active, Truss
+local SpiderShift = false
 
 Spider = Bad.Categories.Blatant:CreateModule({
 	Name = 'Spider',
@@ -54,7 +55,7 @@ Spider = Bad.Categories.Blatant:CreateModule({
 					else
 						local ray = workspace:Raycast(root.Position - Vector3.new(0, (entitylib.character.HipHeight or 2) - 0.5, 0), entitylib.character.RootPart.CFrame.LookVector * 2, rayCheck)
 						if ray and (not (Phase and Phase.Enabled) or not SpiderShift) then
-							Truss.Position = ray.Position - ray.Normal * 0.9 or Vector3.zero
+							Truss.Position = ray.Position - (ray.Normal * 0.9)
 						else
 							Truss.Position = Vector3.zero
 						end

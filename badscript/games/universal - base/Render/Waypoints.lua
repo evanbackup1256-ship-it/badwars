@@ -4,7 +4,7 @@ local List
 local Color = {Hue = 0.44, Sat = 1, Value = 1, Opacity = 0.5}
 local Scale
 local Background
-WaypointFolder = Instance.new('Folder')
+local WaypointFolder = Instance.new('Folder')
 WaypointFolder.Parent = Bad.gui
 
 Waypoints = Bad.Categories.Render:CreateModule({

@@ -3,6 +3,7 @@ local Targets
 local ShootDelay
 local Distance
 local rayCheck, delayCheck = RaycastParams.new(), tick()
+local mouseClicked = false
 
 local function getTriggerBotTarget()
 	if not lplr or not lplr.Character or not gameCamera then return nil end

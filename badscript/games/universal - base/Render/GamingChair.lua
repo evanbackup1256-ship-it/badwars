@@ -11,6 +11,7 @@ local movingsound
 local flyingsound
 local chairanim
 local chair
+local chairTween
 
 GamingChair = Bad.Categories.Render:CreateModule({
 	Name = 'GamingChair',
@@ -157,20 +158,20 @@ GamingChair = Bad.Categories.Render:CreateModule({
 							if currenttween then
 								currenttween:Cancel()
 							end
-							tween = tweenService:Create(chairlegs, TweenInfo.new(0.15), {
+							chairTween = tweenService:Create(chairlegs, TweenInfo.new(0.15), {
 								Size = Vector3.zero
 							})
-							tween.Completed:Connect(function(state)
+							chairTween.Completed:Connect(function(state)
 								if state == Enum.PlaybackState.Completed then
 									chairfan.Transparency = 0
 									chairlegs.Transparency = 1
-									tween = tweenService:Create(chairfan, TweenInfo.new(0.15), {
+									chairTween = tweenService:Create(chairfan, TweenInfo.new(0.15), {
 										Size = Vector3.new(1.534, 0.328, 1.537) / Vector3.new(791.138, 168.824, 792.027)
 									})
-									tween:Play()
+									chairTween:Play()
 								end
 							end)
-							tween:Play()
+							chairTween:Play()
 						else
 							if flyingsound.IsPlaying then
 								flyingsound:Stop()
@@ -179,20 +180,20 @@ GamingChair = Bad.Categories.Render:CreateModule({
 								movingsound:Play()
 							end
 							if currenttween then currenttween:Cancel() end
-							tween = tweenService:Create(chairfan, TweenInfo.new(0.15), {
+							chairTween = tweenService:Create(chairfan, TweenInfo.new(0.15), {
 								Size = Vector3.zero
 							})
-							tween.Completed:Connect(function(state)
+							chairTween.Completed:Connect(function(state)
 								if state == Enum.PlaybackState.Completed then
 									chairfan.Transparency = 1
 									chairlegs.Transparency = 0
-									tween = tweenService:Create(chairlegs, TweenInfo.new(0.15), {
+									chairTween = tweenService:Create(chairlegs, TweenInfo.new(0.15), {
 										Size = Vector3.new(1.8, 1.2, 1.8) / Vector3.new(10.432, 8.105, 9.488)
 									})
-									tween:Play()
+									chairTween:Play()
 								end
 							end)
-							tween:Play()
+							chairTween:Play()
 						end
 						oldflying = flying
 					end

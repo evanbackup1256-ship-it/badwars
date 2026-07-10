@@ -3,6 +3,33 @@
 @tailwind utilities;
 
 :root {
+  /* Tailwind expected HSL variables */
+  --background: 0 0% 1%;
+  --foreground: 0 0% 94%;
+  --card: 0 0% 4%;
+  --card-foreground: 0 0% 94%;
+  --popover: 0 0% 4%;
+  --popover-foreground: 0 0% 94%;
+  --primary: 350 100% 59%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 20% 12%;
+  --secondary-foreground: 0 0% 94%;
+  --muted: 0 0% 8%;
+  --muted-foreground: 0 0% 54%;
+  --accent: 350 100% 59%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 12%;
+  --input: 0 0% 12%;
+  --ring: 350 100% 59%;
+  --radius: 0.5rem;
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+
+  /* Custom BadWars variables */
   --bg-deep: #030304;
   --bg-surface: #0a0a0d;
   --bg-elevated: #111116;
@@ -10,13 +37,11 @@
   --fg-primary: #f0f0f2;
   --fg-secondary: #8a8a96;
   --fg-muted: #4a4a54;
-  --accent: #ff2d4a;
+  --accent-hex: #ff2d4a;
   --accent-dim: #ff2d4a22;
   --accent-glow: #ff2d4a44;
   --border-subtle: #1e1e26;
   --border-accent: #ff2d4a33;
-  --success: #22c55e;
-  --warning: #f59e0b;
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 16px;
@@ -43,7 +68,7 @@ body {
 }
 
 ::selection {
-  background: var(--accent);
+  background: hsl(var(--primary));
   color: #fff;
 }
 
@@ -54,7 +79,7 @@ body {
   background: var(--bg-deep);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--accent);
+  background: hsl(var(--primary));
   border-radius: 10px;
 }
 
@@ -121,10 +146,10 @@ body {
   padding: 1px;
   background: conic-gradient(
     from var(--angle),
-    var(--accent),
+    hsl(var(--primary)),
     transparent 30%,
     transparent 70%,
-    var(--accent)
+    hsl(var(--primary))
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -168,7 +193,7 @@ body {
 }
 
 .glitch::before {
-  color: var(--accent);
+  color: hsl(var(--primary));
   animation: glitch1 4s infinite linear alternate-reverse;
   z-index: -1;
 }
@@ -194,7 +219,7 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: var(--accent);
+  background: hsl(var(--primary));
   animation: pulseRing 2s ease-out infinite;
 }
 
@@ -216,7 +241,7 @@ body {
   position: absolute;
   width: 2px;
   height: 2px;
-  background: var(--accent);
+  background: hsl(var(--primary));
   border-radius: 50%;
   animation: drift 8s ease-in-out infinite;
 }
@@ -230,7 +255,7 @@ body {
 .cursor-blink::after {
   content: '▌';
   animation: blink 1s step-end infinite;
-  color: var(--accent);
+  color: hsl(var(--primary));
   margin-left: 2px;
 }
 
@@ -292,7 +317,7 @@ body {
   content: '';
   position: absolute;
   inset: -2px;
-  background: var(--accent);
+  background: hsl(var(--primary));
   border-radius: inherit;
   filter: blur(12px);
   opacity: 0;
@@ -351,7 +376,7 @@ body {
 }
 
 .code-block .prompt {
-  color: var(--accent);
+  color: hsl(var(--primary));
   user-select: none;
 }
 
@@ -379,7 +404,7 @@ body {
 
 .tag-accent {
   background: var(--accent-dim);
-  color: var(--accent);
+  color: hsl(var(--primary));
   border: 1px solid var(--border-accent);
 }
 

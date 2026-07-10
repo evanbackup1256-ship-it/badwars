@@ -30,12 +30,15 @@ run(function()
 	local AttackRemote = {FireServer = function() end}
 	local store = (shared.Bad and shared.Bad.store) or {}
 	local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+	local remotes = (shared.Bad and shared.Bad.remotes) or {}
 	local lplr = game:GetService('Players').LocalPlayer
 	local inputService = game:GetService('UserInputService')
 	local tweenService = game:GetService('TweenService')
 	local gameCamera = workspace.CurrentCamera
 	local targetinfo = (shared.Bad and shared.Bad.targetinfo) or {Targets = {}}
 	local sortmethods = (shared.Bad and shared.Bad.sortmethods) or {}
+	local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
+	local switchItem = (shared.Bad and shared.Bad.switchItem) or nil
 	local oldSwing
 	task.spawn(function()
 		if bedwars.Client and remotes and remotes.AttackEntity then
@@ -81,7 +84,9 @@ run(function()
 					end)
 				end
 
-				if Animation and Animation.Enabled and not (identifyexecutor and table.find({'Argon', 'Delta'}, ({pcall(identifyexecutor)})[2] or '')) then
+				local execName = ''
+				pcall(function() if type(identifyexecutor) == 'function' then execName = identifyexecutor() end end)
+				if Animation and Animation.Enabled and not table.find({'Argon', 'Delta'}, execName) then
 					local fake = {
 						Controllers = {
 							ViewmodelController = {
@@ -174,7 +179,10 @@ run(function()
 							for _, v in plrs do
 								if not v.RootPart then continue end
 								local delta = (v.RootPart.Position - selfpos)
-								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+								local flatDelta = delta * Vector3.new(1, 0, 1)
+								local dot = localfacing:Dot(flatDelta.Unit)
+								dot = math.clamp(dot, -1, 1)
+								local angle = math.acos(dot)
 								if angle > (math.rad(AngleSlider and AngleSlider.Value or 360) / 2) then continue end
 
 								table.insert(attacked, {

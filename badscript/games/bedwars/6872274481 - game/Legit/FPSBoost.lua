@@ -1,7 +1,7 @@
 local Bad = shared.Bad or {}
-local bedwars = Bad.bedwars or {}
-local store = Bad.store or {}
-local entitylib = Bad.entitylib or {}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local store = (shared.Bad and shared.Bad.store) or {}
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local compat = Bad.BedWarsCompatibility or {}
 
 local FPSBoost
@@ -13,9 +13,9 @@ FPSBoost = Bad.Legit:CreateModule({
 	Name = 'FPS Boost',
 	Function = function(callback)
 		if callback then
-			if Kill.Enabled then
-				for i, v in bedwars.KillEffectController.killEffects do
-					if not i:find('Custom') then
+			if Kill.Enabled and bedwars.KillEffectController and bedwars.KillEffectController.killEffects then
+				for i, v in pairs(bedwars.KillEffectController.killEffects) do
+					if not tostring(i):find('Custom') then
 						effects[i] = v
 						bedwars.KillEffectController.killEffects[i] = {
 							new = function() 
@@ -31,8 +31,8 @@ FPSBoost = Bad.Legit:CreateModule({
 				end
 			end
 
-			if Visualizer.Enabled then
-				for i, v in bedwars.VisualizerUtils do
+			if Visualizer.Enabled and bedwars.VisualizerUtils then
+				for i, v in pairs(bedwars.VisualizerUtils) do
 					util[i] = v
 					bedwars.VisualizerUtils[i] = function() end
 				end
@@ -40,18 +40,26 @@ FPSBoost = Bad.Legit:CreateModule({
 
 			repeat task.wait() until store.matchState ~= 0
 			if not bedwars.AppController then return end
-			bedwars.NametagController.addGameNametag = function() end
-			for _, v in bedwars.AppController:getOpenApps() do
-				if tostring(v):find('Nametag') then
-					bedwars.AppController:closeApp(tostring(v))
+			if bedwars.NametagController then
+				bedwars.NametagController.addGameNametag = function() end
+			end
+			pcall(function()
+				for _, v in bedwars.AppController:getOpenApps() do
+					if tostring(v):find('Nametag') then
+						bedwars.AppController:closeApp(tostring(v))
+					end
+				end
+			end)
+		else
+			for i, v in pairs(effects) do 
+				if bedwars.KillEffectController and bedwars.KillEffectController.killEffects then
+					bedwars.KillEffectController.killEffects[i] = v 
 				end
 			end
-		else
-			for i, v in effects do 
-				bedwars.KillEffectController.killEffects[i] = v 
-			end
-			for i, v in util do 
-				bedwars.VisualizerUtils[i] = v 
+			for i, v in pairs(util) do 
+				if bedwars.VisualizerUtils then
+					bedwars.VisualizerUtils[i] = v 
+				end
 			end
 			table.clear(effects)
 			table.clear(util)

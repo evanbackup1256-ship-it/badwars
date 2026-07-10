@@ -143,7 +143,7 @@ local function attemptBreak(tab, localPosition)
 				end
 			end
 
-			task.wait(InstantBreak.Enabled and (store.damageBlockFail > tick() and 4.5 or 0) or BreakSpeed.Value)
+			task.wait(InstantBreak.Enabled and ((store.damageBlockFail or 0) > tick() and 4.5 or 0) or BreakSpeed.Value)
 
 			return true
 		end

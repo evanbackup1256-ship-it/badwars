@@ -11,7 +11,7 @@ local Apple
 local ShieldPotion
 
 local function consumeCheck(attribute)
-	if entitylib.isAlive then
+	if entitylib.isAlive and lplr and lplr.Character then
 		if SpeedPotion.Enabled and (not attribute or attribute == 'StatusEffect_speed') then
 			local speedpotion = getItem('speed_potion')
 			if speedpotion and (not lplr.Character:GetAttribute('StatusEffect_speed')) then
@@ -22,7 +22,9 @@ local function consumeCheck(attribute)
 		end
 
 		if Apple.Enabled and (not attribute or attribute:find('Health')) then
-			if (lplr.Character:GetAttribute('Health') / lplr.Character:GetAttribute('MaxHealth')) <= (Health.Value / 100) then
+			local health = lplr.Character:GetAttribute('Health') or 0
+			local maxHealth = lplr.Character:GetAttribute('MaxHealth') or 100
+			if maxHealth > 0 and (health / maxHealth) <= (Health.Value / 100) then
 				local apple = getItem('orange') or (not lplr.Character:GetAttribute('StatusEffect_golden_apple') and getItem('golden_apple')) or getItem('apple')
 				
 				if apple then

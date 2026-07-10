@@ -3,6 +3,7 @@ local Expand
 local objects, set = {}
 local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
 local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
+local HitBoxes
 
 local function createHitbox(ent)
 	if ent and ent.Targetable and ent.Player and ent.RootPart and ent.Character then

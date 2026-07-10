@@ -589,8 +589,8 @@ end)
 
 -- V14 module runtime: legacy globals, game libraries, and safe helpers.
 local StarterGui = game:GetService("StarterGui")
-starterGui = StarterGui
-oldinvrender = oldinvrender
+local starterGui = StarterGui
+local oldinvrender = oldinvrender
 
 local function safeRequireModule(module)
     if not module or not module:IsA("ModuleScript") then
@@ -623,7 +623,7 @@ local function safeRequirePath(root, pathParts)
     return safeRequireModule(current)
 end
 
-function getRoactRender(func)
+local function getRoactRender(func)
     if type(func) ~= "function" or not debug or type(debug.getupvalue) ~= "function" then
         return function() end
     end

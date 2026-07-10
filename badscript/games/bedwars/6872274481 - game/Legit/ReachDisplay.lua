@@ -6,7 +6,8 @@ ReachDisplay = Bad.Legit:CreateModule({
 	Function = function(callback)
 		if callback then
 			repeat
-				label.Text = (store.attackReachUpdate > tick() and store.attackReach or '0.00')..' studs'
+				local reach = store.attackReachUpdate and store.attackReachUpdate > tick() and store.attackReach or '0.00'
+				label.Text = tostring(reach)..' studs'
 				task.wait(0.4)
 			until not ReachDisplay.Enabled
 		end

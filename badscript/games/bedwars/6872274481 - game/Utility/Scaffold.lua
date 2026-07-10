@@ -55,9 +55,10 @@ local function getScaffoldBlock()
 
     local wool, woolAmount
     if type(getWool) == "function" then
-        local ok, itemType, amount = pcall(getWool)
-        if ok then
-            wool, woolAmount = itemType, amount
+        local ok, itemType = pcall(getWool)
+        if ok and itemType then
+            wool = itemType
+            woolAmount = 0
         end
     end
     if wool then

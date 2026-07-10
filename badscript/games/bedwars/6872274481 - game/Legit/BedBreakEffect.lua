@@ -31,7 +31,7 @@ BedBreakEffect = Bad.Legit:CreateModule({
         end
         local remote = bedwars.Client:Get("BedBreakEffectTriggered")
         local onClient = remote and remote.instance and remote.instance.OnClientEvent
-        if remote == nullRemote or not onClient or type(firesignal) ~= "function" then
+        if not remote or not remote.instance or not onClient or type(firesignal) ~= "function" then
             return Bad.BedWarsCompatibility.Unavailable(BedBreakEffect, "The bed break effect remote changed in this BedWars update.")
         end
         BedBreakEffect:Clean(event:Connect(function(data)

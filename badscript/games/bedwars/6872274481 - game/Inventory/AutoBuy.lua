@@ -100,7 +100,9 @@ end
 
 local function buyItem(item, currencytable)
 	if not id then return end
-	notif('AutoBuy', 'Bought '..bedwars.ItemMeta[item.itemType].displayName, 3)
+	local meta = bedwars.ItemMeta and bedwars.ItemMeta[item.itemType]
+	local displayName = meta and meta.displayName or item.itemType or "Unknown"
+	notif('AutoBuy', 'Bought '..displayName, 3)
 	bedwars.Client:Get('BedwarsPurchaseItem'):CallServerAsync({
 		shopItem = item,
 		shopId = id

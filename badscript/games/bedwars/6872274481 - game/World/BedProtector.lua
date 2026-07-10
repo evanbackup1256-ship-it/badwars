@@ -18,7 +18,8 @@ end
 local function getBlocks()
 	local blocks = {}
 	for _, item in store.inventory.inventory.items do
-		local block = bedwars.ItemMeta[item.itemType].block
+		local meta = bedwars.ItemMeta and bedwars.ItemMeta[item.itemType]
+		local block = meta and meta.block
 		if block then
 			table.insert(blocks, {item.itemType, block.health})
 		end

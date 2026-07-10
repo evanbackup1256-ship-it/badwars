@@ -5,6 +5,14 @@ local entitylib = Bad.entitylib or {}
 local compat = Bad.BedWarsCompatibility or {}
 local collectionService = Bad.collectionService or game:GetService("CollectionService")
 local BadEvents = Bad.BadEvents or {}
+local getPlacedBlock = bedwars.getPlacedBlock or function() return nil end
+
+local sides = {
+    Vector3.new(1, 0, 0),
+    Vector3.new(-1, 0, 0),
+    Vector3.new(0, 0, 1),
+    Vector3.new(0, 0, -1),
+}
 
 local BedPlates
 local Background

@@ -17,7 +17,7 @@ AutoSuffocate = Bad.Categories.World:CreateModule({
 	Function = function(callback)
 		if callback then
 			repeat
-				local item = store.hand.toolType == 'block' and store.hand.tool.Name or not LimitItem.Enabled and getWool()
+				local item = store.hand and store.hand.toolType == 'block' and store.hand.tool and store.hand.tool.Name or not LimitItem.Enabled and getWool()
 
 				if item then
 					local plrs = entitylib.AllPosition({

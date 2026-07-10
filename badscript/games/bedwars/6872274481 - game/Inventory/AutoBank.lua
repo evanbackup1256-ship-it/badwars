@@ -55,7 +55,7 @@ local function handleState()
 	if not chest then return end
 
 	local mapCF = workspace.MapCFrames:FindFirstChild((lplr:GetAttribute('Team') or 1)..'_spawn')
-	if mapCF and (entitylib.character.RootPart.Position - mapCF.Value.Position).Magnitude < 80 then
+	if mapCF and entitylib.isAlive and entitylib.character and entitylib.character.RootPart and (entitylib.character.RootPart.Position - mapCF.Value.Position).Magnitude < 80 then
 		for _, v in chest:GetChildren() do
 			local item = Items[v.Name]
 			if item then

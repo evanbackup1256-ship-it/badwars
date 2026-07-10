@@ -648,22 +648,9 @@ do
 		local i = a.load("a")
 		local j = d.Heartbeat
 
-		local l = "https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"
-
-		local m
-		if d:IsStudio() or not writefile then
-			m = a.load("b")
-		else
-			-- Fix: Icon download may fail due to rate limiting or network issues
-			local ok, result = pcall(function()
-				local source = game.HttpGet and game:HttpGet(l) or h:GetAsync(l)
-				if type(source) == "string" and #source > 100 then
-					return loadstring(source)()
-				end
-				return nil
-			end)
-			m = ok and result or a.load("b")
-		end
+		-- WindUI already ships the complete Lucide icon provider. Using the bundled
+		-- copy avoids executing an unnamed, mutable remote chunk during startup.
+		local m = a.load("b")
 
 		m.SetIconsType("lucide")
 

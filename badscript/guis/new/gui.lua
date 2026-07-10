@@ -1984,22 +1984,9 @@ end
 
 local G = shared.CACHED_ICON_LIBRARY
 if not G then
-    F(function()
-        local H, I = pcall(function()
-            local H =
-                loadstring(d.http_function("https://raw.githubusercontent.com/Footagesus/Icons/main/Main-v2.lua"))()
-            H.SetIconsType("lucide")
-            return H
-        end)
-        if not H then
-            pcall(function()
-                d:CreateNotification("BadWars | Icons", "Failure loading custom icons :c", 5, "alert")
-            end)
-            bwarn(`[Icons Failure]: {tostring(I)}`)
-        end
-        G = H and I or nil
-        shared.CACHED_ICON_LIBRARY = G
-    end, 3)
+    -- The local icon map below covers this UI. Avoid executing a mutable remote
+    -- icon chunk during startup; that chunk previously failed at its line 7.
+    shared.CACHED_ICON_LIBRARY = nil
 end
 local iconCache = {}
 local missingIconWarnings = {}

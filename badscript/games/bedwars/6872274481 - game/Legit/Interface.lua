@@ -1,7 +1,17 @@
+local Bad = shared.Bad or {}
+local bedwars = Bad.bedwars or {}
+local lplr = game:GetService('Players').LocalPlayer
+local getRoactRender = (Bad.BedWarsCompatibility and Bad.BedWarsCompatibility.getRoactRender) or function() return function() end end
+
 local Interface
-local HotbarOpenInventory = require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-open-inventory']).HotbarOpenInventory
-local HotbarHealthbar = require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui.healthbar['hotbar-healthbar']).HotbarHealthbar
-local HotbarApp = getRoactRender(require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-app']).HotbarApp.render)
+local HotbarOpenInventory, HotbarHealthbar, HotbarApp
+
+pcall(function()
+	HotbarOpenInventory = require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-open-inventory']).HotbarOpenInventory
+	HotbarHealthbar = require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui.healthbar['hotbar-healthbar']).HotbarHealthbar
+	HotbarApp = getRoactRender(require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-app']).HotbarApp.render)
+end)
+
 local old, new = {}, {}
 
 Bad:Clean(function()

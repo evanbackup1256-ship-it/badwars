@@ -18,7 +18,7 @@ local FastConsume = Bad.Categories.Inventory:CreateModule({
 				local handle = self:showProgress()
 				local clicktime = self.startedClickTime
 				bedwars.RuntimeLib.Promise.defer(function()
-					task.wait(self.durationSeconds * (Value.Value / 40))
+					task.wait(self.durationSeconds * (Value.Value / 100))
 					if handle == self.handle and clicktime == self.startedClickTime and self.closeOnComplete then
 						self:hideProgress()
 						if self.onComplete then self.onComplete() end

@@ -1,8 +1,17 @@
 local Bad = shared.Bad or {}
-local bedwars = Bad.bedwars or {}
-local store = Bad.store or {}
-local entitylib = Bad.entitylib or {}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local store = (shared.Bad and shared.Bad.store) or {}
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local compat = Bad.BedWarsCompatibility or {}
+local remotes = (shared.Bad and shared.Bad.remotes) or {}
+local switchItem = (shared.Bad and shared.Bad.switchItem) or function() end
+local prediction = (shared.Bad and shared.Bad.prediction) or {SolveTrajectory = function() return nil end}
+local httpService = game:GetService('HttpService')
+local lplr = game:GetService('Players').LocalPlayer
+local gameCamera = workspace.CurrentCamera
+local getItem = (shared.Bad and shared.Bad.getItem) or function() return nil end
+local getNearGround = (shared.Bad and shared.Bad.getNearGround) or function() return nil end
+local AntiFallPart = nil
 
 local AutoPearl
 local rayCheck = RaycastParams.new()

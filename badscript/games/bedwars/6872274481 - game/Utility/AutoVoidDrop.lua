@@ -1,8 +1,11 @@
 local Bad = shared.Bad or {}
-local bedwars = Bad.bedwars or {}
-local store = Bad.store or {}
-local entitylib = Bad.entitylib or {}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local store = (shared.Bad and shared.Bad.store) or {}
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local compat = Bad.BedWarsCompatibility or {}
+local remotes = (shared.Bad and shared.Bad.remotes) or {}
+local getItem = (shared.Bad and shared.Bad.getItem) or function() return nil end
+local lplr = game:GetService('Players').LocalPlayer
 
 local AutoVoidDrop
 local OwlCheck

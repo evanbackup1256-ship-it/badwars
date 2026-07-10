@@ -2,7 +2,7 @@ local Bad = shared.Bad or {}
 local bedwars = Bad.bedwars or {}
 local compat = Bad.BedWarsCompatibility or {}
 
-Bad.Legit:CreateModule({
+local HitFix = Bad.Legit:CreateModule({
 	Name = 'HitFix',
 	Function = function(callback)
 		local sword = bedwars.SwordController

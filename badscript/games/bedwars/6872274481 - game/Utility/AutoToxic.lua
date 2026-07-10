@@ -1,8 +1,11 @@
 local Bad = shared.Bad or {}
-local bedwars = Bad.bedwars or {}
-local store = Bad.store or {}
-local entitylib = Bad.entitylib or {}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local store = (shared.Bad and shared.Bad.store) or {}
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local compat = Bad.BedWarsCompatibility or {}
+local BadEvents = (shared.Bad and shared.Bad.BadEvents) or {}
+local lplr = game:GetService('Players').LocalPlayer
+local playersService = game:GetService('Players')
 
 local AutoToxic
 local GG
@@ -32,9 +35,9 @@ AutoToxic = Bad.Categories.Utility:CreateModule({
 		if callback then
 			AutoToxic:Clean(BadEvents.BedwarsBedBreak.Event:Connect(function(bedTable)
 				if Toggles.BedDestroyed.Enabled and bedTable.brokenBedTeam.id == lplr:GetAttribute('Team') then
-					sendMessage('BedDestroyed', (bedTable.player.DisplayName or bedTable.player.Name), 'how dare you >:( | <obj>')
-				elseif Toggles.Bed.Enabled and bedTable.player.UserId == lplr.UserId then
-					local team = bedwars.QueueMeta[store.queueType].teams[tonumber(bedTable.brokenBedTeam.id)]
+					sendMessage('BedDestroyed', (bedTable.player and (bedTable.player.DisplayName or bedTable.player.Name)) or 'unknown', 'how dare you >:( | <obj>')
+				elseif Toggles.Bed.Enabled and bedTable.player and bedTable.player.UserId == lplr.UserId then
+					local team = bedwars.QueueMeta and bedwars.QueueMeta[store.queueType] and bedwars.QueueMeta[store.queueType].teams and bedwars.QueueMeta[store.queueType].teams[tonumber(bedTable.brokenBedTeam.id)]
 					sendMessage('Bed', team and team.displayName:lower() or 'white', 'nice bed lul | <obj>')
 				end
 			end))

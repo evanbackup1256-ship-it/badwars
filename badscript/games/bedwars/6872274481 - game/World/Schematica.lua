@@ -1,8 +1,16 @@
 local Bad = shared.Bad or {}
-local bedwars = Bad.bedwars or {}
-local store = Bad.store or {}
-local entitylib = Bad.entitylib or {}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local store = (shared.Bad and shared.Bad.store) or {}
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local compat = Bad.BedWarsCompatibility or {}
+local httpService = game:GetService('HttpService')
+local getPlacedBlock = (shared.Bad and shared.Bad.getPlacedBlock) or function() return nil end
+local getWool = (shared.Bad and shared.Bad.getWool) or function() return nil end
+local getTableSize = (shared.Bad and shared.Bad.getTableSize) or function(t) local c = 0 for _ in pairs(t) do c += 1 end return c end
+local notif = (shared.Bad and shared.Bad.notif) or function() end
+local writefile = type(writefile) == 'function' and writefile or function() end
+local isfile = type(isfile) == 'function' and isfile or function() return false end
+local readfile = type(readfile) == 'function' and readfile or function() return '' end
 
 local Schematica
 local File

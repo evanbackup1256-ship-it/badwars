@@ -152,9 +152,11 @@ Mode = KillEffect:CreateDropdown({
 	end
 })
 local KillEffectName = {}
-for i, v in bedwars.KillEffectMeta do
-	table.insert(KillEffectName, v.name)
-	NameToId[v.name] = i
+for i, v in pairs(bedwars.KillEffectMeta or {}) do
+	if type(v) == 'table' and v.name then
+		table.insert(KillEffectName, v.name)
+		NameToId[v.name] = i
+	end
 end
 table.sort(KillEffectName)
 List = KillEffect:CreateDropdown({

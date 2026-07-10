@@ -1,8 +1,14 @@
 local Bad = shared.Bad or {}
-local bedwars = Bad.bedwars or {}
-local store = Bad.store or {}
-local entitylib = Bad.entitylib or {}
+local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
+local store = (shared.Bad and shared.Bad.store) or {}
+local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
 local compat = Bad.BedWarsCompatibility or {}
+local lplr = game:GetService('Players').LocalPlayer
+local runService = game:GetService('RunService')
+local whitelist = (shared.Bad and shared.Bad.whitelist) or {tag = function(_, plr) return '' end}
+local getfontsize = (shared.Bad and shared.Bad.getfontsize) or function() return Vector2.new(100, 20) end
+local removeTags = (shared.Bad and shared.Bad.removeTags) or function(s) return s end
+local gameCamera = workspace.CurrentCamera
 
 local NameTags
 local Targets
@@ -22,15 +28,6 @@ local Strings, Sizes, Reference = {}, {}, {}
 local Folder = Instance.new('Folder')
 Folder.Parent = Bad.gui
 local methodused
-local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
-local lplr = game:GetService('Players').LocalPlayer
-local runService = game:GetService('RunService')
-local entitylib = (shared.Bad and shared.Bad.entitylib) or {}
-local whitelist = (shared.Bad and shared.Bad.whitelist) or {tag = function(_, plr) return '' end}
-local store = (shared.Bad and shared.Bad.store) or {}
-local getfontsize = (shared.Bad and shared.Bad.getfontsize) or function() return Vector2.new(100, 20) end
-local removeTags = (shared.Bad and shared.Bad.removeTags) or function(s) return s end
-local gameCamera = workspace.CurrentCamera
 
 local Added = {
 	Normal = function(ent)

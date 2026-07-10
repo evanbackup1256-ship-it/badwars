@@ -13091,6 +13091,20 @@ do
 					ImageTransparency = 1,
 				}),
 			})
+			local expandIcon = an.Icon("expand")
+				or an.Icon("maximize-2")
+				or an.Icon("maximize")
+				or an.Icon("move-diagonal-2")
+				or an.Icon("move")
+			local expandIconData = type(expandIcon) == "table" and expandIcon[2] or nil
+			local expandImage = type(expandIcon) == "table" and expandIcon[1] or ""
+			local expandRectOffset = type(expandIconData) == "table"
+				and expandIconData.ImageRectPosition
+				or Vector2.new(0, 0)
+			local expandRectSize = type(expandIconData) == "table"
+				and expandIconData.ImageRectSize
+				or Vector2.new(0, 0)
+
 			local aA = an.NewRoundFrame(aw.UICorner, "Squircle", {
 				Size = UDim2.new(1, 0, 1, 0),
 				ImageTransparency = 1,
@@ -13100,9 +13114,9 @@ do
 			}, {
 				ao("ImageLabel", {
 					Size = UDim2.new(0, 70, 0, 70),
-					Image = an.Icon("expand")[1],
-					ImageRectOffset = an.Icon("expand")[2].ImageRectPosition,
-					ImageRectSize = an.Icon("expand")[2].ImageRectSize,
+					Image = expandImage,
+					ImageRectOffset = expandRectOffset,
+					ImageRectSize = expandRectSize,
 					BackgroundTransparency = 1,
 					Position = UDim2.new(0.5, 0, 0.5, 0),
 					AnchorPoint = Vector2.new(0.5, 0.5),

@@ -1,504 +1,188 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "next-themes";
-import { Activity, ArrowRight, CheckCircle2, ChevronRight, Copy, Download, GitBranch, Menu, Moon, Sun, X, Zap, Terminal, Shield, Cpu } from "lucide-react";
+import {
+  Activity, ArrowRight, Boxes, Check, ChevronRight, Clipboard,
+  Copy, Cpu, Download, GitBranch, Menu, Radar, Route,
+  ShieldCheck, TerminalSquare, X, Zap,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { buildLoader } from "@/lib/loader";
-import { changelog, features, games, navItems, releases } from "@/lib/site-data";
-import { formatRelativeTime } from "@/lib/utils";
+import { games, navItems } from "@/lib/site-data";
 
-type RobloxStatus = {
-  ok: boolean;
-  changed: boolean;
-  version?: string;
-  channel?: string;
-  warning?: string;
-  lastCheckedAt?: string;
-};
-
-type GitHubCommitInfo = {
-  sha: string;
-  shortSha: string;
-  message: string;
-  fallback: boolean;
-};
-
-function buildPageLoader(ref?: string) {
-  const base = typeof window === "undefined" ? "https://badwars-production.up.railway.app" : window.location.origin;
-  return ref ? buildLoader(base, ref) : buildLoader(base);
-}
+type RobloxStatus = { ok: boolean; changed: boolean; version?: string; warning?: string };
+type CommitInfo = { shortSha: string; message: string; fallback: boolean };
 
 async function fetchRobloxStatus(): Promise<RobloxStatus> {
   const response = await fetch("/api/roblox/status", { cache: "no-store" });
-  if (!response.ok) throw new Error("Unable to reach status service");
+  if (!response.ok) throw new Error("Status unavailable");
   return response.json();
 }
 
-async function fetchLatestCommit() {
+async function fetchLatestCommit(): Promise<CommitInfo> {
   const response = await fetch("/api/github/latest", { cache: "no-store" });
-  if (!response.ok) throw new Error("GitHub sync unavailable");
-  return response.json() as Promise<GitHubCommitInfo>;
+  if (!response.ok) throw new Error("Commit unavailable");
+  return response.json();
 }
 
-function copyLoader(loader: string, description = "Paste it once and read the status label.") {
-  navigator.clipboard?.writeText(loader)
-    .then(() => toast.success("Loader copied", { description }))
-    .catch(() => toast.warning("Clipboard blocked", { description: "Select the loader text manually from the download center." }));
-}
-
-async function fetchLatestLoader() {
+async function getLatestLoader() {
   const response = await fetch("/api/download/latest", { cache: "no-store" });
-  if (!response.ok) throw new Error("Loader sync failed");
+  if (!response.ok) {
+    return buildLoader(typeof window === "undefined" ? "https://badwars-production.up.railway.app" : window.location.origin);
+  }
   return response.text();
 }
 
 async function copyLatestLoader() {
   try {
-    copyLoader(await fetchLatestLoader(), "Synced from the latest GitHub commit.");
+    await navigator.clipboard.writeText(await getLatestLoader());
+    toast.success("Loader copied", { description: "Ready to paste into your executor." });
   } catch {
-    copyLoader(buildPageLoader(), "GitHub sync fallback was copied.");
+    toast.error("Clipboard blocked", { description: "Open Downloads to select the loader manually." });
   }
 }
 
 export function SiteNav() {
   const [open, setOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "py-2" : "py-4"}`}>
-      <div className="site-wrap">
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className={`flex h-14 items-center justify-between rounded-lg border border-primary/20 bg-card/90 px-6 backdrop-blur-xl transition-all ${scrolled ? "shadow-lg shadow-primary/10" : ""}`}
-        >
-          <Link className="flex items-center gap-3 group" href="/">
-            <motion.div
-              whileHover={{ rotate: 180, scale: 1.1 }}
-              transition={{ duration: 0.6 }}
-            >
-              <Image src="/logo.svg" alt="BadWars" width={28} height={28} priority />
-            </motion.div>
-            <span className="font-display text-xl font-black tracking-tight">
-              <span className="text-primary">BAD</span>
-              <span className="text-foreground">WARS</span>
-            </span>
-          </Link>
-
-          <nav className="hidden items-center gap-1 text-sm lg:flex">
-            {navItems.slice(0, 5).map((item) => (
-              <motion.div
-                key={item.href}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link
-                  href={item.href}
-                  className="relative px-4 py-2 rounded-md text-muted-foreground hover:text-primary transition-colors group font-mono text-xs uppercase tracking-wider"
-                >
-                  <span className="relative z-10">{item.label}</span>
-                  <div className="absolute inset-0 bg-primary/5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Link>
-              </motion.div>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-md hover:bg-primary/10 transition-colors"
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </motion.button>
-
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                size="sm"
-                className="hidden sm:flex gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-mono text-xs"
-                onClick={copyLatestLoader}
-              >
-                <Copy className="h-3 w-3" />
-                <span className="hidden md:inline">COPY LOADER</span>
-              </Button>
-            </motion.div>
-
-            <button
-              className="lg:hidden p-2 rounded-md hover:bg-primary/10 transition-colors"
-              onClick={() => setOpen(!open)}
-            >
-              {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
-          </div>
-        </motion.div>
-
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mt-2 rounded-lg border border-primary/20 bg-card/95 backdrop-blur-xl p-4 lg:hidden"
-            >
-              <nav className="flex flex-col gap-2">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-center gap-3 rounded-md px-4 py-3 hover:bg-primary/10 transition-colors font-mono text-xs uppercase"
-                    onClick={() => setOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <header className="command-nav">
+      <div className="site-wrap flex h-16 items-center justify-between">
+        <Link href="/" className="brand-lockup" aria-label="BadWars home">
+          <span className="brand-mark"><Image src="/logo.svg" alt="" width={24} height={24} priority /></span>
+          <span><b>BAD</b>WARS</span>
+        </Link>
+        <nav className="hidden items-center lg:flex" aria-label="Primary navigation">
+          {navItems.map((item) => <Link className="nav-link" key={item.href} href={item.href}>{item.label}</Link>)}
+          <Link className="nav-link" href="/dashboard">Console</Link>
+        </nav>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={copyLatestLoader} className="hidden sm:inline-flex uppercase font-mono text-[11px]">
+            <Copy /> Copy loader
+          </Button>
+          <button className="icon-control lg:hidden" onClick={() => setOpen((value) => !value)} aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open}>
+            {open ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
+      <AnimatePresence>
+        {open && <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mobile-nav" aria-label="Mobile navigation">
+          <div className="site-wrap py-3">
+            {[...navItems, { label: "Console", href: "/dashboard" }].map((item) => <Link key={item.href} href={item.href} onClick={() => setOpen(false)}>{item.label}<ChevronRight /></Link>)}
+            <Button onClick={copyLatestLoader} className="mt-2 w-full sm:hidden"><Copy /> Copy loader</Button>
+          </div>
+        </motion.nav>}
+      </AnimatePresence>
     </header>
   );
 }
 
-export function Footer() {
+function CommandCore({ status, commit }: { status: RobloxStatus | undefined; commit: CommitInfo | undefined }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const move = (event: PointerEvent) => {
+      const rect = node.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width - 0.5;
+      const y = (event.clientY - rect.top) / rect.height - 0.5;
+      node.style.setProperty("--rx", `${-y * 9}deg`);
+      node.style.setProperty("--ry", `${x * 12}deg`);
+    };
+    const reset = () => { node.style.setProperty("--rx", "0deg"); node.style.setProperty("--ry", "0deg"); };
+    node.addEventListener("pointermove", move);
+    node.addEventListener("pointerleave", reset);
+    return () => { node.removeEventListener("pointermove", move); node.removeEventListener("pointerleave", reset); };
+  }, []);
+
   return (
-    <footer className="mt-24 border-t border-border">
-      <div className="site-wrap py-12">
-        <div className="grid gap-8 md:grid-cols-4">
-          <div className="md:col-span-2">
-            <Link href="/" className="flex items-center gap-3 mb-4">
-              <Image src="/logo.svg" alt="BadWars" width={24} height={24} />
-              <span className="font-display text-lg font-black">
-                <span className="text-primary">BAD</span>
-                <span className="text-foreground">WARS</span>
-              </span>
-            </Link>
-              <p className="text-sm text-muted-foreground max-w-md font-mono">
-              The Roblox loader console. Live status, one-click deployment, and full diagnostics.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-4 font-mono text-xs uppercase tracking-wider text-primary">Navigation</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              {navItems.map((item) => (
-                <li key={item.href}>
-                  <Link href={item.href} className="hover:text-primary transition-colors font-mono text-xs">
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-4 font-mono text-xs uppercase tracking-wider text-primary">Resources</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <a href="https://github.com/evanbackup1256-ship-it/badwars" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors flex items-center gap-2 font-mono text-xs">
-                  <GitBranch className="h-3 w-3" /> GitHub
-                </a>
-              </li>
-              <li>
-                <Link href="/changelog" className="hover:text-primary transition-colors font-mono text-xs">
-                  Changelog
-                </Link>
-              </li>
-              <li>
-                <Link href="/features" className="hover:text-primary transition-colors font-mono text-xs">
-                  Features
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="mt-8 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-muted-foreground font-mono">
-          <p>&copy; 2026 BadWars. All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <span className="status-live">All systems operational</span>
-          </div>
-        </div>
+    <div className="core-stage" ref={ref} aria-label="Live BadWars command core">
+      <div className="core-grid" />
+      <div className="orbit orbit-a"><i /><i /><i /></div>
+      <div className="orbit orbit-b"><i /><i /></div>
+      <div className="telemetry-rail rail-left"><span>NODE 01</span><b>EXEC</b><em>98.7%</em></div>
+      <div className="telemetry-rail rail-right"><span>NODE 10</span><b>ROUTE</b><em>{games.length}/10</em></div>
+      <div className="core-object">
+        <div className="core-plane plane-back" />
+        <div className="core-plane plane-mid"><Image src="/logo.svg" alt="" width={76} height={76} /></div>
+        <div className="core-plane plane-front"><span>CORE</span><strong>{status?.ok ? "LIVE" : "SYNC"}</strong></div>
       </div>
-    </footer>
+      <div className="core-readout readout-top"><span>COMMIT</span><strong>{commit?.shortSha || "SYNCING"}</strong></div>
+      <div className="core-readout readout-bottom"><span>ROUTES ACTIVE</span><strong>{games.length}</strong></div>
+      <div className="core-caption"><Activity /> BADWARS.RUNTIME / ONLINE</div>
+    </div>
   );
 }
 
+const architecture = [
+  { icon: Zap, number: "01", title: "Execution", text: "Transport fallbacks negotiate the fastest available request path." },
+  { icon: ShieldCheck, number: "02", title: "Isolation", text: "Guarded modules fail independently without taking down the bundle." },
+  { icon: Route, number: "03", title: "Routing", text: "Place IDs resolve directly into game-specific module trees." },
+  { icon: Radar, number: "04", title: "Diagnostics", text: "Preflight and runtime checks surface actionable status." },
+  { icon: Cpu, number: "05", title: "Detection", text: "Capability probes verify executor support before launch." },
+  { icon: Boxes, number: "06", title: "Interface", text: "A persistent control layer keeps modules and profiles close." },
+];
+
+export function Footer() {
+  return <footer className="command-footer">
+    <div className="site-wrap footer-grid">
+      <div><Link href="/" className="brand-lockup"><span className="brand-mark"><Image src="/logo.svg" alt="" width={22} height={22} /></span><span><b>BAD</b>WARS</span></Link><p>Route-aware Roblox loader infrastructure.</p></div>
+      <div><span className="footer-label">Explore</span>{navItems.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}</div>
+      <div><span className="footer-label">System</span><Link href="/dashboard">Dashboard</Link><Link href="/settings">Settings</Link><Link href="/profile">Support profile</Link></div>
+      <div><span className="footer-label">Network</span><a href="https://github.com/evanbackup1256-ship-it/badwars" target="_blank" rel="noreferrer">GitHub <GitBranch /></a><span className="footer-status"><i /> Operational</span></div>
+    </div>
+    <div className="site-wrap footer-base"><span>BADWARS / 2026</span><span>BUILD CHANNEL: MAIN</span></div>
+  </footer>;
+}
+
 export function LandingPage() {
-  const roblox = useQuery({ queryKey: ["landing-roblox"], queryFn: fetchRobloxStatus, refetchInterval: 120_000 });
-  const commit = useQuery({ queryKey: ["landing-commit"], queryFn: fetchLatestCommit, refetchInterval: 60_000 });
+  const status = useQuery({ queryKey: ["landing-roblox"], queryFn: fetchRobloxStatus, refetchInterval: 120_000, retry: 1 });
+  const commit = useQuery({ queryKey: ["landing-commit"], queryFn: fetchLatestCommit, refetchInterval: 60_000, retry: 1 });
+  const loaderPreview = 'loadstring(game:HttpGet("https://badwars-production.up.railway.app/api/download/latest"))()';
 
-  return (
-    <>
-      <SiteNav />
-
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-20 pb-16 overflow-hidden hex-bg">
-        <div className="site-wrap relative z-10">
-          <div className="max-w-5xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="text-center mb-12"
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-primary/30 bg-primary/5 mb-8 font-mono text-xs uppercase tracking-wider">
-                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-primary">v19.0 Obsidian Overhaul</span>
-              </div>
-
-              <h1 className="font-display text-6xl md:text-7xl lg:text-8xl font-black tracking-tight mb-6">
-                <span className="glitch-text text-primary" data-text="BADWARS">BADWARS</span>
-              </h1>
-
-              <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto font-mono">
-                The loader console for Roblox.
-                <br />
-                <span className="text-primary">Live status. One-click deploy. Full diagnostics.</span>
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
-            >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  size="lg"
-                  className="gap-2 px-8 py-6 text-base bg-primary hover:bg-primary/90 text-primary-foreground font-mono uppercase tracking-wider"
-                  onClick={copyLatestLoader}
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy Loader
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </motion.div>
-
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="gap-2 px-8 py-6 text-base border-primary/30 hover:border-primary font-mono uppercase tracking-wider"
-                  asChild
-                >
-                  <Link href="/downloads">
-                    <Download className="h-4 w-4" />
-                    Downloads
-                  </Link>
-                </Button>
-              </motion.div>
-            </motion.div>
-
-            {/* Terminal-style status display */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="max-w-2xl mx-auto"
-            >
-              <div className="terminal">
-                <div className="terminal-header">
-                  <div className="terminal-dot red" />
-                  <div className="terminal-dot yellow" />
-                  <div className="terminal-dot green" />
-                  <span className="ml-2 text-xs text-muted-foreground font-mono">badwars://status</span>
-                </div>
-                <div className="p-4 font-mono text-xs space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">$ roblox_status</span>
-                    <span className={roblox.data?.ok ? "text-success" : "text-warning"}>
-                      {roblox.data?.ok ? "OPERATIONAL" : "CHECKING..."}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">$ latest_commit</span>
-                    <span className="text-primary">{commit.data?.shortSha || "v19.0"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">$ supported_games</span>
-                    <span className="text-foreground">{games.length} routes active</span>
-                  </div>
-                  <div className="typing-cursor">
-                    <span className="text-muted-foreground">$ </span>
-                    <span className="text-primary">ready</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="py-24">
-        <div className="site-wrap">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-primary/30 bg-primary/5 mb-6 font-mono text-xs uppercase tracking-wider">
-              <Terminal className="h-3 w-3 text-primary" />
-              <span className="text-primary">Architecture</span>
+  return <div className="scanlines">
+    <SiteNav />
+    <main>
+      <section className="hero-band">
+        <div className="hero-grid" />
+        <div className="site-wrap hero-layout">
+          <motion.div className="hero-copy" initial={{ y: 8 }} animate={{ y: 0 }} transition={{ duration: .35 }}>
+            <div className="eyebrow"><span className="live-dot" /> V19 / OBSIDIAN CHANNEL</div>
+            <h1>BADWARS</h1>
+            <p>Route-aware loader infrastructure built to execute cleanly, recover intelligently, and show its work.</p>
+            <div className="hero-actions">
+              <Button size="lg" onClick={copyLatestLoader}><Clipboard /> Copy loader <ArrowRight /></Button>
+              <Button size="lg" variant="outline" asChild><Link href="/downloads"><Download /> Downloads</Link></Button>
             </div>
-            <h2 className="font-display text-4xl md:text-5xl font-black mb-4">
-              How it works
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-mono">
-              Six subsystems handle execution, isolation, routing, diagnostics, detection, and interface.
-            </p>
+            <dl className="hero-stats">
+              <div><dt>Network</dt><dd><i /> {status.data?.ok ? "Operational" : status.isError ? "Degraded" : "Checking"}</dd></div>
+              <div><dt>Commit</dt><dd>{commit.data?.shortSha || "Syncing"}</dd></div>
+              <div><dt>Routes</dt><dd>{games.length} active</dd></div>
+            </dl>
           </motion.div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              { icon: Zap, label: "One-Click Deploy", description: "Copy and paste the loader directly into your executor", color: "text-primary" },
-              { icon: Activity, label: "Live Status", description: "Real-time Roblox update monitoring and alerts", color: "text-success" },
-              { icon: Shield, label: "WindUI Interface", description: "Tabbed interface with seamless module controls and notification pipeline", color: "text-primary" },
-            ].map((feature, i) => {
-              const Icon = feature.icon;
-              return (
-                <motion.div
-                  key={feature.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <div className="neon-border rounded-lg p-6 h-full bg-card/50">
-                    <div className={`inline-flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 mb-4 ${feature.color}`}>
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-2 font-display">{feature.label}</h3>
-                    <p className="text-muted-foreground font-mono text-sm">{feature.description}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+          <motion.div initial={{ scale: .985 }} animate={{ scale: 1 }} transition={{ duration: .4 }}><CommandCore status={status.data} commit={commit.data} /></motion.div>
         </div>
+        <div className="hero-index"><span>01</span><i /><span>COMMAND CORE</span></div>
       </section>
 
-      {/* Games Section */}
-      <section className="py-24 bg-card/30">
-        <div className="site-wrap">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-primary/30 bg-primary/5 mb-6 font-mono text-xs uppercase tracking-wider">
-              <Cpu className="h-3 w-3 text-primary" />
-              <span className="text-primary">Route Inventory</span>
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl font-black mb-4">
-              {games.length} Games Mapped
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-mono">
-              Place ID resolution routes to nested module bundles.
-            </p>
-          </motion.div>
+      <section className="ticker" aria-label="Platform metrics"><div>{["234 MODULES", "10 ROUTES", "7 TRANSPORTS", "45 SIGNATURES", "LIVE DIAGNOSTICS", "GUARDED EXECUTION", "234 MODULES", "10 ROUTES", "7 TRANSPORTS"].map((item, i) => <span key={i}><i />{item}</span>)}</div></section>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {games.slice(0, 6).map((game, i) => (
-              <motion.div
-                key={game.name}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <div className="neon-border rounded-lg p-6 bg-card/50">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg mb-1 font-display">{game.name}</h3>
-                      <p className="text-xs text-muted-foreground font-mono">{game.ids[0]}</p>
-                    </div>
-                    <Badge variant={game.status === "working" ? "success" : "warning"} className="font-mono text-xs">
-                      {game.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                    <ChevronRight className="h-3 w-3" />
-                    <span>{game.description || "Full module support"}</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+      <section className="section-band" id="architecture"><div className="site-wrap">
+        <div className="section-heading"><div><span className="section-kicker">02 / ARCHITECTURE</span><h2>Six systems.<br />One clean launch.</h2></div><p>Every layer has a job. Every failure has a boundary. The loader stays readable from first request to final module.</p></div>
+        <div className="architecture-list">{architecture.map(({ icon: Icon, number, title, text }) => <article key={title}><span>{number}</span><Icon /><div><h3>{title}</h3><p>{text}</p></div><ChevronRight /></article>)}</div>
+      </div></section>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mt-12"
-          >
-            <Button variant="outline" size="lg" asChild className="border-primary/30 hover:border-primary font-mono uppercase">
-              <Link href="/features">
-                View All Features
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
-          </motion.div>
-        </div>
-      </section>
+      <section className="section-band route-band" id="routes"><div className="site-wrap">
+        <div className="section-heading"><div><span className="section-kicker">03 / ROUTE INVENTORY</span><h2>Mapped to the game.</h2></div><p>{games.filter((game) => game.status === "working").length} production routes and {games.filter((game) => game.status !== "working").length} monitored routes resolve automatically.</p></div>
+        <div className="route-table"><div className="route-head"><span>Game</span><span>Modules</span><span>Primary ID</span><span>State</span></div>{games.map((game) => <div className="route-row" key={game.name}><span><b>{game.name}</b><small>{game.route}</small></span><span>{String(game.modules).padStart(2, "0")}</span><span>{game.ids[0]}</span><span className={game.status === "working" ? "state-live" : "state-watch"}><i />{game.status === "working" ? "Stable" : "Testing"}</span></div>)}</div>
+      </div></section>
 
-      {/* CTA Section */}
-      <section className="py-24">
-        <div className="site-wrap">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="relative overflow-hidden rounded-lg border border-primary/30 bg-card p-12 md:p-16 text-center neon-border"
-          >
-            <div className="relative z-10">
-              <h2 className="font-display text-4xl md:text-5xl font-black mb-4">
-                One Line. That's It.
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto font-mono">
-                Paste the loader into your executor. Cache, diagnostics, module bundles, and UI — handled.
-                <br />
-                <span className="text-primary">No accounts. No downloads. No setup.</span>
-              </p>
-
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  size="lg"
-                  className="gap-2 px-8 py-6 text-base bg-primary hover:bg-primary/90 text-primary-foreground font-mono uppercase tracking-wider"
-                  onClick={copyLatestLoader}
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy Loader
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      <Footer />
-    </>
-  );
+      <section className="deploy-band"><div className="site-wrap deploy-layout"><div><span className="section-kicker">04 / DEPLOYMENT</span><h2>One line.<br />Full system.</h2><p>Paste the current loader into your executor. Routing, compatibility checks, diagnostics, and interface registration run from there.</p></div><div className="deploy-console"><div className="console-bar"><span><TerminalSquare /> loader.lua</span><button onClick={copyLatestLoader} aria-label="Copy loader"><Copy /></button></div><code><span>01</span>{loaderPreview}</code><div className="console-result"><Check /> Production endpoint ready</div></div></div></section>
+    </main>
+    <Footer />
+  </div>;
 }

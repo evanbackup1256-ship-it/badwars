@@ -295,24 +295,24 @@ local n = {
 }
 local baseFont = Font.fromEnum(Enum.Font.Gotham)
 local o = {
-    -- Obsidian V13: graphite glass surfaces with live accent and soft depth.
-    Main = Color3.fromRGB(4, 7, 11),
-    MainSoft = Color3.fromRGB(7, 11, 16),
-    Text = Color3.fromRGB(220, 229, 237),
-    TextStrong = Color3.fromRGB(250, 252, 254),
-    Surface = Color3.fromRGB(12, 18, 24),
-    SurfaceSoft = Color3.fromRGB(15, 22, 29),
-    SurfaceHover = Color3.fromRGB(21, 31, 41),
-    Elevated = Color3.fromRGB(17, 26, 34),
-    ElevatedHover = Color3.fromRGB(26, 38, 49),
-    Glass = Color3.fromRGB(19, 28, 36),
-    Border = Color3.fromRGB(32, 45, 57),
-    BorderStrong = Color3.fromRGB(64, 88, 106),
-    MutedText = Color3.fromRGB(165, 180, 194),
-    FaintText = Color3.fromRGB(108, 126, 142),
-    Danger = Color3.fromRGB(255, 98, 122),
-    Warning = Color3.fromRGB(255, 194, 88),
-    Success = Color3.fromRGB(72, 220, 166),
+    -- Obsidian V13: graphite glass surfaces with live accent and tighter contrast control.
+    Main = Color3.fromRGB(3, 6, 10),
+    MainSoft = Color3.fromRGB(8, 12, 17),
+    Text = Color3.fromRGB(224, 232, 240),
+    TextStrong = Color3.fromRGB(252, 253, 255),
+    Surface = Color3.fromRGB(13, 19, 26),
+    SurfaceSoft = Color3.fromRGB(16, 24, 32),
+    SurfaceHover = Color3.fromRGB(24, 35, 46),
+    Elevated = Color3.fromRGB(19, 28, 37),
+    ElevatedHover = Color3.fromRGB(31, 44, 56),
+    Glass = Color3.fromRGB(20, 31, 40),
+    Border = Color3.fromRGB(35, 49, 61),
+    BorderStrong = Color3.fromRGB(77, 103, 123),
+    MutedText = Color3.fromRGB(171, 184, 198),
+    FaintText = Color3.fromRGB(117, 133, 148),
+    Danger = Color3.fromRGB(255, 92, 118),
+    Warning = Color3.fromRGB(255, 198, 94),
+    Success = Color3.fromRGB(81, 224, 173),
     Shadow = Color3.fromRGB(0, 1, 3),
     RadiusSmall = UDim.new(0, 8),
     Radius = UDim.new(0, 12),
@@ -348,6 +348,14 @@ end
 
 local function uiTextSize(desktop, mobile)
     return d.isMobile and (mobile or desktop) or desktop
+end
+
+local function motionDecay(timeValue, frequency, damping, amplitude)
+    timeValue = math.max(timeValue or 0, 0)
+    frequency = math.max(frequency or 0, 0)
+    damping = math.max(damping or 0, 0)
+    amplitude = amplitude or 1
+    return math.sin(timeValue * (math.pi * 2) * frequency) * amplitude * math.exp(-timeValue * damping)
 end
 
 local function styleCrispText(instance)
@@ -13007,12 +13015,14 @@ function d.CreateLegit(ag)
             addSurfaceGradient(aI)
             addShadow(aI)
             local widgetStroke = addStroke(aI, o.BorderStrong, 0.58, 1, "LegitWidgetStroke")
+            local widgetScale = addScale(aI)
+            widgetScale.Scale = 0.985
 
             local widgetTint = Instance.new("Frame")
             widgetTint.Name = "WidgetTint"
             widgetTint.Size = UDim2.fromScale(1, 1)
             widgetTint.BackgroundColor3 = o.Main
-            widgetTint.BackgroundTransparency = 0.86
+            widgetTint.BackgroundTransparency = 0.82
             widgetTint.BorderSizePixel = 0
             widgetTint.ZIndex = aI.ZIndex
             widgetTint:SetAttribute("PremiumWidgetInternal", true)
@@ -13024,7 +13034,7 @@ function d.CreateLegit(ag)
             widgetAccent.Size = UDim2.new(1, -16, 0, 2)
             widgetAccent.Position = UDim2.fromOffset(8, 1)
             widgetAccent.BackgroundColor3 = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
-            widgetAccent.BackgroundTransparency = 0.26
+            widgetAccent.BackgroundTransparency = 0.18
             widgetAccent.BorderSizePixel = 0
             widgetAccent.ZIndex = aI.ZIndex + 4
             widgetAccent:SetAttribute("PremiumWidgetInternal", true)
@@ -13094,8 +13104,13 @@ function d.CreateLegit(ag)
                         end
                         local requestedTransparency = child.BackgroundTransparency
                         widgetTint.BackgroundColor3 = child.BackgroundColor3
-                        widgetTint.BackgroundTransparency =
-                            math.clamp(0.94 - ((1 - requestedTransparency) * 0.38), 0.54, 0.94)
+                        if metricModules[aq.Name] then
+                            widgetTint.BackgroundTransparency =
+                                math.clamp(0.8 - ((1 - requestedTransparency) * 0.16), 0.72, 0.86)
+                        else
+                            widgetTint.BackgroundTransparency =
+                                math.clamp(0.94 - ((1 - requestedTransparency) * 0.38), 0.54, 0.94)
+                        end
                         syncingBackground = true
                         child.BackgroundTransparency = 1
                         syncingBackground = false
@@ -13106,14 +13121,16 @@ function d.CreateLegit(ag)
                     child.ZIndex = aI.ZIndex + 3
 
                     if metricModules[aq.Name] then
-                        child.Position = UDim2.fromOffset(10, 12)
-                        child.Size = UDim2.new(1, -20, 1, -14)
+                        child.Position = UDim2.fromOffset(10, 11)
+                        child.Size = UDim2.new(1, -20, 1, -13)
                         child.TextXAlignment = Enum.TextXAlignment.Left
                         child.TextYAlignment = Enum.TextYAlignment.Center
                         child.TextSize = math.min(math.max(child.TextSize, 13), 15)
                         child.FontFace = o.FontSemiBold
                         child.RichText = false
                         child.TextTruncate = Enum.TextTruncate.AtEnd
+                        child.BackgroundTransparency = 1
+                        child.TextColor3 = o.TextStrong
                     end
 
                     child:GetPropertyChangedSignal("BackgroundColor3"):Connect(syncBackground)
@@ -13129,18 +13146,32 @@ function d.CreateLegit(ag)
 
             aI.MouseEnter:Connect(function()
                 local accent = Color3.fromHSV(d.GUIColor.Hue, d.GUIColor.Sat, d.GUIColor.Value)
+                n:Spring(widgetScale, o.SpringInteractive, { Scale = 1.01 })
                 n:Tween(aI, o.TweenFast, { BackgroundColor3 = o.Elevated })
                 n:Tween(widgetStroke, o.TweenFast, {
                     Color = accent:Lerp(o.BorderStrong, 0.5),
                     Transparency = 0.52,
                 })
+                n:Tween(widgetTint, o.TweenFast, {
+                    BackgroundTransparency = 0.72,
+                })
+                n:Tween(widgetAccent, o.TweenFast, {
+                    BackgroundTransparency = 0.06,
+                })
             end)
 
             aI.MouseLeave:Connect(function()
+                n:Spring(widgetScale, o.SpringInteractive, { Scale = 0.985 })
                 n:Tween(aI, o.TweenFast, { BackgroundColor3 = o.MainSoft })
                 n:Tween(widgetStroke, o.TweenFast, {
                     Color = o.BorderStrong,
                     Transparency = 0.62,
+                })
+                n:Tween(widgetTint, o.TweenFast, {
+                    BackgroundTransparency = 0.82,
+                })
+                n:Tween(widgetAccent, o.TweenFast, {
+                    BackgroundTransparency = 0.18,
                 })
             end)
 
@@ -13512,17 +13543,29 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local function layout(animated)
             local offset = d.isMobile and 12 or 16
+            local index = 1
             for _, card in ipairs(cards()) do
                 local height = card:GetAttribute("NotifHeight") or card.AbsoluteSize.Y
                 local target = UDim2.new(1, d.isMobile and -8 or -14, 1, -(offset + height))
                 if animated then
-                    n:Tween(card, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = target }, true)
+                    local settleTilt = d.isMobile and 0 or motionDecay(index * 0.18, 1.2, 1.5, 0.65)
+                    n:Tween(
+                        card,
+                        TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        {
+                            Position = target,
+                            Rotation = settleTilt,
+                        },
+                        true
+                    )
                     local sc = card:FindFirstChildOfClass("UIScale")
                     if sc then n:Spring(sc, { Scale = 1 }, { Frequency = 3.5, Damping = 0.8 }) end
                 else
                     card.Position = target
+                    card.Rotation = 0
                 end
                 offset += height + 6
+                index += 1
             end
         end
 
@@ -13597,6 +13640,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         card.Size = UDim2.fromOffset(width, height)
         card.AnchorPoint = Vector2.new(1, 0)
         card.Position = UDim2.new(1, width + 40, 1, -(height + 20))
+        card.Rotation = d.isMobile and 0 or 1.4
         card.LayoutOrder = math.floor(os.clock() * 100000)
         card.BackgroundColor3 = o.Elevated
         card.BackgroundTransparency = 0.08
@@ -13613,6 +13657,8 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         addCorner(card, o.RadiusLarge)
         addShadow(card, true)
         addSurfaceGradient(card)
+        local cardScale = addScale(card)
+        cardScale.Scale = 0.92
 
         -- Use blurnotif for premium look
         local blur = Instance.new("ImageLabel")
@@ -13628,8 +13674,6 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         blur.Parent = card
 
         local stroke = addStroke(card, styleColor:Lerp(o.BorderStrong, 0.6), 0.65, 1, "NotificationStroke")
-        local scale = addScale(card)
-        scale.Scale = 0.92
 
         -- Accent rail modern
         local rail = Instance.new("Frame")
@@ -13683,7 +13727,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
-        title.Size = UDim2.new(1, -104, 0, 18)
+        title.Size = UDim2.new(1, -116, 0, 18)
         title.Position = UDim2.fromOffset(58, 12)
         title.BackgroundTransparency = 1
         title.Text = ah
@@ -13699,7 +13743,7 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
 
         local body = Instance.new("TextLabel")
         body.Name = "Text"
-        body.Size = UDim2.new(1, -66, 1, -44)
+        body.Size = UDim2.new(1, -74, 1, -44)
         body.Position = UDim2.fromOffset(58, 32)
         body.BackgroundTransparency = 1
         body.Text = ai
@@ -13780,8 +13824,9 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             n:Tween(card, TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
                 Position = UDim2.new(1, width + 24, 1, card.Position.Y.Offset),
                 GroupTransparency = 1,
+                Rotation = d.isMobile and 0 or -1.8,
             }, n.tweenstwo)
-            n:Tween(scale, TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.In), { Scale = 0.975 })
+            n:Tween(cardScale, TweenInfo.new(0.145, Enum.EasingStyle.Quint, Enum.EasingDirection.In), { Scale = 0.975 })
             task.delay(0.15, function()
                 if card.Parent then
                     card:Destroy()
@@ -13807,11 +13852,13 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
             })
         end)
         card.MouseEnter:Connect(function()
+            n:Spring(cardScale, o.SpringInteractive, { Scale = 1.01 })
             n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.08 })
             n:Tween(stroke, o.TweenFast, { Transparency = 0.58, Color = styleColor:Lerp(o.BorderStrong, 0.35) })
             n:Tween(rail, o.TweenFast, { BackgroundTransparency = 0.02 })
         end)
         card.MouseLeave:Connect(function()
+            n:Spring(cardScale, o.SpringInteractive, { Scale = 0.998 })
             n:Tween(card, o.TweenFast, { BackgroundTransparency = 0.14 })
             n:Tween(stroke, o.TweenFast, { Transparency = 0.78, Color = styleColor:Lerp(o.BorderStrong, 0.72) })
             n:Tween(rail, o.TweenFast, { BackgroundTransparency = 0.12 })
@@ -13832,12 +13879,20 @@ function d.CreateNotification(ag, ah, ai, aj, ak)
         n:Tween(card, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
             Position = UDim2.new(1, d.isMobile and -8 or -14, 1, card.Position.Y.Offset),
             GroupTransparency = 0,
+            Rotation = 0,
         })
-        n:Spring(scale, { Scale = 1 }, { Frequency = 4, Damping = 0.75 })
+        n:Spring(cardScale, { Scale = 1 }, { Frequency = 4, Damping = 0.75 })
         n:Tween(progress, TweenInfo.new(aj, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(0, 1) }, n.tweenstwo)
         -- subtle pop on new
         task.delay(0.05, function()
-            if card.Parent then n:Spring(scale, { Scale = 1.02 }, { Frequency = 6 }); task.delay(0.12, function() if card.Parent then n:Spring(scale, { Scale = 1 }, { Frequency = 3 }) end end) end
+            if card.Parent then
+                n:Spring(cardScale, { Scale = 1.02 }, { Frequency = 6 })
+                task.delay(0.12, function()
+                    if card.Parent then
+                        n:Spring(cardScale, { Scale = 1 }, { Frequency = 3 })
+                    end
+                end)
+            end
         end)
 
         local generation = card:GetAttribute("LifeGeneration")

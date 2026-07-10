@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, CheckCircle2, ChevronRight, ClipboardCheck, Copy, Download, ExternalLink, GitBranch, LayoutDashboard, RefreshCcw, Search, Wifi, Zap } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Copy, Download, ExternalLink, GitBranch, LayoutDashboard, RefreshCcw, Search, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,13 @@ type GitHubCommitsResponse = {
   syncedAt: string;
 };
 
+type ReleaseDisplay = {
+  shortSha?: string;
+  version?: string;
+  message?: string;
+  notes?: string[];
+};
+
 async function currentLoaderText() {
   const response = await fetch("/api/download/latest", { cache: "no-store" });
   if (!response.ok) {
@@ -99,11 +106,11 @@ function AppFrame({ title, description, children }: { title: string; description
   return (
     <>
       <SiteNav />
-      <div className="site-wrap pt-32 pb-16">
-        <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
+      <div className="site-wrap pt-28 pb-16">
+        <div className="grid gap-8 lg:grid-cols-[210px_1fr]">
           <aside className="hidden lg:block">
             <div className="sticky top-24">
-              <div className="uppercase tracking-[2px] text-[10px] font-semibold text-muted-foreground mb-4 px-3">Console</div>
+              <div className="uppercase text-[10px] font-mono text-primary mb-4 px-3">Console / Navigate</div>
               <nav className="space-y-1">
                 {sidebar.map((item) => {
                   const Icon = item.icon;
@@ -115,7 +122,7 @@ function AppFrame({ title, description, children }: { title: string; description
                     >
                       <Link 
                         href={item.href} 
-                        className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-primary/10 transition-all text-muted-foreground hover:text-foreground group"
+                        className="flex items-center gap-3 rounded-md border-l border-transparent px-4 py-3 text-sm hover:bg-primary/10 hover:border-primary transition-all text-muted-foreground hover:text-foreground group"
                       >
                         <Icon className="h-4 w-4 group-hover:text-primary transition-colors" />
                         {item.label}
@@ -133,9 +140,9 @@ function AppFrame({ title, description, children }: { title: string; description
               animate={{ opacity: 1, y: 0 }}
               className="mb-8"
             >
-              <Badge className="mb-3 bg-primary/10 border-primary/30 text-primary">BadWars Console</Badge>
-              <h1 className="font-display text-5xl font-black tracking-tight">{title}</h1>
-              <p className="mt-3 text-lg text-muted-foreground max-w-2xl">{description}</p>
+              <div className="mb-3 font-mono text-[10px] uppercase text-primary">BadWars / Console</div>
+              <h1 className="font-display text-4xl font-bold">{title}</h1>
+              <p className="mt-2 text-base text-muted-foreground max-w-2xl">{description}</p>
             </motion.div>
             {children}
           </main>
@@ -196,7 +203,7 @@ export function DashboardPage() {
 
   return (
     <AppFrame title="Dashboard" description="Live status, quick actions, and runtime insights.">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="dashboard-metrics grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {dashboardStats.map((widget, index) => {
           const Icon = widget.icon;
           return (
@@ -512,7 +519,7 @@ export function DownloadsPage() {
       <div>
         <div className="font-semibold text-sm mb-4 text-muted-foreground uppercase tracking-wider">History</div>
         <div className="space-y-2">
-          {(commits.data?.commits.length ? commits.data.commits : releases).slice(0, 8).map((r: any, idx: number) => (
+          {((commits.data?.commits.length ? commits.data.commits : releases) as ReleaseDisplay[]).slice(0, 8).map((r, idx) => (
             <motion.div
               key={idx}
               initial={{ opacity: 0, x: -20 }}

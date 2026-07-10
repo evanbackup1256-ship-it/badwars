@@ -1401,6 +1401,7 @@ local statusMessage
 local statusMeta
 local progressFill
 local progressValue
+local progressSheen
 local elapsedLabel
 local stateDot
 local statusChipText
@@ -1411,35 +1412,41 @@ local statusCardStroke
 local phaseMarkers = {}
 
 local statusProgress = 0.03
+local statusVisualProgress = 0.03
 local statusError = false
 local loaderCreatedAt = os.clock()
 local loaderStatusGeneration = 0
 local loaderDismissScheduled = false
+local loaderMotionClock = 0
 local MINIMUM_VISIBLE_SECONDS = 1.25
 
 local loaderTweenService = cloneref(game:GetService("TweenService"))
 
+-- WindUI BadWars theme colors (exact match)
 local COLORS = {
-    backdrop = Color3.fromRGB(6, 6, 8),
-    background = Color3.fromRGB(10, 10, 14),
-    dialog = Color3.fromRGB(14, 14, 20),
-    accent = Color3.fromRGB(18, 18, 26),
-    element = Color3.fromRGB(20, 20, 28),
-    elementHover = Color3.fromRGB(30, 30, 42),
-    button = Color3.fromRGB(24, 24, 34),
-    outline = Color3.fromRGB(255, 45, 74),
-    text = Color3.fromRGB(255, 255, 255),
-    placeholder = Color3.fromRGB(106, 106, 120),
-    icon = Color3.fromRGB(255, 45, 74),
-    sliderIcon = Color3.fromRGB(138, 138, 150),
-    primary = Color3.fromRGB(255, 45, 74),
-    primarySoft = Color3.fromRGB(255, 90, 110),
-    toggle = Color3.fromRGB(255, 45, 74),
-    warning = Color3.fromRGB(239, 177, 72),
-    warningSoft = Color3.fromRGB(251, 191, 36),
-    crimson = Color3.fromRGB(255, 45, 74),
-    crimsonSoft = Color3.fromRGB(255, 90, 110),
+    backdrop = Color3.fromHex("#08080a"),
+    background = Color3.fromHex("#08080a"),
+    dialog = Color3.fromHex("#16161f"),
+    accent = Color3.fromHex("#12121a"),
+    element = Color3.fromHex("#1a1a22"),
+    elementHover = Color3.fromHex("#2a2a34"),
+    button = Color3.fromHex("#3a3a44"),
+    outline = Color3.fromHex("#FF2D4A"),
+    text = Color3.fromHex("#FFFFFF"),
+    placeholder = Color3.fromHex("#7a7a88"),
+    icon = Color3.fromHex("#FF2D4A"),
+    sliderIcon = Color3.fromHex("#8a8a96"),
+    primary = Color3.fromHex("#FF2D4A"),
+    primarySoft = Color3.fromHex("#FF5A6E"),
+    toggle = Color3.fromHex("#FF2D4A"),
+    warning = Color3.fromHex("#EFB148"),
+    warningSoft = Color3.fromHex("#FBBF24"),
+    crimson = Color3.fromHex("#FF2D4A"),
+    crimsonSoft = Color3.fromHex("#FF5A6E"),
 }
+
+-- WindUI font
+local WINDUI_FONT = "rbxassetid://12187365364"
 
 local function loaderTween(object, info, properties)
     if not object or not object.Parent then
@@ -1462,6 +1469,20 @@ local function loaderTween(object, info, properties)
     end
 
     return nil
+end
+
+local function loaderSmoothApproach(current, target, rate, dt)
+    rate = math.max(tonumber(rate) or 0, 0)
+    dt = math.max(tonumber(dt) or 0, 0)
+    return current + (target - current) * (1 - math.exp(-rate * dt))
+end
+
+local function loaderPulse(timeValue, frequency, damping, amplitude)
+    timeValue = math.max(tonumber(timeValue) or 0, 0)
+    frequency = math.max(tonumber(frequency) or 0, 0)
+    damping = math.max(tonumber(damping) or 0, 0)
+    amplitude = amplitude or 1
+    return math.sin(timeValue * (math.pi * 2) * frequency) * amplitude * math.exp(-timeValue * damping)
 end
 
 local function loaderCorner(parent, radius)
@@ -1762,7 +1783,7 @@ local function createLoader()
     iconGlyph.Name = "Glyph"
     iconGlyph.Size = UDim2.fromScale(1, 1)
     iconGlyph.BackgroundTransparency = 1
-    iconGlyph.Font = Enum.Font.GothamBold
+    iconGlyph.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.Bold)
     iconGlyph.Text = "B"
     iconGlyph.TextSize = 17
     iconGlyph.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1773,7 +1794,7 @@ local function createLoader()
     brand.Position = UDim2.fromOffset(64, 13)
     brand.Size = UDim2.new(1, -190, 0, 21)
     brand.BackgroundTransparency = 1
-    brand.Font = Enum.Font.GothamBold
+    brand.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.Bold)
     brand.Text = "BadWars"
     brand.TextSize = 16
     brand.TextColor3 = COLORS.text
@@ -1786,7 +1807,7 @@ local function createLoader()
     subtitle.Position = UDim2.fromOffset(64, 34)
     subtitle.Size = UDim2.new(1, -190, 0, 16)
     subtitle.BackgroundTransparency = 1
-    subtitle.Font = Enum.Font.Gotham
+    subtitle.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.Medium)
     subtitle.Text = "secure runtime loader"
     subtitle.TextSize = 10
     subtitle.TextColor3 = COLORS.placeholder
@@ -1805,6 +1826,14 @@ local function createLoader()
     statusChip.Parent = topbar
     loaderCorner(statusChip, 9)
     loaderStroke(statusChip, COLORS.crimson, 0.5, 1)
+    local statusChipGradient = Instance.new("UIGradient")
+    statusChipGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, COLORS.crimsonSoft),
+        ColorSequenceKeypoint.new(0.5, COLORS.crimson),
+        ColorSequenceKeypoint.new(1, COLORS.outline),
+    })
+    statusChipGradient.Rotation = -12
+    statusChipGradient.Parent = statusChip
 
     stateDot = Instance.new("Frame")
     stateDot.Name = "Dot"
@@ -1821,7 +1850,7 @@ local function createLoader()
     statusChipText.Position = UDim2.fromOffset(25, 0)
     statusChipText.Size = UDim2.new(1, -31, 1, 0)
     statusChipText.BackgroundTransparency = 1
-    statusChipText.Font = Enum.Font.GothamBold
+    statusChipText.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.Bold)
     statusChipText.Text = "LOADING"
     statusChipText.TextSize = 8
     statusChipText.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1882,7 +1911,7 @@ local function createLoader()
     statusTitle.Position = UDim2.fromOffset(64, 15)
     statusTitle.Size = UDim2.new(1, -76, 0, 21)
     statusTitle.BackgroundTransparency = 1
-    statusTitle.Font = Enum.Font.GothamBold
+    statusTitle.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.Bold)
     statusTitle.Text = "Initializing"
     statusTitle.TextSize = 14
     statusTitle.TextColor3 = COLORS.text
@@ -1895,7 +1924,7 @@ local function createLoader()
     statusMessage.Position = UDim2.fromOffset(64, 37)
     statusMessage.Size = UDim2.new(1, -76, 0, 29)
     statusMessage.BackgroundTransparency = 1
-    statusMessage.Font = Enum.Font.Gotham
+    statusMessage.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.Medium)
     statusMessage.Text = "Starting compatibility services and preparing the runtime."
     statusMessage.TextSize = 9
     statusMessage.TextColor3 = COLORS.placeholder
@@ -1916,7 +1945,7 @@ local function createLoader()
     progressCaption.Name = "Caption"
     progressCaption.Size = UDim2.new(1, -60, 0, 17)
     progressCaption.BackgroundTransparency = 1
-    progressCaption.Font = Enum.Font.GothamSemibold
+    progressCaption.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.SemiBold)
     progressCaption.Text = "Loading"
     progressCaption.TextSize = 10
     progressCaption.TextColor3 = COLORS.text
@@ -1929,7 +1958,7 @@ local function createLoader()
     progressValue.Position = UDim2.new(1, 0, 0, 0)
     progressValue.Size = UDim2.fromOffset(54, 17)
     progressValue.BackgroundTransparency = 1
-    progressValue.Font = Enum.Font.GothamSemibold
+    progressValue.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.SemiBold)
     progressValue.Text = "3%"
     progressValue.TextSize = 10
     progressValue.TextColor3 = COLORS.placeholder
@@ -1953,6 +1982,37 @@ local function createLoader()
     progressFill.BorderSizePixel = 0
     progressFill.Parent = track
     loaderCorner(progressFill, 99)
+    local fillGradient = Instance.new("UIGradient")
+    fillGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, COLORS.primarySoft),
+        ColorSequenceKeypoint.new(0.55, COLORS.primary),
+        ColorSequenceKeypoint.new(1, COLORS.outline),
+    })
+    fillGradient.Rotation = 0
+    fillGradient.Parent = progressFill
+
+    progressSheen = Instance.new("Frame")
+    progressSheen.Name = "Sheen"
+    progressSheen.AnchorPoint = Vector2.new(0, 0)
+    progressSheen.Position = UDim2.fromScale(0, 0)
+    progressSheen.Size = UDim2.fromOffset(44, 7)
+    progressSheen.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    progressSheen.BackgroundTransparency = 0.86
+    progressSheen.BorderSizePixel = 0
+    progressSheen.ZIndex = progressFill.ZIndex + 1
+    progressSheen.Parent = track
+    loaderCorner(progressSheen, 99)
+    local sheenGradient = Instance.new("UIGradient")
+    sheenGradient.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255))
+    sheenGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.28, 0.92),
+        NumberSequenceKeypoint.new(0.5, 0.34),
+        NumberSequenceKeypoint.new(0.72, 0.92),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    sheenGradient.Rotation = 0
+    sheenGradient.Parent = progressSheen
 
     local phases = Instance.new("Frame")
     phases.Name = "Phases"
@@ -1987,7 +2047,7 @@ local function createLoader()
         label.Position = UDim2.fromOffset(12, 2)
         label.Size = UDim2.new(1, -14, 0, 17)
         label.BackgroundTransparency = 1
-        label.Font = Enum.Font.Gotham
+        label.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.Medium)
         label.Text = phaseName
         label.TextSize = 9
         label.TextColor3 = index == 1 and COLORS.text or COLORS.placeholder
@@ -2022,7 +2082,7 @@ local function createLoader()
     statusMeta.Position = UDim2.fromOffset(0, 10)
     statusMeta.Size = UDim2.new(1, -150, 0, 18)
     statusMeta.BackgroundTransparency = 1
-    statusMeta.Font = Enum.Font.Gotham
+    statusMeta.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.Medium)
     statusMeta.Text = "secure startup"
     statusMeta.TextSize = 9
     statusMeta.TextColor3 = COLORS.placeholder
@@ -2051,7 +2111,7 @@ local function createLoader()
     openConsoleButton.BackgroundColor3 = COLORS.element
     openConsoleButton.BorderSizePixel = 0
     openConsoleButton.AutoButtonColor = false
-    openConsoleButton.Font = Enum.Font.GothamSemibold
+    openConsoleButton.FontFace = Font.new(WINDUI_FONT, Enum.FontWeight.SemiBold)
     openConsoleButton.Text = "Open diagnostics"
     openConsoleButton.TextSize = 9
     openConsoleButton.TextColor3 = COLORS.text
@@ -2111,6 +2171,61 @@ local function createLoader()
                 BackgroundTransparency = 0,
             })
             task.wait(0.67)
+        end
+    end)
+
+    task.spawn(function()
+        while statusGui and statusGui.Parent do
+            local dt = task.wait(1 / 30)
+            loaderMotionClock += dt
+
+            statusVisualProgress = loaderSmoothApproach(statusVisualProgress, statusProgress, 10.5, dt)
+
+            local pulse = 0.5 + 0.5 * math.sin(loaderMotionClock * 2.25)
+            local orbit = loaderPulse(loaderMotionClock, 0.7, 0.08, 1)
+
+            if progressFill and progressFill.Parent then
+                progressFill.Size = UDim2.fromScale(math.clamp(statusVisualProgress, 0.03, 1), 1)
+            end
+
+            if progressValue and progressValue.Parent then
+                progressValue.Text = tostring(math.floor(statusVisualProgress * 100 + 0.5)) .. "%"
+            end
+
+            if progressSheen and progressSheen.Parent then
+                local sheenWidth = 40 + math.floor(8 * pulse)
+                progressSheen.Size = UDim2.fromOffset(sheenWidth, 7)
+                progressSheen.Position = UDim2.new(
+                    math.clamp(statusVisualProgress - 0.18 + (0.04 * orbit), 0, 0.96),
+                    0,
+                    0,
+                    0
+                )
+                progressSheen.BackgroundTransparency = 0.88 - (0.08 * pulse)
+            end
+
+            if statusAccent and statusAccent.Parent then
+                local accentSize = 10 + math.floor(1.5 * pulse)
+                statusAccent.Size = UDim2.fromOffset(accentSize, accentSize)
+            end
+
+            if stateDot and stateDot.Parent then
+                local dotSize = 7 + math.floor(1.1 * pulse)
+                stateDot.Size = UDim2.fromOffset(dotSize, dotSize)
+                stateDot.BackgroundTransparency = 0.08 + (0.32 * (1 - pulse))
+            end
+
+            if statusCardStroke and statusCardStroke.Parent then
+                statusCardStroke.Transparency = statusError and 0.28 or (0.34 + (0.05 * (1 - pulse)))
+            end
+
+            if statusChipGradient and statusChipGradient.Parent then
+                statusChipGradient.Offset = Vector2.new(math.sin(loaderMotionClock * 0.55) * 0.05, 0)
+            end
+
+            if fillGradient and fillGradient.Parent then
+                fillGradient.Offset = Vector2.new(math.sin(loaderMotionClock * 0.85) * 0.08, 0)
+            end
         end
     end)
 

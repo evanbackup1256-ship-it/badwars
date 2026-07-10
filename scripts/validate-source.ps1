@@ -137,7 +137,7 @@ if ($packageJson -match '"validate"' -and $packageJson -match "npm run build") {
     Fail "Package validation does not include the full website build"
 }
 
-if ($gitignore -match "(?m)^\.badwars-\*/$" -and $gitignore -match "v11-module-backup") {
+if ($gitignore -match "(?m)^\.badwars-\*/\r?$" -and $gitignore -match "v11-module-backup") {
     Pass "Backup directories are ignored by policy"
 } else {
     Fail "Backup directory ignore policy is incomplete"

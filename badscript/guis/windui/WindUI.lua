@@ -4282,20 +4282,20 @@ do
 					Name = "Dark",
 
 					-- Refined dark theme with better contrast
-					Accent = Color3.fromHex("#141418"),
-					Dialog = Color3.fromHex("#18181d"),
+					Accent = Color3.fromHex("#0f0f14"),
+					Dialog = Color3.fromHex("#14141c"),
 					Outline = Color3.fromHex("#FFFFFF"),
 					Text = Color3.fromHex("#FFFFFF"),
-					Placeholder = Color3.fromHex("#8a8a96"),
-					Background = Color3.fromHex("#0a0a0c"),
-					Button = Color3.fromHex("#4a4a54"),
+					Placeholder = Color3.fromHex("#6a6a78"),
+					Background = Color3.fromHex("#060608"),
+					Button = Color3.fromHex("#2a2a34"),
 					Icon = Color3.fromHex("#a1a1aa"),
 					Toggle = Color3.fromHex("#FF2D4A"),
 					Slider = Color3.fromHex("#FF2D4A"),
 					Checkbox = Color3.fromHex("#FF2D4A"),
 
-					PanelBackground = Color3.fromHex("#FFFFFF"),
-					PanelBackgroundTransparency = 0.95,
+					PanelBackground = Color3.fromHex("#0a0a0f"),
+					PanelBackgroundTransparency = 0.02,
 
 					SliderIcon = Color3.fromHex("#8a8a96"),
 					Primary = Color3.fromHex("#FF2D4A"),
@@ -4303,7 +4303,7 @@ do
 					LabelBackground = Color3.fromHex("#000000"),
 					LabelBackgroundTransparency = 0.83,
 
-					ElementBackground = Color3.fromHex("#1e1e24"),
+					ElementBackground = Color3.fromHex("#12121a"),
 					ElementBackgroundTransparency = 0,
 				},
 
@@ -4311,76 +4311,76 @@ do
 					Name = "BadWars",
 
 					-- Premium BadWars theme with crimson accent and refined dark palette
-					Accent = Color3.fromHex("#12121a"),
-					Dialog = Color3.fromHex("#16161f"),
-					Outline = Color3.fromHex("#FFFFFF"),
+					Accent = Color3.fromHex("#0f0f14"),
+					Dialog = Color3.fromHex("#14141c"),
+					Outline = Color3.fromHex("#FF2D4A"),
 					Text = Color3.fromHex("#FFFFFF"),
-					Placeholder = Color3.fromHex("#7a7a88"),
-					Background = Color3.fromHex("#08080a"),
-					Button = Color3.fromHex("#3a3a44"),
-					Icon = Color3.fromHex("#9a9aa8"),
+					Placeholder = Color3.fromHex("#6a6a78"),
+					Background = Color3.fromHex("#060608"),
+					Button = Color3.fromHex("#2a2a34"),
+					Icon = Color3.fromHex("#FF2D4A"),
 					Toggle = Color3.fromHex("#FF2D4A"),
 					Slider = Color3.fromHex("#FF2D4A"),
 					Checkbox = Color3.fromHex("#FF2D4A"),
 
-					PanelBackground = Color3.fromHex("#FFFFFF"),
-					PanelBackgroundTransparency = 0.95,
+					PanelBackground = Color3.fromHex("#0a0a0f"),
+					PanelBackgroundTransparency = 0.02,
 
-					SliderIcon = Color3.fromHex("#8a8a96"),
+					SliderIcon = Color3.fromHex("#FF2D4A"),
 					Primary = Color3.fromHex("#FF2D4A"),
 
-					LabelBackground = Color3.fromHex("#000000"),
-					LabelBackgroundTransparency = 0.85,
+					LabelBackground = Color3.fromHex("#FF2D4A"),
+					LabelBackgroundTransparency = 0.92,
 
-					ElementBackground = Color3.fromHex("#1a1a22"),
+					ElementBackground = Color3.fromHex("#12121a"),
 					ElementBackgroundTransparency = 0,
 
-					-- Tab styling
-					TabBackground = Color3.fromHex("#12121a"),
+					-- Tab styling with crimson accents
+					TabBackground = Color3.fromHex("#0f0f14"),
 					TabBackgroundHover = Color3.fromHex("#1a1a24"),
-					TabBackgroundHoverTransparency = 0.97,
+					TabBackgroundHoverTransparency = 0.95,
 					TabBackgroundActive = Color3.fromHex("#1e1e28"),
-					TabBackgroundActiveTransparency = 0.93,
+					TabBackgroundActiveTransparency = 0.9,
 					TabText = Color3.fromHex("#FFFFFF"),
-					TabTextTransparency = 0.3,
+					TabTextTransparency = 0.35,
 					TabTextTransparencyActive = 0,
 					TabTitle = Color3.fromHex("#FFFFFF"),
-					TabIcon = Color3.fromHex("#a1a1aa"),
-					TabIconTransparency = 0.4,
-					TabIconTransparencyActive = 0.1,
-					TabBorderTransparency = 1,
-					TabBorderTransparencyActive = 0.75,
-					TabBorder = Color3.fromHex("#FFFFFF"),
+					TabIcon = Color3.fromHex("#FF2D4A"),
+					TabIconTransparency = 0.3,
+					TabIconTransparencyActive = 0,
+					TabBorderTransparency = 0.85,
+					TabBorderTransparencyActive = 0.6,
+					TabBorder = Color3.fromHex("#FF2D4A"),
 
-					-- Section styling
-					SectionBox = Color3.fromHex("#FFFFFF"),
-					SectionBoxTransparency = 0.95,
-					SectionBoxBorder = Color3.fromHex("#FFFFFF"),
-					SectionBoxBorderTransparency = 0.75,
-					SectionBoxBackground = Color3.fromHex("#FFFFFF"),
-					SectionBoxBackgroundTransparency = 0.97,
+					-- Section styling with subtle crimson borders
+					SectionBox = Color3.fromHex("#FF2D4A"),
+					SectionBoxTransparency = 0.96,
+					SectionBoxBorder = Color3.fromHex("#FF2D4A"),
+					SectionBoxBorderTransparency = 0.82,
+					SectionBoxBackground = Color3.fromHex("#0f0f14"),
+					SectionBoxBackgroundTransparency = 0.02,
 
-					-- Notification styling
-					Notification = Color3.fromHex("#12121a"),
-					Notification2 = Color3.fromHex("#FFFFFF"),
-					Notification2Transparency = 0.92,
+					-- Notification styling with crimson accents
+					Notification = Color3.fromHex("#0f0f14"),
+					Notification2 = Color3.fromHex("#FF2D4A"),
+					Notification2Transparency = 0.94,
 					NotificationTitle = Color3.fromHex("#FFFFFF"),
 					NotificationTitleTransparency = 0,
 					NotificationContent = Color3.fromHex("#FFFFFF"),
-					NotificationContentTransparency = 0.4,
-					NotificationDuration = Color3.fromHex("#FFFFFF"),
-					NotificationDurationTransparency = 0.95,
-					NotificationBorder = Color3.fromHex("#FFFFFF"),
-					NotificationBorderTransparency = 0.75,
+					NotificationContentTransparency = 0.35,
+					NotificationDuration = Color3.fromHex("#FF2D4A"),
+					NotificationDurationTransparency = 0.9,
+					NotificationBorder = Color3.fromHex("#FF2D4A"),
+					NotificationBorderTransparency = 0.7,
 
-					-- Dropdown styling
+					-- Dropdown styling with crimson accents
 					DropdownTabBorder = Color3.fromHex("#FF2D4A"),
-					DropdownTabBackground = Color3.fromHex("#1e1e26"),
-					DropdownBackground = Color3.fromHex("#0a0a0c"),
+					DropdownTabBackground = Color3.fromHex("#1a1a22"),
+					DropdownBackground = Color3.fromHex("#08080c"),
 
-					-- Search bar
-					SearchBarBorder = Color3.fromHex("#FFFFFF"),
-					SearchBarBorderTransparency = 0.75,
+					-- Search bar with crimson accent
+					SearchBarBorder = Color3.fromHex("#FF2D4A"),
+					SearchBarBorderTransparency = 0.8,
 				},
 
 				Light = {
@@ -13203,7 +13203,7 @@ do
 			end
 
 			aw.UIElements.MainBar = ao("Frame", {
-				Size = UDim2.new(1, -aw.UIElements.SideBarContainer.AbsoluteSize.X, 1, -aw.Topbar.Height),
+				Size = UDim2.new(1, -aw.SideBarWidth, 1, -aw.Topbar.Height),
 				Position = UDim2.new(1, 0, 1, 0),
 				AnchorPoint = Vector2.new(1, 1),
 				BackgroundTransparency = 1,
@@ -13264,7 +13264,7 @@ do
 				d = ao("TextButton", {
 					Size = UDim2.new(
 						0,
-						aw.UIElements.SideBarContainer.AbsoluteSize.X - (aw.UIPadding / 2),
+						aw.SideBarWidth - (aw.UIPadding / 2),
 						0,
 						42 + aw.UIPadding
 					),
@@ -14766,6 +14766,35 @@ do
 							aA.Active = false
 
 							ap(az.ImageLabel, 0.17, { ImageTransparency = 0.8 }):Play()
+
+							-- Force internal layout recalculation after resize
+							task.defer(function()
+								if aw.Destroyed then return end
+								-- Refresh MainBar size
+								if aw.UIElements.MainBar then
+									aw.UIElements.MainBar.Size = UDim2.new(1, -aw.SideBarWidth, 1, -aw.Topbar.Height)
+								end
+								-- Refresh SideBarContainer size
+								if aw.UIElements.SideBarContainer then
+									aw.UIElements.SideBarContainer.Size = UDim2.new(
+										0, aw.SideBarWidth, 1,
+										aw.User and aw.User.Enabled and -aw.Topbar.Height - 42 - (aw.UIPadding * 2) or -aw.Topbar.Height
+									)
+								end
+								-- Refresh all tab ContainerFrames
+								if aw.TabModule and aw.TabModule.Tabs then
+									for _, tab in pairs(aw.TabModule.Tabs) do
+										if tab and tab.UIElements and tab.UIElements.ContainerFrame then
+											tab.UIElements.ContainerFrame.Size = UDim2.new(
+												1, 0, 1,
+												tab.ShowTabTitle and -((aw.UIPadding * 2.4) + 12) or 0
+											)
+											-- Force canvas recalculation
+											tab.UIElements.ContainerFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+										end
+									end
+								end
+							end)
 						end
 					end)
 				end

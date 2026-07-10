@@ -418,33 +418,47 @@ moduleHealthLabel = Tabs.Modules:Paragraph({
 -- Real-time module tracking
 task.spawn(function()
 	local lastCount = 0
+	local finalReportDone = false
 	while not d.Destroyed do
 		task.wait(0.5)
 		
-		-- Count registered modules
+		-- Get actual health data from Bad API
+		local B = shared.Bad
+		if B and type(B.GetBedWarsModuleHealth) == "function" then
+			local report = B:GetBedWarsModuleHealth()
+			if type(report) == "table" and report.Total and report.Total > 0 then
+				updateModuleHealth(report.Ready or 0, report.Total)
+				if not finalReportDone then
+					finalReportDone = true
+				end
+				-- Keep updating for a while to catch late-loading modules
+				if (report.Ready or 0) >= (report.Total or 0) then
+					return
+				end
+				continue
+			end
+		end
+		
+		-- Fallback: count registered modules in adapter
 		local currentCount = 0
 		for _ in pairs(d.Modules) do
 			currentCount += 1
 		end
 		
-		-- Update if changed
 		if currentCount ~= lastCount then
 			lastCount = currentCount
-			-- Estimate total (universal + game modules, typically 70-100)
-			local estimatedTotal = math.max(currentCount, 70)
-			updateModuleHealth(currentCount, estimatedTotal)
+			-- Use actual count as both loaded and total (no guessing)
+			updateModuleHealth(currentCount, currentCount)
 		end
 		
-		-- Stop if we've loaded a reasonable amount
+		-- Stop polling once we have a reasonable amount of modules
 		if currentCount >= 50 then
-			task.wait(2)
-			-- Final update with actual health data
-			local B = shared.Bad
+			task.wait(3)
+			-- One final check
 			if B and type(B.GetBedWarsModuleHealth) == "function" then
 				local report = B:GetBedWarsModuleHealth()
 				if type(report) == "table" and report.Total and report.Total > 0 then
 					updateModuleHealth(report.Ready or 0, report.Total)
-					return
 				end
 			end
 			return

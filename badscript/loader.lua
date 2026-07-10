@@ -1420,21 +1420,21 @@ local MINIMUM_VISIBLE_SECONDS = 1.25
 local loaderTweenService = cloneref(game:GetService("TweenService"))
 
 local COLORS = {
-    backdrop = Color3.fromRGB(2, 4, 7),
-    background = Color3.fromRGB(8, 12, 17),
-    dialog = Color3.fromRGB(12, 18, 24),
-    accent = Color3.fromRGB(16, 24, 32),
-    element = Color3.fromRGB(18, 26, 35),
-    elementHover = Color3.fromRGB(28, 40, 52),
-    button = Color3.fromRGB(20, 28, 38),
-    outline = Color3.fromRGB(85, 110, 130),
-    text = Color3.fromRGB(245, 248, 252),
-    placeholder = Color3.fromRGB(120, 140, 158),
-    icon = Color3.fromRGB(135, 155, 170),
-    sliderIcon = Color3.fromRGB(100, 118, 132),
-    primary = Color3.fromRGB(66, 214, 153),
-    primarySoft = Color3.fromRGB(120, 230, 180),
-    toggle = Color3.fromRGB(66, 214, 153),
+    backdrop = Color3.fromRGB(6, 6, 8),
+    background = Color3.fromRGB(10, 10, 14),
+    dialog = Color3.fromRGB(14, 14, 20),
+    accent = Color3.fromRGB(18, 18, 26),
+    element = Color3.fromRGB(20, 20, 28),
+    elementHover = Color3.fromRGB(30, 30, 42),
+    button = Color3.fromRGB(24, 24, 34),
+    outline = Color3.fromRGB(255, 45, 74),
+    text = Color3.fromRGB(255, 255, 255),
+    placeholder = Color3.fromRGB(106, 106, 120),
+    icon = Color3.fromRGB(255, 45, 74),
+    sliderIcon = Color3.fromRGB(138, 138, 150),
+    primary = Color3.fromRGB(255, 45, 74),
+    primarySoft = Color3.fromRGB(255, 90, 110),
+    toggle = Color3.fromRGB(255, 45, 74),
     warning = Color3.fromRGB(239, 177, 72),
     warningSoft = Color3.fromRGB(251, 191, 36),
     crimson = Color3.fromRGB(255, 45, 74),
@@ -1502,19 +1502,24 @@ local function resolveStatusProgress(message)
 
     local stages = {
         { "initialized", 0.06 },
-        { "cache setup", 0.13 },
-        { "cache cleared", 0.18 },
-        { "self-test", 0.24 },
-        { "validating orchestrator", 0.31 },
-        { "url validation passed", 0.39 },
-        { "compiled ok", 0.5 },
-        { "executing main", 0.59 },
-        { "interface", 0.67 },
-        { "core modules", 0.75 },
-        { "universal", 0.82 },
-        { "game module", 0.88 },
-        { "profile", 0.93 },
-        { "finalizing", 0.96 },
+        { "security: environment", 0.1 },
+        { "security: http", 0.14 },
+        { "security: filesystem", 0.18 },
+        { "security: tamper", 0.22 },
+        { "security checks passed", 0.26 },
+        { "cache setup", 0.3 },
+        { "cache cleared", 0.35 },
+        { "self-test", 0.4 },
+        { "validating orchestrator", 0.47 },
+        { "url validation passed", 0.55 },
+        { "compiled ok", 0.62 },
+        { "executing main", 0.7 },
+        { "interface", 0.77 },
+        { "core modules", 0.83 },
+        { "universal", 0.88 },
+        { "game module", 0.92 },
+        { "profile", 0.95 },
+        { "finalizing", 0.97 },
         { "health", 0.98 },
     }
 
@@ -1532,6 +1537,16 @@ local function friendlyStage(message)
 
     if string.find(lower, "initialized", 1, true) then
         return "Initializing"
+    elseif string.find(lower, "security: environment", 1, true) then
+        return "Checking environment"
+    elseif string.find(lower, "security: http", 1, true) then
+        return "Verifying connectivity"
+    elseif string.find(lower, "security: filesystem", 1, true) then
+        return "Verifying filesystem"
+    elseif string.find(lower, "security: tamper", 1, true) then
+        return "Integrity check"
+    elseif string.find(lower, "security checks passed", 1, true) then
+        return "Security verified"
     elseif string.find(lower, "cache setup", 1, true) then
         return "Preparing local cache"
     elseif string.find(lower, "cache cleared", 1, true) then
@@ -1562,6 +1577,7 @@ local function friendlyStage(message)
     text = text:gsub("^downloading%s+", "Downloading ")
     text = text:gsub("^validating%s+", "Checking ")
     text = text:gsub("^finalizing%s*", "Finishing")
+    text = text:gsub("^security:%s*", "")
     return text
 end
 
@@ -1570,6 +1586,16 @@ local function statusDetail(message)
 
     if string.find(lower, "initialized", 1, true) then
         return "Starting compatibility services and preparing the runtime."
+    elseif string.find(lower, "security: environment", 1, true) then
+        return "Verifying executor environment and available APIs."
+    elseif string.find(lower, "security: http", 1, true) then
+        return "Testing network connectivity and HTTP access."
+    elseif string.find(lower, "security: filesystem", 1, true) then
+        return "Checking file system integrity and required folders."
+    elseif string.find(lower, "security: tamper", 1, true) then
+        return "Scanning for potential code tampering or injection."
+    elseif string.find(lower, "security checks passed", 1, true) then
+        return "All security checks completed successfully."
     elseif string.find(lower, "cache setup", 1, true) then
         return "Checking local folders and previously downloaded components."
     elseif string.find(lower, "cache cleared", 1, true) then
@@ -1706,7 +1732,7 @@ local function createLoader()
     statusCard.ClipsDescendants = true
     statusCard.Parent = statusGui
     loaderCorner(statusCard, 18)
-    statusCardStroke = loaderStroke(statusCard, COLORS.outline, 0.34, 1)
+    statusCardStroke = loaderStroke(statusCard, COLORS.crimson, 0.7, 1)
 
     statusCardScale = Instance.new("UIScale")
     statusCardScale.Name = "MotionScale"
@@ -1716,7 +1742,7 @@ local function createLoader()
     local topbar = Instance.new("Frame")
     topbar.Name = "Topbar"
     topbar.Size = UDim2.new(1, 0, 0, 64)
-    topbar.BackgroundColor3 = Color3.fromRGB(8, 13, 18)
+    topbar.BackgroundColor3 = COLORS.dialog
     topbar.BackgroundTransparency = 0
     topbar.BorderSizePixel = 0
     topbar.Parent = statusCard
@@ -1725,11 +1751,12 @@ local function createLoader()
     appIcon.Name = "Icon"
     appIcon.Position = UDim2.fromOffset(16, 14)
     appIcon.Size = UDim2.fromOffset(36, 36)
-    appIcon.BackgroundColor3 = COLORS.element
+    appIcon.BackgroundColor3 = COLORS.crimson
+    appIcon.BackgroundTransparency = 0.1
     appIcon.BorderSizePixel = 0
     appIcon.Parent = topbar
     loaderCorner(appIcon, 10)
-    loaderStroke(appIcon, COLORS.outline, 0.78, 1)
+    loaderStroke(appIcon, COLORS.crimson, 0.5, 1)
 
     local iconGlyph = Instance.new("TextLabel")
     iconGlyph.Name = "Glyph"
@@ -1738,7 +1765,7 @@ local function createLoader()
     iconGlyph.Font = Enum.Font.GothamBold
     iconGlyph.Text = "B"
     iconGlyph.TextSize = 17
-    iconGlyph.TextColor3 = COLORS.text
+    iconGlyph.TextColor3 = Color3.fromRGB(255, 255, 255)
     iconGlyph.Parent = appIcon
 
     local brand = Instance.new("TextLabel")
@@ -1746,9 +1773,9 @@ local function createLoader()
     brand.Position = UDim2.fromOffset(64, 13)
     brand.Size = UDim2.new(1, -190, 0, 21)
     brand.BackgroundTransparency = 1
-    brand.Font = Enum.Font.GothamSemibold
+    brand.Font = Enum.Font.GothamBold
     brand.Text = "BadWars"
-    brand.TextSize = 15
+    brand.TextSize = 16
     brand.TextColor3 = COLORS.text
     brand.TextXAlignment = Enum.TextXAlignment.Left
     brand.TextTruncate = Enum.TextTruncate.AtEnd
@@ -1760,7 +1787,7 @@ local function createLoader()
     subtitle.Size = UDim2.new(1, -190, 0, 16)
     subtitle.BackgroundTransparency = 1
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "runtime loader"
+    subtitle.Text = "secure runtime loader"
     subtitle.TextSize = 10
     subtitle.TextColor3 = COLORS.placeholder
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -1772,18 +1799,19 @@ local function createLoader()
     statusChip.AnchorPoint = Vector2.new(1, 0.5)
     statusChip.Position = UDim2.new(1, -16, 0.5, 0)
     statusChip.Size = UDim2.fromOffset(96, 28)
-    statusChip.BackgroundColor3 = COLORS.accent
+    statusChip.BackgroundColor3 = COLORS.crimson
+    statusChip.BackgroundTransparency = 0.15
     statusChip.BorderSizePixel = 0
     statusChip.Parent = topbar
     loaderCorner(statusChip, 9)
-    loaderStroke(statusChip, COLORS.outline, 0.78, 1)
+    loaderStroke(statusChip, COLORS.crimson, 0.5, 1)
 
     stateDot = Instance.new("Frame")
     stateDot.Name = "Dot"
     stateDot.AnchorPoint = Vector2.new(0, 0.5)
     stateDot.Position = UDim2.new(0, 11, 0.5, 0)
     stateDot.Size = UDim2.fromOffset(7, 7)
-    stateDot.BackgroundColor3 = COLORS.primary
+    stateDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     stateDot.BorderSizePixel = 0
     stateDot.Parent = statusChip
     loaderCorner(stateDot, 99)
@@ -1793,10 +1821,10 @@ local function createLoader()
     statusChipText.Position = UDim2.fromOffset(25, 0)
     statusChipText.Size = UDim2.new(1, -31, 1, 0)
     statusChipText.BackgroundTransparency = 1
-    statusChipText.Font = Enum.Font.GothamSemibold
+    statusChipText.Font = Enum.Font.GothamBold
     statusChipText.Text = "LOADING"
     statusChipText.TextSize = 8
-    statusChipText.TextColor3 = COLORS.text
+    statusChipText.TextColor3 = Color3.fromRGB(255, 255, 255)
     statusChipText.TextXAlignment = Enum.TextXAlignment.Left
     statusChipText.Parent = statusChip
 
@@ -1804,8 +1832,8 @@ local function createLoader()
     topbarDivider.Name = "Divider"
     topbarDivider.Position = UDim2.new(0, 0, 1, -1)
     topbarDivider.Size = UDim2.new(1, 0, 0, 1)
-    topbarDivider.BackgroundColor3 = COLORS.outline
-    topbarDivider.BackgroundTransparency = 0.66
+    topbarDivider.BackgroundColor3 = COLORS.crimson
+    topbarDivider.BackgroundTransparency = 0.7
     topbarDivider.BorderSizePixel = 0
     topbarDivider.Parent = topbar
 
@@ -1817,7 +1845,7 @@ local function createLoader()
     content.BorderSizePixel = 0
     content.Parent = statusCard
     loaderCorner(content, 12)
-    loaderStroke(content, COLORS.outline, 0.66, 1)
+    loaderStroke(content, COLORS.crimson, 0.82, 1)
 
     local statusPanel = Instance.new("Frame")
     statusPanel.Name = "CurrentStatus"
@@ -1827,23 +1855,24 @@ local function createLoader()
     statusPanel.BorderSizePixel = 0
     statusPanel.Parent = content
     loaderCorner(statusPanel, 10)
+    loaderStroke(statusPanel, COLORS.crimson, 0.88, 1)
 
     local statusIcon = Instance.new("Frame")
     statusIcon.Name = "StatusIcon"
     statusIcon.Position = UDim2.fromOffset(12, 18)
     statusIcon.Size = UDim2.fromOffset(40, 40)
-    statusIcon.BackgroundColor3 = COLORS.accent
+    statusIcon.BackgroundColor3 = COLORS.crimson
+    statusIcon.BackgroundTransparency = 0.15
     statusIcon.BorderSizePixel = 0
     statusIcon.Parent = statusPanel
     loaderCorner(statusIcon, 10)
-    loaderStroke(statusIcon, COLORS.outline, 0.62, 1)
 
     statusAccent = Instance.new("Frame")
     statusAccent.Name = "Accent"
     statusAccent.AnchorPoint = Vector2.new(0.5, 0.5)
     statusAccent.Position = UDim2.fromScale(0.5, 0.5)
     statusAccent.Size = UDim2.fromOffset(10, 10)
-    statusAccent.BackgroundColor3 = COLORS.primary
+    statusAccent.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     statusAccent.BorderSizePixel = 0
     statusAccent.Parent = statusIcon
     loaderCorner(statusAccent, 99)
@@ -1853,7 +1882,7 @@ local function createLoader()
     statusTitle.Position = UDim2.fromOffset(64, 15)
     statusTitle.Size = UDim2.new(1, -76, 0, 21)
     statusTitle.BackgroundTransparency = 1
-    statusTitle.Font = Enum.Font.GothamSemibold
+    statusTitle.Font = Enum.Font.GothamBold
     statusTitle.Text = "Initializing"
     statusTitle.TextSize = 14
     statusTitle.TextColor3 = COLORS.text

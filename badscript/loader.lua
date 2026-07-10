@@ -140,6 +140,72 @@ do
     }
 end
 
+-- BADWARS_RUNTIME_ERROR_CAPTURE_V7_BEGIN
+do
+    shared.__badwars_script_errors = type(shared.__badwars_script_errors) == "table"
+        and shared.__badwars_script_errors
+        or {}
+
+    local scriptContext
+    pcall(function()
+        scriptContext = cloneref(game:GetService("ScriptContext"))
+    end)
+
+    if scriptContext and typeof(scriptContext.Error) == "RBXScriptSignal" then
+        local previous = shared.__badwars_script_error_connection
+        if typeof(previous) == "RBXScriptConnection" then
+            pcall(previous.Disconnect, previous)
+        end
+
+        local ok, connection = pcall(function()
+            return scriptContext.Error:Connect(function(message, stackTrace, scriptInstance)
+                local entry = {
+                    time = os.clock(),
+                    message = tostring(message or "Unknown runtime error"),
+                    stackTrace = tostring(stackTrace or ""),
+                    script = scriptInstance and scriptInstance:GetFullName() or nil,
+                    placeId = game.PlaceId,
+                }
+
+                table.insert(shared.__badwars_script_errors, entry)
+                while #shared.__badwars_script_errors > 80 do
+                    table.remove(shared.__badwars_script_errors, 1)
+                end
+
+                warn("BadWars: [SCRIPT RUNTIME ERROR]")
+                warn(entry.message)
+                if entry.stackTrace ~= "" then
+                    warn(entry.stackTrace)
+                end
+                warn("BadWars: [END SCRIPT RUNTIME ERROR]")
+
+                local diagnostics = shared.BadDiagnostics
+                if type(diagnostics) == "table"
+                    and type(diagnostics.RecordRuntime) == "function"
+                then
+                    pcall(
+                        diagnostics.RecordRuntime,
+                        diagnostics,
+                        "ScriptContext",
+                        entry.message,
+                        {
+                            subsystem = "Runtime",
+                            stage = "script-context",
+                            traceback = entry.stackTrace,
+                            script = entry.script,
+                        }
+                    )
+                end
+            end)
+        end)
+
+        if ok then
+            shared.__badwars_script_error_connection = connection
+        end
+    end
+end
+-- BADWARS_RUNTIME_ERROR_CAPTURE_V7_END
+
 -- BadWars Loader
 -- Dual-format URL fallback + all diagnostics
 
@@ -209,11 +275,19 @@ if not loadstring then
     loadstring = load or function(code) error("loadstring unavailable") end
 end
 
+-- Compatibility helpers required by older downloaded modules.
+unpack = unpack or table.unpack
+if type(table.pack) ~= "function" then
+    table.pack = function(...)
+        return { n = select("#", ...), ... }
+    end
+end
+
 -- Aggressive cache clearing: always wipe old cached files before any HTTP requests
 -- This ensures the latest code is always downloaded, even if old loader is cached
 pcall(function()
     local oldCacheVersion = isfile('badscript/profiles/cache-version.txt') and readfile('badscript/profiles/cache-version.txt') or ''
-    if oldCacheVersion ~= 'badwars-v27-windui-2026-07-08-14' then
+    if oldCacheVersion ~= 'badwars-v27-runtime-nil-v7-2026-07-10-01' then
         -- Clear old main.lua and diagnostics to force fresh download
         local filesToClear = {
             'badscript/main.lua',
@@ -238,7 +312,7 @@ pcall(function()
             end
         end
         -- Write new cache version
-        pcall(writefile, 'badscript/profiles/cache-version.txt', 'badwars-v27-windui-2026-07-08-14')
+        pcall(writefile, 'badscript/profiles/cache-version.txt', 'badwars-v27-runtime-nil-v7-2026-07-10-01')
     end
 end)
 
@@ -1404,7 +1478,7 @@ local function httpGet(urls)
 end
 
 
--- BADWARS_LOADER_PRESENTATION_V6_BEGIN
+-- BADWARS_LOADER_PRESENTATION_V7_BEGIN
 -- Native pre-runtime loader styled to match the BadWars WindUI theme.
 -- This intentionally uses Roblox instances because WindUI itself has not loaded yet.
 
@@ -2778,7 +2852,7 @@ end
 
 local setStatus = shared.BadStatus
 setStatus("pipeline: initialized")
--- BADWARS_LOADER_PRESENTATION_V6_END
+-- BADWARS_LOADER_PRESENTATION_V7_END
 -- Error tracking
 local __rtErrs=shared.__badwars_runtime_errors
 if type(__rtErrs)~='table' then __rtErrs={};shared.__badwars_runtime_errors=__rtErrs end
@@ -2893,7 +2967,7 @@ if isfile(ORCH_PATH) then
     end
 end
 
-local cacheVersion = 'badwars-v27-windui-2026-07-08-14'
+local cacheVersion = 'badwars-v27-runtime-nil-v7-2026-07-10-01'
 local cacheFile = 'badscript/profiles/cache-version.txt'
 local function isCurrentGuiCache(contents)
     return type(contents) == "string"
@@ -3221,6 +3295,13 @@ if not ok then
     local originalFailure = tostring(result)
     local m = "main.lua runtime: " .. originalFailure
 
+    shared.BadWarsFatalError = {
+        stage = "main-runtime",
+        message = originalFailure,
+        traceback = originalFailure,
+        time = os.clock(),
+    }
+
     setStatus("ERROR: " .. m, true)
     recordErr("main.lua", originalFailure)
 
@@ -3228,7 +3309,9 @@ if not ok then
     warn(originalFailure)
     warn("BadWars: [END MAIN RUNTIME FAILURE]")
 
-    error(m, 0)
+    -- Do not rethrow into the executor's anonymous wrapper. That wrapper is
+    -- what produces the useless blank-script line 7 message.
+    return nil
 end
 
 -- Validation

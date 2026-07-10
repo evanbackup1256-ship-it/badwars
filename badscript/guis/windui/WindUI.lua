@@ -349,11 +349,44 @@ do
 				return
 			end
 
-			if not d.Icons[e] then
-				d.Icons[e] = {
-					Icons = {},
+			local iconPack = d.Icons[e]
+			if type(iconPack) ~= "table" then
+				iconPack = {}
+			end
+
+			if type(iconPack.Icons) ~= "table" then
+				local normalizedIcons = {}
+				for iconName, iconValue in pairs(iconPack) do
+					if
+						type(iconName) == "string"
+						and (type(iconValue) == "number"
+							or (type(iconValue) == "string" and iconValue:match("^rbxassetid://")))
+					then
+						local image = type(iconValue) == "number"
+								and ("rbxassetid://" .. tostring(iconValue))
+							or iconValue
+						normalizedIcons[iconName] = {
+							Image = image,
+							ImageRectSize = Vector2.new(0, 0),
+							ImageRectPosition = Vector2.new(0, 0),
+							Parts = nil,
+						}
+					end
+				end
+
+				iconPack = {
+					Icons = normalizedIcons,
 					Spritesheets = {},
 				}
+				d.Icons[e] = iconPack
+			end
+
+			iconPack.Spritesheets = type(iconPack.Spritesheets) == "table" and iconPack.Spritesheets or {}
+			for _, iconData in pairs(iconPack.Icons) do
+				if type(iconData) == "table" and iconData.Image ~= nil then
+					local imageKey = tostring(iconData.Image)
+					iconPack.Spritesheets[imageKey] = iconPack.Spritesheets[imageKey] or iconData.Image
+				end
 			end
 
 			for g, h in pairs(f) do
@@ -363,13 +396,13 @@ do
 						i = "rbxassetid://" .. tostring(h)
 					end
 
-					d.Icons[e].Icons[g] = {
+					iconPack.Icons[g] = {
 						Image = i,
 						ImageRectSize = Vector2.new(0, 0),
 						ImageRectPosition = Vector2.new(0, 0),
 						Parts = nil,
 					}
-					d.Icons[e].Spritesheets[i] = i
+					iconPack.Spritesheets[i] = i
 				elseif type(h) == "table" then
 					if h.Image and h.ImageRectSize and h.ImageRectPosition then
 						local i = h.Image
@@ -377,15 +410,15 @@ do
 							i = "rbxassetid://" .. tostring(i)
 						end
 
-						d.Icons[e].Icons[g] = {
+						iconPack.Icons[g] = {
 							Image = i,
 							ImageRectSize = h.ImageRectSize,
 							ImageRectPosition = h.ImageRectPosition,
 							Parts = h.Parts,
 						}
 
-						if not d.Icons[e].Spritesheets[i] then
-							d.Icons[e].Spritesheets[i] = i
+						if not iconPack.Spritesheets[i] then
+							iconPack.Spritesheets[i] = i
 						end
 					else
 						warn("AddIcons: Invalid spritesheet data format for icon '" .. g .. "'")
@@ -395,7 +428,6 @@ do
 				end
 			end
 		end
-
 		function d.SetIconsType(e)
 			d.IconsType = e
 		end
@@ -419,9 +451,14 @@ do
 			local p = d.Icons[l]
 
 			if p and p.Icons and p.Icons[m] then
+				local iconData = p.Icons[m]
+				local image = iconData.Image
+				if type(p.Spritesheets) == "table" then
+					image = p.Spritesheets[tostring(iconData.Image)] or image
+				end
 				return {
-					p.Spritesheets[tostring(p.Icons[m].Image)],
-					p.Icons[m],
+					image,
+					iconData,
 				}
 			elseif p and p[m] and string.find(p[m], "rbxassetid://") then
 				return h
@@ -433,7 +470,6 @@ do
 			end
 			return nil
 		end
-
 		function d.GetIcon(f, g)
 			return d.Icon(f, g, false)
 		end

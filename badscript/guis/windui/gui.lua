@@ -2040,6 +2040,192 @@ profileSection:Button({
 	end,
 })
 
+-- ─── Friends Tab ───
+Tabs.Friends:Paragraph({
+	Title = "Friends",
+	Desc = "Mark players as friends to protect them from combat modules.",
+})
+
+local friendsSection = Tabs.Friends:Section({
+	Title = "Settings",
+	Opened = true,
+	Box = true,
+})
+
+local friendsCategory = d.Categories.Friends
+
+friendsSection:Toggle({
+	Title = "Use Friends",
+	Desc = "Enable friend protection",
+	Value = false,
+	Flag = "friends/use",
+	Callback = function(value)
+		if friendsCategory and friendsCategory.Options then
+			friendsCategory.Options["Use friends"] = friendsCategory.Options["Use friends"] or {}
+			friendsCategory.Options["Use friends"].Enabled = value
+		end
+	end,
+})
+
+friendsSection:Toggle({
+	Title = "Recolor Visuals",
+	Desc = "Change friend color in ESP",
+	Value = false,
+	Flag = "friends/recolor",
+	Callback = function(value)
+		if friendsCategory and friendsCategory.Options then
+			friendsCategory.Options["Recolor visuals"] = friendsCategory.Options["Recolor visuals"] or {}
+			friendsCategory.Options["Recolor visuals"].Enabled = value
+		end
+	end,
+})
+
+friendsSection:Divider()
+
+local friendsListSection = Tabs.Friends:Section({
+	Title = "Player List",
+	Opened = true,
+	Box = true,
+})
+
+local friendsListLabel = friendsListSection:Paragraph({
+	Title = "Server Players",
+	Desc = "Click a player to toggle friend status",
+})
+
+local friendButtons = {}
+
+local function refreshFriendsList()
+	for _, btn in ipairs(friendButtons) do
+		pcall(function() btn:Destroy() end)
+	end
+	friendButtons = {}
+
+	local players = game:GetService("Players"):GetPlayers()
+	local listEnabled = (friendsCategory and friendsCategory.ListEnabled) or {}
+
+	for _, player in ipairs(players) do
+		local isFriend = table.find(listEnabled, player.Name) and true or false
+		local btn = friendsListSection:Button({
+			Title = player.Name .. (isFriend and " [FRIEND]" or ""),
+			Desc = isFriend and "Remove from friends" or "Add as friend",
+			Icon = isFriend and "user-check" or "user-plus",
+			Callback = function()
+				if not friendsCategory then return end
+				friendsCategory.ListEnabled = friendsCategory.ListEnabled or {}
+				local idx = table.find(friendsCategory.ListEnabled, player.Name)
+				if idx then
+					table.remove(friendsCategory.ListEnabled, idx)
+				else
+					table.insert(friendsCategory.ListEnabled, player.Name)
+				end
+				if friendsCategory.Update then
+					pcall(friendsCategory.Update.Fire, friendsCategory.Update)
+				end
+				refreshFriendsList()
+				d:CreateNotification("Friends", isFriend and ("Removed " .. player.Name) or ("Added " .. player.Name .. " as friend"), 3, "success")
+			end,
+		})
+		table.insert(friendButtons, btn)
+	end
+end
+
+friendsListSection:Button({
+	Title = "Refresh Player List",
+	Icon = "refresh-cw",
+	Desc = "Update the server player list",
+	Callback = refreshFriendsList,
+})
+
+task.defer(refreshFriendsList)
+
+game:GetService("Players").PlayerAdded:Connect(function()
+	task.defer(refreshFriendsList)
+end)
+game:GetService("Players").PlayerRemoving:Connect(function()
+	task.defer(refreshFriendsList)
+end)
+
+-- ─── Targets Tab ───
+Tabs.Targets:Paragraph({
+	Title = "Targets",
+	Desc = "Mark specific players as targets for combat modules.",
+})
+
+local targetsSection = Tabs.Targets:Section({
+	Title = "Settings",
+	Opened = true,
+	Box = true,
+})
+
+local targetsCategory = d.Categories.Targets
+
+targetsSection:Divider()
+
+local targetsListSection = Tabs.Targets:Section({
+	Title = "Player List",
+	Opened = true,
+	Box = true,
+})
+
+local targetsListLabel = targetsListSection:Paragraph({
+	Title = "Server Players",
+	Desc = "Click a player to toggle target status",
+})
+
+local targetButtons = {}
+
+local function refreshTargetsList()
+	for _, btn in ipairs(targetButtons) do
+		pcall(function() btn:Destroy() end)
+	end
+	targetButtons = {}
+
+	local players = game:GetService("Players"):GetPlayers()
+	local listEnabled = (targetsCategory and targetsCategory.ListEnabled) or {}
+
+	for _, player in ipairs(players) do
+		local isTarget = table.find(listEnabled, player.Name) and true or false
+		local btn = targetsListSection:Button({
+			Title = player.Name .. (isTarget and " [TARGET]" or ""),
+			Desc = isTarget and "Remove from targets" or "Add as target",
+			Icon = isTarget and "crosshair" or "circle",
+			Callback = function()
+				if not targetsCategory then return end
+				targetsCategory.ListEnabled = targetsCategory.ListEnabled or {}
+				local idx = table.find(targetsCategory.ListEnabled, player.Name)
+				if idx then
+					table.remove(targetsCategory.ListEnabled, idx)
+				else
+					table.insert(targetsCategory.ListEnabled, player.Name)
+				end
+				if targetsCategory.Update then
+					pcall(targetsCategory.Update.Fire, targetsCategory.Update)
+				end
+				refreshTargetsList()
+				d:CreateNotification("Targets", isTarget and ("Removed " .. player.Name) or ("Added " .. player.Name .. " as target"), 3, "success")
+			end,
+		})
+		table.insert(targetButtons, btn)
+	end
+end
+
+targetsListSection:Button({
+	Title = "Refresh Player List",
+	Icon = "refresh-cw",
+	Desc = "Update the server player list",
+	Callback = refreshTargetsList,
+})
+
+task.defer(refreshTargetsList)
+
+game:GetService("Players").PlayerAdded:Connect(function()
+	task.defer(refreshTargetsList)
+end)
+game:GetService("Players").PlayerRemoving:Connect(function()
+	task.defer(refreshTargetsList)
+end)
+
 -- ─── API methods ───
 function d.Save(self, target)
 	if self ~= d then target = self end

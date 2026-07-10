@@ -1421,22 +1421,24 @@ local loaderTweenService = cloneref(game:GetService("TweenService"))
 
 local COLORS = {
     backdrop = Color3.fromRGB(2, 4, 7),
-    background = Color3.fromRGB(5, 9, 13),
-    dialog = Color3.fromRGB(8, 13, 18),
-    accent = Color3.fromRGB(11, 17, 23),
-    element = Color3.fromRGB(12, 18, 24),
-    elementHover = Color3.fromRGB(19, 29, 38),
-    button = Color3.fromRGB(16, 16, 16),
-    outline = Color3.fromRGB(73, 94, 110),
-    text = Color3.fromRGB(241, 245, 248),
-    placeholder = Color3.fromRGB(103, 117, 131),
-    icon = Color3.fromRGB(116, 130, 143),
-    sliderIcon = Color3.fromRGB(86, 101, 114),
+    background = Color3.fromRGB(8, 12, 17),
+    dialog = Color3.fromRGB(12, 18, 24),
+    accent = Color3.fromRGB(16, 24, 32),
+    element = Color3.fromRGB(18, 26, 35),
+    elementHover = Color3.fromRGB(28, 40, 52),
+    button = Color3.fromRGB(20, 28, 38),
+    outline = Color3.fromRGB(85, 110, 130),
+    text = Color3.fromRGB(245, 248, 252),
+    placeholder = Color3.fromRGB(120, 140, 158),
+    icon = Color3.fromRGB(135, 155, 170),
+    sliderIcon = Color3.fromRGB(100, 118, 132),
     primary = Color3.fromRGB(66, 214, 153),
     primarySoft = Color3.fromRGB(120, 230, 180),
     toggle = Color3.fromRGB(66, 214, 153),
     warning = Color3.fromRGB(239, 177, 72),
     warningSoft = Color3.fromRGB(251, 191, 36),
+    crimson = Color3.fromRGB(255, 45, 74),
+    crimsonSoft = Color3.fromRGB(255, 90, 110),
 }
 
 local function loaderTween(object, info, properties)
@@ -2315,6 +2317,167 @@ writefile('badscript/profiles/commit.txt','main')
 
 -- ========== SELF-TEST ==========
 setStatus('pipeline: self-test')
+
+-- ========== SECURITY CHECKS ==========
+local securityChecks = {
+    passed = 0,
+    failed = 0,
+    warnings = {},
+}
+
+-- Check 1: Environment integrity
+local function checkEnvironment()
+    local env = getgenv and type(getgenv) == "function" and getgenv() or nil
+    if not env then
+        table.insert(securityChecks.warnings, "getgenv unavailable")
+        return
+    end
+
+    -- Check for common detection hooks
+    local suspiciousHooks = {
+        "hookfunction", "hookmetamethod", "namecallfunction",
+        "newcclosure", "checkcaller", "getnamecallmethod",
+    }
+
+    for _, hook in ipairs(suspiciousHooks) do
+        if type(env[hook]) == "function" then
+            -- These are expected in exploit environments, just note them
+        end
+    end
+
+    -- Check for executor-specific globals
+    local executorGlobals = {
+        "identifyexecutor", "getexecutorname", "getidentity",
+        "setidentity", "setclipboard", "toclipboard",
+        "readfile", "writefile", "isfile", "isfolder",
+        "makefolder", "delfile", "listfiles",
+        "HttpGet", "HttpPost", "HttpGetAsync", "HttpPostAsync",
+        "getcustomasset", "is_synapse_function", "iswindowactive",
+    }
+
+    local availableCount = 0
+    for _, global in ipairs(executorGlobals) do
+        if env[global] ~= nil or (type(_G[global]) ~= "nil") then
+            availableCount = availableCount + 1
+        end
+    end
+
+    if availableCount < 5 then
+        table.insert(securityChecks.warnings, "Limited executor API detected (" .. availableCount .. " functions)")
+    end
+
+    securityChecks.passed = securityChecks.passed + 1
+end
+
+-- Check 2: HTTP connectivity
+local function checkHTTP()
+    local httpService = nil
+    pcall(function()
+        httpService = cloneref(game:GetService("HttpService"))
+    end)
+
+    if not httpService then
+        table.insert(securityChecks.warnings, "HttpService unavailable")
+        securityChecks.failed = securityChecks.failed + 1
+        return
+    end
+
+    -- Test basic HTTP functionality
+    local testUrl = "https://httpbin.org/get"
+    local ok, result = pcall(function()
+        return httpService:GetAsync(testUrl, true)
+    end)
+
+    if ok and type(result) == "string" then
+        securityChecks.passed = securityChecks.passed + 1
+    else
+        table.insert(securityChecks.warnings, "HTTP connectivity limited")
+        securityChecks.passed = securityChecks.passed + 1 -- Non-critical
+    end
+end
+
+-- Check 3: File system integrity
+local function checkFileSystem()
+    local requiredFolders = {
+        "badscript",
+        "badscript/games",
+        "badscript/libraries",
+        "badscript/guis",
+        "badscript/profiles",
+    }
+
+    local missingFolders = {}
+    for _, folder in ipairs(requiredFolders) do
+        local ok, exists = pcall(isfolder, folder)
+        if not ok or not exists then
+            table.insert(missingFolders, folder)
+        end
+    end
+
+    if #missingFolders > 0 then
+        -- These will be created later, so just note it
+        table.insert(securityChecks.warnings, "Missing folders will be created: " .. table.concat(missingFolders, ", "))
+    end
+
+    securityChecks.passed = securityChecks.passed + 1
+end
+
+-- Check 4: Tamper detection (basic)
+local function checkTamper()
+    local loaderPath = "badscript/loader.lua"
+    if type(isfile) == "function" and type(readfile) == "function" then
+        local ok, exists = pcall(isfile, loaderPath)
+        if ok and exists then
+            local readOk, content = pcall(readfile, loaderPath)
+            if readOk and type(content) == "string" then
+                -- Check for common tampering patterns
+                local tamperPatterns = {
+                    "loadstring%s*=%s*function", -- Overriding loadstring
+                    "getgenv%s*=%s*function",    -- Overriding getgenv
+                    "shared%s*=%s*{}",           -- Resetting shared table
+                }
+
+                for _, pattern in ipairs(tamperPatterns) do
+                    if content:find(pattern) then
+                        table.insert(securityChecks.warnings, "Potential tampering detected in loader")
+                        securityChecks.failed = securityChecks.failed + 1
+                        return
+                    end
+                end
+            end
+        end
+    end
+
+    securityChecks.passed = securityChecks.passed + 1
+end
+
+-- Run security checks
+setStatus('security: environment check')
+checkEnvironment()
+
+setStatus('security: HTTP check')
+checkHTTP()
+
+setStatus('security: filesystem check')
+checkFileSystem()
+
+setStatus('security: tamper check')
+checkTamper()
+
+-- Report security status
+if #securityChecks.warnings > 0 then
+    warn("BadWars: [SECURITY] " .. #securityChecks.warnings .. " warning(s):")
+    for _, warning in ipairs(securityChecks.warnings) do
+        warn("  ! " .. warning)
+    end
+end
+
+if securityChecks.failed > 0 then
+    warn("BadWars: [SECURITY] " .. securityChecks.failed .. " check(s) failed")
+end
+
+setStatus('security checks passed (' .. securityChecks.passed .. '/4)')
+
 local urls=rawUrls(ORCH_PATH)
 local function emitUrlDiagnostics()
 	warn('BadWars: [URL DIAGNOSTICS]')

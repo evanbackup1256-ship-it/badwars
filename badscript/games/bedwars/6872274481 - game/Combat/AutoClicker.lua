@@ -1,3 +1,4 @@
+local Bad = shared.Bad or {}
 local AutoClicker
 local CPS
 local BlockCPS = {}

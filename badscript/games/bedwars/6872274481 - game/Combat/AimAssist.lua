@@ -1,3 +1,4 @@
+local Bad = shared.Bad or {}
 local AimAssist
 local Targets
 local Sort
@@ -44,8 +45,9 @@ AimAssist = Bad.Categories.Combat:CreateModule({
 
 						if ent and ent.RootPart then
 							local delta = (ent.RootPart.Position - entitylib.character.RootPart.Position)
-							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
-							local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+							local flatDelta = delta * Vector3.new(1, 0, 1)
+							local dot = localfacing:Dot(flatDelta.Unit)
+							local angle = math.acos(math.clamp(dot, -1, 1))
 							if angle >= (math.rad(AngleSlider and AngleSlider.Value or 70) / 2) then return end
 							if targetinfo and targetinfo.Targets then targetinfo.Targets[ent] = tick() + 1 end
 							local strafeBonus = (StrafeIncrease and StrafeIncrease.Enabled and (inputService:IsKeyDown(Enum.KeyCode.A) or inputService:IsKeyDown(Enum.KeyCode.D)) and 10 or 0)

@@ -1,3 +1,4 @@
+local Bad = shared.Bad or {}
 local Value
 local bedwars = (shared.Bad and shared.Bad.bedwars) or {}
 

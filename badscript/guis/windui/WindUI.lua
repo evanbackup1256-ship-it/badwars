@@ -266,9 +266,13 @@ do
 			return b
 		end)
 
-		-- Fix: GetIcons remote doesn't exist in BadWars/BedWars, would hang for 99999s
-		-- Use a fallback icon set instead
-		local d
+		-- Prefer a game-provided icon module when available, but never depend on it.
+		-- BadWars does not expose GetIcons, so these essential Lucide assets keep
+		-- WindUI usable without remote HTTP or long WaitForChild timeouts.
+		local d = {
+			Icons = {},
+			Spritesheets = {},
+		}
 		local ok, result = pcall(function()
 			local rs = game:GetService("ReplicatedStorage")
 			local getIcons = rs:FindFirstChild("GetIcons")
@@ -277,15 +281,54 @@ do
 			end
 			return nil
 		end)
-		
+
 		if ok and type(result) == "table" then
 			d = result
+		end
+
+		d.Icons = type(d.Icons) == "table" and d.Icons or {}
+		d.Spritesheets = type(d.Spritesheets) == "table" and d.Spritesheets or {}
+
+		local builtInLucide = {
+			check = "rbxassetid://93898873302694",
+			["chevron-down"] = "rbxassetid://134243273101015",
+			["chevrons-up-down"] = "rbxassetid://131833120209646",
+			copy = "rbxassetid://78979572434545",
+			expand = "rbxassetid://137492887754537",
+			maximize = "rbxassetid://76045941763188",
+			["maximize-2"] = "rbxassetid://73085922906397",
+			minimize = "rbxassetid://121304296213645",
+			move = "rbxassetid://116138709011735",
+			["move-diagonal-2"] = "rbxassetid://117298577948096",
+			search = "rbxassetid://121018724060431",
+			x = "rbxassetid://110786993356448",
+		}
+
+		local lucide = d.Icons.lucide
+		if type(lucide) ~= "table" then
+			lucide = {}
+			d.Icons.lucide = lucide
+		end
+
+		if type(lucide.Icons) == "table" then
+			lucide.Spritesheets = type(lucide.Spritesheets) == "table" and lucide.Spritesheets or {}
+			for iconName, image in pairs(builtInLucide) do
+				if lucide.Icons[iconName] == nil then
+					lucide.Icons[iconName] = {
+						Image = image,
+						ImageRectSize = Vector2.new(0, 0),
+						ImageRectPosition = Vector2.new(0, 0),
+						Parts = nil,
+					}
+				end
+				lucide.Spritesheets[image] = lucide.Spritesheets[image] or image
+			end
 		else
-			-- Fallback: create a basic icon table for BadWars
-			d = {
-				Icons = {},
-				Spritesheets = {},
-			}
+			for iconName, image in pairs(builtInLucide) do
+				if lucide[iconName] == nil then
+					lucide[iconName] = image
+				end
+			end
 		end
 
 		local function parseIconString(e)
@@ -428,6 +471,12 @@ do
 			end
 
 			local j = d.Icon2(g.Icon, g.Type)
+			if j == nil then
+				j = {
+					"rbxassetid://130359823580534",
+					{ ImageRectSize = Vector2.new(0, 0), ImageRectPosition = Vector2.new(0, 0), Parts = nil },
+				}
+			end
 			local l = typeof(j) == "string" and string.find(j, "rbxassetid://")
 
 			if d.New then
@@ -1121,6 +1170,23 @@ do
 			return m.Icon2(u, nil, v ~= false)
 		end
 
+		local EMPTY_ICON_DATA = {
+			ImageRectSize = Vector2.new(0, 0),
+			ImageRectPosition = Vector2.new(0, 0),
+			Parts = nil,
+		}
+
+		function r.SafeIcon(u, v)
+			local icon = m.Icon2(u, nil, v ~= false)
+			if type(icon) == "table" and type(icon[2]) == "table" then
+				return icon
+			end
+			if type(icon) == "string" then
+				return { icon, EMPTY_ICON_DATA }
+			end
+			return { "rbxassetid://130359823580534", EMPTY_ICON_DATA }
+		end
+
 		function r.AddIcons(u, v)
 			return m.AddIcons(u, v)
 		end
@@ -1642,9 +1708,9 @@ do
 			local l
 			if h.CanClose then
 				l = d("ImageButton", {
-					Image = b.Icon("x")[1],
-					ImageRectSize = b.Icon("x")[2].ImageRectSize,
-					ImageRectOffset = b.Icon("x")[2].ImageRectPosition,
+					Image = b.SafeIcon("x")[1],
+					ImageRectSize = b.SafeIcon("x")[2].ImageRectSize,
+					ImageRectOffset = b.SafeIcon("x")[2].ImageRectPosition,
 					BackgroundTransparency = 1,
 					Size = UDim2.new(0, 16, 0, 16),
 					Position = UDim2.new(1, -f.UIPadding, 0, f.UIPadding),
@@ -2894,9 +2960,9 @@ do
 			local an
 			if af and af ~= "" then
 				an = ac("ImageLabel", {
-					Image = ab.Icon(af)[1],
-					ImageRectSize = ab.Icon(af)[2].ImageRectSize,
-					ImageRectOffset = ab.Icon(af)[2].ImageRectPosition,
+					Image = ab.SafeIcon(af)[1],
+					ImageRectSize = ab.SafeIcon(af)[2].ImageRectSize,
+					ImageRectOffset = ab.SafeIcon(af)[2].ImageRectPosition,
 					Size = UDim2.new(0, 21, 0, 21),
 					BackgroundTransparency = 1,
 					ImageColor3 = ah == "White" and Color3.new(0, 0, 0) or nil,
@@ -3025,9 +3091,9 @@ do
 			local ao
 			if af and af ~= "" then
 				ao = ac("ImageLabel", {
-					Image = ab.Icon(af)[1],
-					ImageRectSize = ab.Icon(af)[2].ImageRectSize,
-					ImageRectOffset = ab.Icon(af)[2].ImageRectPosition,
+					Image = ab.SafeIcon(af)[1],
+					ImageRectSize = ab.SafeIcon(af)[2].ImageRectSize,
+					ImageRectOffset = ab.SafeIcon(af)[2].ImageRectPosition,
 					Size = UDim2.new(0, 21, 0, 21),
 					BackgroundTransparency = 1,
 					ThemeTag = {
@@ -4728,9 +4794,9 @@ do
 			local al
 			if af and af ~= "" then
 				al = ac("ImageLabel", {
-					Image = ab.Icon(af)[1],
-					ImageRectSize = ab.Icon(af)[2].ImageRectSize,
-					ImageRectOffset = ab.Icon(af)[2].ImageRectPosition,
+					Image = ab.SafeIcon(af)[1],
+					ImageRectSize = ab.SafeIcon(af)[2].ImageRectSize,
+					ImageRectOffset = ab.SafeIcon(af)[2].ImageRectPosition,
 					Size = UDim2.new(0, 21, 0, 21),
 					BackgroundTransparency = 1,
 					ThemeTag = {
@@ -5551,9 +5617,9 @@ do
 				Name = "Drag",
 			}, {
 				ac("ImageLabel", {
-					Image = ab.Icon("move")[1],
-					ImageRectOffset = ab.Icon("move")[2].ImageRectPosition,
-					ImageRectSize = ab.Icon("move")[2].ImageRectSize,
+					Image = ab.SafeIcon("move")[1],
+					ImageRectOffset = ab.SafeIcon("move")[2].ImageRectPosition,
+					ImageRectSize = ab.SafeIcon("move")[2].ImageRectSize,
 					Size = UDim2.new(0, 18, 0, 18),
 					BackgroundTransparency = 1,
 					Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -6846,9 +6912,9 @@ do
 					BackgroundTransparency = 1,
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					Position = UDim2.new(0.5, 0, 0.5, 0),
-					Image = ab.Icon(ag)[1],
-					ImageRectOffset = ab.Icon(ag)[2].ImageRectPosition,
-					ImageRectSize = ab.Icon(ag)[2].ImageRectSize,
+					Image = ab.SafeIcon(ag)[1],
+					ImageRectOffset = ab.SafeIcon(ag)[2].ImageRectPosition,
+					ImageRectSize = ab.SafeIcon(ag)[2].ImageRectSize,
 					ImageTransparency = 1,
 					ImageColor3 = Color3.new(0, 0, 0),
 				})
@@ -9212,9 +9278,9 @@ do
 			ap.Close = ap.DropdownMenu.Close
 
 			ag("ImageLabel", {
-				Image = af.Icon("chevrons-up-down")[1],
-				ImageRectOffset = af.Icon("chevrons-up-down")[2].ImageRectPosition,
-				ImageRectSize = af.Icon("chevrons-up-down")[2].ImageRectSize,
+				Image = af.SafeIcon("chevrons-up-down")[1],
+				ImageRectOffset = af.SafeIcon("chevrons-up-down")[2].ImageRectPosition,
+				ImageRectSize = af.SafeIcon("chevrons-up-down")[2].ImageRectSize,
 				Size = UDim2.new(0, 18, 0, 18),
 				Position = UDim2.new(1, ap.UIElements.Dropdown and -12 or 0, 0.5, 0),
 				ThemeTag = {
@@ -9567,9 +9633,9 @@ do
 								Scale = 1,
 							}),
 							ag("ImageLabel", {
-								Image = af.Icon("copy")[1],
-								ImageRectSize = af.Icon("copy")[2].ImageRectSize,
-								ImageRectOffset = af.Icon("copy")[2].ImageRectPosition,
+								Image = af.SafeIcon("copy")[1],
+								ImageRectSize = af.SafeIcon("copy")[2].ImageRectSize,
+								ImageRectOffset = af.SafeIcon("copy")[2].ImageRectPosition,
 								BackgroundTransparency = 1,
 								AnchorPoint = Vector2.new(0.5, 0.5),
 								Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -10689,9 +10755,9 @@ do
 				af("ImageLabel", {
 					Size = UDim2.new(1, 0, 1, 0),
 					BackgroundTransparency = 1,
-					Image = aa.Icon("chevron-down")[1],
-					ImageRectSize = aa.Icon("chevron-down")[2].ImageRectSize,
-					ImageRectOffset = aa.Icon("chevron-down")[2].ImageRectPosition,
+					Image = aa.SafeIcon("chevron-down")[1],
+					ImageRectSize = aa.SafeIcon("chevron-down")[2].ImageRectSize,
+					ImageRectOffset = aa.SafeIcon("chevron-down")[2].ImageRectPosition,
 					ThemeTag = {
 						ImageTransparency = "SectionExpandIconTransparency",
 						ImageColor3 = "SectionExpandIcon",
@@ -12290,9 +12356,9 @@ do
 				ai("ImageLabel", {
 					Size = UDim2.new(1, 0, 1, 0),
 					BackgroundTransparency = 1,
-					Image = af.Icon("chevron-down")[1],
-					ImageRectSize = af.Icon("chevron-down")[2].ImageRectSize,
-					ImageRectOffset = af.Icon("chevron-down")[2].ImageRectPosition,
+					Image = af.SafeIcon("chevron-down")[1],
+					ImageRectSize = af.SafeIcon("chevron-down")[2].ImageRectSize,
+					ImageRectOffset = af.SafeIcon("chevron-down")[2].ImageRectPosition,
 					ThemeTag = {
 						ImageColor3 = "Icon",
 					},
@@ -12477,9 +12543,9 @@ do
 			})
 
 			local ar = ak("ImageLabel", {
-				Image = ai.Icon("x")[1],
-				ImageRectSize = ai.Icon("x")[2].ImageRectSize,
-				ImageRectOffset = ai.Icon("x")[2].ImageRectPosition,
+				Image = ai.SafeIcon("x")[1],
+				ImageRectSize = ai.SafeIcon("x")[2].ImageRectSize,
+				ImageRectOffset = ai.SafeIcon("x")[2].ImageRectPosition,
 				BackgroundTransparency = 1,
 				ThemeTag = {
 					ImageColor3 = "Icon",
@@ -12548,9 +12614,9 @@ do
 							BackgroundTransparency = 1,
 						}, {
 							ak("ImageLabel", {
-								Image = ai.Icon("search")[1],
-								ImageRectSize = ai.Icon("search")[2].ImageRectSize,
-								ImageRectOffset = ai.Icon("search")[2].ImageRectPosition,
+								Image = ai.SafeIcon("search")[1],
+								ImageRectSize = ai.SafeIcon("search")[2].ImageRectSize,
+								ImageRectOffset = ai.SafeIcon("search")[2].ImageRectPosition,
 								BackgroundTransparency = 1,
 								ThemeTag = {
 									ImageColor3 = "Icon",
@@ -12650,9 +12716,9 @@ do
 								PaddingBottom = UDim.new(0, ap.Padding - 2),
 							}),
 							ak("ImageLabel", {
-								Image = ai.Icon(ax)[1],
-								ImageRectSize = ai.Icon(ax)[2].ImageRectSize,
-								ImageRectOffset = ai.Icon(ax)[2].ImageRectPosition,
+								Image = ai.SafeIcon(ax)[1],
+								ImageRectSize = ai.SafeIcon(ax)[2].ImageRectSize,
+								ImageRectOffset = ai.SafeIcon(ax)[2].ImageRectPosition,
 								BackgroundTransparency = 1,
 								ThemeTag = {
 									ImageColor3 = "Icon",
@@ -13091,11 +13157,11 @@ do
 					ImageTransparency = 1,
 				}),
 			})
-			local expandIcon = an.Icon("expand")
-				or an.Icon("maximize-2")
-				or an.Icon("maximize")
-				or an.Icon("move-diagonal-2")
-				or an.Icon("move")
+			local expandIcon = an.SafeIcon("expand")
+				or an.SafeIcon("maximize-2")
+				or an.SafeIcon("maximize")
+				or an.SafeIcon("move-diagonal-2")
+				or an.SafeIcon("move")
 			local expandIconData = type(expandIcon) == "table" and expandIcon[2] or nil
 			local expandImage = type(expandIcon) == "table" and expandIcon[1] or ""
 			local expandRectOffset = type(expandIconData) == "table"

@@ -128,6 +128,18 @@ do
     __badwarsLoadDiagnostics()
 end
 -- BADWARS_DIAGNOSTICS_BOOTSTRAP_END
+-- Diagnostics implementations may be partial or stale.
+-- Detect optional methods instead of assuming every diagnostics table is complete.
+do
+    local diagnostics = type(shared) == "table" and shared.BadDiagnostics or nil
+    shared.BadDiagnosticsCapabilities = {
+        Traceback = type(diagnostics) == "table" and type(diagnostics.Traceback) == "function",
+        RecordRuntime = type(diagnostics) == "table" and type(diagnostics.RecordRuntime) == "function",
+        Capture = type(diagnostics) == "table" and type(diagnostics.Capture) == "function",
+        Open = type(diagnostics) == "table" and type(diagnostics.Open) == "function",
+    }
+end
+
 -- BadWars Loader
 -- Dual-format URL fallback + all diagnostics
 
@@ -1392,7 +1404,7 @@ local function httpGet(urls)
 end
 
 
--- BADWARS_LOADER_PRESENTATION_V5_BEGIN
+-- BADWARS_LOADER_PRESENTATION_V6_BEGIN
 -- Native pre-runtime loader styled to match the BadWars WindUI theme.
 -- This intentionally uses Roblox instances because WindUI itself has not loaded yet.
 
@@ -2766,11 +2778,66 @@ end
 
 local setStatus = shared.BadStatus
 setStatus("pipeline: initialized")
--- BADWARS_LOADER_PRESENTATION_V5_END
+-- BADWARS_LOADER_PRESENTATION_V6_END
 -- Error tracking
 local __rtErrs=shared.__badwars_runtime_errors
 if type(__rtErrs)~='table' then __rtErrs={};shared.__badwars_runtime_errors=__rtErrs end
-local function recordErr(mod,msg) local trace=shared.BadDiagnostics and shared.BadDiagnostics:Traceback(msg,3) or tostring(msg) table.insert(__rtErrs,{module=tostring(mod),error=tostring(msg),traceback=trace,time=os.clock()}) if shared.BadDiagnostics then shared.BadDiagnostics:RecordRuntime(mod,msg,{subsystem='Loader',file='badscript/loader.lua',traceback=trace}) else warn('BadWars: [ERROR] '..tostring(mod)..': '..tostring(msg)) end end
+
+local function safeDiagnosticsTraceback(message, level)
+    local diagnostics = type(shared) == "table" and shared.BadDiagnostics or nil
+
+    if type(diagnostics) == "table" and type(diagnostics.Traceback) == "function" then
+        local ok, result = pcall(diagnostics.Traceback, diagnostics, message, level or 2)
+        if ok and result ~= nil then
+            return tostring(result)
+        end
+    end
+
+    if type(debug) == "table" and type(debug.traceback) == "function" then
+        local ok, result = pcall(debug.traceback, tostring(message), level or 2)
+        if ok and result ~= nil then
+            return tostring(result)
+        end
+    end
+
+    return tostring(message)
+end
+
+local function safeDiagnosticsRecord(moduleName, message, context)
+    local diagnostics = type(shared) == "table" and shared.BadDiagnostics or nil
+    if type(diagnostics) ~= "table" or type(diagnostics.RecordRuntime) ~= "function" then
+        return false
+    end
+
+    return pcall(
+        diagnostics.RecordRuntime,
+        diagnostics,
+        moduleName,
+        message,
+        type(context) == "table" and context or {}
+    )
+end
+
+local function recordErr(mod, msg)
+    local trace = safeDiagnosticsTraceback(msg, 3)
+
+    table.insert(__rtErrs, {
+        module = tostring(mod),
+        error = tostring(msg),
+        traceback = trace,
+        time = os.clock(),
+    })
+
+    local recorded = safeDiagnosticsRecord(mod, msg, {
+        subsystem = "Loader",
+        file = "badscript/loader.lua",
+        traceback = trace,
+    })
+
+    if not recorded then
+        warn("BadWars: [ERROR] " .. tostring(mod) .. ": " .. tostring(msg))
+    end
+end
 
 -- Loadstring
 local _loadstring
@@ -3036,7 +3103,7 @@ setStatus('validating orchestrator URL')
 local raw,usedUrl,usedMethod=httpGet(urls)
 
 if raw == nil and type(cachedOrchestrator) == "string" then
-    local cachedProbe = _loadstring(cachedOrchestrator, "cached-main-probe")
+    local cachedProbe = _loadstring(cachedOrchestrator, "@badscript/main.lua:cache-probe")
     if cachedProbe then
         raw = cachedOrchestrator
         usedUrl = "local cache: " .. ORCH_PATH
@@ -3140,14 +3207,29 @@ pcall(function()
     writefile(ORCH_PATH, code)
 end)
 
-local fn,cerr=_loadstring(code,'main')
+local fn,cerr=_loadstring(code,"@badscript/main.lua")
 if not fn then local m='main.lua compile: '..tostring(cerr);setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0) end
 setStatus('main.lua compiled OK')
 
 -- Execute
 setStatus('pipeline: executing main orchestrator')
-local ok,result=xpcall(fn,function(err) local d=shared.BadDiagnostics; local hasTraceback=type(debug)=="table" and type(debug.traceback)=="function" return d and d:Traceback(err,2) or (hasTraceback and debug.traceback(tostring(err),2) or tostring(err)) end)
-if not ok then local m='main.lua runtime: '..tostring(result);setStatus('ERROR: '..m,true);recordErr('loader',m);error(m,0) end
+local ok, result = xpcall(fn, function(err)
+    return safeDiagnosticsTraceback(err, 2)
+end)
+
+if not ok then
+    local originalFailure = tostring(result)
+    local m = "main.lua runtime: " .. originalFailure
+
+    setStatus("ERROR: " .. m, true)
+    recordErr("main.lua", originalFailure)
+
+    warn("BadWars: [MAIN RUNTIME FAILURE]")
+    warn(originalFailure)
+    warn("BadWars: [END MAIN RUNTIME FAILURE]")
+
+    error(m, 0)
+end
 
 -- Validation
 setStatus('pipeline: validation')

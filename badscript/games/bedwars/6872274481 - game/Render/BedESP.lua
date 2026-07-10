@@ -1,7 +1,8 @@
+local Bad = shared.Bad or {}
 local BedESP
 local Reference = {}
 local Folder = Instance.new('Folder')
-Folder.Parent = Bad.gui
+Folder.Parent = Bad.gui or Instance.new("ScreenGui")
 local collectionService = game:GetService('CollectionService')
 
 local function Added(bed)

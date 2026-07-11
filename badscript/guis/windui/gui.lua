@@ -487,7 +487,7 @@ pcall(function()
 	Window:SetUIScale(0.94)
 end)
 
--- BADWARS_CINEMATIC_MOTION_V4
+-- BADWARS_SAFE_VISUAL_MOTION_V2
 d.ScreenGui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui or nil
 
 local compatibilityRoot = Instance.new("Frame")
@@ -527,26 +527,14 @@ d.gui = compatibilityRoot
 d.CompatibilityRoot = compatibilityRoot
 d.ScaledGui = compatibilityScaledGui
 d.ClickGui = compatibilityClickGui
-
 d.MotionEnabled = d.MotionEnabled ~= false
-d.LayoutMotionEnabled = true
-d.KineticGlowEnabled = true
-d.MorphingCornersEnabled = true
-d.ChoreographedRevealEnabled = true
-d.ProximityReflowEnabled = true
 d.MotionIntensity = tonumber(d.MotionIntensity) or 1
 
 local motionTweens = setmetatable({}, { __mode = "k" })
 local motionBound = setmetatable({}, { __mode = "k" })
-local motionRevealed = setmetatable({}, { __mode = "k" })
-local layoutStates = setmetatable({}, { __mode = "k" })
-local cornerStates = setmetatable({}, { __mode = "k" })
 local activeRipples = setmetatable({}, { __mode = "k" })
-local activeKineticStates = setmetatable({}, { __mode = "k" })
-local cascadeBound = setmetatable({}, { __mode = "k" })
 local motionObjectCount = 0
-local MAX_MOTION_OBJECTS = 1100
-local MAX_CASCADE_ITEMS = 24
+local MAX_MOTION_OBJECTS = 900
 
 local function trackResource(resource)
 	if resource ~= nil then
@@ -556,7 +544,7 @@ local function trackResource(resource)
 end
 
 local function motionDuration(base)
-	return math.max(0.035, base / math.max(0.5, tonumber(d.MotionIntensity) or 1))
+	return math.max(0.04, base / math.max(0.55, tonumber(d.MotionIntensity) or 1))
 end
 
 local function motionTween(object, channelOrDuration, durationOrProperties, propertiesOrStyle, styleOrDirection, direction)
@@ -607,30 +595,30 @@ local function motionTween(object, channelOrDuration, durationOrProperties, prop
 		return nil
 	end
 
-	local info = TweenInfo.new(
-		motionDuration(duration),
-		style or Enum.EasingStyle.Quint,
-		direction or Enum.EasingDirection.Out
+	local ok, tween = pcall(
+		TweenService.Create,
+		TweenService,
+		object,
+		TweenInfo.new(
+			motionDuration(duration),
+			style or Enum.EasingStyle.Quint,
+			direction or Enum.EasingDirection.Out
+		),
+		properties
 	)
 
-	local ok, created = pcall(TweenService.Create, TweenService, object, info, properties)
-	if not ok or not created then
-		for property, value in pairs(properties) do
-			pcall(function()
-				object[property] = value
-			end)
-		end
+	if not ok or not tween then
 		return nil
 	end
 
-	channels[channel] = created
-	created.Completed:Connect(function()
-		if channels[channel] == created then
+	channels[channel] = tween
+	tween.Completed:Connect(function()
+		if channels[channel] == tween then
 			channels[channel] = nil
 		end
 	end)
-	created:Play()
-	return created
+	tween:Play()
+	return tween
 end
 
 local function ensureMotionScale(object)
@@ -654,267 +642,6 @@ local function ensureMotionScale(object)
 	return scale
 end
 
-local function findLayoutItem(object)
-	local current = object
-	for _ = 1, 8 do
-		if typeof(current) ~= "Instance" or not current:IsA("GuiObject") then
-			break
-		end
-
-		local parent = current.Parent
-		if typeof(parent) ~= "Instance" then
-			break
-		end
-
-		local layout = parent:FindFirstChildWhichIsA("UIListLayout")
-		if layout then
-			return current, layout
-		end
-
-		current = parent
-	end
-	return nil, nil
-end
-
-local function beginLayoutState(item)
-	if d.LayoutMotionEnabled == false or typeof(item) ~= "Instance" or not item:IsA("GuiObject") then
-		return nil
-	end
-
-	local state = layoutStates[item]
-	if state and state.Active then
-		return state
-	end
-
-	local absoluteHeight = math.max(1, math.floor(item.AbsoluteSize.Y + 0.5))
-	state = {
-		Active = true,
-		Token = (state and state.Token or 0) + 1,
-		OriginalSize = item.Size,
-		OriginalAutomaticSize = item.AutomaticSize,
-		OriginalClipsDescendants = item.ClipsDescendants,
-		BaseHeight = absoluteHeight,
-	}
-
-	layoutStates[item] = state
-	item.AutomaticSize = Enum.AutomaticSize.None
-	item.Size = UDim2.new(
-		state.OriginalSize.X.Scale,
-		state.OriginalSize.X.Offset,
-		0,
-		absoluteHeight
-	)
-	return state
-end
-
-local function animateLayoutHeight(item, extraHeight, duration, releaseAfter)
-	local state = beginLayoutState(item)
-	if not state then
-		return false
-	end
-
-	state.Token += 1
-	local token = state.Token
-	local targetHeight = math.max(1, state.BaseHeight + (tonumber(extraHeight) or 0))
-
-	motionTween(
-		item,
-		"layout-size",
-		duration,
-		{
-			Size = UDim2.new(
-				state.OriginalSize.X.Scale,
-				state.OriginalSize.X.Offset,
-				0,
-				targetHeight
-			),
-		}
-	)
-
-	if releaseAfter then
-		task.delay(motionDuration(duration) + 0.035, function()
-			local current = layoutStates[item]
-			if current ~= state or current.Token ~= token or not item.Parent then
-				return
-			end
-
-			item.Size = state.OriginalSize
-			item.AutomaticSize = state.OriginalAutomaticSize
-			item.ClipsDescendants = state.OriginalClipsDescendants
-			state.Active = false
-		end)
-	end
-
-	return true
-end
-
-local function getOrderedLayoutSiblings(item)
-	local parent = item and item.Parent
-	if typeof(parent) ~= "Instance" then
-		return {}
-	end
-
-	local siblings = {}
-	for _, child in ipairs(parent:GetChildren()) do
-		if child:IsA("GuiObject") and child.Visible then
-			table.insert(siblings, child)
-		end
-	end
-
-	table.sort(siblings, function(left, right)
-		if left.LayoutOrder == right.LayoutOrder then
-			return left.Name < right.Name
-		end
-		return left.LayoutOrder < right.LayoutOrder
-	end)
-
-	return siblings
-end
-
-local function applyProximityField(item, active)
-	if d.ProximityReflowEnabled == false or not item then
-		return
-	end
-
-	local siblings = getOrderedLayoutSiblings(item)
-	local center = table.find(siblings, item)
-	if not center then
-		return
-	end
-
-	for index, sibling in ipairs(siblings) do
-		local distance = math.abs(index - center)
-		if distance <= 2 then
-			local extra = 0
-			if active then
-				extra = distance == 0 and 4 or distance == 1 and 1.5 or 0.5
-			end
-			animateLayoutHeight(sibling, extra, active and 0.15 or 0.18, not active)
-		end
-	end
-end
-
-local function animateLayoutReveal(item)
-	if d.LayoutMotionEnabled == false or motionRevealed[item] then
-		return
-	end
-	if typeof(item) ~= "Instance" or not item:IsA("GuiObject") or not item.Parent then
-		return
-	end
-
-	local _, layout = findLayoutItem(item)
-	if not layout then
-		return
-	end
-
-	motionRevealed[item] = true
-	task.defer(function()
-		if not item.Parent or not item.Visible then
-			return
-		end
-
-		local originalSize = item.Size
-		local originalAutomaticSize = item.AutomaticSize
-		local originalClips = item.ClipsDescendants
-		local targetHeight = math.max(1, math.floor(item.AbsoluteSize.Y + 0.5))
-
-		item.AutomaticSize = Enum.AutomaticSize.None
-		item.ClipsDescendants = true
-		item.Size = UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, 1)
-
-		motionTween(
-			item,
-			"layout-reveal",
-			0.2,
-			{
-				Size = UDim2.new(
-					originalSize.X.Scale,
-					originalSize.X.Offset,
-					0,
-					targetHeight
-				),
-			}
-		)
-
-		task.delay(motionDuration(0.2) + 0.04, function()
-			if not item.Parent then
-				return
-			end
-			item.Size = originalSize
-			item.AutomaticSize = originalAutomaticSize
-			item.ClipsDescendants = originalClips
-		end)
-	end)
-end
-
-local function animateLayoutVisibility(target, visible)
-	if typeof(target) ~= "Instance" or not target:IsA("GuiObject") then
-		return false
-	end
-
-	local item = findLayoutItem(target) or target
-	if typeof(item) ~= "Instance" or not item:IsA("GuiObject") then
-		return false
-	end
-
-	if visible then
-		target.Visible = true
-		item.Visible = true
-		motionRevealed[item] = nil
-		animateLayoutReveal(item)
-		return true
-	end
-
-	if d.LayoutMotionEnabled == false or not item.Visible then
-		target.Visible = false
-		return true
-	end
-
-	local state = beginLayoutState(item)
-	if not state then
-		target.Visible = false
-		return true
-	end
-
-	state.Token += 1
-	local token = state.Token
-	item.ClipsDescendants = true
-
-	motionTween(
-		item,
-		"layout-visibility",
-		0.16,
-		{
-			Size = UDim2.new(
-				state.OriginalSize.X.Scale,
-				state.OriginalSize.X.Offset,
-				0,
-				1
-			),
-		}
-	)
-
-	task.delay(motionDuration(0.16) + 0.03, function()
-		local current = layoutStates[item]
-		if current ~= state or current.Token ~= token or not item.Parent then
-			return
-		end
-
-		target.Visible = false
-		if target == item then
-			item.Visible = false
-		end
-		item.Size = state.OriginalSize
-		item.AutomaticSize = state.OriginalAutomaticSize
-		item.ClipsDescendants = state.OriginalClipsDescendants
-		state.Active = false
-	end)
-
-	return true
-end
-
-d.AnimateControlVisibility = animateLayoutVisibility
-
 local function findRoundedSurface(button)
 	local current = button
 	for _ = 1, 6 do
@@ -933,19 +660,19 @@ local function findRoundedSurface(button)
 		end
 		current = parent
 	end
+
 	return button, nil
 end
 
 local function getMotionStroke(button)
 	local surface, corner = findRoundedSurface(button)
+	if not corner then
+		return nil, surface, nil
+	end
 
 	local oldStroke = button:FindFirstChild("BadWarsMotionStroke")
 	if oldStroke and oldStroke.Parent ~= surface then
 		oldStroke:Destroy()
-	end
-
-	if not corner then
-		return nil, surface, nil
 	end
 
 	local stroke = surface:FindFirstChild("BadWarsMotionStroke")
@@ -953,6 +680,7 @@ local function getMotionStroke(button)
 		if stroke then
 			stroke:Destroy()
 		end
+
 		stroke = Instance.new("UIStroke")
 		stroke.Name = "BadWarsMotionStroke"
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -963,51 +691,18 @@ local function getMotionStroke(button)
 		stroke.Parent = surface
 	end
 
-	if not cornerStates[corner] then
-		cornerStates[corner] = {
-			Original = corner.CornerRadius,
-		}
-	end
-
 	return stroke, surface, corner
 end
 
-local function morphCorner(corner, state)
-	if not corner or d.MorphingCornersEnabled == false then
-		return
-	end
-
-	local data = cornerStates[corner]
-	if not data then
-		data = { Original = corner.CornerRadius }
-		cornerStates[corner] = data
-	end
-
-	local original = data.Original
-	local offset = original.Offset
-	if state == "hovered" then
-		offset += 4
-	elseif state == "pressed" then
-		offset = math.max(0, offset - 1)
-	end
-
-	motionTween(
-		corner,
-		"corner-morph",
-		state == "pressed" and 0.08 or 0.17,
-		{ CornerRadius = UDim.new(original.Scale, offset) }
-	)
-end
-
-local function getEffectLayer(button, cornerSource)
-	local layer = button:FindFirstChild("BadWarsEffectClip")
+local function getRippleLayer(button, cornerSource)
+	local layer = button:FindFirstChild("BadWarsRippleClip")
 	if not layer or not layer:IsA("Frame") then
 		if layer then
 			layer:Destroy()
 		end
 
 		layer = Instance.new("Frame")
-		layer.Name = "BadWarsEffectClip"
+		layer.Name = "BadWarsRippleClip"
 		layer.Size = UDim2.fromScale(1, 1)
 		layer.Position = UDim2.fromScale(0, 0)
 		layer.BackgroundTransparency = 1
@@ -1019,14 +714,15 @@ local function getEffectLayer(button, cornerSource)
 		layer.Parent = button
 	end
 
-	local layerCorner = layer:FindFirstChild("BadWarsEffectCorner")
+	local layerCorner = layer:FindFirstChild("BadWarsRippleCorner")
 	if cornerSource then
 		if not layerCorner or not layerCorner:IsA("UICorner") then
 			if layerCorner then
 				layerCorner:Destroy()
 			end
+
 			layerCorner = Instance.new("UICorner")
-			layerCorner.Name = "BadWarsEffectCorner"
+			layerCorner.Name = "BadWarsRippleCorner"
 			layerCorner.Parent = layer
 		end
 		layerCorner.CornerRadius = cornerSource.CornerRadius
@@ -1037,92 +733,7 @@ local function getEffectLayer(button, cornerSource)
 	return layer
 end
 
-local function createKineticGlow(button, cornerSource)
-	if d.KineticGlowEnabled == false then
-		return nil
-	end
-
-	local layer = getEffectLayer(button, cornerSource)
-	local glow = layer:FindFirstChild("BadWarsKineticGlow")
-	if not glow then
-		glow = Instance.new("Frame")
-		glow.Name = "BadWarsKineticGlow"
-		glow.AnchorPoint = Vector2.new(0.5, 0.5)
-		glow.Size = UDim2.fromOffset(74, 74)
-		glow.BackgroundColor3 = Color3.new(1, 1, 1)
-		glow.BackgroundTransparency = 1
-		glow.BorderSizePixel = 0
-		glow.ZIndex = layer.ZIndex
-		glow.Parent = layer
-
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = glow
-
-		local gradient = Instance.new("UIGradient")
-		gradient.Name = "KineticGradient"
-		gradient.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 1),
-			NumberSequenceKeypoint.new(0.5, 0.52),
-			NumberSequenceKeypoint.new(1, 1),
-		})
-		gradient.Parent = glow
-	end
-
-	return glow
-end
-
-local function createEchoRing(layer, position, delayTime, accent)
-	task.delay(delayTime, function()
-		if not layer.Parent then
-			return
-		end
-
-		local ring = Instance.new("Frame")
-		ring.Name = "BadWarsEchoRing"
-		ring.AnchorPoint = Vector2.new(0.5, 0.5)
-		ring.Position = UDim2.fromOffset(position.X, position.Y)
-		ring.Size = UDim2.fromOffset(2, 2)
-		ring.BackgroundTransparency = 1
-		ring.BorderSizePixel = 0
-		ring.ZIndex = layer.ZIndex
-		ring.Parent = layer
-
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = ring
-
-		local stroke = Instance.new("UIStroke")
-		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		stroke.LineJoinMode = Enum.LineJoinMode.Round
-		stroke.Thickness = 1.5
-		stroke.Color = accent
-		stroke.Transparency = 0.22
-		stroke.Parent = ring
-
-		local diameter = math.max(layer.AbsoluteSize.X, layer.AbsoluteSize.Y) * 1.42
-		motionTween(
-			ring,
-			"echo-size",
-			0.34,
-			{ Size = UDim2.fromOffset(diameter, diameter) }
-		)
-		motionTween(
-			stroke,
-			"echo-fade",
-			0.34,
-			{ Transparency = 1 }
-		)
-
-		task.delay(motionDuration(0.38), function()
-			if ring.Parent then
-				ring:Destroy()
-			end
-		end)
-	end)
-end
-
-local function createClickEcho(button, inputPosition, cornerSource)
+local function createRipple(button, inputPosition, cornerSource)
 	if d.MotionEnabled == false or not button.Parent then
 		return
 	end
@@ -1130,12 +741,12 @@ local function createClickEcho(button, inputPosition, cornerSource)
 		return
 	end
 
-	local previous = activeRipples[button]
-	if previous and previous.Parent then
-		previous:Destroy()
+	local old = activeRipples[button]
+	if old and old.Parent then
+		old:Destroy()
 	end
 
-	local layer = getEffectLayer(button, cornerSource)
+	local layer = getRippleLayer(button, cornerSource)
 	local localPosition = Vector2.new(
 		button.AbsoluteSize.X * 0.5,
 		button.AbsoluteSize.Y * 0.5
@@ -1148,107 +759,60 @@ local function createClickEcho(button, inputPosition, cornerSource)
 		)
 	end
 
-	local accent = Color3.fromHSV(
-		((d.GUIColor and d.GUIColor.Hue) or 0.02) % 1,
-		0.78,
-		1
-	)
+	local ripple = Instance.new("Frame")
+	ripple.Name = "BadWarsMotionRipple"
+	ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+	ripple.Position = UDim2.fromOffset(localPosition.X, localPosition.Y)
+	ripple.Size = UDim2.fromOffset(0, 0)
+	ripple.BackgroundColor3 = Color3.new(1, 1, 1)
+	ripple.BackgroundTransparency = 0.84
+	ripple.BorderSizePixel = 0
+	ripple.ZIndex = layer.ZIndex
+	ripple.Parent = layer
+	activeRipples[button] = ripple
 
-	local flash = Instance.new("Frame")
-	flash.Name = "BadWarsClickFlash"
-	flash.AnchorPoint = Vector2.new(0.5, 0.5)
-	flash.Position = UDim2.fromOffset(localPosition.X, localPosition.Y)
-	flash.Size = UDim2.fromOffset(8, 8)
-	flash.BackgroundColor3 = accent
-	flash.BackgroundTransparency = 0.35
-	flash.BorderSizePixel = 0
-	flash.ZIndex = layer.ZIndex
-	flash.Parent = layer
-	activeRipples[button] = flash
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1, 0)
-	corner.Parent = flash
+	local rippleCorner = Instance.new("UICorner")
+	rippleCorner.CornerRadius = UDim.new(1, 0)
+	rippleCorner.Parent = ripple
 
 	local diameter = math.max(button.AbsoluteSize.X, button.AbsoluteSize.Y) * 1.25
 	motionTween(
-		flash,
-		"click-flash",
-		0.22,
+		ripple,
+		"ripple",
+		0.26,
 		{
 			Size = UDim2.fromOffset(diameter, diameter),
 			BackgroundTransparency = 1,
 		}
 	)
 
-	createEchoRing(layer, localPosition, 0, accent)
-	createEchoRing(layer, localPosition, 0.055, Color3.new(1, 1, 1))
-
-	task.delay(motionDuration(0.25), function()
-		if activeRipples[button] == flash then
+	task.delay(motionDuration(0.3), function()
+		if activeRipples[button] == ripple then
 			activeRipples[button] = nil
 		end
-		if flash.Parent then
-			flash:Destroy()
+		if ripple.Parent then
+			ripple:Destroy()
 		end
 	end)
 end
 
-local function cascadeContainer(container)
-	if d.ChoreographedRevealEnabled == false
-		or typeof(container) ~= "Instance"
-		or not container:IsA("GuiObject")
-		or not container.Visible
-	then
-		return
-	end
+local function collectVisualChildren(button)
+	local icons = {}
+	local labels = {}
 
-	local layout = container:FindFirstChildWhichIsA("UIListLayout")
-	if not layout then
-		return
-	end
-
-	local children = {}
-	for _, child in ipairs(container:GetChildren()) do
-		if child:IsA("GuiObject") and child.Visible then
-			table.insert(children, child)
-		end
-	end
-
-	table.sort(children, function(left, right)
-		if left.LayoutOrder == right.LayoutOrder then
-			return left.Name < right.Name
-		end
-		return left.LayoutOrder < right.LayoutOrder
-	end)
-
-	for index = 1, math.min(#children, MAX_CASCADE_ITEMS) do
-		local child = children[index]
-		task.delay((index - 1) * 0.018, function()
-			if child.Parent and child.Visible then
-				motionRevealed[child] = nil
-				animateLayoutReveal(child)
+	for _, descendant in ipairs(button:GetDescendants()) do
+		if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+			if #icons < 3 then
+				table.insert(icons, descendant)
 			end
-		end)
-	end
-end
-
-local function bindCascadeContainer(container)
-	if cascadeBound[container] or not container:IsA("GuiObject") then
-		return
-	end
-	if not container:FindFirstChildWhichIsA("UIListLayout") then
-		return
-	end
-
-	cascadeBound[container] = true
-	trackResource(container:GetPropertyChangedSignal("Visible"):Connect(function()
-		if container.Visible then
-			task.defer(cascadeContainer, container)
+		elseif descendant:IsA("TextLabel") then
+			if #labels < 3 then
+				table.insert(labels, descendant)
+			end
 		end
-	end))
+	end
 
-	task.defer(cascadeContainer, container)
+	return icons, labels
 end
 
 local function bindMotionButton(button)
@@ -1262,85 +826,97 @@ local function bindMotionButton(button)
 	motionBound[button] = true
 	motionObjectCount += 1
 
-	local layoutItem = findLayoutItem(button)
-	local stroke, surface, cornerSource = getMotionStroke(button)
-	local fallbackScale = not layoutItem and ensureMotionScale(button) or nil
-	local kineticGlow = createKineticGlow(button, cornerSource)
+	local scale = ensureMotionScale(button)
+	local stroke, _, cornerSource = getMotionStroke(button)
+	local icons, labels = collectVisualChildren(button)
 	local hovered = false
 	local pressed = false
 
-	local kineticState = {
-		Button = button,
-		Glow = kineticGlow,
-		Current = Vector2.new(button.AbsoluteSize.X * 0.5, button.AbsoluteSize.Y * 0.5),
-		Target = Vector2.new(button.AbsoluteSize.X * 0.5, button.AbsoluteSize.Y * 0.5),
-		Hovered = false,
-		Stroke = stroke,
-	}
-	activeKineticStates[button] = kineticState
+	local originalIconTransparency = {}
+	for _, icon in ipairs(icons) do
+		originalIconTransparency[icon] = icon.ImageTransparency
+	end
 
-	local function animateState(state)
-		if state == "pressed" then
-			if layoutItem then
-				applyProximityField(layoutItem, true)
-				animateLayoutHeight(layoutItem, 1, 0.075, false)
-			elseif fallbackScale then
-				motionTween(fallbackScale, "button-scale", 0.075, { Scale = 0.982 })
+	local originalTextTransparency = {}
+	for _, label in ipairs(labels) do
+		originalTextTransparency[label] = label.TextTransparency
+	end
+
+	local function setState(state)
+		local targetScale = 1
+		local borderTransparency = 1
+		local borderThickness = 1
+		local iconTransparencyOffset = 0
+		local textTransparencyOffset = 0
+
+		if state == "hovered" then
+			targetScale = 1.008
+			borderTransparency = 0.82
+			iconTransparencyOffset = -0.08
+			textTransparencyOffset = -0.035
+		elseif state == "pressed" then
+			targetScale = 0.985
+			borderTransparency = 0.62
+			borderThickness = 1.15
+			iconTransparencyOffset = -0.12
+			textTransparencyOffset = -0.055
+		end
+
+		if scale then
+			motionTween(scale, "button-scale", state == "pressed" and 0.07 or 0.15, {
+				Scale = targetScale,
+			})
+		end
+
+		if stroke then
+			motionTween(stroke, "button-border", state == "pressed" and 0.07 or 0.15, {
+				Transparency = borderTransparency,
+				Thickness = borderThickness,
+			})
+		end
+
+		for _, icon in ipairs(icons) do
+			if icon.Parent then
+				motionTween(icon, "icon-emphasis", 0.14, {
+					ImageTransparency = math.clamp(
+						(originalIconTransparency[icon] or 0) + iconTransparencyOffset,
+						0,
+						1
+					),
+				})
 			end
-			if stroke then
-				motionTween(stroke, "button-border", 0.075, { Transparency = 0.42, Thickness = 1.4 })
+		end
+
+		for _, label in ipairs(labels) do
+			if label.Parent then
+				motionTween(label, "text-emphasis", 0.14, {
+					TextTransparency = math.clamp(
+						(originalTextTransparency[label] or 0) + textTransparencyOffset,
+						0,
+						1
+					),
+				})
 			end
-			morphCorner(cornerSource, "pressed")
-		elseif state == "hovered" then
-			if layoutItem then
-				applyProximityField(layoutItem, true)
-			elseif fallbackScale then
-				motionTween(fallbackScale, "button-scale", 0.15, { Scale = 1.012 })
-			end
-			if stroke then
-				motionTween(stroke, "button-border", 0.15, { Transparency = 0.72, Thickness = 1.15 })
-			end
-			morphCorner(cornerSource, "hovered")
-		else
-			if layoutItem then
-				applyProximityField(layoutItem, false)
-			elseif fallbackScale then
-				motionTween(fallbackScale, "button-scale", 0.17, { Scale = 1 })
-			end
-			if stroke then
-				motionTween(stroke, "button-border", 0.17, { Transparency = 1, Thickness = 1 })
-			end
-			morphCorner(cornerSource, "idle")
 		end
 	end
 
 	trackResource(button.MouseEnter:Connect(function()
 		hovered = true
-		kineticState.Hovered = true
-		if kineticGlow then
-			kineticGlow.Visible = true
-			motionTween(kineticGlow, "glow-fade", 0.14, { BackgroundTransparency = 0.82 })
-		end
 		if not pressed then
-			animateState("hovered")
+			setState("hovered")
 		end
 	end))
 
 	trackResource(button.MouseLeave:Connect(function()
 		hovered = false
-		kineticState.Hovered = false
-		if kineticGlow then
-			motionTween(kineticGlow, "glow-fade", 0.18, { BackgroundTransparency = 1 })
-		end
 		if not pressed then
-			animateState("idle")
+			setState("idle")
 		end
 	end))
 
 	trackResource(button.InputBegan:Connect(function(input)
-		local inputType = input.UserInputType
-		if inputType ~= Enum.UserInputType.MouseButton1
-			and inputType ~= Enum.UserInputType.Touch
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1
+			and input.UserInputType ~= Enum.UserInputType.Touch
 		then
 			return
 		end
@@ -1349,20 +925,19 @@ local function bindMotionButton(button)
 		end
 
 		pressed = true
-		animateState("pressed")
-		createClickEcho(button, input.Position, cornerSource)
+		setState("pressed")
+		createRipple(button, input.Position, cornerSource)
 	end))
 
 	trackResource(button.InputEnded:Connect(function(input)
-		local inputType = input.UserInputType
-		if inputType ~= Enum.UserInputType.MouseButton1
-			and inputType ~= Enum.UserInputType.Touch
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1
+			and input.UserInputType ~= Enum.UserInputType.Touch
 		then
 			return
 		end
 
 		pressed = false
-		animateState(hovered and "hovered" or "idle")
+		setState(hovered and "hovered" or "idle")
 	end))
 
 	trackResource(button.AncestryChanged:Connect(function(_, parent)
@@ -1372,57 +947,38 @@ local function bindMotionButton(button)
 				ripple:Destroy()
 			end
 			activeRipples[button] = nil
-			activeKineticStates[button] = nil
 			motionBound[button] = nil
 		end
 	end))
 end
 
-local function revealMotionObject(object)
-	if motionObjectCount >= MAX_MOTION_OBJECTS then
-		return
-	end
-	if not object:IsA("GuiObject") or object:IsA("GuiButton") then
-		return
-	end
-	if object == compatibilityRoot or object == compatibilityScaledGui or object == compatibilityClickGui then
-		return
-	end
-	if object.Name:find("BadWars", 1, true) then
+local function animatePassiveObject(object)
+	if not object:IsA("CanvasGroup") then
 		return
 	end
 
-	local layoutItem = findLayoutItem(object)
 	local name = string.lower(object.Name)
-	local revealable = layoutItem ~= nil
-		or name:find("section", 1, true)
-		or name:find("notification", 1, true)
+	if not (
+		name:find("notification", 1, true)
 		or name:find("dialog", 1, true)
 		or name:find("popup", 1, true)
 		or name:find("dropdown", 1, true)
-		or name:find("card", 1, true)
-
-	if not revealable then
-		return
-	end
-
-	motionObjectCount += 1
-	if layoutItem then
-		animateLayoutReveal(layoutItem)
+	) then
 		return
 	end
 
 	local scale = ensureMotionScale(object)
+	local targetTransparency = object.GroupTransparency
+
 	if scale then
-		scale.Scale = 0.98
-		motionTween(scale, "reveal-scale", 0.18, { Scale = 1 })
+		scale.Scale = 0.975
+		motionTween(scale, "passive-scale", 0.16, { Scale = 1 })
 	end
 
-	if object:IsA("CanvasGroup") then
-		local target = object.GroupTransparency
-		object.GroupTransparency = math.min(1, target + 0.25)
-		motionTween(object, "reveal-fade", 0.16, { GroupTransparency = target })
-	end
+	object.GroupTransparency = math.min(1, targetTransparency + 0.35)
+	motionTween(object, "passive-fade", 0.15, {
+		GroupTransparency = targetTransparency,
+	})
 end
 
 local function bindMotionObject(object)
@@ -1432,12 +988,8 @@ local function bindMotionObject(object)
 
 	if object:IsA("GuiButton") then
 		bindMotionButton(object)
-		return
-	end
-
-	if object:IsA("GuiObject") then
-		revealMotionObject(object)
-		bindCascadeContainer(object)
+	elseif object:IsA("CanvasGroup") then
+		task.defer(animatePassiveObject, object)
 	end
 end
 
@@ -1446,54 +998,12 @@ local function attachMotionRoot(root)
 		return
 	end
 
-	if root:IsA("GuiObject") then
-		bindCascadeContainer(root)
-	end
-
 	for _, descendant in ipairs(root:GetDescendants()) do
 		bindMotionObject(descendant)
 	end
 
-	trackResource(root.DescendantAdded:Connect(function(descendant)
-		bindMotionObject(descendant)
-		local parent = descendant.Parent
-		if parent and parent:IsA("GuiObject") then
-			bindCascadeContainer(parent)
-		end
-	end))
+	trackResource(root.DescendantAdded:Connect(bindMotionObject))
 end
-
-trackResource(RunService.RenderStepped:Connect(function(deltaTime)
-	if d.MotionEnabled == false or d.KineticGlowEnabled == false then
-		return
-	end
-
-	local mouseLocation = UserInputService:GetMouseLocation()
-	local alpha = 1 - math.exp(-math.max(deltaTime, 0) * 16)
-
-	for button, state in pairs(activeKineticStates) do
-		if not button.Parent then
-			activeKineticStates[button] = nil
-		elseif state.Hovered and state.Glow and state.Glow.Parent then
-			local localPosition = Vector2.new(
-				math.clamp(mouseLocation.X - button.AbsolutePosition.X, 0, button.AbsoluteSize.X),
-				math.clamp(mouseLocation.Y - button.AbsolutePosition.Y, 0, button.AbsoluteSize.Y)
-			)
-			state.Target = localPosition
-			state.Current = state.Current:Lerp(state.Target, alpha)
-			state.Glow.Position = UDim2.fromOffset(state.Current.X, state.Current.Y)
-
-			if state.Stroke then
-				local ratio = button.AbsoluteSize.X > 0 and state.Current.X / button.AbsoluteSize.X or 0.5
-				state.Stroke.Color = Color3.fromHSV(
-					(((d.GUIColor and d.GUIColor.Hue) or 0.02) + ratio * 0.08) % 1,
-					0.72,
-					1
-				)
-			end
-		end
-	end
-end))
 
 local function animateWindowMotion()
 	local main = findWindowMain(Window)
@@ -1503,23 +1013,16 @@ local function animateWindowMotion()
 
 	local scale = ensureMotionScale(main)
 	if scale then
-		scale.Scale = 0.975
-		motionTween(scale, "window-scale", 0.2, { Scale = 1 })
+		scale.Scale = 0.985
+		motionTween(scale, "window-scale", 0.18, { Scale = 1 })
 	end
 
-	main.Rotation = 0
 	if main:IsA("CanvasGroup") then
 		main.GroupTransparency = 1
-		motionTween(main, "window-fade", 0.17, { GroupTransparency = 0 })
+		motionTween(main, "window-fade", 0.15, {
+			GroupTransparency = 0,
+		})
 	end
-
-	task.defer(function()
-		for _, descendant in ipairs(main:GetDescendants()) do
-			if descendant:IsA("GuiObject") then
-				bindCascadeContainer(descendant)
-			end
-		end
-	end)
 end
 
 task.defer(function()
@@ -1834,24 +1337,14 @@ local function setControlVisible(control, visible)
 		return
 	end
 
-	local target = control.ElementFrame
-	if typeof(target) ~= "Instance" and type(control.UIElements) == "table" then
-		target = control.UIElements.Main
-	end
-
-	if typeof(target) == "Instance"
-		and type(d.AnimateControlVisibility) == "function"
-		and d.MotionEnabled ~= false
-	then
-		local ok, handled = pcall(d.AnimateControlVisibility, target, visible ~= false)
-		if ok and handled then
-			return
-		end
-	end
-
 	if type(control.SetVisible) == "function" then
 		pcall(control.SetVisible, control, visible)
 		return
+	end
+
+	local target = control.ElementFrame
+	if typeof(target) ~= "Instance" and type(control.UIElements) == "table" then
+		target = control.UIElements.Main
 	end
 
 	setObjectVisible(target, visible)
@@ -3618,55 +3111,6 @@ appearanceSection:Toggle({
 	end,
 })
 
-appearanceSection:Toggle({
-	Title = "Smart Layout Reflow",
-	Desc = "Moves every row below an animated element in real time",
-	Value = true,
-	Flag = "settings/smart_layout_motion",
-	Callback = function(value)
-		d.LayoutMotionEnabled = value == true
-	end,
-})
-
-appearanceSection:Toggle({
-	Title = "Cinematic Cursor Light",
-	Desc = "A delayed light source follows the pointer inside hovered controls",
-	Value = true,
-	Flag = "settings/kinetic_cursor_glow",
-	Callback = function(value)
-		d.KineticGlowEnabled = value == true
-	end,
-})
-
-appearanceSection:Toggle({
-	Title = "Morphing Corners",
-	Desc = "Rounded surfaces reshape smoothly during hover and press",
-	Value = true,
-	Flag = "settings/morphing_corners",
-	Callback = function(value)
-		d.MorphingCornersEnabled = value == true
-	end,
-})
-
-appearanceSection:Toggle({
-	Title = "Choreographed Reveals",
-	Desc = "Sections and tabs unfold row-by-row instead of appearing at once",
-	Value = true,
-	Flag = "settings/choreographed_reveals",
-	Callback = function(value)
-		d.ChoreographedRevealEnabled = value == true
-	end,
-})
-
-appearanceSection:Toggle({
-	Title = "Proximity Reflow",
-	Desc = "Nearby rows react subtly when the pointer focuses an element",
-	Value = true,
-	Flag = "settings/proximity_reflow",
-	Callback = function(value)
-		d.ProximityReflowEnabled = value == true
-	end,
-})
 appearanceSection:Slider({
 	Title = "Motion Intensity",
 	Desc = "Controls animation speed and emphasis",

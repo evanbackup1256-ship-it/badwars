@@ -16,9 +16,9 @@ local d = {
 	Connections = {},
 	Resources = {},
 	GUIColor = { Hue = 0.02, Sat = 0.95, Value = 0.98 },
-	Version = "WindUI-Adapter-2.1",
+	Version = "WindUI-Adapter-3.0",
 	PremiumBuild = false,
-	Name = "BadWars-WindUI",
+	Name = "BadWars-WindUI-V3",
 	Visible = false,
 	Destroyed = false,
 }
@@ -263,37 +263,55 @@ end
 d.WindUI = WindUI
 
 pcall(function()
-	WindUI.TransparencyValue = 0.08
+	WindUI.TransparencyValue = 0.03
 	WindUI:SetTheme("BadWars")
 end)
 
 local Window = WindUI:CreateWindow({
 	Title = "BadWars",
-	Author = "Runtime Loader",
+	Author = "Control Center",
 	Icon = "swords",
+	IconRadius = 10,
 	Folder = "BadWars",
 	NewElements = true,
 	HideSearchBar = false,
 	ScrollBarEnabled = true,
 	AutoScale = false,
 	Resizable = true,
-	Size = UDim2.new(0, 760, 0, 540),
-	MinSize = Vector2.new(560, 380),
-	MaxSize = Vector2.new(1000, 760),
+	Transparent = false,
+	Acrylic = false,
+	HidePanelBackground = false,
+	ShadowTransparency = 0.34,
+	Size = UDim2.new(0, 920, 0, 620),
+	MinSize = Vector2.new(680, 460),
+	MaxSize = Vector2.new(1180, 820),
+	SideBarWidth = 232,
+	Radius = 18,
+	ElementsRadius = 12,
+	Padding = 16,
+	Gap = 8,
+	ElementPadding = 10,
+	SectionHeaderSize = 44,
+	SectionTitleSize = 17,
+	SectionDescSize = 13,
+	TopBarButtonIconSize = 12,
 	ToggleKey = Enum.KeyCode.RightShift,
 	OpenButton = {
 		Title = "BadWars",
 		Enabled = true,
 		Draggable = true,
-		Scale = 0.55,
-		Color = ColorSequence.new(Color3.fromHex("#FF2D4A"), Color3.fromHex("#FF6B35")),
+		Scale = 0.58,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromHex("#FF335F")),
+			ColorSequenceKeypoint.new(0.55, Color3.fromHex("#FF6A3D")),
+			ColorSequenceKeypoint.new(1, Color3.fromHex("#8B5CF6")),
+		}),
 	},
 	Topbar = {
-		Height = 50,
+		Height = 56,
 		ButtonsType = "Mac",
 	},
 })
-
 if type(Window) ~= "table" then
 	error("WindUI failed to create the BadWars window")
 end
@@ -301,13 +319,177 @@ end
 d.Window = Window
 
 pcall(function()
-	Window:SetUIScale(0.94)
+	Window:SetUIScale(0.96)
 end)
 
 d.gui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui
 	or (typeof(findWindowMain(Window)) == "Instance" and findWindowMain(Window))
 	or Window
 
+-- BADWARS_VISUAL_REVAMP_V5
+local REVAMP = {
+	Canvas = Color3.fromHex("#090B10"),
+	Panel = Color3.fromHex("#0F1219"),
+	Raised = Color3.fromHex("#151A24"),
+	Border = Color3.fromHex("#2A3040"),
+	Accent = Color3.fromHex("#FF335F"),
+	AccentWarm = Color3.fromHex("#FF6A3D"),
+	AccentCool = Color3.fromHex("#8B5CF6"),
+	Muted = Color3.fromHex("#98A2B3"),
+	Scroll = Color3.fromHex("#464E61"),
+}
+
+local function createRevampOutline(parent, radius)
+	if typeof(parent) ~= "Instance" or not parent:IsA("GuiObject") then
+		return
+	end
+	if parent:FindFirstChild("BadWarsRevampOutline") then
+		return
+	end
+
+	local outline = Instance.new("Frame")
+	outline.Name = "BadWarsRevampOutline"
+	outline.Size = UDim2.fromScale(1, 1)
+	outline.BackgroundTransparency = 1
+	outline.BorderSizePixel = 0
+	outline.Active = false
+	outline.Selectable = false
+	outline.ZIndex = 1000
+	outline.Parent = parent
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius)
+	corner.Parent = outline
+
+	local stroke = Instance.new("UIStroke")
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.LineJoinMode = Enum.LineJoinMode.Round
+	stroke.Color = REVAMP.Border
+	stroke.Thickness = 1
+	stroke.Transparency = 0.12
+	stroke.Parent = outline
+end
+
+local function createAccentRail(parent)
+	if typeof(parent) ~= "Instance" or not parent:IsA("GuiObject") then
+		return
+	end
+	if parent:FindFirstChild("BadWarsAccentRail") then
+		return
+	end
+
+	local rail = Instance.new("Frame")
+	rail.Name = "BadWarsAccentRail"
+	rail.Size = UDim2.new(1, -36, 0, 3)
+	rail.Position = UDim2.new(0, 18, 0, 0)
+	rail.BackgroundColor3 = Color3.new(1, 1, 1)
+	rail.BorderSizePixel = 0
+	rail.Active = false
+	rail.Selectable = false
+	rail.ZIndex = 1001
+	rail.Parent = parent
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = rail
+
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, REVAMP.Accent),
+		ColorSequenceKeypoint.new(0.52, REVAMP.AccentWarm),
+		ColorSequenceKeypoint.new(1, REVAMP.AccentCool),
+	})
+	gradient.Parent = rail
+end
+
+local function createSidebarDivider(parent)
+	if typeof(parent) ~= "Instance" or not parent:IsA("GuiObject") then
+		return
+	end
+	if parent:FindFirstChild("BadWarsSidebarDivider") then
+		return
+	end
+
+	local divider = Instance.new("Frame")
+	divider.Name = "BadWarsSidebarDivider"
+	divider.Size = UDim2.new(0, 1, 1, -80)
+	divider.Position = UDim2.new(0, 232, 0, 64)
+	divider.BackgroundColor3 = REVAMP.Border
+	divider.BackgroundTransparency = 0.34
+	divider.BorderSizePixel = 0
+	divider.Active = false
+	divider.Selectable = false
+	divider.ZIndex = 8
+	divider.Parent = parent
+end
+
+local function applyRevampTypography(object)
+	if not (
+		object:IsA("TextLabel")
+		or object:IsA("TextButton")
+		or object:IsA("TextBox")
+	) then
+		return
+	end
+
+	pcall(function()
+		local lowerName = string.lower(object.Name)
+		local weight = Enum.FontWeight.Medium
+		if object.TextSize >= 16 or lowerName:find("title", 1, true) then
+			weight = Enum.FontWeight.SemiBold
+		end
+		if lowerName:find("code", 1, true) then
+			object.FontFace = Font.fromEnum(Enum.Font.Code)
+		else
+			object.FontFace = Font.new(
+				"rbxasset://fonts/families/GothamSSm.json",
+				weight,
+				Enum.FontStyle.Normal
+			)
+		end
+		object.TextStrokeTransparency = 1
+	end)
+end
+
+local function applyRevampInstance(object)
+	if typeof(object) ~= "Instance" then
+		return
+	end
+
+	if object:IsA("ScrollingFrame") then
+		pcall(function()
+			object.ScrollBarThickness = 3
+			object.ScrollBarImageColor3 = REVAMP.Scroll
+			object.ScrollBarImageTransparency = 0.22
+			object.ElasticBehavior = Enum.ElasticBehavior.Never
+		end)
+	elseif object:IsA("UIStroke") then
+		pcall(function()
+			object.LineJoinMode = Enum.LineJoinMode.Round
+		end)
+	elseif object:IsA("GuiButton") then
+		pcall(function()
+			object.AutoButtonColor = false
+		end)
+	end
+
+	applyRevampTypography(object)
+end
+
+local mainVisual = findWindowMain(Window)
+if typeof(mainVisual) == "Instance" and mainVisual:IsA("GuiObject") then
+	createRevampOutline(mainVisual, 18)
+	createAccentRail(mainVisual)
+	createSidebarDivider(mainVisual)
+end
+
+local visualRoot = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui or mainVisual
+if typeof(visualRoot) == "Instance" then
+	for _, descendant in ipairs(visualRoot:GetDescendants()) do
+		applyRevampInstance(descendant)
+	end
+	table.insert(d.Resources, visualRoot.DescendantAdded:Connect(applyRevampInstance))
+end
 local function setWindowHidden(hidden)
 	local main = findWindowMain(Window)
 	if typeof(main) == "Instance" then
@@ -327,9 +509,15 @@ setWindowHidden(true)
 
 pcall(function()
 	Window:Tag({
-		Title = "v2.1",
+		Title = "v3.0",
 		Icon = "badge-check",
-		Color = Color3.fromHex("#FF2D4A"),
+		Color = Color3.fromHex("#FF335F"),
+		Border = true,
+	})
+	Window:Tag({
+		Title = "STABLE",
+		Icon = "check",
+		Color = Color3.fromHex("#22C55E"),
 		Border = true,
 	})
 end)
@@ -338,19 +526,19 @@ local Tabs = {}
 d.Tabs = Tabs
 
 local tabMetadata = {
-	General = { Icon = "home", Desc = "Quick actions and loader script" },
-	Modules = { Icon = "list", Desc = "Module health and status" },
-	Blatant = { Icon = "flame", Desc = "High-visibility modules" },
-	Combat = { Icon = "sword", Desc = "Combat enhancements" },
-	Render = { Icon = "eye", Desc = "Visuals and ESP" },
-	Utility = { Icon = "wrench", Desc = "Automation tools" },
-	World = { Icon = "globe", Desc = "Movement and world" },
-	Minigames = { Icon = "gamepad-2", Desc = "Minigame modules" },
-	Legit = { Icon = "user-check", Desc = "Legit modules" },
-	Friends = { Icon = "users", Desc = "Friend settings" },
-	Targets = { Icon = "crosshair", Desc = "Target config" },
-	Notifications = { Icon = "bell", Desc = "Event history" },
-	Settings = { Icon = "settings", Desc = "Appearance and profiles" },
+	General = { Icon = "home", Desc = "Dashboard, loader, and core controls" },
+	Modules = { Icon = "list", Desc = "Runtime health and module diagnostics" },
+	Blatant = { Icon = "flame", Desc = "High-impact gameplay modules" },
+	Combat = { Icon = "sword", Desc = "Combat targeting and assistance" },
+	Render = { Icon = "eye", Desc = "Visual overlays and world rendering" },
+	Utility = { Icon = "wrench", Desc = "Automation and quality-of-life tools" },
+	World = { Icon = "globe", Desc = "Movement and environment controls" },
+	Minigames = { Icon = "gamepad-2", Desc = "Mode-specific modules and helpers" },
+	Legit = { Icon = "user-check", Desc = "Low-profile assistance modules" },
+	Friends = { Icon = "users", Desc = "Friend protection and player lists" },
+	Targets = { Icon = "crosshair", Desc = "Target selection and filtering" },
+	Notifications = { Icon = "bell", Desc = "Runtime alerts and event history" },
+	Settings = { Icon = "settings", Desc = "Interface, scale, and profiles" },
 }
 
 local function ensureTab(name, metadata)
@@ -376,13 +564,10 @@ for _, name in ipairs({
 end
 
 -- ─── Modules Tab ───
+-- Modules Tab
 Tabs.Modules:Paragraph({
-	Title = "Module Browser",
-	Desc = "Modules are grouped by category. Each module is sandboxed — failures are isolated and recorded.",
-})
-Tabs.Modules:Paragraph({
-	Title = "Controls",
-	Desc = "RightShift toggles the window. Options sync with legacy module objects and persist via profile flags.",
+	Title = "Runtime Overview",
+	Desc = "A focused view of module loading, health, and interface controls.",
 })
 
 local moduleHealthProgress
@@ -402,20 +587,53 @@ local function updateModuleHealth(ready, total)
 	end
 end
 
-moduleHealthProgress = Tabs.Modules:ProgressBar({
-	Title = "Module Health",
-	Desc = "Real-time loading progress",
+local runtimeHealthSection = Tabs.Modules:Section({
+	Title = "Runtime Health",
+	Desc = "Live registration status for the active module set",
+	Icon = "badge-check",
+	Opened = true,
+	Box = true,
+	BoxBorder = true,
+	TextSize = 17,
+	DescTextSize = 13,
+})
+
+moduleHealthProgress = runtimeHealthSection:ProgressBar({
+	Title = "Module Readiness",
+	Desc = "Modules available to the current game runtime",
 	Value = { Min = 0, Max = 100, Default = 0 },
 	DisplayMode = "Percent",
 	Animate = true,
+	Width = 220,
 })
 
-moduleHealthLabel = Tabs.Modules:Paragraph({
-	Title = "Status",
+moduleHealthLabel = runtimeHealthSection:Paragraph({
+	Title = "Registration Status",
 	Desc = "Waiting for modules to load...",
 })
 
--- Real-time module tracking
+local runtimeControlsSection = Tabs.Modules:Section({
+	Title = "Interface Controls",
+	Desc = "Essential shortcuts and persistence behavior",
+	Icon = "settings",
+	Opened = true,
+	Box = true,
+	BoxBorder = true,
+	TextSize = 17,
+	DescTextSize = 13,
+})
+
+runtimeControlsSection:Paragraph({
+	Title = "RightShift",
+	Desc = "Show or hide the control center without disabling active modules.",
+})
+
+runtimeControlsSection:Paragraph({
+	Title = "Profiles",
+	Desc = "Compatible module options persist through the active profile manager.",
+})
+
+-- Real-time module tracking-- Real-time module tracking
 task.spawn(function()
 	local lastCount = 0
 	local finalReportDone = false
@@ -1355,9 +1573,15 @@ local function createCategoryObject(name, iconName, suppliedTab)
 		local baseDescription = normalizeDescription(settings)
 		local section = tab:Section({
 			Title = moduleName,
-			Desc = baseDescription,
-			Opened = settings.Opened ~= false and settings.Expanded ~= false,
-			Box = settings.Box,
+			Desc = baseDescription ~= "" and baseDescription or (name .. " module"),
+			Icon = settings.Icon or iconName or categoryIcons[name],
+			Opened = settings.Opened == true or settings.Expanded == true,
+			Box = settings.Box ~= false,
+			BoxBorder = settings.BoxBorder ~= false,
+			TextSize = 17,
+			DescTextSize = 13,
+			FontWeight = Enum.FontWeight.SemiBold,
+			DescFontWeight = Enum.FontWeight.Medium,
 		})
 		module.Section = section
 
@@ -1808,8 +2032,8 @@ end
 
 -- ─── General Tab ───
 Tabs.General:Paragraph({
-	Title = "BadWars v2.1",
-	Desc = "Runtime loader for Roblox. RightShift to toggle.",
+	Title = "BadWars Control Center",
+	Desc = "A structured interface for modules, profiles, runtime health, and player configuration. Press RightShift to toggle.",
 })
 
 Tabs.General:Divider()
@@ -1825,8 +2049,13 @@ Tabs.General:Divider()
 -- Quick actions section
 local quickActionsSection = Tabs.General:Section({
 	Title = "Quick Actions",
+	Desc = "Common loader and session actions",
+	Icon = "swords",
 	Opened = true,
 	Box = true,
+	BoxBorder = true,
+	TextSize = 17,
+	DescTextSize = 13,
 })
 
 quickActionsSection:Button({
@@ -1937,9 +2166,14 @@ end
 
 -- Appearance section
 local appearanceSection = Tabs.Settings:Section({
-	Title = "Appearance",
+	Title = "Interface",
+	Desc = "Scale, transparency, and visual density",
+	Icon = "settings",
 	Opened = true,
 	Box = true,
+	BoxBorder = true,
+	TextSize = 17,
+	DescTextSize = 13,
 })
 
 appearanceSection:Toggle({
@@ -1986,8 +2220,13 @@ appearanceSection:Slider({
 -- Profile section
 local profileSection = Tabs.Settings:Section({
 	Title = "Profiles",
+	Desc = "Save, load, and reset configuration sets",
+	Icon = "folder",
 	Opened = true,
 	Box = true,
+	BoxBorder = true,
+	TextSize = 17,
+	DescTextSize = 13,
 })
 
 profileSection:Input({
@@ -2061,9 +2300,12 @@ Tabs.Friends:Paragraph({
 })
 
 local friendsSection = Tabs.Friends:Section({
-	Title = "Settings",
+	Title = "Friend Protection",
+	Desc = "Control how friends are treated by active modules",
+	Icon = "users",
 	Opened = true,
 	Box = true,
+	BoxBorder = true,
 })
 
 local friendsCategory = d.Categories.Friends
@@ -2097,9 +2339,12 @@ friendsSection:Toggle({
 friendsSection:Divider()
 
 local friendsListSection = Tabs.Friends:Section({
-	Title = "Player List",
+	Title = "Server Players",
+	Desc = "Manage protected players in the current server",
+	Icon = "user-check",
 	Opened = true,
 	Box = true,
+	BoxBorder = true,
 })
 
 local friendsListLabel = friendsListSection:Paragraph({
@@ -2167,9 +2412,12 @@ Tabs.Targets:Paragraph({
 })
 
 local targetsSection = Tabs.Targets:Section({
-	Title = "Settings",
+	Title = "Target Rules",
+	Desc = "Configure target selection behavior",
+	Icon = "crosshair",
 	Opened = true,
 	Box = true,
+	BoxBorder = true,
 })
 
 local targetsCategory = d.Categories.Targets
@@ -2177,9 +2425,12 @@ local targetsCategory = d.Categories.Targets
 targetsSection:Divider()
 
 local targetsListSection = Tabs.Targets:Section({
-	Title = "Player List",
+	Title = "Server Targets",
+	Desc = "Select priority targets in the current server",
+	Icon = "crosshair",
 	Opened = true,
 	Box = true,
+	BoxBorder = true,
 })
 
 local targetsListLabel = targetsListSection:Paragraph({

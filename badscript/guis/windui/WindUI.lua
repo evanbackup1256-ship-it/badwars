@@ -10784,8 +10784,8 @@ do
 				Icon = am.Icon,
 				IconThemed = am.IconThemed,
 				TextXAlignment = am.TextXAlignment or "Left",
-				TextSize = am.TextSize or 19,
-				DescTextSize = am.DescTextSize or 16,
+				TextSize = am.TextSize or am.Window.SectionTitleSize or 19,
+				DescTextSize = am.DescTextSize or am.Window.SectionDescSize or 16,
 				Box = am.Box or false,
 				BoxBorder = am.BoxBorder or false,
 				FontWeight = am.FontWeight or Enum.FontWeight.SemiBold,
@@ -10795,7 +10795,7 @@ do
 				Opened = am.Opened or false,
 				UIElements = {},
 
-				HeaderSize = 48,
+				HeaderSize = am.HeaderSize or am.Window.SectionHeaderSize or 48,
 				IconSize = 20,
 				Padding = 10,
 
@@ -10916,7 +10916,7 @@ do
 
 						ImageColor3 = "SectionBoxBorder",
 					},
-					ImageTransparency = an.Box and an.BoxBorder and 0.92 or 1,
+					ImageTransparency = an.Box and an.BoxBorder and 0.78 or 1,
 					Name = "Outline",
 					ClipsDescendants = true,
 				}, {
@@ -13121,6 +13121,11 @@ do
 				ToggleKey = av.ToggleKey,
 				ElementsRadius = av.ElementsRadius,
 				Radius = av.Radius or 16,
+				Padding = av.Padding,
+				ElementPadding = av.ElementPadding,
+				SectionHeaderSize = av.SectionHeaderSize,
+				SectionTitleSize = av.SectionTitleSize,
+				SectionDescSize = av.SectionDescSize,
 				Transparent = av.Transparent or false,
 				HideSearchBar = av.HideSearchBar ~= false,
 				ScrollBarEnabled = av.ScrollBarEnabled or false,
@@ -13133,9 +13138,10 @@ do
 				OpenButton = av.OpenButton,
 				DragFrameSize = 160,
 
+				-- BADWARS_VISUAL_METRICS_V5
 				Position = UDim2.new(0.5, 0, 0.5, 0),
 				UICorner = 16,
-				UIPadding = 14,
+				UIPadding = av.Padding or 14,
 				UIElements = {},
 				CanDropdown = true,
 				Closed = false,
@@ -13157,7 +13163,7 @@ do
 
 				IsPC = false,
 
-				Gap = 5,
+				Gap = av.Gap or 5,
 
 				TopBarButtons = {},
 				AllElements = {},
@@ -13174,7 +13180,7 @@ do
 			aw.TopBarButtonIconSize = aw.TopBarButtonIconSize or (aw.Topbar.ButtonsType == "Mac" and 11 or 16)
 
 			aw.ElementConfig = {
-				UIPadding = (aw.NewElements and 10 or 13),
+				UIPadding = aw.ElementPadding or (aw.NewElements and 10 or 13),
 				UICorner = aw.ElementsRadius or (aw.NewElements and 23 or 16),
 			}
 

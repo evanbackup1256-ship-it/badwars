@@ -53,9 +53,9 @@ $library = Read-ProjectFile "badscript\guis\windui\WindUI.lua"
 
 Assert-Match $adapter 'BADWARS_WINDUI_INTEGRATION' `
     "WindUI adapter integration marker is present"
-Assert-Match $adapter 'Version\s*=\s*"WindUI-Adapter-2\.1"' `
+Assert-Match $adapter 'Version\s*=\s*"WindUI-Adapter-3\.0"' `
     "WindUI adapter version is current"
-Assert-Match $adapter 'Name\s*=\s*"BadWars-WindUI"' `
+Assert-Match $adapter 'Name\s*=\s*"BadWars-WindUI-V3"' `
     "WindUI adapter identity is present"
 
 $requiredApis = @(
@@ -120,6 +120,28 @@ foreach ($iconName in $requiredIcons) {
         "Required WindUI icon is bundled: $iconName"
 }
 
+Assert-Match $adapter 'BADWARS_VISUAL_REVAMP_V5' `
+    "Big visual revamp marker is present"
+Assert-Match $library 'BADWARS_VISUAL_METRICS_V5' `
+    "WindUI visual metrics are installed"
+Assert-Match $adapter 'SideBarWidth\s*=\s*232' `
+    "Desktop sidebar width is configured"
+Assert-Match $adapter 'ElementsRadius\s*=\s*12' `
+    "Consistent element corner radius is configured"
+Assert-Match $adapter 'BoxBorder\s*=\s*settings\.BoxBorder\s*~=\s*false' `
+    "Module cards use bordered surfaces"
+Assert-Match $adapter 'createAccentRail' `
+    "Branded accent rail is installed"
+Assert-Match $adapter 'createSidebarDivider' `
+    "Sidebar and content hierarchy are separated"
+Assert-Match $adapter 'ScrollBarThickness\s*=\s*3' `
+    "Slim visible scrollbars are installed"
+Assert-NoMatch $adapter 'BADWARS_(?:EXTREME|CINEMATIC|SMART_LAYOUT|MOTION_STABILITY|SAFE_VISUAL)_MOTION' `
+    "Custom motion engines remain absent"
+Assert-NoMatch $adapter 'RunService\.RenderStepped:Connect' `
+    "Visual revamp does not add a per-frame loop"
+Assert-NoMatch $adapter '\bendreturn\b' `
+    "Joined Luau keywords are absent"
 if ($script:Failed) {
     Write-Host ""
     Write-Host "WindUI validation failed." -ForegroundColor Red

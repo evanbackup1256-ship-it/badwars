@@ -275,7 +275,7 @@ local Window = WindUI:CreateWindow({
 	Folder = "BadWars",
 	NewElements = true,
 	HideSearchBar = false,
-	ScrollBarEnabled = true,
+	ScrollBarEnabled = false,
 	AutoScale = false,
 	Resizable = true,
 	Transparent = false,
@@ -327,6 +327,13 @@ d.gui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui
 	or Window
 
 -- BADWARS_VISUAL_REVAMP_V5
+-- BADWARS_UNIVERSAL_UI_V6
+local UserInputService = cloneref(game:GetService("UserInputService"))
+local GuiService = cloneref(game:GetService("GuiService"))
+local ContextActionService = cloneref(game:GetService("ContextActionService"))
+local TextService = cloneref(game:GetService("TextService"))
+local Workspace = cloneref(game:GetService("Workspace"))
+
 local REVAMP = {
 	Canvas = Color3.fromHex("#090B10"),
 	Panel = Color3.fromHex("#0F1219"),
@@ -335,92 +342,318 @@ local REVAMP = {
 	Accent = Color3.fromHex("#FF335F"),
 	AccentWarm = Color3.fromHex("#FF6A3D"),
 	AccentCool = Color3.fromHex("#8B5CF6"),
+	Text = Color3.fromHex("#F8FAFC"),
 	Muted = Color3.fromHex("#98A2B3"),
-	Scroll = Color3.fromHex("#464E61"),
+	Scroll = Color3.fromHex("#697386"),
 }
+
+local CUSTOMIZATION_DEFAULTS = {
+	Preset = "BadWars",
+	PlatformPreset = "Auto",
+	Canvas = REVAMP.Canvas,
+	Panel = REVAMP.Panel,
+	Raised = REVAMP.Raised,
+	Border = REVAMP.Border,
+	Accent = REVAMP.Accent,
+	AccentWarm = REVAMP.AccentWarm,
+	AccentCool = REVAMP.AccentCool,
+	Text = REVAMP.Text,
+	Muted = REVAMP.Muted,
+	Scroll = REVAMP.Scroll,
+	Scale = 0.96,
+	WindowWidth = 920,
+	WindowHeight = 620,
+	SidebarWidth = 232,
+	WindowRadius = 18,
+	ElementRadius = 12,
+	Spacing = 8,
+	Transparency = 0.03,
+	ScrollbarThickness = 3,
+	TooltipDelay = 0.03,
+	ShowScrollbars = true,
+	ShowAccentRail = true,
+	ShowSidebarDivider = true,
+	InstantTooltips = true,
+	SafeArea = true,
+	GamepadNavigation = true,
+	LargeTouchTargets = true,
+	HighContrast = false,
+}
+
+local CUSTOM = {}
+for key, value in pairs(CUSTOMIZATION_DEFAULTS) do
+	CUSTOM[key] = value
+end
+
+local THEME_PRESETS = {
+	BadWars = {
+		Canvas = Color3.fromHex("#090B10"),
+		Panel = Color3.fromHex("#0F1219"),
+		Raised = Color3.fromHex("#151A24"),
+		Border = Color3.fromHex("#2A3040"),
+		Accent = Color3.fromHex("#FF335F"),
+		AccentWarm = Color3.fromHex("#FF6A3D"),
+		AccentCool = Color3.fromHex("#8B5CF6"),
+		Text = Color3.fromHex("#F8FAFC"),
+		Muted = Color3.fromHex("#98A2B3"),
+		Scroll = Color3.fromHex("#697386"),
+	},
+	Midnight = {
+		Canvas = Color3.fromHex("#05070D"),
+		Panel = Color3.fromHex("#0A1020"),
+		Raised = Color3.fromHex("#111B31"),
+		Border = Color3.fromHex("#263754"),
+		Accent = Color3.fromHex("#4F8CFF"),
+		AccentWarm = Color3.fromHex("#22D3EE"),
+		AccentCool = Color3.fromHex("#8B5CF6"),
+		Text = Color3.fromHex("#EEF6FF"),
+		Muted = Color3.fromHex("#8EA3C0"),
+		Scroll = Color3.fromHex("#4D6383"),
+	},
+	Ember = {
+		Canvas = Color3.fromHex("#100806"),
+		Panel = Color3.fromHex("#1A0F0B"),
+		Raised = Color3.fromHex("#281610"),
+		Border = Color3.fromHex("#503026"),
+		Accent = Color3.fromHex("#FF4D2E"),
+		AccentWarm = Color3.fromHex("#FFB020"),
+		AccentCool = Color3.fromHex("#FF2D7A"),
+		Text = Color3.fromHex("#FFF5EE"),
+		Muted = Color3.fromHex("#C6A394"),
+		Scroll = Color3.fromHex("#805346"),
+	},
+	Violet = {
+		Canvas = Color3.fromHex("#090610"),
+		Panel = Color3.fromHex("#120B20"),
+		Raised = Color3.fromHex("#1C1230"),
+		Border = Color3.fromHex("#3E2C5D"),
+		Accent = Color3.fromHex("#A855F7"),
+		AccentWarm = Color3.fromHex("#EC4899"),
+		AccentCool = Color3.fromHex("#6366F1"),
+		Text = Color3.fromHex("#FAF5FF"),
+		Muted = Color3.fromHex("#B7A1CA"),
+		Scroll = Color3.fromHex("#70568A"),
+	},
+	Ocean = {
+		Canvas = Color3.fromHex("#041014"),
+		Panel = Color3.fromHex("#071B22"),
+		Raised = Color3.fromHex("#0C2933"),
+		Border = Color3.fromHex("#1B4D5C"),
+		Accent = Color3.fromHex("#06B6D4"),
+		AccentWarm = Color3.fromHex("#2DD4BF"),
+		AccentCool = Color3.fromHex("#3B82F6"),
+		Text = Color3.fromHex("#ECFEFF"),
+		Muted = Color3.fromHex("#8DB8C2"),
+		Scroll = Color3.fromHex("#3D7482"),
+	},
+	Monochrome = {
+		Canvas = Color3.fromHex("#080808"),
+		Panel = Color3.fromHex("#111111"),
+		Raised = Color3.fromHex("#1B1B1B"),
+		Border = Color3.fromHex("#3B3B3B"),
+		Accent = Color3.fromHex("#F5F5F5"),
+		AccentWarm = Color3.fromHex("#BDBDBD"),
+		AccentCool = Color3.fromHex("#737373"),
+		Text = Color3.fromHex("#FAFAFA"),
+		Muted = Color3.fromHex("#A3A3A3"),
+		Scroll = Color3.fromHex("#666666"),
+	},
+}
+
+local revampObjects = {}
+local tooltipBound = setmetatable({}, { __mode = "k" })
+local navigationBound = setmetatable({}, { __mode = "k" })
+local currentPlatform = "Desktop"
+local tooltipToken = 0
+local activeTooltipTarget = nil
+local cameraConnection = nil
+
+local function trackUniversalResource(resource)
+	if resource ~= nil then
+		table.insert(d.Resources, resource)
+	end
+	return resource
+end
+
+local function selectionName(value)
+	if type(value) == "table" then
+		return tostring(value.Title or value.Name or value.Value or "")
+	end
+	return tostring(value or "")
+end
 
 local function createRevampOutline(parent, radius)
 	if typeof(parent) ~= "Instance" or not parent:IsA("GuiObject") then
-		return
-	end
-	if parent:FindFirstChild("BadWarsRevampOutline") then
-		return
+		return nil
 	end
 
-	local outline = Instance.new("Frame")
-	outline.Name = "BadWarsRevampOutline"
-	outline.Size = UDim2.fromScale(1, 1)
-	outline.BackgroundTransparency = 1
-	outline.BorderSizePixel = 0
-	outline.Active = false
-	outline.Selectable = false
-	outline.ZIndex = 1000
-	outline.Parent = parent
+	local outline = parent:FindFirstChild("BadWarsRevampOutline")
+	if not outline or not outline:IsA("Frame") then
+		if outline then
+			outline:Destroy()
+		end
 
-	local corner = Instance.new("UICorner")
+		outline = Instance.new("Frame")
+		outline.Name = "BadWarsRevampOutline"
+		outline.Size = UDim2.fromScale(1, 1)
+		outline.BackgroundTransparency = 1
+		outline.BorderSizePixel = 0
+		outline.Active = false
+		outline.Selectable = false
+		outline.ZIndex = 1000
+		outline.Parent = parent
+	end
+
+	local corner = outline:FindFirstChildWhichIsA("UICorner") or Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, radius)
 	corner.Parent = outline
 
-	local stroke = Instance.new("UIStroke")
+	local stroke = outline:FindFirstChildWhichIsA("UIStroke") or Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.LineJoinMode = Enum.LineJoinMode.Round
-	stroke.Color = REVAMP.Border
-	stroke.Thickness = 1
-	stroke.Transparency = 0.12
+	stroke.Color = CUSTOM.Border
+	stroke.Thickness = CUSTOM.HighContrast and 2 or 1
+	stroke.Transparency = CUSTOM.HighContrast and 0 or 0.12
 	stroke.Parent = outline
+
+	revampObjects.Outline = outline
+	revampObjects.OutlineCorner = corner
+	revampObjects.OutlineStroke = stroke
+	return outline
 end
 
 local function createAccentRail(parent)
 	if typeof(parent) ~= "Instance" or not parent:IsA("GuiObject") then
-		return
-	end
-	if parent:FindFirstChild("BadWarsAccentRail") then
-		return
+		return nil
 	end
 
-	local rail = Instance.new("Frame")
-	rail.Name = "BadWarsAccentRail"
-	rail.Size = UDim2.new(1, -36, 0, 3)
-	rail.Position = UDim2.new(0, 18, 0, 0)
-	rail.BackgroundColor3 = Color3.new(1, 1, 1)
-	rail.BorderSizePixel = 0
-	rail.Active = false
-	rail.Selectable = false
-	rail.ZIndex = 1001
-	rail.Parent = parent
+	local rail = parent:FindFirstChild("BadWarsAccentRail")
+	if not rail or not rail:IsA("Frame") then
+		if rail then
+			rail:Destroy()
+		end
 
-	local corner = Instance.new("UICorner")
+		rail = Instance.new("Frame")
+		rail.Name = "BadWarsAccentRail"
+		rail.Size = UDim2.new(1, -36, 0, 3)
+		rail.Position = UDim2.new(0, 18, 0, 0)
+		rail.BackgroundColor3 = Color3.new(1, 1, 1)
+		rail.BorderSizePixel = 0
+		rail.Active = false
+		rail.Selectable = false
+		rail.ZIndex = 1001
+		rail.Parent = parent
+	end
+
+	local corner = rail:FindFirstChildWhichIsA("UICorner") or Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(1, 0)
 	corner.Parent = rail
 
-	local gradient = Instance.new("UIGradient")
+	local gradient = rail:FindFirstChildWhichIsA("UIGradient") or Instance.new("UIGradient")
 	gradient.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, REVAMP.Accent),
-		ColorSequenceKeypoint.new(0.52, REVAMP.AccentWarm),
-		ColorSequenceKeypoint.new(1, REVAMP.AccentCool),
+		ColorSequenceKeypoint.new(0, CUSTOM.Accent),
+		ColorSequenceKeypoint.new(0.52, CUSTOM.AccentWarm),
+		ColorSequenceKeypoint.new(1, CUSTOM.AccentCool),
 	})
 	gradient.Parent = rail
+
+	rail.Visible = CUSTOM.ShowAccentRail
+	revampObjects.AccentRail = rail
+	revampObjects.AccentGradient = gradient
+	return rail
 end
 
 local function createSidebarDivider(parent)
 	if typeof(parent) ~= "Instance" or not parent:IsA("GuiObject") then
-		return
+		return nil
 	end
-	if parent:FindFirstChild("BadWarsSidebarDivider") then
+
+	local divider = parent:FindFirstChild("BadWarsSidebarDivider")
+	if not divider or not divider:IsA("Frame") then
+		if divider then
+			divider:Destroy()
+		end
+
+		divider = Instance.new("Frame")
+		divider.Name = "BadWarsSidebarDivider"
+		divider.Size = UDim2.new(0, 1, 1, -80)
+		divider.BackgroundTransparency = 0.34
+		divider.BorderSizePixel = 0
+		divider.Active = false
+		divider.Selectable = false
+		divider.ZIndex = 8
+		divider.Parent = parent
+	end
+
+	divider.Position = UDim2.new(0, CUSTOM.SidebarWidth, 0, 64)
+	divider.BackgroundColor3 = CUSTOM.Border
+	divider.Visible = CUSTOM.ShowSidebarDivider
+	revampObjects.SidebarDivider = divider
+	return divider
+end
+
+local mainVisual = findWindowMain(Window)
+local visualRoot = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui or mainVisual
+
+local function hasScrollableAncestor(object)
+	local parent = object and object.Parent
+	while typeof(parent) == "Instance" do
+		if parent:IsA("ScrollingFrame") then
+			return true
+		end
+		if parent == visualRoot then
+			break
+		end
+		parent = parent.Parent
+	end
+	return false
+end
+
+local function isAuxiliaryScrollFrame(object)
+	local name = string.lower(object.Name)
+	if name:find("sidebar", 1, true)
+		or name:find("dropdown", 1, true)
+		or name:find("menu", 1, true)
+		or name:find("search", 1, true)
+		or name:find("result", 1, true)
+		or name:find("tooltip", 1, true)
+		or name:find("notification", 1, true)
+	then
+		return true
+	end
+
+	local parent = object.Parent
+	for _ = 1, 5 do
+		if typeof(parent) ~= "Instance" then
+			break
+		end
+
+		local parentName = string.lower(parent.Name)
+		if parentName:find("dropdown", 1, true)
+			or parentName:find("menu", 1, true)
+			or parentName:find("search", 1, true)
+			or parentName:find("sidebar", 1, true)
+		then
+			return true
+		end
+		parent = parent.Parent
+	end
+
+	return false
+end
+
+local function applyScrollbarStyle(object)
+	if not object:IsA("ScrollingFrame") then
 		return
 	end
 
-	local divider = Instance.new("Frame")
-	divider.Name = "BadWarsSidebarDivider"
-	divider.Size = UDim2.new(0, 1, 1, -80)
-	divider.Position = UDim2.new(0, 232, 0, 64)
-	divider.BackgroundColor3 = REVAMP.Border
-	divider.BackgroundTransparency = 0.34
-	divider.BorderSizePixel = 0
-	divider.Active = false
-	divider.Selectable = false
-	divider.ZIndex = 8
-	divider.Parent = parent
+	local hidden = hasScrollableAncestor(object) or isAuxiliaryScrollFrame(object)
+	pcall(function()
+		object.ElasticBehavior = Enum.ElasticBehavior.Never
+		object.ScrollBarImageColor3 = CUSTOM.Scroll
+		object.ScrollBarImageTransparency = hidden or not CUSTOM.ShowScrollbars and 1 or 0.18
+		object.ScrollBarThickness = hidden or not CUSTOM.ShowScrollbars and 0 or CUSTOM.ScrollbarThickness
+	end)
 end
 
 local function applyRevampTypography(object)
@@ -438,6 +671,7 @@ local function applyRevampTypography(object)
 		if object.TextSize >= 16 or lowerName:find("title", 1, true) then
 			weight = Enum.FontWeight.SemiBold
 		end
+
 		if lowerName:find("code", 1, true) then
 			object.FontFace = Font.fromEnum(Enum.Font.Code)
 		else
@@ -451,18 +685,62 @@ local function applyRevampTypography(object)
 	end)
 end
 
+local function applyCornerCustomization(object)
+	if not object:IsA("UICorner") then
+		return
+	end
+
+	pcall(function()
+		if object.CornerRadius.Scale ~= 0 then
+			return
+		end
+
+		local parent = object.Parent
+		if parent == mainVisual or parent == revampObjects.Outline then
+			object.CornerRadius = UDim.new(0, CUSTOM.WindowRadius)
+		elseif typeof(parent) == "Instance" and parent:IsA("GuiObject") then
+			local minimumSide = math.min(parent.AbsoluteSize.X, parent.AbsoluteSize.Y)
+			if minimumSide > 24 then
+				object.CornerRadius = UDim.new(0, math.min(CUSTOM.ElementRadius, math.floor(minimumSide / 2)))
+			end
+		end
+	end)
+end
+
+local function applySpacingCustomization(object)
+	if not object:IsA("UIListLayout") then
+		return
+	end
+
+	pcall(function()
+		if object.FillDirection == Enum.FillDirection.Vertical
+			and object.Padding.Scale == 0
+			and object.Padding.Offset <= 24
+		then
+			object.Padding = UDim.new(0, CUSTOM.Spacing)
+		end
+	end)
+end
+
+local function makeNavigable(object)
+	if not object:IsA("GuiButton") and not object:IsA("TextBox") then
+		return
+	end
+
+	pcall(function()
+		object.Selectable = true
+	end)
+
+	navigationBound[object] = true
+end
+
 local function applyRevampInstance(object)
 	if typeof(object) ~= "Instance" then
 		return
 	end
 
 	if object:IsA("ScrollingFrame") then
-		pcall(function()
-			object.ScrollBarThickness = 3
-			object.ScrollBarImageColor3 = REVAMP.Scroll
-			object.ScrollBarImageTransparency = 0.22
-			object.ElasticBehavior = Enum.ElasticBehavior.Never
-		end)
+		applyScrollbarStyle(object)
 	elseif object:IsA("UIStroke") then
 		pcall(function()
 			object.LineJoinMode = Enum.LineJoinMode.Round
@@ -474,22 +752,777 @@ local function applyRevampInstance(object)
 	end
 
 	applyRevampTypography(object)
+	applyCornerCustomization(object)
+	applySpacingCustomization(object)
+	makeNavigable(object)
 end
 
-local mainVisual = findWindowMain(Window)
-if typeof(mainVisual) == "Instance" and mainVisual:IsA("GuiObject") then
-	createRevampOutline(mainVisual, 18)
-	createAccentRail(mainVisual)
-	createSidebarDivider(mainVisual)
+local function buildCustomTheme()
+	local border = CUSTOM.HighContrast and CUSTOM.Text or CUSTOM.Border
+	local muted = CUSTOM.HighContrast and CUSTOM.Text:Lerp(CUSTOM.Canvas, 0.22) or CUSTOM.Muted
+	local panelTransparency = math.clamp(CUSTOM.Transparency, 0, 0.4)
+	local elementTransparency = math.clamp(CUSTOM.Transparency + 0.03, 0, 0.45)
+
+	return {
+		Name = "BadWarsCustom",
+		Accent = CUSTOM.Accent,
+		Dialog = CUSTOM.Panel,
+		Outline = border,
+		Text = CUSTOM.Text,
+		Placeholder = muted,
+		Background = CUSTOM.Canvas,
+		Button = CUSTOM.Raised,
+		Icon = CUSTOM.Text,
+		Toggle = CUSTOM.Accent,
+		Slider = CUSTOM.Accent,
+		Checkbox = CUSTOM.Accent,
+		PanelBackground = CUSTOM.Panel,
+		PanelBackgroundTransparency = panelTransparency,
+		LabelBackground = CUSTOM.Raised,
+		LabelBackgroundTransparency = elementTransparency,
+		ElementBackground = CUSTOM.Raised,
+		ElementBackgroundTransparency = elementTransparency,
+		Primary = CUSTOM.Accent,
+		TabBackground = CUSTOM.Panel,
+		TabBackgroundHover = CUSTOM.Raised,
+		TabBackgroundActive = CUSTOM.Raised,
+		DropdownBackground = CUSTOM.Panel,
+		WindowShadow = CUSTOM.Canvas,
+		White = CUSTOM.Text,
+	}
 end
 
-local visualRoot = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui or mainVisual
+local function applyCustomTheme()
+	local theme = buildCustomTheme()
+	pcall(function()
+		if type(WindUI.AddTheme) == "function" then
+			WindUI:AddTheme(theme)
+		end
+		if type(WindUI.SetTheme) == "function" then
+			WindUI:SetTheme(theme.Name)
+		end
+	end)
+
+	if revampObjects.AccentGradient then
+		revampObjects.AccentGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, CUSTOM.Accent),
+			ColorSequenceKeypoint.new(0.52, CUSTOM.AccentWarm),
+			ColorSequenceKeypoint.new(1, CUSTOM.AccentCool),
+		})
+	end
+
+	if revampObjects.OutlineStroke then
+		revampObjects.OutlineStroke.Color = CUSTOM.HighContrast and CUSTOM.Text or CUSTOM.Border
+		revampObjects.OutlineStroke.Thickness = CUSTOM.HighContrast and 2 or 1
+		revampObjects.OutlineStroke.Transparency = CUSTOM.HighContrast and 0 or 0.12
+	end
+
+	if revampObjects.SidebarDivider then
+		revampObjects.SidebarDivider.BackgroundColor3 = CUSTOM.Border
+	end
+end
+
+local function applySafeArea()
+	local enabled = CUSTOM.SafeArea == true
+	for _, gui in ipairs({
+		WindUI.ScreenGui,
+		WindUI.DropdownGui,
+		WindUI.NotificationGui,
+		WindUI.TooltipGui,
+	}) do
+		if typeof(gui) == "Instance" and gui:IsA("ScreenGui") then
+			pcall(function()
+				gui.ScreenInsets = enabled and Enum.ScreenInsets.DeviceSafeInsets or Enum.ScreenInsets.None
+				gui.ClipToDeviceSafeArea = enabled
+			end)
+		end
+	end
+end
+
+local function detectPlatform()
+	local lastInput = UserInputService:GetLastInputType()
+	if lastInput.Name:find("Gamepad", 1, true) then
+		return "Console"
+	end
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		return "Mobile"
+	end
+	if UserInputService.GamepadEnabled and not UserInputService.KeyboardEnabled then
+		return "Console"
+	end
+	return "Desktop"
+end
+
+local function resolvePlatform()
+	if CUSTOM.PlatformPreset ~= "Auto" then
+		return CUSTOM.PlatformPreset
+	end
+	return detectPlatform()
+end
+
+local function updateSidebarWidth(width)
+	width = math.max(150, math.floor(width + 0.5))
+	Window.SideBarWidth = width
+
+	local sideBarContainer = type(Window.UIElements) == "table" and Window.UIElements.SideBarContainer
+	if typeof(sideBarContainer) == "Instance" and sideBarContainer:IsA("GuiObject") then
+		sideBarContainer.Size = UDim2.new(
+			0,
+			width,
+			sideBarContainer.Size.Y.Scale,
+			sideBarContainer.Size.Y.Offset
+		)
+	end
+
+	local mainBar = type(Window.UIElements) == "table" and Window.UIElements.MainBar
+	if typeof(mainBar) == "Instance" and mainBar:IsA("GuiObject") then
+		mainBar.Size = UDim2.new(
+			1,
+			-width,
+			mainBar.Size.Y.Scale,
+			mainBar.Size.Y.Offset
+		)
+	end
+
+	if revampObjects.SidebarDivider then
+		revampObjects.SidebarDivider.Position = UDim2.new(0, width, 0, 64)
+	end
+end
+
+local function applyResponsiveLayout()
+	if typeof(mainVisual) ~= "Instance" or not mainVisual:IsA("GuiObject") then
+		return
+	end
+
+	local camera = Workspace.CurrentCamera
+	local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+	local platform = resolvePlatform()
+	currentPlatform = platform
+
+	local width = CUSTOM.WindowWidth
+	local height = CUSTOM.WindowHeight
+	local scale = CUSTOM.Scale
+	local sidebarWidth = CUSTOM.SidebarWidth
+
+	if platform == "Mobile" then
+		width = math.max(320, viewport.X - 20)
+		height = math.max(360, viewport.Y - 28)
+		scale = math.clamp(math.min(viewport.X / 900, viewport.Y / 640), 0.72, 0.94) * CUSTOM.Scale
+		sidebarWidth = math.clamp(math.floor(width * 0.29), 156, 205)
+	elseif platform == "Console" then
+		width = math.clamp(math.floor(viewport.X * 0.88), 720, 1180)
+		height = math.clamp(math.floor(viewport.Y * 0.82), 480, 820)
+		scale = math.clamp(math.min(viewport.X / 1280, viewport.Y / 720), 0.92, 1.12) * CUSTOM.Scale
+		sidebarWidth = math.clamp(CUSTOM.SidebarWidth, 210, 280)
+	elseif platform == "Compact" then
+		width = math.clamp(CUSTOM.WindowWidth, 640, 820)
+		height = math.clamp(CUSTOM.WindowHeight, 420, 600)
+		scale = math.clamp(CUSTOM.Scale, 0.72, 1)
+		sidebarWidth = math.clamp(CUSTOM.SidebarWidth, 170, 215)
+	else
+		width = math.clamp(CUSTOM.WindowWidth, 640, 1280)
+		height = math.clamp(CUSTOM.WindowHeight, 420, 900)
+		scale = math.clamp(CUSTOM.Scale, 0.7, 1.3)
+		sidebarWidth = math.clamp(CUSTOM.SidebarWidth, 180, 300)
+	end
+
+	pcall(function()
+		mainVisual.AnchorPoint = Vector2.new(0.5, 0.5)
+		mainVisual.Position = UDim2.fromScale(0.5, 0.5)
+		mainVisual.Size = UDim2.fromOffset(width, height)
+	end)
+
+	pcall(function()
+		if type(Window.SetUIScale) == "function" then
+			Window:SetUIScale(scale)
+		end
+	end)
+
+	updateSidebarWidth(sidebarWidth)
+end
+
+local function applyVisualCustomization()
+	WindUI.TransparencyValue = math.clamp(CUSTOM.Transparency, 0, 0.4)
+	applyCustomTheme()
+	applySafeArea()
+	applyResponsiveLayout()
+
+	if revampObjects.OutlineCorner then
+		revampObjects.OutlineCorner.CornerRadius = UDim.new(0, CUSTOM.WindowRadius)
+	end
+	if revampObjects.AccentRail then
+		revampObjects.AccentRail.Visible = CUSTOM.ShowAccentRail
+	end
+	if revampObjects.SidebarDivider then
+		revampObjects.SidebarDivider.Visible = CUSTOM.ShowSidebarDivider
+	end
+
+	if typeof(visualRoot) == "Instance" then
+		for _, descendant in ipairs(visualRoot:GetDescendants()) do
+			applyRevampInstance(descendant)
+		end
+	end
+end
+
+local function applyThemePreset(name)
+	local preset = THEME_PRESETS[name]
+	if not preset then
+		return false
+	end
+
+	CUSTOM.Preset = name
+	for key, value in pairs(preset) do
+		CUSTOM[key] = value
+	end
+	applyVisualCustomization()
+	return true
+end
+
+local function disableNativeTooltips()
+	local candidates = {
+		WindUI.TooltipGui,
+		typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui:FindFirstChild("ToolTips", true) or nil,
+		typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui:FindFirstChild("Tooltips", true) or nil,
+	}
+
+	for _, candidate in ipairs(candidates) do
+		if typeof(candidate) == "Instance" then
+			if candidate:IsA("ScreenGui") then
+				candidate.Enabled = false
+			elseif candidate:IsA("GuiObject") then
+				candidate.Visible = false
+			else
+				for _, child in ipairs(candidate:GetChildren()) do
+					child:Destroy()
+				end
+				trackUniversalResource(candidate.ChildAdded:Connect(function(child)
+					child:Destroy()
+				end))
+			end
+		end
+	end
+end
+
+local tooltipFrame
+local tooltipLabel
+local tooltipStroke
+
+local function createInstantTooltip()
+	if typeof(WindUI.ScreenGui) ~= "Instance" then
+		return
+	end
+
+	tooltipFrame = Instance.new("Frame")
+	tooltipFrame.Name = "BadWarsInstantTooltip"
+	tooltipFrame.AnchorPoint = Vector2.new(0, 0)
+	tooltipFrame.Size = UDim2.fromOffset(180, 38)
+	tooltipFrame.BackgroundColor3 = CUSTOM.Panel
+	tooltipFrame.BackgroundTransparency = 0.02
+	tooltipFrame.BorderSizePixel = 0
+	tooltipFrame.Visible = false
+	tooltipFrame.Active = false
+	tooltipFrame.Selectable = false
+	tooltipFrame.ZIndex = 10000
+	tooltipFrame.Parent = WindUI.ScreenGui
+
+	local corner = Instance.new("UICorner")
+	corner.Name = "TooltipCorner"
+	corner.CornerRadius = UDim.new(0, CUSTOM.ElementRadius)
+	corner.Parent = tooltipFrame
+
+	tooltipStroke = Instance.new("UIStroke")
+	tooltipStroke.Name = "TooltipStroke"
+	tooltipStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	tooltipStroke.LineJoinMode = Enum.LineJoinMode.Round
+	tooltipStroke.Color = CUSTOM.Border
+	tooltipStroke.Thickness = 1
+	tooltipStroke.Transparency = 0.08
+	tooltipStroke.Parent = tooltipFrame
+
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 9)
+	padding.PaddingBottom = UDim.new(0, 9)
+	padding.PaddingLeft = UDim.new(0, 12)
+	padding.PaddingRight = UDim.new(0, 12)
+	padding.Parent = tooltipFrame
+
+	tooltipLabel = Instance.new("TextLabel")
+	tooltipLabel.Name = "TooltipText"
+	tooltipLabel.Size = UDim2.fromScale(1, 1)
+	tooltipLabel.BackgroundTransparency = 1
+	tooltipLabel.TextColor3 = CUSTOM.Text
+	tooltipLabel.TextSize = 14
+	tooltipLabel.TextWrapped = true
+	tooltipLabel.TextXAlignment = Enum.TextXAlignment.Left
+	tooltipLabel.TextYAlignment = Enum.TextYAlignment.Center
+	tooltipLabel.FontFace = Font.new(
+		"rbxasset://fonts/families/GothamSSm.json",
+		Enum.FontWeight.Medium,
+		Enum.FontStyle.Normal
+	)
+	tooltipLabel.ZIndex = tooltipFrame.ZIndex + 1
+	tooltipLabel.Parent = tooltipFrame
+
+	revampObjects.Tooltip = tooltipFrame
+	revampObjects.TooltipCorner = corner
+end
+
+local function cleanTooltipText(text)
+	text = tostring(text or "")
+	text = text:gsub("^%s+", ""):gsub("%s+$", "")
+	text = text:gsub("%s+", " ")
+	return text
+end
+
+local function extractTooltipText(target)
+	if typeof(target) ~= "Instance" then
+		return nil
+	end
+
+	local attributed = cleanTooltipText(target:GetAttribute("BadWarsTooltip"))
+	if attributed ~= "" then
+		return attributed
+	end
+
+	local fallback
+	local current = target
+	for _ = 1, 4 do
+		if typeof(current) ~= "Instance" then
+			break
+		end
+
+		for _, descendant in ipairs(current:GetDescendants()) do
+			if descendant:IsA("TextLabel") then
+				local text = cleanTooltipText(descendant.Text)
+				if text ~= "" then
+					local lowerName = string.lower(descendant.Name)
+					if lowerName:find("desc", 1, true)
+						or lowerName:find("description", 1, true)
+						or lowerName:find("subtitle", 1, true)
+						or lowerName:find("hint", 1, true)
+					then
+						return text
+					end
+					if not fallback or #text > #fallback then
+						fallback = text
+					end
+				end
+			end
+		end
+
+		current = current.Parent
+	end
+
+	if fallback and #fallback >= 8 then
+		return fallback
+	end
+	return nil
+end
+
+local function positionTooltip(target, pointer)
+	if not tooltipFrame or not tooltipFrame.Visible then
+		return
+	end
+
+	local camera = Workspace.CurrentCamera
+	local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+	local position
+
+	if typeof(pointer) == "Vector2" then
+		position = pointer + Vector2.new(14, 18)
+	elseif typeof(pointer) == "Vector3" then
+		position = Vector2.new(pointer.X + 14, pointer.Y + 18)
+	elseif typeof(target) == "Instance" and target:IsA("GuiObject") then
+		position = target.AbsolutePosition + Vector2.new(target.AbsoluteSize.X + 10, 4)
+	else
+		local mouse = UserInputService:GetMouseLocation()
+		position = mouse + Vector2.new(14, 18)
+	end
+
+	local width = tooltipFrame.AbsoluteSize.X
+	local height = tooltipFrame.AbsoluteSize.Y
+	local x = math.clamp(position.X, 8, math.max(8, viewport.X - width - 8))
+	local y = math.clamp(position.Y, 8, math.max(8, viewport.Y - height - 8))
+	tooltipFrame.Position = UDim2.fromOffset(x, y)
+end
+
+local function hideInstantTooltip()
+	tooltipToken += 1
+	activeTooltipTarget = nil
+	if tooltipFrame then
+		tooltipFrame.Visible = false
+	end
+end
+
+local function showInstantTooltip(target, pointer)
+	if not CUSTOM.InstantTooltips or not tooltipFrame then
+		return
+	end
+
+	local text = extractTooltipText(target)
+	if not text then
+		return
+	end
+
+	tooltipToken += 1
+	local token = tooltipToken
+	activeTooltipTarget = target
+
+	task.delay(math.max(0, CUSTOM.TooltipDelay), function()
+		if token ~= tooltipToken or activeTooltipTarget ~= target or not target.Parent then
+			return
+		end
+
+		local bounds = TextService:GetTextSize(
+			text,
+			14,
+			Enum.Font.GothamMedium,
+			Vector2.new(320, 500)
+		)
+		tooltipFrame.Size = UDim2.fromOffset(
+			math.clamp(bounds.X + 24, 150, 344),
+			math.clamp(bounds.Y + 18, 36, 140)
+		)
+		tooltipFrame.BackgroundColor3 = CUSTOM.Panel
+		tooltipLabel.TextColor3 = CUSTOM.Text
+		tooltipLabel.Text = text
+		tooltipStroke.Color = CUSTOM.HighContrast and CUSTOM.Text or CUSTOM.Border
+		revampObjects.TooltipCorner.CornerRadius = UDim.new(0, CUSTOM.ElementRadius)
+		tooltipFrame.Visible = true
+		positionTooltip(target, pointer)
+	end)
+end
+
+local function bindInstantTooltip(object)
+	if tooltipBound[object] or not object:IsA("GuiButton") then
+		return
+	end
+
+	tooltipBound[object] = true
+	trackUniversalResource(object.MouseEnter:Connect(function()
+		showInstantTooltip(object)
+	end))
+	trackUniversalResource(object.MouseLeave:Connect(function()
+		if activeTooltipTarget == object then
+			hideInstantTooltip()
+		end
+	end))
+	trackUniversalResource(object.SelectionGained:Connect(function()
+		showInstantTooltip(object)
+	end))
+	trackUniversalResource(object.SelectionLost:Connect(function()
+		if activeTooltipTarget == object then
+			hideInstantTooltip()
+		end
+	end))
+	trackUniversalResource(object.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch then
+			showInstantTooltip(object, input.Position)
+		end
+	end))
+end
+
+local selectionFrame
+local selectionStroke
+
+local function createSelectionFrame()
+	if typeof(WindUI.ScreenGui) ~= "Instance" then
+		return
+	end
+
+	selectionFrame = Instance.new("Frame")
+	selectionFrame.Name = "BadWarsGamepadSelection"
+	selectionFrame.BackgroundTransparency = 1
+	selectionFrame.BorderSizePixel = 0
+	selectionFrame.Visible = false
+	selectionFrame.Active = false
+	selectionFrame.Selectable = false
+	selectionFrame.ZIndex = 9998
+	selectionFrame.Parent = WindUI.ScreenGui
+
+	local corner = Instance.new("UICorner")
+	corner.Name = "SelectionCorner"
+	corner.CornerRadius = UDim.new(0, CUSTOM.ElementRadius + 2)
+	corner.Parent = selectionFrame
+
+	selectionStroke = Instance.new("UIStroke")
+	selectionStroke.Name = "SelectionStroke"
+	selectionStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	selectionStroke.LineJoinMode = Enum.LineJoinMode.Round
+	selectionStroke.Color = CUSTOM.Accent
+	selectionStroke.Thickness = 2
+	selectionStroke.Transparency = 0
+	selectionStroke.Parent = selectionFrame
+
+	revampObjects.Selection = selectionFrame
+	revampObjects.SelectionCorner = corner
+end
+
+local function updateSelectionFrame()
+	if not selectionFrame then
+		return
+	end
+
+	local selected = GuiService.SelectedObject
+	if not CUSTOM.GamepadNavigation
+		or typeof(selected) ~= "Instance"
+		or not selected:IsA("GuiObject")
+		or not selected.Visible
+	then
+		selectionFrame.Visible = false
+		return
+	end
+
+	selectionFrame.Position = UDim2.fromOffset(
+		selected.AbsolutePosition.X - 3,
+		selected.AbsolutePosition.Y - 3
+	)
+	selectionFrame.Size = UDim2.fromOffset(
+		selected.AbsoluteSize.X + 6,
+		selected.AbsoluteSize.Y + 6
+	)
+	selectionStroke.Color = CUSTOM.Accent
+	revampObjects.SelectionCorner.CornerRadius = UDim.new(0, CUSTOM.ElementRadius + 2)
+	selectionFrame.Visible = true
+end
+
+local function collectSidebarButtons()
+	local results = {}
+	local sidebar = type(Window.UIElements) == "table" and Window.UIElements.SideBar
+	if typeof(sidebar) ~= "Instance" then
+		return results
+	end
+
+	for _, descendant in ipairs(sidebar:GetDescendants()) do
+		if descendant:IsA("GuiButton")
+			and descendant.Visible
+			and descendant.Active
+		then
+			table.insert(results, descendant)
+		end
+	end
+
+	table.sort(results, function(left, right)
+		if left.LayoutOrder == right.LayoutOrder then
+			return left.AbsolutePosition.Y < right.AbsolutePosition.Y
+		end
+		return left.LayoutOrder < right.LayoutOrder
+	end)
+	return results
+end
+
+local function cycleSidebar(direction)
+	local buttons = collectSidebarButtons()
+	if #buttons == 0 then
+		return
+	end
+
+	local selected = GuiService.SelectedObject
+	local index = table.find(buttons, selected) or (direction > 0 and 0 or 1)
+	index = ((index - 1 + direction) % #buttons) + 1
+	GuiService.SelectedObject = buttons[index]
+	updateSelectionFrame()
+end
+
+local function focusSearch()
+	if typeof(visualRoot) ~= "Instance" then
+		return
+	end
+
+	for _, descendant in ipairs(visualRoot:GetDescendants()) do
+		if descendant:IsA("TextBox") then
+			local lowerName = string.lower(descendant.Name)
+			local placeholder = string.lower(descendant.PlaceholderText or "")
+			if lowerName:find("search", 1, true) or placeholder:find("search", 1, true) then
+				descendant:CaptureFocus()
+				return
+			end
+		end
+	end
+end
+
+local ACTION_TOGGLE = "BadWarsUniversalToggle"
+local ACTION_BACK = "BadWarsUniversalBack"
+local ACTION_PREVIOUS = "BadWarsUniversalPrevious"
+local ACTION_NEXT = "BadWarsUniversalNext"
+local ACTION_SEARCH = "BadWarsUniversalSearch"
+
+local function universalInputAction(actionName, inputState)
+	if inputState ~= Enum.UserInputState.Begin then
+		return Enum.ContextActionResult.Pass
+	end
+	if not CUSTOM.GamepadNavigation then
+		return Enum.ContextActionResult.Pass
+	end
+
+	if actionName == ACTION_TOGGLE then
+		task.defer(function()
+			if type(d.Toggle) == "function" then
+				d:Toggle()
+			end
+		end)
+		return Enum.ContextActionResult.Sink
+	elseif actionName == ACTION_BACK then
+		local focused = UserInputService:GetFocusedTextBox()
+		if focused then
+			focused:ReleaseFocus()
+		elseif d.Visible and type(d.Hide) == "function" then
+			d:Hide()
+		else
+			hideInstantTooltip()
+		end
+		return Enum.ContextActionResult.Sink
+	elseif actionName == ACTION_PREVIOUS then
+		cycleSidebar(-1)
+		return Enum.ContextActionResult.Sink
+	elseif actionName == ACTION_NEXT then
+		cycleSidebar(1)
+		return Enum.ContextActionResult.Sink
+	elseif actionName == ACTION_SEARCH then
+		focusSearch()
+		return Enum.ContextActionResult.Sink
+	end
+
+	return Enum.ContextActionResult.Pass
+end
+
+local function bindUniversalInput()
+	pcall(function()
+		GuiService.GuiNavigationEnabled = CUSTOM.GamepadNavigation
+		GuiService.AutoSelectGuiEnabled = CUSTOM.GamepadNavigation
+	end)
+
+	ContextActionService:BindActionAtPriority(
+		ACTION_TOGGLE,
+		universalInputAction,
+		false,
+		3000,
+		Enum.KeyCode.ButtonStart,
+		Enum.KeyCode.ButtonSelect
+	)
+	ContextActionService:BindActionAtPriority(
+		ACTION_BACK,
+		universalInputAction,
+		false,
+		3000,
+		Enum.KeyCode.ButtonB
+	)
+	ContextActionService:BindActionAtPriority(
+		ACTION_PREVIOUS,
+		universalInputAction,
+		false,
+		3000,
+		Enum.KeyCode.ButtonL1
+	)
+	ContextActionService:BindActionAtPriority(
+		ACTION_NEXT,
+		universalInputAction,
+		false,
+		3000,
+		Enum.KeyCode.ButtonR1
+	)
+	ContextActionService:BindActionAtPriority(
+		ACTION_SEARCH,
+		universalInputAction,
+		false,
+		3000,
+		Enum.KeyCode.ButtonY
+	)
+
+	trackUniversalResource(function()
+		for _, actionName in ipairs({
+			ACTION_TOGGLE,
+			ACTION_BACK,
+			ACTION_PREVIOUS,
+			ACTION_NEXT,
+			ACTION_SEARCH,
+		}) do
+			pcall(ContextActionService.UnbindAction, ContextActionService, actionName)
+		end
+	end)
+end
+
+local function bindCamera()
+	if cameraConnection then
+		cameraConnection:Disconnect()
+		cameraConnection = nil
+	end
+
+	local camera = Workspace.CurrentCamera
+	if camera then
+		cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			applyResponsiveLayout()
+			updateSelectionFrame()
+			if activeTooltipTarget then
+				positionTooltip(activeTooltipTarget)
+			end
+		end)
+		trackUniversalResource(cameraConnection)
+	end
+end
+
+createRevampOutline(mainVisual, CUSTOM.WindowRadius)
+createAccentRail(mainVisual)
+createSidebarDivider(mainVisual)
+disableNativeTooltips()
+createInstantTooltip()
+createSelectionFrame()
+bindUniversalInput()
+bindCamera()
+
 if typeof(visualRoot) == "Instance" then
 	for _, descendant in ipairs(visualRoot:GetDescendants()) do
 		applyRevampInstance(descendant)
+		bindInstantTooltip(descendant)
 	end
-	table.insert(d.Resources, visualRoot.DescendantAdded:Connect(applyRevampInstance))
+
+	trackUniversalResource(visualRoot.DescendantAdded:Connect(function(descendant)
+		task.defer(function()
+			if descendant.Parent then
+				applyRevampInstance(descendant)
+				bindInstantTooltip(descendant)
+			end
+		end)
+	end))
 end
+
+trackUniversalResource(UserInputService.LastInputTypeChanged:Connect(function()
+	if CUSTOM.PlatformPreset == "Auto" then
+		applyResponsiveLayout()
+	end
+end))
+
+trackUniversalResource(UserInputService.InputChanged:Connect(function(input)
+	if tooltipFrame and tooltipFrame.Visible
+		and input.UserInputType == Enum.UserInputType.MouseMovement
+	then
+		positionTooltip(activeTooltipTarget, input.Position)
+	end
+end))
+
+trackUniversalResource(GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(function()
+	updateSelectionFrame()
+end))
+
+trackUniversalResource(Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+	bindCamera()
+	applyResponsiveLayout()
+end))
+
+d.Customization = CUSTOM
+d.CustomizationDefaults = CUSTOMIZATION_DEFAULTS
+d.ThemePresets = THEME_PRESETS
+d.ApplyCustomization = applyVisualCustomization
+d.SetPlatformPreset = function(_, preset)
+	CUSTOM.PlatformPreset = tostring(preset or "Auto")
+	applyVisualCustomization()
+	return CUSTOM.PlatformPreset
+end
+d.SetThemePreset = function(_, preset)
+	return applyThemePreset(tostring(preset or "BadWars"))
+end
+
+applyVisualCustomization()
 local function setWindowHidden(hidden)
 	local main = findWindowMain(Window)
 	if typeof(main) == "Instance" then
@@ -2176,47 +3209,379 @@ local appearanceSection = Tabs.Settings:Section({
 	DescTextSize = 13,
 })
 
-appearanceSection:Toggle({
-	Title = "UI Transparency",
-	Desc = "Glass effect",
-	Value = true,
-	Flag = "settings/transparency",
+local customizationControls = {}
+local syncingCustomization = false
+
+local function updateCustomizationControl(control, value, ...)
+	if type(control) == "table" then
+		setControlValue(control, value, ...)
+	end
+end
+
+local function syncCustomizationControls()
+	if syncingCustomization then
+		return
+	end
+	syncingCustomization = true
+
+	updateCustomizationControl(customizationControls.ThemePreset, CUSTOM.Preset)
+	updateCustomizationControl(customizationControls.PlatformPreset, CUSTOM.PlatformPreset)
+	updateCustomizationControl(customizationControls.Accent, CUSTOM.Accent)
+	updateCustomizationControl(customizationControls.AccentWarm, CUSTOM.AccentWarm)
+	updateCustomizationControl(customizationControls.AccentCool, CUSTOM.AccentCool)
+	updateCustomizationControl(customizationControls.Canvas, CUSTOM.Canvas)
+	updateCustomizationControl(customizationControls.Panel, CUSTOM.Panel)
+	updateCustomizationControl(customizationControls.Raised, CUSTOM.Raised)
+	updateCustomizationControl(customizationControls.Border, CUSTOM.Border)
+	updateCustomizationControl(customizationControls.Text, CUSTOM.Text)
+	updateCustomizationControl(customizationControls.Muted, CUSTOM.Muted)
+	updateCustomizationControl(customizationControls.Scroll, CUSTOM.Scroll)
+	updateCustomizationControl(customizationControls.Scale, math.floor(CUSTOM.Scale * 100 + 0.5))
+	updateCustomizationControl(customizationControls.WindowWidth, CUSTOM.WindowWidth)
+	updateCustomizationControl(customizationControls.WindowHeight, CUSTOM.WindowHeight)
+	updateCustomizationControl(customizationControls.SidebarWidth, CUSTOM.SidebarWidth)
+	updateCustomizationControl(customizationControls.WindowRadius, CUSTOM.WindowRadius)
+	updateCustomizationControl(customizationControls.ElementRadius, CUSTOM.ElementRadius)
+	updateCustomizationControl(customizationControls.Spacing, CUSTOM.Spacing)
+	updateCustomizationControl(customizationControls.Transparency, math.floor(CUSTOM.Transparency * 100 + 0.5))
+	updateCustomizationControl(customizationControls.ScrollbarThickness, CUSTOM.ScrollbarThickness)
+	updateCustomizationControl(customizationControls.TooltipDelay, math.floor(CUSTOM.TooltipDelay * 1000 + 0.5))
+	updateCustomizationControl(customizationControls.ShowScrollbars, CUSTOM.ShowScrollbars)
+	updateCustomizationControl(customizationControls.ShowAccentRail, CUSTOM.ShowAccentRail)
+	updateCustomizationControl(customizationControls.ShowSidebarDivider, CUSTOM.ShowSidebarDivider)
+	updateCustomizationControl(customizationControls.InstantTooltips, CUSTOM.InstantTooltips)
+	updateCustomizationControl(customizationControls.SafeArea, CUSTOM.SafeArea)
+	updateCustomizationControl(customizationControls.GamepadNavigation, CUSTOM.GamepadNavigation)
+	updateCustomizationControl(customizationControls.LargeTouchTargets, CUSTOM.LargeTouchTargets)
+	updateCustomizationControl(customizationControls.HighContrast, CUSTOM.HighContrast)
+
+	syncingCustomization = false
+end
+
+local platformSection = Tabs.Settings:Section({
+	Title = "Platform and Input",
+	Desc = "Responsive presets for desktop, touch, Xbox, and PlayStation controllers",
+	Icon = "gamepad-2",
+	Opened = true,
+	Box = true,
+	BoxBorder = true,
+	TextSize = 17,
+	DescTextSize = 13,
+})
+
+customizationControls.PlatformPreset = platformSection:Dropdown({
+	Title = "Platform Preset",
+	Desc = "Auto adapts to the most recently used input device",
+	Values = { "Auto", "Desktop", "Mobile", "Console", "Compact" },
+	Value = CUSTOM.PlatformPreset,
+	Flag = "settings/platform_preset",
 	Callback = function(value)
-		WindUI.TransparencyValue = value and 0.08 or 0
+		if syncingCustomization then return end
+		CUSTOM.PlatformPreset = selectionName(value)
+		applyVisualCustomization()
+	end,
+})
+
+customizationControls.GamepadNavigation = platformSection:Toggle({
+	Title = "Gamepad Navigation",
+	Desc = "Xbox and PlayStation: Start toggles, B/Circle closes, L1/R1 changes tabs, Y/Triangle focuses search",
+	Value = CUSTOM.GamepadNavigation,
+	Flag = "settings/gamepad_navigation",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.GamepadNavigation = value == true
 		pcall(function()
-			if type(Window.ToggleTransparency) == "function" then
-				Window:ToggleTransparency(value)
-			end
+			GuiService.GuiNavigationEnabled = CUSTOM.GamepadNavigation
+			GuiService.AutoSelectGuiEnabled = CUSTOM.GamepadNavigation
 		end)
+		updateSelectionFrame()
 	end,
 })
 
--- UI Scale with progress indicator
-local uiScaleProgress = appearanceSection:ProgressBar({
-	Title = "UI Scale",
-	Desc = "Current scale",
-	Value = { Min = 65, Max = 125, Default = 94 },
-	DisplayMode = "Value",
-	Format = function(value)
-		return string.format("%.0f%%", value)
-	end,
-	Width = 200,
-	Animate = true,
-})
-
-appearanceSection:Slider({
-	Title = "Adjust Scale",
-	Value = { Min = 65, Max = 125, Default = 94 },
-	Step = 5,
+customizationControls.SafeArea = platformSection:Toggle({
+	Title = "Device Safe Area",
+	Desc = "Keeps controls clear of mobile notches, rounded screens, and console overscan",
+	Value = CUSTOM.SafeArea,
+	Flag = "settings/device_safe_area",
 	Callback = function(value)
-		local scale = value / 100
-		pcall(function() Window:SetUIScale(scale) end)
-		if uiScaleProgress and type(uiScaleProgress.Set) == "function" then
-			pcall(uiScaleProgress.Set, uiScaleProgress, value)
+		if syncingCustomization then return end
+		CUSTOM.SafeArea = value == true
+		applySafeArea()
+	end,
+})
+
+customizationControls.LargeTouchTargets = platformSection:Toggle({
+	Title = "Touch-Friendly Sizing",
+	Desc = "Uses the responsive mobile scale and larger usable controls",
+	Value = CUSTOM.LargeTouchTargets,
+	Flag = "settings/large_touch_targets",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.LargeTouchTargets = value == true
+		applyResponsiveLayout()
+	end,
+})
+
+customizationControls.InstantTooltips = platformSection:Toggle({
+	Title = "Instant Tooltips",
+	Desc = "Replaces WindUI's delayed tooltip layer",
+	Value = CUSTOM.InstantTooltips,
+	Flag = "settings/instant_tooltips",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.InstantTooltips = value == true
+		if not CUSTOM.InstantTooltips then
+			hideInstantTooltip()
 		end
 	end,
 })
 
+customizationControls.TooltipDelay = platformSection:Slider({
+	Title = "Tooltip Delay",
+	Desc = "Delay in milliseconds; 0 displays immediately",
+	Value = { Min = 0, Max = 300, Default = math.floor(CUSTOM.TooltipDelay * 1000 + 0.5) },
+	Step = 10,
+	Flag = "settings/tooltip_delay",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.TooltipDelay = math.clamp(tonumber(value) or 0, 0, 300) / 1000
+	end,
+})
+
+local themeSection = Tabs.Settings:Section({
+	Title = "Theme Studio",
+	Desc = "Every major interface color can be changed independently",
+	Icon = "eye",
+	Opened = true,
+	Box = true,
+	BoxBorder = true,
+	TextSize = 17,
+	DescTextSize = 13,
+})
+
+customizationControls.ThemePreset = themeSection:Dropdown({
+	Title = "Color Preset",
+	Values = { "BadWars", "Midnight", "Ember", "Violet", "Ocean", "Monochrome" },
+	Value = CUSTOM.Preset,
+	Flag = "settings/theme_preset",
+	Callback = function(value)
+		if syncingCustomization then return end
+		local name = selectionName(value)
+		if applyThemePreset(name) then
+			syncCustomizationControls()
+		end
+	end,
+})
+
+local function addColorControl(key, title, description, flag)
+	customizationControls[key] = themeSection:Colorpicker({
+		Title = title,
+		Desc = description,
+		Default = CUSTOM[key],
+		Flag = flag,
+		Callback = function(color)
+			if syncingCustomization then return end
+			if typeof(color) == "Color3" then
+				CUSTOM[key] = color
+				CUSTOM.Preset = "Custom"
+				applyVisualCustomization()
+			end
+		end,
+	})
+end
+
+addColorControl("Accent", "Primary Accent", "Toggles, selections, and focus indicators", "settings/color_accent")
+addColorControl("AccentWarm", "Secondary Accent", "Middle color in the branded accent rail", "settings/color_accent_warm")
+addColorControl("AccentCool", "Tertiary Accent", "Final color in gradients and highlights", "settings/color_accent_cool")
+addColorControl("Canvas", "Window Background", "Deepest background layer", "settings/color_canvas")
+addColorControl("Panel", "Panel Background", "Sidebar, tooltips, dialogs, and panels", "settings/color_panel")
+addColorControl("Raised", "Element Background", "Cards, controls, buttons, and inputs", "settings/color_raised")
+addColorControl("Border", "Border Color", "Window, card, and tooltip outlines", "settings/color_border")
+addColorControl("Text", "Primary Text", "Titles, values, and selected navigation", "settings/color_text")
+addColorControl("Muted", "Muted Text", "Descriptions and secondary labels", "settings/color_muted")
+addColorControl("Scroll", "Scrollbar Color", "The single primary content scrollbar", "settings/color_scroll")
+
+customizationControls.HighContrast = themeSection:Toggle({
+	Title = "High Contrast",
+	Desc = "Brighter text and stronger borders for visibility",
+	Value = CUSTOM.HighContrast,
+	Flag = "settings/high_contrast",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.HighContrast = value == true
+		applyVisualCustomization()
+	end,
+})
+
+customizationControls.ShowAccentRail = themeSection:Toggle({
+	Title = "Accent Rail",
+	Desc = "Show the three-color brand rail across the top",
+	Value = CUSTOM.ShowAccentRail,
+	Flag = "settings/show_accent_rail",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.ShowAccentRail = value == true
+		applyVisualCustomization()
+	end,
+})
+
+customizationControls.ShowSidebarDivider = themeSection:Toggle({
+	Title = "Sidebar Divider",
+	Desc = "Show the separator between navigation and content",
+	Value = CUSTOM.ShowSidebarDivider,
+	Flag = "settings/show_sidebar_divider",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.ShowSidebarDivider = value == true
+		applyVisualCustomization()
+	end,
+})
+
+local layoutSection = Tabs.Settings:Section({
+	Title = "Layout and Density",
+	Desc = "Customize scale, dimensions, curvature, spacing, opacity, and scrolling",
+	Icon = "settings",
+	Opened = true,
+	Box = true,
+	BoxBorder = true,
+	TextSize = 17,
+	DescTextSize = 13,
+})
+
+customizationControls.Scale = layoutSection:Slider({
+	Title = "UI Scale",
+	Value = { Min = 70, Max = 130, Default = math.floor(CUSTOM.Scale * 100 + 0.5) },
+	Step = 2,
+	Flag = "settings/ui_scale",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.Scale = math.clamp(value / 100, 0.7, 1.3)
+		applyResponsiveLayout()
+	end,
+})
+
+customizationControls.WindowWidth = layoutSection:Slider({
+	Title = "Window Width",
+	Value = { Min = 640, Max = 1280, Default = CUSTOM.WindowWidth },
+	Step = 10,
+	Flag = "settings/window_width",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.WindowWidth = value
+		applyResponsiveLayout()
+	end,
+})
+
+customizationControls.WindowHeight = layoutSection:Slider({
+	Title = "Window Height",
+	Value = { Min = 420, Max = 900, Default = CUSTOM.WindowHeight },
+	Step = 10,
+	Flag = "settings/window_height",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.WindowHeight = value
+		applyResponsiveLayout()
+	end,
+})
+
+customizationControls.SidebarWidth = layoutSection:Slider({
+	Title = "Sidebar Width",
+	Value = { Min = 170, Max = 300, Default = CUSTOM.SidebarWidth },
+	Step = 2,
+	Flag = "settings/sidebar_width",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.SidebarWidth = value
+		applyResponsiveLayout()
+	end,
+})
+
+customizationControls.WindowRadius = layoutSection:Slider({
+	Title = "Window Radius",
+	Value = { Min = 6, Max = 30, Default = CUSTOM.WindowRadius },
+	Step = 1,
+	Flag = "settings/window_radius",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.WindowRadius = value
+		applyVisualCustomization()
+	end,
+})
+
+customizationControls.ElementRadius = layoutSection:Slider({
+	Title = "Control Radius",
+	Value = { Min = 4, Max = 24, Default = CUSTOM.ElementRadius },
+	Step = 1,
+	Flag = "settings/element_radius",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.ElementRadius = value
+		applyVisualCustomization()
+	end,
+})
+
+customizationControls.Spacing = layoutSection:Slider({
+	Title = "Vertical Spacing",
+	Value = { Min = 2, Max = 18, Default = CUSTOM.Spacing },
+	Step = 1,
+	Flag = "settings/vertical_spacing",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.Spacing = value
+		applyVisualCustomization()
+	end,
+})
+
+customizationControls.Transparency = layoutSection:Slider({
+	Title = "Surface Transparency",
+	Desc = "0 is opaque; 40 is the lightest supported glass effect",
+	Value = { Min = 0, Max = 40, Default = math.floor(CUSTOM.Transparency * 100 + 0.5) },
+	Step = 1,
+	Flag = "settings/surface_transparency",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.Transparency = math.clamp(value / 100, 0, 0.4)
+		applyVisualCustomization()
+	end,
+})
+
+customizationControls.ShowScrollbars = layoutSection:Toggle({
+	Title = "Show Content Scrollbar",
+	Desc = "Only one scrollbar is shown for the primary content pane",
+	Value = CUSTOM.ShowScrollbars,
+	Flag = "settings/show_scrollbars",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.ShowScrollbars = value == true
+		applyVisualCustomization()
+	end,
+})
+
+customizationControls.ScrollbarThickness = layoutSection:Slider({
+	Title = "Scrollbar Thickness",
+	Value = { Min = 1, Max = 8, Default = CUSTOM.ScrollbarThickness },
+	Step = 1,
+	Flag = "settings/scrollbar_thickness",
+	Callback = function(value)
+		if syncingCustomization then return end
+		CUSTOM.ScrollbarThickness = value
+		applyVisualCustomization()
+	end,
+})
+
+layoutSection:Button({
+	Title = "Reset Visual Settings",
+	Icon = "refresh-cw",
+	Desc = "Restore every visual, input, color, and layout setting",
+	Callback = function()
+		for key, value in pairs(CUSTOMIZATION_DEFAULTS) do
+			CUSTOM[key] = value
+		end
+		applyVisualCustomization()
+		syncCustomizationControls()
+		d:CreateNotification("Customization", "Visual settings restored", 3, "success")
+	end,
+})
 -- Profile section
 local profileSection = Tabs.Settings:Section({
 	Title = "Profiles",

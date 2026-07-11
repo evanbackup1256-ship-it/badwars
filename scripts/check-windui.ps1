@@ -142,6 +142,44 @@ Assert-NoMatch $adapter 'RunService\.RenderStepped:Connect' `
     "Visual revamp does not add a per-frame loop"
 Assert-NoMatch $adapter '\bendreturn\b' `
     "Joined Luau keywords are absent"
+Assert-Match $adapter 'BADWARS_UNIVERSAL_UI_V6' `
+    "Universal platform support marker is present"
+Assert-Match $adapter 'BadWarsInstantTooltip' `
+    "Immediate tooltip layer is installed"
+Assert-Match $adapter 'disableNativeTooltips' `
+    "Delayed native tooltips are disabled"
+Assert-Match $adapter 'TooltipDelay\s*=\s*0\.03' `
+    "Default tooltip delay is near-instant"
+Assert-Match $adapter 'DeviceSafeInsets' `
+    "Mobile and console safe-area support is installed"
+Assert-Match $adapter 'GuiNavigationEnabled' `
+    "Roblox GUI navigation is enabled for controllers"
+Assert-Match $adapter 'AutoSelectGuiEnabled' `
+    "Automatic gamepad selection is configured"
+Assert-Match $adapter 'Enum\.KeyCode\.ButtonStart' `
+    "Xbox and PlayStation menu-button toggle is installed"
+Assert-Match $adapter 'Enum\.KeyCode\.ButtonL1' `
+    "Controller previous-tab navigation is installed"
+Assert-Match $adapter 'Enum\.KeyCode\.ButtonR1' `
+    "Controller next-tab navigation is installed"
+Assert-Match $adapter 'Enum\.KeyCode\.ButtonB' `
+    "Controller back action is installed"
+Assert-Match $adapter 'Enum\.KeyCode\.ButtonY' `
+    "Controller search shortcut is installed"
+Assert-Match $adapter 'PlatformPreset\s*=\s*"Auto"' `
+    "Automatic desktop, mobile, and console presets are installed"
+Assert-Match $adapter 'WindUI:AddTheme' `
+    "Runtime custom theme registration is installed"
+Assert-Match $adapter 'Theme Studio' `
+    "Complete color customization controls are installed"
+Assert-Match $adapter 'Layout and Density' `
+    "Complete layout customization controls are installed"
+Assert-Match $adapter 'Platform and Input' `
+    "Platform customization controls are installed"
+Assert-NoMatch $adapter 'RunService\.RenderStepped:Connect' `
+    "Universal UI does not add a continuous frame loop"
+Assert-NoMatch $adapter '\bendreturn\b' `
+    "Joined Luau keywords are absent"
 if ($script:Failed) {
     Write-Host ""
     Write-Host "WindUI validation failed." -ForegroundColor Red

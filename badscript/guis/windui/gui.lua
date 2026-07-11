@@ -2244,7 +2244,8 @@ local function createCategoryObject(name, iconName, suppliedTab)
 				-- BADWARS_SHORT_MODULE_ALIASES_V1
 		if d.Modules[moduleName] == nil or d.Modules[moduleName].Destroyed then
 			d.Modules[moduleName] = module
-		endreturn module
+		end
+		return module
 	end
 
 	function category:CreateModuleCategory(settings)

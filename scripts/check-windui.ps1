@@ -146,6 +146,8 @@ Assert-Match $adapter 'BADWARS_EXTREME_MOTION_V1' `
     "Extreme motion engine is installed"
 Assert-Match $adapter 'BADWARS_MOTION_SETTINGS_V1' `
     "Motion settings controls are present"
+Assert-NoMatch $adapter '\bendreturn\b' `
+    "Joined Luau keywords are absent"
 if ($script:Failed) {
     Write-Host ""
     Write-Host "WindUI validation failed." -ForegroundColor Red

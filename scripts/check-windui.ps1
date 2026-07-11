@@ -142,10 +142,40 @@ Assert-Match $adapter 'BADWARS_TEXTLIST_LISTENABLED_V1' `
     "TextList ListEnabled compatibility is present"
 Assert-Match $adapter 'BADWARS_SHORT_MODULE_ALIASES_V1' `
     "Short module aliases are restored"
-Assert-Match $adapter 'BADWARS_EXTREME_MOTION_V1' `
-    "Extreme motion engine is installed"
 Assert-Match $adapter 'BADWARS_MOTION_SETTINGS_V1' `
     "Motion settings controls are present"
+Assert-NoMatch $adapter '\bendreturn\b' `
+    "Joined Luau keywords are absent"
+Assert-Match $adapter 'BADWARS_CINEMATIC_MOTION_V4' `
+    "Cinematic motion engine is installed"
+Assert-Match $adapter 'local function applyProximityField' `
+    "Neighboring rows react through real layout reflow"
+Assert-Match $adapter 'local function createKineticGlow' `
+    "Cursor-following kinetic light is present"
+Assert-Match $adapter 'local function createEchoRing' `
+    "Double click echo rings are present"
+Assert-Match $adapter 'local function morphCorner' `
+    "Corner-radius morphing is present"
+Assert-Match $adapter 'local function cascadeContainer' `
+    "Staggered tab and section choreography is present"
+Assert-Match $adapter 'stroke\.Parent\s*=\s*surface' `
+    "Animated borders use the real rounded surface"
+Assert-Match $adapter 'layer\.ClipsDescendants\s*=\s*true' `
+    "All cinematic effects remain clipped"
+Assert-Match $adapter 'RunService\.RenderStepped:Connect' `
+    "Kinetic light uses frame-smoothed pointer tracking"
+Assert-Match $adapter 'Title\s*=\s*"Cinematic Cursor Light"' `
+    "Cinematic cursor light can be configured"
+Assert-Match $adapter 'Title\s*=\s*"Morphing Corners"' `
+    "Corner morphing can be configured"
+Assert-Match $adapter 'Title\s*=\s*"Choreographed Reveals"' `
+    "Reveal choreography can be configured"
+Assert-Match $adapter 'Title\s*=\s*"Proximity Reflow"' `
+    "Proximity reflow can be configured"
+Assert-NoMatch $adapter 'baseRotation\s*=' `
+    "Button motion does not rotate controls"
+Assert-NoMatch $adapter 'Rotation\s*=\s*tilt' `
+    "Overlay dragging does not apply tilt"
 Assert-NoMatch $adapter '\bendreturn\b' `
     "Joined Luau keywords are absent"
 if ($script:Failed) {

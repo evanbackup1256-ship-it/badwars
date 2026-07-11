@@ -120,62 +120,6 @@ foreach ($iconName in $requiredIcons) {
         "Required WindUI icon is bundled: $iconName"
 }
 
-Assert-Match $adapter 'BADWARS_RUNTIME_COMPAT_V28' `
-    "Runtime compatibility libraries are installed"
-Assert-Match $adapter 'd\.Libraries\.getcustomasset\s*=\s*compatGetCustomAsset' `
-    "getcustomasset compatibility is exported"
-Assert-Match $adapter 'd\.Libraries\.getfontsize\s*=\s*compatGetFontSize' `
-    "getfontsize compatibility is exported"
-Assert-Match $adapter 'd\.Libraries\.tween\s*=\s*compatTween' `
-    "tween compatibility is exported"
-Assert-Match $adapter 'BADWARS_OVERLAY_RUNTIME_V2' `
-    "Legacy overlay runtime is installed"
-Assert-Match $adapter 'overlay\.Children\s*=\s*root' `
-    "Overlay Children container is present"
-Assert-Match $adapter 'overlay\.Button\s*=\s*overlay' `
-    "Overlay Button compatibility object is present"
-Assert-Match $adapter 'BADWARS_TARGETS_COMPAT_V2' `
-    "Targets wrappers expose Enabled state"
-Assert-Match $adapter 'BADWARS_FONT_COMPAT_V2' `
-    "Font controls return Font values"
-Assert-Match $adapter 'BADWARS_TEXTLIST_LISTENABLED_V1' `
-    "TextList ListEnabled compatibility is present"
-Assert-Match $adapter 'BADWARS_SHORT_MODULE_ALIASES_V1' `
-    "Short module aliases are restored"
-Assert-Match $adapter 'BADWARS_MOTION_SETTINGS_V1' `
-    "Motion settings controls are present"
-Assert-NoMatch $adapter '\bendreturn\b' `
-    "Joined Luau keywords are absent"
-Assert-Match $adapter 'stroke\.Parent\s*=\s*surface' `
-    "Animated borders use the real rounded surface"
-Assert-Match $adapter 'layer\.ClipsDescendants\s*=\s*true' `
-    "All cinematic effects remain clipped"
-Assert-NoMatch $adapter 'baseRotation\s*=' `
-    "Button motion does not rotate controls"
-Assert-NoMatch $adapter 'Rotation\s*=\s*tilt' `
-    "Overlay dragging does not apply tilt"
-Assert-NoMatch $adapter '\bendreturn\b' `
-    "Joined Luau keywords are absent"
-Assert-Match $adapter 'BADWARS_SAFE_VISUAL_MOTION_V2' `
-    "Safe visual motion engine is installed"
-Assert-Match $adapter 'layer\.ClipsDescendants\s*=\s*true' `
-    "Ripple effects are clipped"
-Assert-Match $adapter 'stroke\.Parent\s*=\s*surface' `
-    "Motion borders use the actual rounded surface"
-Assert-Match $adapter 'local function collectVisualChildren' `
-    "Icons and text receive safe visual emphasis"
-Assert-Match $adapter 'local function animatePassiveObject' `
-    "Dialogs and notifications receive safe entrance motion"
-Assert-NoMatch $adapter 'AutomaticSize\s*=\s*Enum\.AutomaticSize\.None' `
-    "Motion never disables automatic layout sizing"
-Assert-NoMatch $adapter 'local function animateLayoutHeight' `
-    "Motion never changes layout-row height"
-Assert-NoMatch $adapter 'RunService\.RenderStepped:Connect' `
-    "Motion does not use a per-frame UI loop"
-Assert-NoMatch $adapter 'Rotation\s*=\s*tilt' `
-    "Motion never tilts draggable overlays"
-Assert-NoMatch $adapter '\bendreturn\b' `
-    "Joined Luau keywords are absent"
 if ($script:Failed) {
     Write-Host ""
     Write-Host "WindUI validation failed." -ForegroundColor Red

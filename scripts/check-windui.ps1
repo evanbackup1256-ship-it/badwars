@@ -180,6 +180,24 @@ Assert-NoMatch $adapter 'RunService\.RenderStepped:Connect' `
     "Universal UI does not add a continuous frame loop"
 Assert-NoMatch $adapter '\bendreturn\b' `
     "Joined Luau keywords are absent"
+Assert-Match $adapter 'BADWARS_UNIVERSAL_UI_REVIEW_FIX_V1' `
+    "Universal UI PR review fixes are installed"
+Assert-Match $adapter 'local shouldHide = hidden or not CUSTOM\.ShowScrollbars' `
+    "Scrollbar visibility uses a numeric-safe condition"
+Assert-NoMatch $adapter 'ScrollBarImageTransparency\s*=\s*hidden or not CUSTOM\.ShowScrollbars and' `
+    "Scrollbar transparency cannot receive a boolean"
+Assert-NoMatch $adapter 'ScrollBarThickness\s*=\s*hidden or not CUSTOM\.ShowScrollbars and' `
+    "Scrollbar thickness cannot receive a boolean"
+Assert-Match $adapter 'setNativeTooltipsSuppressed' `
+    "Native tooltip fallback is preserved"
+Assert-NoMatch $adapter 'candidate\.Enabled\s*=\s*false\s*\r?\n\s*elseif candidate:IsA\("GuiObject"\) then\s*\r?\n\s*candidate\.Visible\s*=\s*false' `
+    "Native tooltips are not disabled unconditionally at startup"
+Assert-Match $adapter 'd\.Destroyed\s*\r?\n\s*or token ~= tooltipToken' `
+    "Delayed tooltips stop after teardown"
+Assert-Match $adapter 'tooltipFrame\.Parent == nil' `
+    "Destroyed tooltip instances are guarded"
+Assert-Match $adapter 'setNativeTooltipsSuppressed\(false\)' `
+    "Native tooltips are restored when the custom tooltip hides"
 if ($script:Failed) {
     Write-Host ""
     Write-Host "WindUI validation failed." -ForegroundColor Red

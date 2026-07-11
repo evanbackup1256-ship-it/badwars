@@ -328,6 +328,7 @@ d.gui = typeof(WindUI.ScreenGui) == "Instance" and WindUI.ScreenGui
 
 -- BADWARS_VISUAL_REVAMP_V5
 -- BADWARS_UNIVERSAL_UI_V6
+-- BADWARS_UNIVERSAL_UI_REVIEW_FIX_V1
 local UserInputService = cloneref(game:GetService("UserInputService"))
 local GuiService = cloneref(game:GetService("GuiService"))
 local ContextActionService = cloneref(game:GetService("ContextActionService"))
@@ -651,8 +652,9 @@ local function applyScrollbarStyle(object)
 	pcall(function()
 		object.ElasticBehavior = Enum.ElasticBehavior.Never
 		object.ScrollBarImageColor3 = CUSTOM.Scroll
-		object.ScrollBarImageTransparency = hidden or not CUSTOM.ShowScrollbars and 1 or 0.18
-		object.ScrollBarThickness = hidden or not CUSTOM.ShowScrollbars and 0 or CUSTOM.ScrollbarThickness
+		local shouldHide = hidden or not CUSTOM.ShowScrollbars
+		object.ScrollBarImageTransparency = shouldHide and 1 or 0.18
+		object.ScrollBarThickness = shouldHide and 0 or CUSTOM.ScrollbarThickness
 	end)
 end
 
@@ -978,6 +980,24 @@ local function applyThemePreset(name)
 	return true
 end
 
+local nativeTooltipTargets = {}
+local nativeTooltipStates = setmetatable({}, { __mode = "k" })
+
+local function registerNativeTooltipTarget(candidate)
+	if typeof(candidate) ~= "Instance" then
+		return
+	end
+
+	if candidate:IsA("ScreenGui") or candidate:IsA("GuiObject") then
+		if not table.find(nativeTooltipTargets, candidate) then
+			table.insert(nativeTooltipTargets, candidate)
+			nativeTooltipStates[candidate] = candidate:IsA("ScreenGui")
+				and candidate.Enabled
+				or candidate.Visible
+		end
+	end
+end
+
 local function disableNativeTooltips()
 	local candidates = {
 		WindUI.TooltipGui,
@@ -986,23 +1006,38 @@ local function disableNativeTooltips()
 	}
 
 	for _, candidate in ipairs(candidates) do
-		if typeof(candidate) == "Instance" then
-			if candidate:IsA("ScreenGui") then
-				candidate.Enabled = false
-			elseif candidate:IsA("GuiObject") then
-				candidate.Visible = false
-			else
-				for _, child in ipairs(candidate:GetChildren()) do
-					child:Destroy()
+		registerNativeTooltipTarget(candidate)
+	end
+
+	trackUniversalResource(function()
+		for _, candidate in ipairs(nativeTooltipTargets) do
+			if typeof(candidate) == "Instance" and candidate.Parent then
+				local original = nativeTooltipStates[candidate]
+				if candidate:IsA("ScreenGui") then
+					candidate.Enabled = original ~= false
+				elseif candidate:IsA("GuiObject") then
+					candidate.Visible = original ~= false
 				end
-				trackUniversalResource(candidate.ChildAdded:Connect(function(child)
-					child:Destroy()
-				end))
+			end
+		end
+	end)
+end
+
+local function setNativeTooltipsSuppressed(suppressed)
+	for index = #nativeTooltipTargets, 1, -1 do
+		local candidate = nativeTooltipTargets[index]
+		if typeof(candidate) ~= "Instance" or candidate.Parent == nil then
+			table.remove(nativeTooltipTargets, index)
+		else
+			local original = nativeTooltipStates[candidate]
+			if candidate:IsA("ScreenGui") then
+				candidate.Enabled = suppressed and false or original ~= false
+			elseif candidate:IsA("GuiObject") then
+				candidate.Visible = suppressed and false or original ~= false
 			end
 		end
 	end
 end
-
 local tooltipFrame
 local tooltipLabel
 local tooltipStroke
@@ -1149,7 +1184,8 @@ end
 local function hideInstantTooltip()
 	tooltipToken += 1
 	activeTooltipTarget = nil
-	if tooltipFrame then
+	setNativeTooltipsSuppressed(false)
+	if typeof(tooltipFrame) == "Instance" and tooltipFrame.Parent then
 		tooltipFrame.Visible = false
 	end
 end
@@ -1169,7 +1205,20 @@ local function showInstantTooltip(target, pointer)
 	activeTooltipTarget = target
 
 	task.delay(math.max(0, CUSTOM.TooltipDelay), function()
-		if token ~= tooltipToken or activeTooltipTarget ~= target or not target.Parent then
+		local tooltipCorner = revampObjects.TooltipCorner
+		if d.Destroyed
+			or token ~= tooltipToken
+			or activeTooltipTarget ~= target
+			or not target.Parent
+			or typeof(tooltipFrame) ~= "Instance"
+			or tooltipFrame.Parent == nil
+			or typeof(tooltipLabel) ~= "Instance"
+			or tooltipLabel.Parent == nil
+			or typeof(tooltipStroke) ~= "Instance"
+			or tooltipStroke.Parent == nil
+			or typeof(tooltipCorner) ~= "Instance"
+			or tooltipCorner.Parent == nil
+		then
 			return
 		end
 
@@ -1187,7 +1236,8 @@ local function showInstantTooltip(target, pointer)
 		tooltipLabel.TextColor3 = CUSTOM.Text
 		tooltipLabel.Text = text
 		tooltipStroke.Color = CUSTOM.HighContrast and CUSTOM.Text or CUSTOM.Border
-		revampObjects.TooltipCorner.CornerRadius = UDim.new(0, CUSTOM.ElementRadius)
+		tooltipCorner.CornerRadius = UDim.new(0, CUSTOM.ElementRadius)
+		setNativeTooltipsSuppressed(true)
 		tooltipFrame.Visible = true
 		positionTooltip(target, pointer)
 	end)
